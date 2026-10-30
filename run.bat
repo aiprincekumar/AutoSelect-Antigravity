@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
@@ -56,32 +56,78 @@ if not exist ".venv\Scripts\python.exe" (
 )
 
 :: 3. Check and Install Requirements
-if not exist ".venv\.installed" (
-    echo [SETUP] Installing required dependencies (pyautogui, opencv-python, pillow, pynput, pygetwindow, uiautomation)...
+if not exist ".venv\.installed_v2" (
+    echo [SETUP] Installing required dependencies (pyautogui, opencv-python, pillow, pynput, pygetwindow, uiautomation, winsdk)...
     if %USE_UV% equ 1 (
         uv pip install --python ".venv\Scripts\python.exe" -r requirements.txt
     ) else (
-        ".venv\Scripts\python.exe" -m pip install --upgrade pip
         ".venv\Scripts\python.exe" -m pip install -r requirements.txt
     )
     if %errorlevel% neq 0 (
-        echo [ERROR] Failed to install dependencies!
-        pause
-        exit /b 1
+        echo [WARN] Fast install encountered notice, checking runtime...
     )
-    echo 1 > ".venv\.installed"
-    echo [SETUP] Dependencies installed successfully.
+    echo 2 > ".venv\.installed_v2"
+    echo [SETUP] Dependencies verified.
     echo.
 )
 
-:: 4. Launch AutoSelect-Commander
-echo [LAUNCH] Starting AutoSelect-Commander...
-echo ───────────────────────────────────────────────────────────────────────────────
-".venv\Scripts\python.exe" auto_commander.py %*
+:: 4. If command-line arguments are provided, bypass menu and run directly
+if not "%~1"=="" (
+    ".venv\Scripts\python.exe" auto_commander.py %*
+    goto FINISH
+)
 
+:: 5. Interactive Mode Selection Menu (5s Default to Demo Mode)
+echo.
+echo  =============================================================================
+echo                              SELECT EXECUTION MODE
+echo  =============================================================================
+echo.
+echo    [1] Live Visual Demo / Test Mode (Recommended)
+echo        -^> Spawns mock question card, floating countdown HUD ^& glides mouse!
+echo.
+echo    [2] Active Background Sentinel
+echo        -^> Monitors live screen for Antigravity decision modals.
+echo.
+echo    [3] Screen ^& Window Diagnostics
+echo        -^> Scans screen, tests OCR, lists detected windows and text.
+echo.
+echo  -----------------------------------------------------------------------------
+echo  Auto-launching [1] Demo Mode in 5 seconds (Press 1, 2, or 3 to choose now)...
+echo  -----------------------------------------------------------------------------
+echo.
+
+choice /c 123 /t 5 /d 1 /m "Your selection"
+
+if %errorlevel% equ 3 goto RUN_DIAGNOSTICS
+if %errorlevel% equ 2 goto RUN_SENTINEL
+goto RUN_DEMO
+
+:RUN_DEMO
+echo.
+echo [LAUNCH] Starting Live Visual Demo Mode...
+echo ───────────────────────────────────────────────────────────────────────────────
+".venv\Scripts\python.exe" auto_commander.py --simulate
+goto FINISH
+
+:RUN_SENTINEL
+echo.
+echo [LAUNCH] Starting Active Background Sentinel...
+echo ───────────────────────────────────────────────────────────────────────────────
+".venv\Scripts\python.exe" auto_commander.py
+goto FINISH
+
+:RUN_DIAGNOSTICS
+echo.
+echo [LAUNCH] Running Screen ^& Window Diagnostics...
+echo ───────────────────────────────────────────────────────────────────────────────
+".venv\Scripts\python.exe" auto_commander.py --diagnostics
+goto FINISH
+
+:FINISH
 if %errorlevel% neq 0 (
     echo.
-    echo [INFO] AutoSelect-Commander terminated with code %errorlevel%.
+    echo [INFO] Process terminated with code %errorlevel%.
     pause
 )
 

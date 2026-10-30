@@ -6,10 +6,15 @@
   "cooldown_after_dismissal_s": 5,
   "failsafe_enabled": true,
   "sound_notification": true,
-  "window_title_filter": "Antigravity",
+  "window_title_filter": "",
+  "floating_hud_enabled": true,
+  "floating_hud_alpha": 0.92,
+  "ocr_enabled": true,
   "target_keywords": [
     "(Recommended)",
     "Recommended",
+    "(अनुशंसित)",
+    "अनुशंसित",
     "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
     "(Recommended) GitHub",
     "Proceed"
