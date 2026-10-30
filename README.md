@@ -1,4 +1,4 @@
-# AutoSelect-Commander 🎯
+﻿# AutoSelect-Commander 🎯
 
 > **Autonomous Visual Mouse Automation & Auto-Selector for Antigravity Coding Agents**  
 > **एंटीग्रेविटी कोडिंग एजेंट्स के लिए विज़ुअल माउस ऑटोमेशन एवं ऑटो-सिलेक्टर**
