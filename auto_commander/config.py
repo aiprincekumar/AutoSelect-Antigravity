@@ -39,8 +39,12 @@ class Config:
         "Proceed",
         "Submit / पुष्टि करें",
         "जारी रखें",
+        "Continue",
+        "Select",
+        "OK",
     )
     detection_mode: str = "auto"  # 'auto', 'ocr', 'uia', 'vision'
+    require_submit_button: bool = True  # Strictly requires Submit button to eliminate chat false positives
 
     @classmethod
     def load(cls, config_path: str = "config.json") -> "Config":
@@ -64,6 +68,7 @@ class Config:
                         target_keywords=tuple(data.get("target_keywords", cls.target_keywords)),
                         submit_keywords=tuple(data.get("submit_keywords", cls.submit_keywords)),
                         detection_mode=str(data.get("detection_mode", "auto")),
+                        require_submit_button=bool(data.get("require_submit_button", True)),
                     )
             except Exception as e:
                 print(f"\033[93m[WARN] Failed to parse config.json ({e}). Using default settings.\033[0m")
@@ -86,6 +91,7 @@ class Config:
             "target_keywords": list(self.target_keywords),
             "submit_keywords": list(self.submit_keywords),
             "detection_mode": self.detection_mode,
+            "require_submit_button": self.require_submit_button,
         }
         with open(config_path, "w", encoding="utf-8") as f:
             json.dump(data, f, indent=4, ensure_ascii=False)

@@ -279,6 +279,145 @@ class TestAutoCommander(unittest.TestCase):
         hud.close()
         self.assertFalse(hud.is_visible)
 
+    def test_config_require_submit_button(self):
+        cfg = Config()
+        self.assertTrue(cfg.require_submit_button)
+        self.assertIn("Continue", cfg.submit_keywords)
+        self.assertIn("Select", cfg.submit_keywords)
+        self.assertIn("OK", cfg.submit_keywords)
+
+    def test_minimized_restore_to_maximized(self):
+        dummy_hwnd = 54321
+        with unittest.mock.patch.object(win32_mod.user32, "IsIconic", return_value=1), \
+             unittest.mock.patch.object(win32_mod.user32, "ShowWindow") as mock_show, \
+             unittest.mock.patch.object(win32_mod.user32, "ShowWindowAsync") as mock_show_async, \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowPlacement") as mock_gwp, \
+             unittest.mock.patch.object(win32_mod.user32, "SetForegroundWindow", return_value=1), \
+             unittest.mock.patch.object(win32_mod.user32, "BringWindowToTop", return_value=1):
+
+            def fake_gwp(hwnd, wp_ptr):
+                # Simulate a window that was maximized prior to minimize (WPF_RESTORETOMAXIMIZED = 2)
+                wp = getattr(wp_ptr, "_obj", getattr(wp_ptr, "contents", None))
+                if wp:
+                    wp.flags = 2
+                    wp.showCmd = 3
+                return 1
+
+            mock_gwp.side_effect = fake_gwp
+            res = AntigravityWindowManager.bring_to_foreground(dummy_hwnd)
+            self.assertTrue(res)
+            # Must call ShowWindow(dummy_hwnd, 3) (SW_MAXIMIZE) and ShowWindowAsync(dummy_hwnd, 3)
+            mock_show.assert_called_with(dummy_hwnd, 3)
+            mock_show_async.assert_called_with(dummy_hwnd, 3)
+
+    def test_minimized_restore_to_normal(self):
+        dummy_hwnd = 54321
+        with unittest.mock.patch.object(win32_mod.user32, "IsIconic", return_value=1), \
+             unittest.mock.patch.object(win32_mod.user32, "ShowWindow") as mock_show, \
+             unittest.mock.patch.object(win32_mod.user32, "ShowWindowAsync") as mock_show_async, \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowPlacement") as mock_gwp, \
+             unittest.mock.patch.object(win32_mod.user32, "SetForegroundWindow", return_value=1), \
+             unittest.mock.patch.object(win32_mod.user32, "BringWindowToTop", return_value=1):
+
+            def fake_gwp(hwnd, wp_ptr):
+                # Normal unmaximized window (flags = 0, showCmd = 1)
+                wp = getattr(wp_ptr, "_obj", getattr(wp_ptr, "contents", None))
+                if wp:
+                    wp.flags = 0
+                    wp.showCmd = 1
+                return 1
+
+            mock_gwp.side_effect = fake_gwp
+            res = AntigravityWindowManager.bring_to_foreground(dummy_hwnd)
+            self.assertTrue(res)
+            # Must call ShowWindow(dummy_hwnd, 9) (SW_RESTORE) and ShowWindowAsync(dummy_hwnd, 9)
+            mock_show.assert_called_with(dummy_hwnd, 9)
+            mock_show_async.assert_called_with(dummy_hwnd, 9)
+
+    def test_ocr_decision_modal_rejects_plain_chat_without_submit(self):
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "Recommended"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        img_chat = Image.new("RGB", (600, 300), color=(30, 30, 46))
+        d = ImageDraw.Draw(img_chat)
+        d.text((40, 40), "Option 1: (Recommended) GitHub Commit Push", fill=(255, 255, 255))
+        d.text((40, 80), "Option 2: Cancel and review changes manually", fill=(200, 200, 200))
+        d.text((40, 130), "Just conversational text with no interactive submit button.", fill=(180, 180, 180))
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
+            match = detector.scan_decision_modal_on_image(img_chat, require_submit=True)
+            self.assertIsNone(match, "Plain chat without submit button must be strictly rejected!")
+
+    def test_ocr_decision_modal_detects_prompt_with_submit(self):
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "Recommended"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        img_modal = Image.new("RGB", (600, 350), color=(30, 30, 46))
+        d = ImageDraw.Draw(img_modal)
+        d.text((40, 40), "Select an option:", fill=(255, 255, 255))
+        d.text((40, 90), "o (Recommended) GitHub Commit Push", fill=(166, 227, 161))
+        d.text((40, 130), "o Cancel inspection", fill=(200, 200, 200))
+        d.rectangle([40, 190, 140, 225], fill=(137, 180, 250))
+        d.text((55, 200), "Submit", fill=(0, 0, 0))
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
+            match = detector.scan_decision_modal_on_image(img_modal, require_submit=True)
+            self.assertIsNotNone(match, "Interactive modal with Submit button must be detected!")
+            opt, sub = match
+            self.assertIn("Recommended", opt.label)
+            self.assertEqual(sub.label, "Submit")
+            self.assertGreater(sub.y, opt.y)
+
+
+    def test_find_antigravity_window_when_minimized(self):
+        dummy_hwnd = 98765
+        with unittest.mock.patch.object(win32_mod.user32, "IsIconic", return_value=1), \
+             unittest.mock.patch.object(win32_mod.user32, "IsWindowVisible", return_value=1), \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowTextLengthW", return_value=11), \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowTextW", side_effect=lambda h, buf, l: setattr(buf, "value", "Antigravity")), \
+             unittest.mock.patch.object(win32_mod.user32, "GetClassNameW", side_effect=lambda h, buf, l: setattr(buf, "value", "Chrome_WidgetWin_1")), \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowThreadProcessId", side_effect=lambda h, ptr: None), \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowPlacement") as mock_gwp, \
+             unittest.mock.patch.object(win32_mod.user32, "GetWindowRect") as mock_gwr, \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_process_image_path", return_value=("antigravity.exe", "C:\\Antigravity.exe")), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_own_process_family_pids", return_value=set()):
+
+            # When minimized, GetWindowRect returns (-32000, -32000) with small dims (160x30)
+            def fake_gwr(h, rect_ptr):
+                r = rect_ptr._obj
+                r.left = -32000
+                r.top = -32000
+                r.right = -31840
+                r.bottom = -31970
+                return 1
+
+            # GetWindowPlacement returns normal restored dimensions (1920x1080)
+            def fake_gwp(h, wp_ptr):
+                wp = getattr(wp_ptr, "_obj", getattr(wp_ptr, "contents", None))
+                if wp:
+                    wp.flags = 2
+                    wp.showCmd = 3
+                    wp.rcNormalPosition.left = 0
+                    wp.rcNormalPosition.top = 0
+                    wp.rcNormalPosition.right = 1920
+                    wp.rcNormalPosition.bottom = 1080
+                return 1
+
+            mock_gwr.side_effect = fake_gwr
+            mock_gwp.side_effect = fake_gwp
+
+            # Mock EnumWindows to invoke the callback with dummy_hwnd
+            def fake_enum(cb, lparam):
+                cb(dummy_hwnd, lparam)
+                return 1
+
+            with unittest.mock.patch.object(win32_mod.user32, "EnumDesktopWindows", side_effect=lambda h, cb, l: fake_enum(cb, l)), \
+                 unittest.mock.patch.object(win32_mod.user32, "EnumWindows", side_effect=fake_enum):
+                found_hwnd = AntigravityWindowManager.find_antigravity_window()
+                self.assertEqual(found_hwnd, dummy_hwnd, "Minimized Antigravity window must be detected!")
+
 
 if __name__ == "__main__":
     unittest.main()

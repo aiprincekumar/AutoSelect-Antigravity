@@ -26,37 +26,66 @@ class MultiEngineDetector:
         self.ocr_detector = WindowsOcrDetector(config.target_keywords, ocr_enabled=config.ocr_enabled)
         self.uia_detector = UIAutomationDetector(config.window_title_filter, config.target_keywords)
         self.vision_detector = VisionDetector(target_keywords=config.target_keywords)
+        self.last_detected_submit: Optional[DetectionResult] = None
 
     def detect(self, target_hwnd: Optional[int] = None) -> Optional[DetectionResult]:
-        """Detects the (Recommended) option modal on screen."""
+        """
+        Detects an interactive decision modal on screen.
+        Requires presence of an interactive Submit/Confirm button (when require_submit_button is True)
+        to prevent false positives on plain static chat text.
+        """
         mode = self.config.detection_mode.lower()
+        self.last_detected_submit = None
+        require_submit = getattr(self.config, "require_submit_button", True)
 
-        # Strategy 1: Windows Native OCR (Fastest & most robust)
+        # Strategy 1: Windows Native OCR (Fastest, most robust & font-invariant)
         if mode in ("auto", "ocr"):
             if self.ocr_detector.is_available():
-                res = self.ocr_detector.scan(target_hwnd=target_hwnd)
-                if res:
-                    return res
+                modal_pair = self.ocr_detector.scan_decision_modal(
+                    target_hwnd=target_hwnd,
+                    target_keywords=self.config.target_keywords,
+                    submit_keywords=self.config.submit_keywords,
+                    require_submit=require_submit,
+                )
+                if modal_pair:
+                    opt_res, sub_res = modal_pair
+                    self.last_detected_submit = sub_res
+                    return opt_res
 
         # Strategy 2: UIAutomation Tree Search
         if mode in ("auto", "uia"):
-            res = self.uia_detector.scan()
-            if res:
-                return res
+            opt_res = self.uia_detector.scan()
+            if opt_res:
+                sub_res = self.uia_detector.find_by_keywords(self.config.submit_keywords)
+                if require_submit:
+                    if sub_res and sub_res.y >= opt_res.y - 15:
+                        self.last_detected_submit = sub_res
+                        return opt_res
+                else:
+                    self.last_detected_submit = sub_res
+                    return opt_res
 
         # Strategy 3: Computer Vision Multi-Scale Template Fallback
         if mode in ("auto", "vision"):
-            res = self.vision_detector.scan()
-            if res:
-                return res
+            opt_res = self.vision_detector.scan()
+            if opt_res:
+                if not require_submit:
+                    return opt_res
+                sub_res = self.detect_submit_button(option_result=opt_res)
+                if sub_res and sub_res.source != "LayoutInference":
+                    self.last_detected_submit = sub_res
+                    return opt_res
 
         return None
 
     def detect_submit_button(self, option_result: Optional[DetectionResult] = None) -> Optional[DetectionResult]:
         """
         Detects the 'Submit / पुष्टि करें' button on the active Antigravity modal.
-        Uses UIA -> OCR -> Layout Inference fallback.
+        Uses cached detection from detect() -> UIA -> OCR -> Layout Inference fallback.
         """
+        if self.last_detected_submit:
+            return self.last_detected_submit
+
         # 1. UIAutomation scan
         if self.config.detection_mode in ("auto", "uia"):
             res = self.uia_detector.find_by_keywords(self.config.submit_keywords)

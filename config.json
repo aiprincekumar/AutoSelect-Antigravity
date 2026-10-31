@@ -25,7 +25,11 @@
     "Confirm",
     "Proceed",
     "Submit / पुष्टि करें",
-    "जारी रखें"
+    "जारी रखें",
+    "Continue",
+    "Select",
+    "OK"
   ],
-  "detection_mode": "auto"
+  "detection_mode": "auto",
+  "require_submit_button": true
 }

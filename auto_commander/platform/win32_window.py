@@ -16,6 +16,32 @@ from auto_commander.models import Rect
 user32 = ctypes.windll.user32 if sys.platform == "win32" else None
 kernel32 = ctypes.windll.kernel32 if sys.platform == "win32" else None
 
+
+class WINDOWPLACEMENT(ctypes.Structure):
+    _fields_ = [
+        ("length", wintypes.UINT),
+        ("flags", wintypes.UINT),
+        ("showCmd", wintypes.UINT),
+        ("ptMinPosition", wintypes.POINT),
+        ("ptMaxPosition", wintypes.POINT),
+        ("rcNormalPosition", wintypes.RECT),
+    ]
+
+
+if user32:
+    user32.OpenInputDesktop.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    user32.OpenInputDesktop.restype = wintypes.HANDLE
+    user32.SetThreadDesktop.argtypes = [wintypes.HANDLE]
+    user32.SetThreadDesktop.restype = wintypes.BOOL
+    user32.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(WINDOWPLACEMENT)]
+    user32.GetWindowPlacement.restype = wintypes.BOOL
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+    user32.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindowAsync.restype = wintypes.BOOL
+    user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    user32.GetWindowRect.restype = wintypes.BOOL
+
 # Shell and system processes that must NEVER be targeted or brought to foreground
 BLACK_LISTED_PROCESS_NAMES = {
     "cmd.exe",
@@ -261,20 +287,35 @@ class AntigravityWindowManager:
             # Case 2: Production Antigravity IDE detection
             is_antigravity_proc = any(target in pname for target in cls.PROCESS_NAMES)
             if is_antigravity_proc:
-                # Minimum size filter: ignore tiny utility / tray / message-only windows
-                if width >= 300 and height >= 200:
+                is_iconic = bool(user32.IsIconic(hwnd))
+
+                # For minimized windows, rect from GetWindowRect is (-32000, -32000) with small dims (~160x30).
+                # Retrieve normal restored dimensions via GetWindowPlacement
+                normal_w = width
+                normal_h = height
+                if is_iconic:
+                    wp = WINDOWPLACEMENT()
+                    wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+                    if user32.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                        normal_w = wp.rcNormalPosition.right - wp.rcNormalPosition.left
+                        normal_h = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top
+
+                # Check minimum size: either current dimensions or normal placement if iconic
+                if (width >= 300 and height >= 200) or (is_iconic and (normal_w >= 300 and normal_h >= 200 or normal_w == 0)):
                     priority = 50
                     # Electron top-level window class
                     if cls_name == "Chrome_WidgetWin_1":
                         priority += 20
                     # If window is visible and not minimized, higher priority
-                    if user32.IsWindowVisible(hwnd) and not user32.IsIconic(hwnd):
+                    if user32.IsWindowVisible(hwnd) and not is_iconic:
                         priority += 10
+                    elif is_iconic:
+                        priority += 8  # Prioritize minimized top-level Antigravity window
                     matched_hwnds.append((priority, hwnd))
                     return 1
 
             # Case 3: Title filter fallback (if specified and not blacklisted)
-            if title_filter and title_filter.lower() in title_lower and width >= 300 and height >= 200:
+            if title_filter and title_filter.lower() in title_lower and ((width >= 300 and height >= 200) or user32.IsIconic(hwnd)):
                 matched_hwnds.append((30, hwnd))
 
             return 1
@@ -390,18 +431,39 @@ class AntigravityWindowManager:
         """
         Safely brings ONLY the target window to the foreground.
         NEVER minimizes or touches other windows.
-        If minimized, calls SW_RESTORE.
+        If minimized, restores using WINDOWPLACEMENT to preserve maximized state (SW_MAXIMIZE or SW_RESTORE).
         """
         if not hwnd or not user32 or not kernel32:
             return False
         try:
             cls.attach_to_input_desktop()
 
-            # Only restore if minimized
+            # Restore minimized window using WINDOWPLACEMENT to preserve maximized state
             if user32.IsIconic(hwnd):
-                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                wp = WINDOWPLACEMENT()
+                wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+                was_maximized = False
+                if user32.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                    # WPF_RESTORETOMAXIMIZED = 0x0002
+                    # SW_SHOWMAXIMIZED = 3
+                    if (wp.flags & 0x0002) or wp.showCmd == 3:
+                        was_maximized = True
+
+                cmd = 3 if was_maximized else 9  # SW_MAXIMIZE=3, SW_RESTORE=9
+                user32.ShowWindow(hwnd, cmd)
+                user32.ShowWindowAsync(hwnd, cmd)
             else:
                 user32.ShowWindow(hwnd, 5)  # SW_SHOW
+                user32.ShowWindowAsync(hwnd, 5)
+
+            # Unlock foreground lock via null Alt key tap
+            VK_MENU = 0x12
+            KEYEVENTF_KEYUP = 0x0002
+            try:
+                user32.keybd_event(VK_MENU, 0, 0, 0)
+                user32.keybd_event(VK_MENU, 0, KEYEVENTF_KEYUP, 0)
+            except Exception:
+                pass
 
             cur_thread = kernel32.GetCurrentThreadId()
             fg_hwnd = user32.GetForegroundWindow()
@@ -416,7 +478,7 @@ class AntigravityWindowManager:
                 user32.BringWindowToTop(hwnd)
                 user32.SetForegroundWindow(hwnd)
 
-            time.sleep(0.12)
+            time.sleep(0.15)
             return True
         except Exception:
             return False
@@ -441,6 +503,7 @@ class AntigravityWindowManager:
                 cls.bring_to_foreground(hwnd)
                 return True, "Antigravity background window brought to foreground.", hwnd
             else:
+                cls.attach_to_input_desktop()
                 return True, "Antigravity active in foreground.", hwnd
 
         if proc_running:
