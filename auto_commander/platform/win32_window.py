@@ -345,22 +345,43 @@ class AntigravityWindowManager:
         return None
 
     @classmethod
-    def validate_click_target(cls, x: int, y: int, target_hwnd: Optional[int] = None) -> Tuple[bool, str]:
+    def validate_click_target(
+        cls,
+        x: int,
+        y: int,
+        target_hwnd: Optional[int] = None,
+        is_demo: bool = False,
+    ) -> Tuple[bool, str]:
         """
         Validates that click coordinates:
-        1. Do NOT fall inside own console window (prevents clicking cmd.exe).
-        2. Strictly fall inside the target window's bounding box if target_hwnd is provided.
+        1. When is_demo=True or targeting demo window: verifies coordinates fall within demo window bounds and permits click even if console is behind it.
+        2. In standard mode: strictly checks that coordinates do NOT fall inside own console window (prevents clicking cmd.exe).
+        3. Strictly fall inside the target window's bounding box if target_hwnd is provided.
         """
-        # Check console boundary
+        target_rect = cls.get_window_rect(target_hwnd) if target_hwnd else None
+
+        # Check target window boundary if provided
+        if target_hwnd and target_rect:
+            if not target_rect.contains(x, y):
+                return False, f"Click at ({x}, {y}) is outside target window bounds ({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety."
+            if is_demo:
+                # Topmost demo modal is valid and intended even if console window is underneath
+                return True, "Click target coordinate valid (Demo Mode target window validated)."
+
+        # Fallback check for demo mode without explicit target_rect
+        if is_demo and not target_rect:
+            demo_hwnd = cls.find_antigravity_window(is_demo=True)
+            if demo_hwnd:
+                d_rect = cls.get_window_rect(demo_hwnd)
+                if d_rect and d_rect.contains(x, y):
+                    return True, "Click target coordinate valid (Demo Mode window verified)."
+
+        # Check console boundary for self-click prevention
         console_rect = cls.get_console_window_rect()
         if console_rect and console_rect.contains(x, y):
+            if is_demo and target_rect and target_rect.contains(x, y):
+                return True, "Click target coordinate valid (Demo Mode target window override)."
             return False, f"Click at ({x}, {y}) falls inside console window! Blocked to prevent self-clicking."
-
-        # Check target window boundary
-        if target_hwnd:
-            target_rect = cls.get_window_rect(target_hwnd)
-            if target_rect and not target_rect.contains(x, y):
-                return False, f"Click at ({x}, {y}) is outside target window bounds ({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety."
 
         return True, "Click target coordinate valid."
 

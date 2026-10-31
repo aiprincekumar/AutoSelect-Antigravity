@@ -27,14 +27,14 @@ class MultiEngineDetector:
         self.uia_detector = UIAutomationDetector(config.window_title_filter, config.target_keywords)
         self.vision_detector = VisionDetector(target_keywords=config.target_keywords)
 
-    def detect(self) -> Optional[DetectionResult]:
+    def detect(self, target_hwnd: Optional[int] = None) -> Optional[DetectionResult]:
         """Detects the (Recommended) option modal on screen."""
         mode = self.config.detection_mode.lower()
 
         # Strategy 1: Windows Native OCR (Fastest & most robust)
         if mode in ("auto", "ocr"):
             if self.ocr_detector.is_available():
-                res = self.ocr_detector.scan()
+                res = self.ocr_detector.scan(target_hwnd=target_hwnd)
                 if res:
                     return res
 

@@ -130,7 +130,7 @@ class AutoCommanderEngine:
 
                     TerminalDashboard.render_scanning(tick)
 
-                    result = self.detector.detect()
+                    result = self.detector.detect(target_hwnd=self.active_hwnd)
                     if result:
                         TerminalDashboard.render_detected(result)
                         self._execute_countdown(result)

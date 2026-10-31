@@ -8,6 +8,7 @@ import math
 import os
 import sys
 import unittest
+from unittest import mock
 from PIL import Image, ImageDraw
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
@@ -209,6 +210,64 @@ class TestAutoCommander(unittest.TestCase):
         self.assertIs(TD, TerminalDashboard)
         self.assertIs(ACE, AutoCommanderEngine)
         self.assertTrue(callable(cli_main))
+
+    def test_validate_click_target_demo_mode_override(self):
+        dummy_demo_hwnd = 12345
+        demo_rect = Rect(200, 200, 500, 400)
+        console_rect = Rect(100, 100, 800, 600)
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
+            with unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", side_effect=lambda h: demo_rect if h == dummy_demo_hwnd else None):
+                # Point (350, 350) is inside both demo_rect and console_rect
+                # Under live mode (is_demo=False), it must be blocked to prevent self-clicking
+                valid_live, reason_live = AntigravityWindowManager.validate_click_target(350, 350, target_hwnd=dummy_demo_hwnd, is_demo=False)
+                self.assertFalse(valid_live)
+                self.assertIn("falls inside console window", reason_live)
+
+                # Under demo mode (is_demo=True), the topmost demo window bypasses console check
+                valid_demo, reason_demo = AntigravityWindowManager.validate_click_target(350, 350, target_hwnd=dummy_demo_hwnd, is_demo=True)
+                self.assertTrue(valid_demo)
+                self.assertIn("Demo Mode", reason_demo)
+
+                # Point (150, 150) is inside console_rect but OUTSIDE demo_rect
+                valid_outside, reason_outside = AntigravityWindowManager.validate_click_target(150, 150, target_hwnd=dummy_demo_hwnd, is_demo=True)
+                self.assertFalse(valid_outside)
+                self.assertIn("outside target window bounds", reason_outside)
+
+    def test_ocr_detector_console_masking_and_filtering(self):
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "Recommended"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        test_img = Image.new("RGB", (500, 150), color=(30, 30, 46))
+        draw = ImageDraw.Draw(test_img)
+        draw.text((40, 30), "Option 1: (Recommended) GitHub Commit Push", fill=(166, 227, 161))
+
+        # Case 1: Without console mask covering text, scan_image detects target
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
+            match = detector.scan_image(test_img, offset_x=0, offset_y=0)
+            self.assertIsNotNone(match)
+
+        # Case 2: With console mask covering the exact text area, OCR is blocked/masked out
+        console_rect = Rect(0, 0, 500, 150)
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
+            masked_match = detector.scan_image(test_img, offset_x=0, offset_y=0, mask_console=True)
+            self.assertIsNone(masked_match)
+
+    def test_mouse_controller_demo_mode_pass_through(self):
+        mouse_ctrl = MouseController(glide_duration=0.8, failsafe_enabled=True)
+        demo_rect = Rect(100, 100, 400, 300)
+        console_rect = Rect(50, 50, 500, 400)
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
+            with unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=demo_rect):
+                with unittest.mock.patch("pyautogui.moveTo") as mock_move, \
+                     unittest.mock.patch("pyautogui.mouseDown") as mock_down, \
+                     unittest.mock.patch("pyautogui.mouseUp") as mock_up:
+                    success = mouse_ctrl.firm_click(x=200, y=200, target_hwnd=999, is_demo=True)
+                    self.assertTrue(success)
+                    mock_down.assert_called_once()
+                    mock_up.assert_called_once()
 
     def test_floating_hud_initialization_and_lifecycle(self):
         hud = FloatingHUD(alpha=0.92)

@@ -34,7 +34,15 @@ def launch_simulator(countdown_seconds: float = 10.0):
     print("\n\033[96m[SIMULATION MODE] Launching mock Antigravity Decision Modal & Floating HUD (2-Step Flow)...\033[0m")
     root = tk.Tk()
     root.title("Antigravity - Interactive Decision Modal (Live Demo)")
-    root.geometry("700x460+300+180")
+    root.update_idletasks()
+
+    # Position demo window nicely centered on screen
+    screen_w = root.winfo_screenwidth()
+    screen_h = root.winfo_screenheight()
+    win_w, win_h = 700, 460
+    pos_x = max(0, (screen_w - win_w) // 2)
+    pos_y = max(0, (screen_h - win_h) // 2)
+    root.geometry(f"{win_w}x{win_h}+{pos_x}+{pos_y}")
     root.configure(bg="#1E1E2E")
     root.attributes("-topmost", True)
 
@@ -42,7 +50,8 @@ def launch_simulator(countdown_seconds: float = 10.0):
     sim_hwnd = None
     try:
         raw_hwnd = root.winfo_id()
-        sim_hwnd = ctypes.windll.user32.GetParent(raw_hwnd) or raw_hwnd
+        # GA_ROOT = 2 retrieves the root window handle for the specified window
+        sim_hwnd = ctypes.windll.user32.GetAncestor(raw_hwnd, 2) or ctypes.windll.user32.GetParent(raw_hwnd) or raw_hwnd
         AntigravityWindowManager.bring_to_foreground(sim_hwnd)
     except Exception:
         pass
@@ -195,10 +204,10 @@ def launch_simulator(countdown_seconds: float = 10.0):
     # Floating HUD overlay initialized to configured countdown duration
     hud = FloatingHUD(alpha=0.92)
     countdown_duration = float(countdown_seconds)
-    hud.show(countdown_duration, "Option 1: (Recommended) GitHub", master=root)
+    hud.show(countdown_duration, "Option 1: [Recommended Option] GitHub", master=root)
 
     start_time = time.time()
-    initial_mouse = pyautogui.position() if pyautogui else (0, 0)
+    initial_mouse = [None]
     cancelled = [False]
     mouse_ctrl = MouseController(glide_duration=0.8, failsafe_enabled=True)
 
@@ -214,13 +223,17 @@ def launch_simulator(countdown_seconds: float = 10.0):
         except Exception:
             pass
 
+        # Capture initial mouse position on first tick when window is shown and countdown starts
+        if pyautogui and initial_mouse[0] is None:
+            initial_mouse[0] = pyautogui.position()
+
         elapsed = time.time() - start_time
         remaining = max(0.0, countdown_duration - elapsed)
 
         # Check for user mouse movement fail-safe
-        if pyautogui:
+        if pyautogui and initial_mouse[0] is not None:
             curr_pos = pyautogui.position()
-            dist = math.hypot(curr_pos[0] - initial_mouse[0], curr_pos[1] - initial_mouse[1])
+            dist = math.hypot(curr_pos[0] - initial_mouse[0][0], curr_pos[1] - initial_mouse[0][1])
             if dist > 15:
                 cancelled[0] = True
                 hud.flash_cancelled()
@@ -237,8 +250,8 @@ def launch_simulator(countdown_seconds: float = 10.0):
             # -------------------------------------------------------------
             # STEP 1: Glide to Option 1 and Firm Click
             # -------------------------------------------------------------
-            hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding cursor smoothly to (Recommended)...", "#89B4FA")
-            status_lbl.config(text="[STEP 1/2] Gliding cursor to Option 1 (Recommended)...", fg="#89B4FA")
+            hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding cursor smoothly to [Recommended Option]...", "#89B4FA")
+            status_lbl.config(text="[STEP 1/2] Gliding cursor to Option 1 [Recommended Option]...", fg="#89B4FA")
             root.update_idletasks()
             opt1_frame.update_idletasks()
 
@@ -253,6 +266,7 @@ def launch_simulator(countdown_seconds: float = 10.0):
                 o1_y,
                 check_interrupted_fn=check_cancel,
                 target_hwnd=sim_hwnd,
+                is_demo=True,
             )
             if not success_step1:
                 hud.flash_cancelled()
@@ -280,6 +294,7 @@ def launch_simulator(countdown_seconds: float = 10.0):
                 sb_y,
                 check_interrupted_fn=check_cancel,
                 target_hwnd=sim_hwnd,
+                is_demo=True,
             )
             if success_step2:
                 hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")

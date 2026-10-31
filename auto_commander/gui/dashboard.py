@@ -27,7 +27,7 @@ class TerminalDashboard:
         banner = f"""
 {cls.CYAN}{cls.BOLD}╔══════════════════════════════════════════════════════════════════════════════╗
 ║                   AutoSelect-Commander for Antigravity                       ║
-║        Visual Mouse Automation & Autonomous (Recommended) Selector           ║
+║        Visual Mouse Automation & Autonomous [Recommended Option] Selector    ║
 ╚══════════════════════════════════════════════════════════════════════════════╝{cls.RESET}
  {cls.GREEN}● Status:{cls.RESET} Active Daemon Running       {cls.GREEN}● Failsafe:{cls.RESET} Instant Mouse Movement (> {config.mouse_interruption_threshold_px}px)
  {cls.GREEN}● Countdown:{cls.RESET} {config.countdown_seconds}s Timeout (2-Step)       {cls.GREEN}● Floating HUD:{cls.RESET} {'Enabled (Top-Most)' if config.floating_hud_enabled else 'Disabled'}
@@ -47,7 +47,8 @@ class TerminalDashboard:
     @classmethod
     def render_detected(cls, result: DetectionResult):
         cx, cy = result.center
-        print(f"\n{cls.GREEN}{cls.BOLD}[MODAL DETECTED]{cls.RESET} Engine: {cls.MAGENTA}{result.source}{cls.RESET} | Target: '{result.label}' at ({cx}, {cy})")
+        clean_label = result.label.replace("(Recommended)", "[Recommended Option]").replace("Recommended", "[Recommended Option]")
+        print(f"\n{cls.GREEN}{cls.BOLD}[MODAL DETECTED]{cls.RESET} Engine: {cls.MAGENTA}{result.source}{cls.RESET} | Target: '{clean_label}' at ({cx}, {cy})")
 
     @classmethod
     def render_countdown(cls, remaining: float, total: float, result: DetectionResult):
@@ -69,7 +70,8 @@ class TerminalDashboard:
 
     @classmethod
     def render_clicking(cls, step: int, total_steps: int, label: str, x: int, y: int):
-        print(f"\n{cls.CYAN}{cls.BOLD}[ACTION STEP {step}/{total_steps}]{cls.RESET} Gliding cursor smoothly to {label} at ({x}, {y}) and clicking...")
+        clean_label = label.replace("(Recommended)", "[Recommended Option]").replace("Recommended", "[Recommended Option]")
+        print(f"\n{cls.CYAN}{cls.BOLD}[ACTION STEP {step}/{total_steps}]{cls.RESET} Gliding cursor smoothly to {clean_label} at ({x}, {y}) and clicking...")
 
     @classmethod
     def render_completed(cls):
