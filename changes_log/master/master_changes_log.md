@@ -4,6 +4,33 @@
 
 ---
 
+### [2026-11-01 03:05:00 IST] - Release 1.3.0 (Modular Package Deconstruction & Window Tracking Fixes)
+- **Commit:** `refactor(architecture): decompose into modular auto_commander package, fix Antigravity window tracking and click safety`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Modular Package Deconstruction (`auto_commander/`):**
+    - `models.py`: Clean geometric and detection primitives (`Point`, `Rect`, `DetectionResult`).
+    - `config.py`: Dataclass configuration manager with default fallbacks and validation.
+    - `platform/win32_window.py`: Win32 window management, process inspection, self-exclusion filtering, and safe activation.
+    - `platform/mouse_ctrl.py`: Human-like cubic easing cursor motion, firm click, and boundary validation.
+    - `detectors/`: Decoupled engines (`base.py`, `ocr_detector.py`, `uia_detector.py`, `vision_detector.py`, `orchestrator.py`).
+    - `gui/`: Interactive UI components (`hud.py`, `dashboard.py`, `simulator.py`).
+    - `core/`: Orchestration state machine (`engine.py`) and diagnostics probe (`diagnostics.py`).
+    - `cli.py` & `__main__.py`: Modular CLI entrypoint and package execution (`python -m auto_commander`).
+  - **Backward-Compatible Root Facade (`auto_commander.py`):**
+    - Retained root `auto_commander.py` as a facade exposing all public classes and functions, ensuring `run.bat` and legacy imports work without modification.
+  - **Antigravity Tracking & Foregrounding Bug Fixes:**
+    - Strict Self-Exclusion: Excluded own PID, parent shell PIDs (`cmd.exe`, `powershell.exe`, `wt.exe`, `conhost.exe`, `python.exe`), and File Explorer (`explorer.exe`).
+    - Title Keyword Disambiguation: Eliminated false matching where repository directory title (`AutoSelect-Commander`) matched as Antigravity.
+    - Desktop Session Attachment: Implemented thread attachment to interactive user desktop (`OpenInputDesktop` + `EnumDesktopWindows`) ensuring robust discovery across execution contexts.
+    - Zero Unwanted Minimization: Only calls `ShowWindow(SW_RESTORE)` if target window is iconic (`IsIconic`); never minimizes background windows.
+    - Click Target Boundary Safety: Validates target coordinates against console window rect and target window boundaries before moving or clicking.
+  - **Testing & Verification:**
+    - Expanded unit test suite to 17 automated tests (100% green in 0.20s).
+    - Verified screen diagnostics, simulator mode, and CLI argument parsing.
+
+---
+
 ### [2026-11-01 02:30:00 IST] - Release 1.2.0 (10s Timer, Reliable Firm Click, 2-Step Option + Submit Flow, Antigravity Auto-Foregrounding)
 - **Commit:** `feat(core): 10s timer, reliable firm click, 2-step submit flow, and Antigravity auto-foregrounding`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)

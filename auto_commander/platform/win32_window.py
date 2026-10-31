@@ -1,0 +1,428 @@
+# -*- coding: utf-8 -*-
+"""
+Win32 window detection, self-exclusion filtering, and safe foreground activation.
+"""
+
+import ctypes
+from ctypes import wintypes
+import os
+import sys
+import time
+from typing import List, Optional, Set, Tuple
+
+from auto_commander.models import Rect
+
+# Ensure Win32 types
+user32 = ctypes.windll.user32 if sys.platform == "win32" else None
+kernel32 = ctypes.windll.kernel32 if sys.platform == "win32" else None
+
+# Shell and system processes that must NEVER be targeted or brought to foreground
+BLACK_LISTED_PROCESS_NAMES = {
+    "cmd.exe",
+    "powershell.exe",
+    "pwsh.exe",
+    "conhost.exe",
+    "wt.exe",
+    "windowsterminal.exe",
+    "explorer.exe",
+    "python.exe",
+    "pythonw.exe",
+}
+
+# Substrings that must NEVER match as real Antigravity IDE
+EXCLUDED_WINDOW_TITLE_KEYWORDS = {
+    "autoselect-commander",
+    "command prompt",
+    "windows powershell",
+    "file explorer",
+}
+
+
+class AntigravityWindowManager:
+    """
+    Win32 Window Manager dedicated to locating, verifying, and safely foregrounding
+    the true Antigravity IDE process and window, with strict self-exclusion to prevent
+    targeting cmd.exe, PowerShell, File Explorer, or itself.
+    """
+
+    PROCESS_NAMES = ("antigravity.exe", "antigravity")
+    DEMO_WINDOW_TITLE_KEYWORDS = (
+        "antigravity - interactive decision modal",
+        "antigravity decision simulator",
+        "interactive decision modal (live demo)",
+    )
+
+    @classmethod
+    def attach_to_input_desktop(cls) -> bool:
+        """
+        Attaches the current thread to the interactive user desktop (WinSta0\\Default).
+        Crucial when running from background sessions, subagents, or elevated harnesses.
+        """
+        if not user32:
+            return False
+        try:
+            h_input = user32.OpenInputDesktop(0, False, 0x01FF)
+            if h_input:
+                user32.SetThreadDesktop(h_input)
+                return True
+        except Exception:
+            pass
+        return False
+
+    @classmethod
+    def get_own_process_family_pids(cls) -> Set[int]:
+        """
+        Retrieves own PID and immediate console/shell parent PIDs (e.g. cmd.exe, wt.exe, python.exe)
+        so they can never be targeted or confused with Antigravity.
+        NEVER blacklists Antigravity itself even if Antigravity launched the sub-shell.
+        """
+        pids = {os.getpid()}
+        if not kernel32:
+            return pids
+
+        try:
+            TH32CS_SNAPPROCESS = 0x00000002
+
+            class PROCESSENTRY32W(ctypes.Structure):
+                _fields_ = [
+                    ("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", wintypes.WCHAR * 260),
+                ]
+
+            h_snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+            if h_snap != -1:
+                pe = PROCESSENTRY32W()
+                pe.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+                parent_map = {}
+                name_map = {}
+                has_next = kernel32.Process32FirstW(h_snap, ctypes.byref(pe))
+                while has_next:
+                    parent_map[pe.th32ProcessID] = pe.th32ParentProcessID
+                    name_map[pe.th32ProcessID] = pe.szExeFile.lower()
+                    has_next = kernel32.Process32NextW(h_snap, ctypes.byref(pe))
+                kernel32.CloseHandle(h_snap)
+
+                curr = os.getpid()
+                depth = 0
+                while curr in parent_map and depth < 6:
+                    curr = parent_map[curr]
+                    exe_name = name_map.get(curr, "")
+                    # NEVER blacklist Antigravity IDE itself!
+                    if any(target in exe_name for target in cls.PROCESS_NAMES):
+                        break
+                    # Only blacklist shells and script interpreters
+                    if exe_name in BLACK_LISTED_PROCESS_NAMES:
+                        pids.add(curr)
+                    depth += 1
+        except Exception:
+            pass
+        return pids
+
+    @classmethod
+    def get_process_image_path(cls, pid: int) -> Tuple[str, str]:
+        """Returns (process_name, full_executable_path) for a given PID."""
+        if not kernel32 or not pid:
+            return "", ""
+        try:
+            h_proc = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if not h_proc:
+                return "", ""
+            buf = ctypes.create_unicode_buffer(1024)
+            size = wintypes.DWORD(1024)
+            if kernel32.QueryFullProcessImageNameW(h_proc, 0, buf, ctypes.byref(size)):
+                full_path = buf.value
+                name = os.path.basename(full_path).lower()
+                kernel32.CloseHandle(h_proc)
+                return name, full_path
+            kernel32.CloseHandle(h_proc)
+        except Exception:
+            pass
+        return "", ""
+
+    @classmethod
+    def is_process_running(cls) -> bool:
+        """Checks if the Antigravity IDE executable is running in the Windows process table."""
+        if not kernel32:
+            return False
+        try:
+            TH32CS_SNAPPROCESS = 0x00000002
+
+            class PROCESSENTRY32W(ctypes.Structure):
+                _fields_ = [
+                    ("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", wintypes.WCHAR * 260),
+                ]
+
+            h_snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+            if h_snap != -1:
+                pe = PROCESSENTRY32W()
+                pe.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+                has_next = kernel32.Process32FirstW(h_snap, ctypes.byref(pe))
+                found = False
+                while has_next:
+                    exe = pe.szExeFile.lower()
+                    for target in cls.PROCESS_NAMES:
+                        if target in exe:
+                            found = True
+                            break
+                    if found:
+                        break
+                    has_next = kernel32.Process32NextW(h_snap, ctypes.byref(pe))
+                kernel32.CloseHandle(h_snap)
+                return found
+        except Exception:
+            pass
+        return False
+
+    @classmethod
+    def find_antigravity_window(cls, is_demo: bool = False, title_filter: str = "") -> Optional[int]:
+        """
+        Locates the exact HWND for Antigravity IDE or Demo Simulator window.
+        Strictly excludes cmd.exe, PowerShell, File Explorer, and own processes.
+        """
+        if not user32:
+            return None
+
+        h_input = None
+        try:
+            h_input = user32.OpenInputDesktop(0, False, 0x01FF)
+            if h_input:
+                user32.SetThreadDesktop(h_input)
+        except Exception:
+            h_input = None
+
+        blacklisted_pids = cls.get_own_process_family_pids()
+        matched_hwnds: List[Tuple[int, int]] = []  # (priority, hwnd)
+
+        def enum_cb(hwnd, lparam):
+            if not (user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd)):
+                return 1
+
+            # Get PID
+            pid = wintypes.DWORD()
+            user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+            if pid.value in blacklisted_pids:
+                return 1
+
+            # Get process image name
+            pname, _ = cls.get_process_image_path(pid.value)
+            if pname in BLACK_LISTED_PROCESS_NAMES:
+                return 1
+
+            # Get window title
+            length = user32.GetWindowTextLengthW(hwnd)
+            title = ""
+            if length > 0:
+                buf = ctypes.create_unicode_buffer(length + 1)
+                user32.GetWindowTextW(hwnd, buf, length + 1)
+                title = buf.value
+            title_lower = title.lower()
+
+            # Enforce self-exclusion on title
+            if any(k in title_lower for k in EXCLUDED_WINDOW_TITLE_KEYWORDS):
+                # Only accept if strictly in demo mode and this is the simulator modal
+                if not (is_demo and any(dk in title_lower for dk in cls.DEMO_WINDOW_TITLE_KEYWORDS)):
+                    return 1
+
+            # Get window class
+            class_buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, class_buf, 256)
+            cls_name = class_buf.value
+
+            # Get window rect
+            rect = wintypes.RECT()
+            user32.GetWindowRect(hwnd, ctypes.byref(rect))
+            width = rect.right - rect.left
+            height = rect.bottom - rect.top
+
+            # Case 1: In Demo mode, locate the Simulator window
+            if is_demo:
+                if any(dk in title_lower for dk in cls.DEMO_WINDOW_TITLE_KEYWORDS):
+                    matched_hwnds.append((100, hwnd))
+                    return 0  # Found exact demo target
+                return 1
+
+            # Case 2: Production Antigravity IDE detection
+            is_antigravity_proc = any(target in pname for target in cls.PROCESS_NAMES)
+            if is_antigravity_proc:
+                # Minimum size filter: ignore tiny utility / tray / message-only windows
+                if width >= 300 and height >= 200:
+                    priority = 50
+                    # Electron top-level window class
+                    if cls_name == "Chrome_WidgetWin_1":
+                        priority += 20
+                    # If window is visible and not minimized, higher priority
+                    if user32.IsWindowVisible(hwnd) and not user32.IsIconic(hwnd):
+                        priority += 10
+                    matched_hwnds.append((priority, hwnd))
+                    return 1
+
+            # Case 3: Title filter fallback (if specified and not blacklisted)
+            if title_filter and title_filter.lower() in title_lower and width >= 300 and height >= 200:
+                matched_hwnds.append((30, hwnd))
+
+            return 1
+
+        WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
+        cb_func = WNDENUMPROC(enum_cb)
+        if h_input:
+            user32.EnumDesktopWindows.argtypes = [wintypes.HANDLE, WNDENUMPROC, wintypes.LPARAM]
+            user32.EnumDesktopWindows(h_input, cb_func, 0)
+        else:
+            user32.EnumWindows(cb_func, 0)
+
+        if matched_hwnds:
+            matched_hwnds.sort(key=lambda item: item[0], reverse=True)
+            return matched_hwnds[0][1]
+
+        return None
+
+    @classmethod
+    def is_minimized(cls, hwnd: int) -> bool:
+        """Returns True if the window is currently minimized (iconic)."""
+        if not hwnd or not user32:
+            return False
+        try:
+            return bool(user32.IsIconic(hwnd))
+        except Exception:
+            return False
+
+    @classmethod
+    def is_foreground(cls, hwnd: int) -> bool:
+        """Returns True if the window is currently in the active foreground."""
+        if not hwnd or not user32:
+            return False
+        try:
+            return user32.GetForegroundWindow() == hwnd
+        except Exception:
+            return False
+
+    @classmethod
+    def get_window_rect(cls, hwnd: int) -> Optional[Rect]:
+        """Returns the bounding Rect of a window."""
+        if not hwnd or not user32:
+            return None
+        try:
+            rect = wintypes.RECT()
+            if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                return Rect(
+                    x=rect.left,
+                    y=rect.top,
+                    width=rect.right - rect.left,
+                    height=rect.bottom - rect.top,
+                )
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def get_console_window_rect(cls) -> Optional[Rect]:
+        """Returns the bounding Rect of own console/terminal window to prevent self-clicks."""
+        if not kernel32:
+            return None
+        try:
+            h_console = kernel32.GetConsoleWindow()
+            if h_console and user32 and user32.IsWindowVisible(h_console):
+                return cls.get_window_rect(h_console)
+        except Exception:
+            pass
+        return None
+
+    @classmethod
+    def validate_click_target(cls, x: int, y: int, target_hwnd: Optional[int] = None) -> Tuple[bool, str]:
+        """
+        Validates that click coordinates:
+        1. Do NOT fall inside own console window (prevents clicking cmd.exe).
+        2. Strictly fall inside the target window's bounding box if target_hwnd is provided.
+        """
+        # Check console boundary
+        console_rect = cls.get_console_window_rect()
+        if console_rect and console_rect.contains(x, y):
+            return False, f"Click at ({x}, {y}) falls inside console window! Blocked to prevent self-clicking."
+
+        # Check target window boundary
+        if target_hwnd:
+            target_rect = cls.get_window_rect(target_hwnd)
+            if target_rect and not target_rect.contains(x, y):
+                return False, f"Click at ({x}, {y}) is outside target window bounds ({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety."
+
+        return True, "Click target coordinate valid."
+
+    @classmethod
+    def bring_to_foreground(cls, hwnd: int) -> bool:
+        """
+        Safely brings ONLY the target window to the foreground.
+        NEVER minimizes or touches other windows.
+        If minimized, calls SW_RESTORE.
+        """
+        if not hwnd or not user32 or not kernel32:
+            return False
+        try:
+            cls.attach_to_input_desktop()
+
+            # Only restore if minimized
+            if user32.IsIconic(hwnd):
+                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+            else:
+                user32.ShowWindow(hwnd, 5)  # SW_SHOW
+
+            cur_thread = kernel32.GetCurrentThreadId()
+            fg_hwnd = user32.GetForegroundWindow()
+            fg_thread = user32.GetWindowThreadProcessId(fg_hwnd, None) if fg_hwnd else 0
+
+            if fg_thread and fg_thread != cur_thread:
+                user32.AttachThreadInput(cur_thread, fg_thread, True)
+                user32.BringWindowToTop(hwnd)
+                user32.SetForegroundWindow(hwnd)
+                user32.AttachThreadInput(cur_thread, fg_thread, False)
+            else:
+                user32.BringWindowToTop(hwnd)
+                user32.SetForegroundWindow(hwnd)
+
+            time.sleep(0.12)
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def check_and_foreground(cls, is_demo: bool = False, title_filter: str = "") -> Tuple[bool, str, Optional[int]]:
+        """
+        Verifies if Antigravity is open/running and brings it to foreground if minimized or in background.
+        Returns: (is_ready, message, hwnd)
+        """
+        proc_running = cls.is_process_running()
+        hwnd = cls.find_antigravity_window(is_demo=is_demo, title_filter=title_filter)
+
+        if not proc_running and not hwnd and not is_demo:
+            return False, "एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)", None
+
+        if hwnd:
+            if cls.is_minimized(hwnd):
+                cls.bring_to_foreground(hwnd)
+                return True, "Antigravity minimized window restored to foreground.", hwnd
+            elif not cls.is_foreground(hwnd):
+                cls.bring_to_foreground(hwnd)
+                return True, "Antigravity background window brought to foreground.", hwnd
+            else:
+                return True, "Antigravity active in foreground.", hwnd
+
+        if proc_running:
+            return True, "Antigravity process is active.", None
+
+        return False, "Target window not found.", None

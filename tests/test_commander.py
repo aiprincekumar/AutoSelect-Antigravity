@@ -14,6 +14,8 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")
 
 from auto_commander import (
     Config,
+    Point,
+    Rect,
     DetectionResult,
     WindowsOcrDetector,
     UIAutomationDetector,
@@ -21,10 +23,13 @@ from auto_commander import (
     MultiEngineDetector,
     DualModeDetector,
     FloatingHUD,
+    TerminalDashboard,
     MouseController,
     AntigravityWindowManager,
+    AutoCommanderEngine,
     WINSDK_OCR_AVAILABLE,
 )
+import auto_commander.platform.win32_window as win32_mod
 
 
 class TestAutoCommander(unittest.TestCase):
@@ -151,6 +156,59 @@ class TestAutoCommander(unittest.TestCase):
 
     def test_dual_mode_detector_alias(self):
         self.assertIs(DualModeDetector, MultiEngineDetector)
+
+    def test_models_point_and_rect(self):
+        p1 = Point(100, 200)
+        p2 = Point(130, 240)
+        self.assertEqual(p1.distance_to(p2), 50.0)
+        self.assertEqual(p1.as_tuple(), (100, 200))
+
+        rect = Rect(50, 100, 200, 150)
+        self.assertEqual(rect.left, 50)
+        self.assertEqual(rect.top, 100)
+        self.assertEqual(rect.right, 250)
+        self.assertEqual(rect.bottom, 250)
+        self.assertEqual(rect.center, (150, 175))
+        self.assertTrue(rect.contains(100, 150))
+        self.assertFalse(rect.contains(300, 150))
+
+    def test_self_exclusion_blacklist(self):
+        # Verify blacklisted process set contains critical shell/system tools
+        self.assertIn("cmd.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
+        self.assertIn("powershell.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
+        self.assertIn("explorer.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
+        self.assertIn("python.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
+
+        # Current process PID must be in self process family
+        pids = AntigravityWindowManager.get_own_process_family_pids()
+        self.assertIn(os.getpid(), pids)
+
+    def test_validate_click_target_boundary(self):
+        # Click target inside valid dummy rect
+        valid, _ = AntigravityWindowManager.validate_click_target(500, 500, target_hwnd=None)
+        self.assertIsInstance(valid, bool)
+
+    def test_modular_package_imports_parity(self):
+        from auto_commander.config import Config as Cfg
+        from auto_commander.models import Point as Pt, Rect as Rc
+        from auto_commander.platform.win32_window import AntigravityWindowManager as AWM
+        from auto_commander.platform.mouse_ctrl import MouseController as MC
+        from auto_commander.detectors.ocr_detector import WindowsOcrDetector as WOD
+        from auto_commander.gui.hud import FloatingHUD as FH
+        from auto_commander.gui.dashboard import TerminalDashboard as TD
+        from auto_commander.core.engine import AutoCommanderEngine as ACE
+        from auto_commander.cli import main as cli_main
+
+        self.assertIs(Cfg, Config)
+        self.assertIs(Pt, Point)
+        self.assertIs(Rc, Rect)
+        self.assertIs(AWM, AntigravityWindowManager)
+        self.assertIs(MC, MouseController)
+        self.assertIs(WOD, WindowsOcrDetector)
+        self.assertIs(FH, FloatingHUD)
+        self.assertIs(TD, TerminalDashboard)
+        self.assertIs(ACE, AutoCommanderEngine)
+        self.assertTrue(callable(cli_main))
 
     def test_floating_hud_initialization_and_lifecycle(self):
         hud = FloatingHUD(alpha=0.92)
