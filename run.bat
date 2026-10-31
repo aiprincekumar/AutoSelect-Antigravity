@@ -71,8 +71,11 @@ if not exist ".venv\.installed_v2" (
     echo.
 )
 
-:: 4. If command-line arguments are provided, bypass menu and run directly
+:: 4. If command-line arguments are provided, handle numeric shortcuts or pass flags directly
 if not "%~1"=="" (
+    if "%~1"=="1" goto RUN_DEMO
+    if "%~1"=="2" goto RUN_SENTINEL
+    if "%~1"=="3" goto RUN_DIAGNOSTICS
     ".venv\Scripts\python.exe" auto_commander.py %*
     goto FINISH
 )

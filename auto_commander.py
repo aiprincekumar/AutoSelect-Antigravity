@@ -6,19 +6,22 @@ AutoSelect-Commander: Visual Mouse Automation & Auto-Selector for Antigravity
 ===============================================================================
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Repository: C:\Users\Atul Verma\Desktop\AutoSelect-Commander\
-Version: 1.1.0
+Version: 1.2.0
 Description:
     Autonomous visual daemon that monitors the desktop surface for Antigravity
     interactive decision modals ('ask_question' cards), displays an on-screen
     floating HUD overlay and terminal countdown with instant mouse fail-safe,
-    and smoothly glides the mouse cursor using cubic easing to auto-select
-    '(Recommended)' options.
+    auto-foregrounds minimized or background Antigravity windows, and smoothly
+    glides the mouse cursor using cubic easing to perform the complete 2-step flow:
+    Step 1: Select '(Recommended)' option with a firm click.
+    Step 2: Confirm and submit via 'Submit / पुष्टि करें' button.
 ===============================================================================
 """
 
 import argparse
 import asyncio
 import ctypes
+from ctypes import wintypes
 import difflib
 import io
 import json
@@ -31,6 +34,14 @@ import threading
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, List, Optional, Tuple
+
+# Reconfigure stdout/stderr to UTF-8 to prevent charmap UnicodeEncodeError on Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding="utf-8", errors="replace")
+        sys.stderr.reconfigure(encoding="utf-8", errors="replace")
+    except Exception:
+        pass
 
 # Enable High-DPI Awareness on Windows to prevent coordinate drift
 try:
@@ -97,11 +108,183 @@ except ImportError:
 
 
 # =============================================================================
-# 1. Configuration Manager
+# 1. Antigravity Window & Process Tracker with Auto-Foregrounding
+# =============================================================================
+class AntigravityWindowManager:
+    """Detects if Antigravity is open/running, and automatically restores/foregrounds it."""
+
+    PROCESS_NAMES = ("antigravity.exe", "antigravity")
+    WINDOW_TITLE_KEYWORDS = ("antigravity", "autoselect-commander", "ask_question")
+
+    @classmethod
+    def is_process_running(cls) -> bool:
+        """Checks if Antigravity process is active in the Windows process table."""
+        try:
+            kernel32 = ctypes.windll.kernel32
+            TH32CS_SNAPPROCESS = 0x00000002
+
+            class PROCESSENTRY32W(ctypes.Structure):
+                _fields_ = [
+                    ("dwSize", wintypes.DWORD),
+                    ("cntUsage", wintypes.DWORD),
+                    ("th32ProcessID", wintypes.DWORD),
+                    ("th32DefaultHeapID", ctypes.c_size_t),
+                    ("th32ModuleID", wintypes.DWORD),
+                    ("cntThreads", wintypes.DWORD),
+                    ("th32ParentProcessID", wintypes.DWORD),
+                    ("pcPriClassBase", wintypes.LONG),
+                    ("dwFlags", wintypes.DWORD),
+                    ("szExeFile", wintypes.WCHAR * 260),
+                ]
+
+            h_snap = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
+            if h_snap != -1:
+                pe = PROCESSENTRY32W()
+                pe.dwSize = ctypes.sizeof(PROCESSENTRY32W)
+                has_next = kernel32.Process32FirstW(h_snap, ctypes.byref(pe))
+                found = False
+                while has_next:
+                    exe = pe.szExeFile.lower()
+                    for target in cls.PROCESS_NAMES:
+                        if target in exe:
+                            found = True
+                            break
+                    if found:
+                        break
+                    has_next = kernel32.Process32NextW(h_snap, ctypes.byref(pe))
+                kernel32.CloseHandle(h_snap)
+                if found:
+                    return True
+        except Exception:
+            pass
+
+        # Fallback via pygetwindow
+        if gw is not None:
+            try:
+                for w in gw.getAllWindows():
+                    if w.title and any(k in w.title.lower() for k in cls.WINDOW_TITLE_KEYWORDS):
+                        return True
+            except Exception:
+                pass
+        return False
+
+    @classmethod
+    def find_antigravity_window(cls) -> Optional[int]:
+        """Returns the HWND of the primary Antigravity or Demo window."""
+        try:
+            user32 = ctypes.windll.user32
+            found_hwnds = []
+
+            def enum_proc(hwnd, lParam):
+                if user32.IsWindowVisible(hwnd) or user32.IsIconic(hwnd):
+                    length = user32.GetWindowTextLengthW(hwnd)
+                    if length > 0:
+                        buf = ctypes.create_unicode_buffer(length + 1)
+                        user32.GetWindowTextW(hwnd, buf, length + 1)
+                        title_lower = buf.value.lower()
+                        if any(k in title_lower for k in cls.WINDOW_TITLE_KEYWORDS):
+                            if "autoselect-commander launcher" not in title_lower:
+                                found_hwnds.append(hwnd)
+                return True
+
+            WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p)
+            user32.EnumWindows(WNDENUMPROC(enum_proc), 0)
+            if found_hwnds:
+                return found_hwnds[0]
+        except Exception:
+            pass
+
+        if gw is not None:
+            try:
+                for w in gw.getAllWindows():
+                    if w.title and any(k in w.title.lower() for k in cls.WINDOW_TITLE_KEYWORDS):
+                        if hasattr(w, "_hWnd"):
+                            return w._hWnd
+            except Exception:
+                pass
+        return None
+
+    @classmethod
+    def is_minimized(cls, hwnd: int) -> bool:
+        if not hwnd:
+            return False
+        try:
+            return bool(ctypes.windll.user32.IsIconic(hwnd))
+        except Exception:
+            return False
+
+    @classmethod
+    def is_foreground(cls, hwnd: int) -> bool:
+        if not hwnd:
+            return False
+        try:
+            return ctypes.windll.user32.GetForegroundWindow() == hwnd
+        except Exception:
+            return False
+
+    @classmethod
+    def bring_to_foreground(cls, hwnd: int) -> bool:
+        """Brings window to foreground without moving the mouse."""
+        if not hwnd:
+            return False
+        try:
+            user32 = ctypes.windll.user32
+            kernel32 = ctypes.windll.kernel32
+
+            if user32.IsIconic(hwnd):
+                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+            else:
+                user32.ShowWindow(hwnd, 5)  # SW_SHOW
+
+            cur_thread = kernel32.GetCurrentThreadId()
+            fg_hwnd = user32.GetForegroundWindow()
+            fg_thread = user32.GetWindowThreadProcessId(fg_hwnd, None) if fg_hwnd else 0
+
+            if fg_thread and fg_thread != cur_thread:
+                user32.AttachThreadInput(cur_thread, fg_thread, True)
+                user32.BringWindowToTop(hwnd)
+                user32.SetForegroundWindow(hwnd)
+                user32.AttachThreadInput(cur_thread, fg_thread, False)
+            else:
+                user32.BringWindowToTop(hwnd)
+                user32.SetForegroundWindow(hwnd)
+
+            time.sleep(0.15)
+            return True
+        except Exception:
+            return False
+
+    @classmethod
+    def check_and_foreground(cls) -> Tuple[bool, str, Optional[int]]:
+        """
+        Verifies if Antigravity is open/running and brings it to the foreground if minimized or in background.
+        Returns: (is_ready, message, hwnd)
+        """
+        proc_running = cls.is_process_running()
+        hwnd = cls.find_antigravity_window()
+
+        if not proc_running and not hwnd:
+            return False, "एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)", None
+
+        if hwnd:
+            if cls.is_minimized(hwnd):
+                cls.bring_to_foreground(hwnd)
+                return True, "Antigravity minimized window restored to foreground.", hwnd
+            elif not cls.is_foreground(hwnd):
+                cls.bring_to_foreground(hwnd)
+                return True, "Antigravity background window brought to foreground.", hwnd
+            else:
+                return True, "Antigravity active in foreground.", hwnd
+
+        return True, "Antigravity process is active.", None
+
+
+# =============================================================================
+# 2. Configuration Manager
 # =============================================================================
 @dataclass
 class Config:
-    countdown_seconds: int = 30
+    countdown_seconds: int = 10
     check_interval_ms: int = 1000
     mouse_interruption_threshold_px: int = 15
     smooth_glide_duration_s: float = 0.8
@@ -121,6 +304,14 @@ class Config:
         "(Recommended) GitHub",
         "Proceed",
     )
+    submit_keywords: Tuple[str, ...] = (
+        "Submit",
+        "पुष्टि करें",
+        "Confirm",
+        "Proceed",
+        "Submit / पुष्टि करें",
+        "जारी रखें",
+    )
     detection_mode: str = "auto"  # 'auto', 'ocr', 'uia', 'vision'
 
     @classmethod
@@ -131,7 +322,7 @@ class Config:
                 with open(config_path, "r", encoding="utf-8") as f:
                     data = json.load(f)
                     return cls(
-                        countdown_seconds=int(data.get("countdown_seconds", 30)),
+                        countdown_seconds=int(data.get("countdown_seconds", 10)),
                         check_interval_ms=int(data.get("check_interval_ms", 1000)),
                         mouse_interruption_threshold_px=int(data.get("mouse_interruption_threshold_px", 15)),
                         smooth_glide_duration_s=float(data.get("smooth_glide_duration_s", 0.8)),
@@ -143,6 +334,7 @@ class Config:
                         floating_hud_alpha=float(data.get("floating_hud_alpha", 0.92)),
                         ocr_enabled=bool(data.get("ocr_enabled", True)),
                         target_keywords=tuple(data.get("target_keywords", cls.target_keywords)),
+                        submit_keywords=tuple(data.get("submit_keywords", cls.submit_keywords)),
                         detection_mode=str(data.get("detection_mode", "auto")),
                     )
             except Exception as e:
@@ -151,7 +343,7 @@ class Config:
 
 
 # =============================================================================
-# 2. Detection Result Data Structure
+# 3. Detection Result Data Structure
 # =============================================================================
 @dataclass
 class DetectionResult:
@@ -160,7 +352,7 @@ class DetectionResult:
     width: int
     height: int
     confidence: float
-    source: str  # 'WindowsOcr', 'UIAutomation', or 'Vision'
+    source: str  # 'WindowsOcr', 'UIAutomation', 'Vision', or 'LayoutInference'
     label: str
 
     @property
@@ -169,7 +361,7 @@ class DetectionResult:
 
 
 # =============================================================================
-# 3. Windows Native WinRT OCR Detection Engine (Fast, Font-Invariant)
+# 4. Windows Native WinRT OCR Detection Engine (Fast, Font-Invariant)
 # =============================================================================
 class WindowsOcrDetector:
     """Uses Windows 10/11 native WinRT OCR (Windows.Media.Ocr) to detect target keywords on screen."""
@@ -207,11 +399,19 @@ class WindowsOcrDetector:
         except Exception:
             return None
 
-    def scan_image(self, img: Image.Image, offset_x: int = 0, offset_y: int = 0) -> Optional[DetectionResult]:
+    def scan_image(
+        self,
+        img: Image.Image,
+        offset_x: int = 0,
+        offset_y: int = 0,
+        keywords: Optional[Tuple[str, ...]] = None,
+        min_y: int = 0,
+    ) -> Optional[DetectionResult]:
         """Runs OCR on a PIL Image and matches against target keywords with fuzzy tolerance."""
         if not self.is_available() or img is None:
             return None
 
+        kw_list = keywords if keywords is not None else self.target_keywords
         try:
             import concurrent.futures
             buf = io.BytesIO()
@@ -230,7 +430,7 @@ class WindowsOcrDetector:
                 line_lower = line.text.lower()
 
                 # Check line level matching first
-                for kw in self.target_keywords:
+                for kw in kw_list:
                     kw_clean = kw.lower().strip("()[] ")
                     if not kw_clean:
                         continue
@@ -245,7 +445,6 @@ class WindowsOcrDetector:
                                 break
 
                     if has_match:
-                        # Find the best matching word or words in this line
                         matched_words = []
                         for word in line.words:
                             w_clean = word.text.lower().strip("()[] ")
@@ -254,15 +453,19 @@ class WindowsOcrDetector:
 
                         if matched_words:
                             min_x = min(w.bounding_rect.x for w in matched_words)
-                            min_y = min(w.bounding_rect.y for w in matched_words)
+                            w_min_y = min(w.bounding_rect.y for w in matched_words)
                             max_x = max(w.bounding_rect.x + w.bounding_rect.width for w in matched_words)
                             max_y = max(w.bounding_rect.y + w.bounding_rect.height for w in matched_words)
 
+                            actual_y = int(w_min_y + offset_y)
+                            if min_y > 0 and actual_y < min_y:
+                                continue
+
                             return DetectionResult(
                                 x=int(min_x + offset_x),
-                                y=int(min_y + offset_y),
+                                y=actual_y,
                                 width=int(max_x - min_x),
-                                height=int(max_y - min_y),
+                                height=int(max_y - w_min_y),
                                 confidence=0.98,
                                 source="WindowsOcr",
                                 label=kw,
@@ -303,7 +506,7 @@ class WindowsOcrDetector:
 
 
 # =============================================================================
-# 4. Windows UIAutomation Detection Engine (Fast, DPI-Invariant)
+# 5. Windows UIAutomation Detection Engine (Fast, DPI-Invariant)
 # =============================================================================
 class UIAutomationDetector:
     """Scans the Windows UI Automation tree to locate Antigravity decision buttons."""
@@ -342,7 +545,6 @@ class UIAutomationDetector:
             top_windows = root.GetChildren()
             for win in top_windows:
                 name = win.Name or ""
-                # If title filter is specified, respect it; otherwise scan all top-level windows
                 if self.title_filter:
                     if self.title_filter not in name.lower() and "simulation" not in name.lower() and "antigravity" not in name.lower():
                         continue
@@ -364,23 +566,50 @@ class UIAutomationDetector:
             return None
         return None
 
+    def find_by_keywords(self, keywords: Tuple[str, ...]) -> Optional[DetectionResult]:
+        """Searches UIA tree specifically for elements matching given keywords (e.g. Submit button)."""
+        if auto is None:
+            return None
+        try:
+            fg_win = auto.GetForegroundControl()
+            if fg_win:
+                match = self._find_in_tree_for_keywords(fg_win, keywords)
+                if match:
+                    rect = match.BoundingRectangle
+                    if rect.width() > 10 and rect.height() > 5:
+                        return DetectionResult(
+                            x=rect.left,
+                            y=rect.top,
+                            width=rect.width(),
+                            height=rect.height(),
+                            confidence=0.99,
+                            source="UIAutomation",
+                            label=match.Name or "Submit",
+                        )
+        except Exception:
+            pass
+        return None
+
     def _find_in_tree(self, parent_control):
-        """Recursively checks controls for keyword matches with depth limit."""
+        """Recursively checks controls for target keyword matches with depth limit."""
+        return self._find_in_tree_for_keywords(parent_control, self.target_keywords)
+
+    def _find_in_tree_for_keywords(self, parent_control, keywords: Tuple[str, ...]):
         try:
             ctrl_name = parent_control.Name or ""
-            for kw in self.target_keywords:
+            for kw in keywords:
                 if kw.lower() in ctrl_name.lower():
                     return parent_control
 
             # Depth limit to keep inspection under 40ms
             for child in parent_control.GetChildren()[:30]:
                 name = child.Name or ""
-                for kw in self.target_keywords:
+                for kw in keywords:
                     if kw.lower() in name.lower():
                         return child
                 for grandchild in child.GetChildren()[:20]:
                     gname = grandchild.Name or ""
-                    for kw in self.target_keywords:
+                    for kw in keywords:
                         if kw.lower() in gname.lower():
                             return grandchild
         except Exception:
@@ -389,7 +618,7 @@ class UIAutomationDetector:
 
 
 # =============================================================================
-# 5. Computer Vision / Multi-Scale Multi-Theme Template Matching Engine
+# 6. Computer Vision / Multi-Scale Multi-Theme Template Matching Engine
 # =============================================================================
 class VisionDetector:
     """Uses OpenCV multi-scale multi-template matching to detect '(Recommended)' on screen."""
@@ -403,7 +632,6 @@ class VisionDetector:
         """Ensures template directory exists with multiple theme templates and loads them."""
         os.makedirs(self.templates_dir, exist_ok=True)
 
-        # Generate a suite of theme templates if missing
         tpl_variants = [
             ("recommended_dark_16.png", (30, 30, 46), (166, 227, 161), 16),
             ("recommended_dark_14.png", (24, 24, 37), (205, 214, 244), 14),
@@ -417,7 +645,6 @@ class VisionDetector:
                 if not os.path.exists(path):
                     self._generate_template(path, bg, fg, sz)
 
-        # Load all PNG templates from disk
         if cv2 is not None:
             for file in os.listdir(self.templates_dir):
                 if file.lower().endswith(".png"):
@@ -482,7 +709,7 @@ class VisionDetector:
 
 
 # =============================================================================
-# 6. Multi-Engine Detection Orchestrator
+# 7. Multi-Engine Detection Orchestrator
 # =============================================================================
 class MultiEngineDetector:
     """Coordinates Windows Native OCR, UIAutomation, and Vision Detection."""
@@ -494,6 +721,7 @@ class MultiEngineDetector:
         self.vision_detector = VisionDetector(target_keywords=config.target_keywords)
 
     def detect(self) -> Optional[DetectionResult]:
+        """Detects the (Recommended) option modal on screen."""
         mode = self.config.detection_mode.lower()
 
         # Strategy 1: Windows Native OCR (Fastest & most robust)
@@ -517,13 +745,56 @@ class MultiEngineDetector:
 
         return None
 
+    def detect_submit_button(self, option_result: Optional[DetectionResult] = None) -> Optional[DetectionResult]:
+        """
+        Detects the 'Submit / पुष्टि करें' button on the active Antigravity modal.
+        Uses UIA -> OCR -> Layout Inference fallback.
+        """
+        # 1. UIAutomation scan
+        if self.config.detection_mode in ("auto", "uia"):
+            res = self.uia_detector.find_by_keywords(self.config.submit_keywords)
+            if res:
+                return res
+
+        # 2. Windows Native OCR scan
+        if self.config.detection_mode in ("auto", "ocr"):
+            if self.ocr_detector.is_available() and ImageGrab is not None:
+                try:
+                    screen_img = ImageGrab.grab()
+                    min_y = (option_result.y + option_result.height) if option_result else 0
+                    res = self.ocr_detector.scan_image(
+                        screen_img,
+                        offset_x=0,
+                        offset_y=0,
+                        keywords=self.config.submit_keywords,
+                        min_y=min_y,
+                    )
+                    if res:
+                        return res
+                except Exception:
+                    pass
+
+        # 3. Layout Inference Fallback: Standard Antigravity modal places Submit ~65px below option
+        if option_result:
+            return DetectionResult(
+                x=option_result.x,
+                y=option_result.y + option_result.height + 65,
+                width=min(option_result.width, 160),
+                height=38,
+                confidence=0.85,
+                source="LayoutInference",
+                label="Submit / पुष्टि करें",
+            )
+
+        return None
+
 
 # Backward-compatibility alias
 DualModeDetector = MultiEngineDetector
 
 
 # =============================================================================
-# 7. Floating On-Screen HUD Overlay (Tkinter Top-Most Window)
+# 8. Floating On-Screen HUD Overlay (Tkinter Top-Most Window)
 # =============================================================================
 class FloatingHUD:
     """Always-on-top semi-transparent floating on-screen countdown HUD."""
@@ -534,14 +805,14 @@ class FloatingHUD:
         self.master = None
         self.lbl_title = None
         self.lbl_status = None
-        self.total_seconds = 30.0
+        self.total_seconds = 10.0
         self.is_visible = False
 
     def show(self, total_seconds: float, label: str, master=None):
         """Displays the floating HUD at the top center of the primary display."""
         try:
             import tkinter as tk
-            self.total_seconds = total_seconds
+            self.total_seconds = float(total_seconds)
             self.master = master
 
             if master is not None:
@@ -558,15 +829,15 @@ class FloatingHUD:
 
             # Center at top of screen
             sw = self.root.winfo_screenwidth()
-            w, h = 580, 56
+            w, h = 620, 58
             x = (sw - w) // 2
             y = 20
             self.root.geometry(f"{w}x{h}+{x}+{y}")
             self.root.configure(bg="#181825", highlightbackground="#89B4FA", highlightthickness=2)
 
             clean_label = label.replace("\n", " ")
-            if len(clean_label) > 38:
-                clean_label = clean_label[:35] + "..."
+            if len(clean_label) > 42:
+                clean_label = clean_label[:39] + "..."
 
             self.lbl_title = tk.Label(
                 self.root,
@@ -603,9 +874,9 @@ class FloatingHUD:
             filled = int(bar_len * pct)
             bar = "█" * filled + "░" * (bar_len - filled)
 
-            if remaining > 10.0:
+            if remaining > 6.0:
                 color = "#A6E3A1"  # Mint Green
-            elif remaining > 5.0:
+            elif remaining > 3.0:
                 color = "#F9E2AF"  # Warm Yellow
             else:
                 color = "#F38BA8"  # Soft Red
@@ -614,6 +885,18 @@ class FloatingHUD:
                 text=f"[{bar}] {remaining:4.1f}s remaining | Move mouse to cancel",
                 fg=color,
             )
+            self.root.update_idletasks()
+            self.root.update()
+        except Exception:
+            pass
+
+    def update_step(self, step_title: str, step_detail: str, color: str = "#89B4FA"):
+        """Displays real-time multi-step progress in the HUD."""
+        if not self.is_visible or not self.root:
+            return
+        try:
+            self.lbl_title.config(text=step_title, fg=color)
+            self.lbl_status.config(text=step_detail, fg="#CDD6F4")
             self.root.update_idletasks()
             self.root.update()
         except Exception:
@@ -635,17 +918,17 @@ class FloatingHUD:
         finally:
             self.close()
 
-    def flash_success(self):
+    def flash_success(self, title: str = "✅ AUTO-SELECTED & SUBMITTED SUCCESSFULLY", detail: str = "Form submitted! Agent unblocked and resuming autonomously."):
         """Flashes green notification indicating success."""
         if not self.is_visible or not self.root:
             return
         try:
             self.root.configure(highlightbackground="#A6E3A1")
-            self.lbl_title.config(text="✅ AUTO-SELECTED (RECOMMENDED) OPTION", fg="#A6E3A1")
-            self.lbl_status.config(text="Option selected! Agent unblocked and resuming autonomously.", fg="#A6E3A1")
+            self.lbl_title.config(text=title, fg="#A6E3A1")
+            self.lbl_status.config(text=detail, fg="#A6E3A1")
             self.root.update_idletasks()
             self.root.update()
-            time.sleep(1.0)
+            time.sleep(1.2)
         except Exception:
             pass
         finally:
@@ -663,7 +946,7 @@ class FloatingHUD:
 
 
 # =============================================================================
-# 8. Smooth Human-Like Mouse Controller
+# 9. Smooth Human-Like Mouse Controller with Firm Click
 # =============================================================================
 class MouseController:
     """Dispatches human-like cubic easing cursor motion and natural clicks."""
@@ -673,14 +956,30 @@ class MouseController:
         if pyautogui:
             pyautogui.FAILSAFE = failsafe_enabled
 
+    def firm_click(self, x: Optional[int] = None, y: Optional[int] = None):
+        """Firm mouse down + dwell + up ensuring 100% reliable click registration on Web/Electron/Native."""
+        if not pyautogui:
+            return
+        try:
+            if x is not None and y is not None:
+                pyautogui.moveTo(x, y)
+            time.sleep(0.06)
+            pyautogui.mouseDown()
+            time.sleep(0.08)  # 80ms press duration guarantees OS and Chromium register click
+            pyautogui.mouseUp()
+            time.sleep(0.06)
+        except Exception:
+            pass
+
     def glide_and_click(self, target_x: int, target_y: int, check_interrupted_fn=None) -> bool:
+        """Glides cursor smoothly and executes a firm click at the target coordinate."""
         if not pyautogui:
             return False
 
         try:
-            # Add minor random offset (+-3 px) for human-like natural landing
-            offset_x = random.randint(-3, 3)
-            offset_y = random.randint(-3, 3)
+            # Add minor random offset (+-2 px) for human-like natural landing
+            offset_x = random.randint(-2, 2)
+            offset_y = random.randint(-2, 2)
             dest_x = target_x + offset_x
             dest_y = target_y + offset_y
 
@@ -696,10 +995,8 @@ class MouseController:
             if check_interrupted_fn and check_interrupted_fn():
                 return False
 
-            # Natural click with small dwell duration
-            time.sleep(0.08)
-            pyautogui.click()
-            time.sleep(0.12)
+            # Firm click with dwell to guarantee button/option triggers
+            self.firm_click()
             return True
         except Exception as e:
             print(f"\033[91m[ERROR] Mouse controller exception: {e}\033[0m")
@@ -707,7 +1004,7 @@ class MouseController:
 
 
 # =============================================================================
-# 9. Real-Time ANSI Terminal Dashboard
+# 10. Real-Time ANSI Terminal Dashboard
 # =============================================================================
 class TerminalDashboard:
     """Renders ANSI colored banner, status updates, and interactive countdown bar."""
@@ -730,7 +1027,7 @@ class TerminalDashboard:
 ║        Visual Mouse Automation & Autonomous (Recommended) Selector           ║
 ╚══════════════════════════════════════════════════════════════════════════════╝{cls.RESET}
  {cls.GREEN}● Status:{cls.RESET} Active Daemon Running       {cls.GREEN}● Failsafe:{cls.RESET} Instant Mouse Movement (> {config.mouse_interruption_threshold_px}px)
- {cls.GREEN}● Countdown:{cls.RESET} {config.countdown_seconds}s Timeout                {cls.GREEN}● Floating HUD:{cls.RESET} {'Enabled (Top-Most)' if config.floating_hud_enabled else 'Disabled'}
+ {cls.GREEN}● Countdown:{cls.RESET} {config.countdown_seconds}s Timeout (2-Step)       {cls.GREEN}● Floating HUD:{cls.RESET} {'Enabled (Top-Most)' if config.floating_hud_enabled else 'Disabled'}
  {cls.GREEN}● Engines:{cls.RESET} Multi (OCR + UIA + Vision)  {cls.GREEN}● WinRT OCR:{cls.RESET} {ocr_status}
  {cls.YELLOW}● Emergency Abort:{cls.RESET} Shake/Move Mouse, Press 'Q' or ESC, or Move to Screen Corner
 ────────────────────────────────────────────────────────────────────────────────
@@ -756,7 +1053,7 @@ class TerminalDashboard:
         pct = max(0.0, min(1.0, remaining / total))
         filled = int(bar_length * pct)
         bar = "█" * filled + "░" * (bar_length - filled)
-        color = cls.GREEN if remaining > 10 else (cls.YELLOW if remaining > 5 else cls.RED)
+        color = cls.GREEN if remaining > 6 else (cls.YELLOW if remaining > 3 else cls.RED)
         sys.stdout.write(
             f"{cls.CLEAR_LINE}{color}[COUNTDOWN]{cls.RESET} [{bar}] {cls.BOLD}{remaining:4.1f}s{cls.RESET} remaining | Target: ({cx}, {cy}) | {cls.YELLOW}Move mouse to cancel{cls.RESET}"
         )
@@ -768,12 +1065,12 @@ class TerminalDashboard:
         print(f"{cls.YELLOW}➜ Yielded full control back to developer. Entering cooldown suppression.{cls.RESET}\n")
 
     @classmethod
-    def render_clicking(cls, x: int, y: int):
-        print(f"\n{cls.CYAN}{cls.BOLD}[ACTION]{cls.RESET} Gliding cursor smoothly to ({x}, {y}) and clicking (Recommended)...")
+    def render_clicking(cls, step: int, total_steps: int, label: str, x: int, y: int):
+        print(f"\n{cls.CYAN}{cls.BOLD}[ACTION STEP {step}/{total_steps}]{cls.RESET} Gliding cursor smoothly to {label} at ({x}, {y}) and clicking...")
 
     @classmethod
     def render_completed(cls):
-        print(f"{cls.GREEN}{cls.BOLD}[SUCCESS]{cls.RESET} Option successfully auto-selected! Agent unblocked and resuming.\n")
+        print(f"{cls.GREEN}{cls.BOLD}[SUCCESS]{cls.RESET} 2-Step Flow complete! Option selected & form submitted. Agent unblocked.\n")
 
     @classmethod
     def render_cooldown(cls, seconds_left: int):
@@ -782,7 +1079,7 @@ class TerminalDashboard:
 
 
 # =============================================================================
-# 10. Main Engine Orchestrator
+# 11. Main Engine Orchestrator
 # =============================================================================
 class AutoCommanderEngine:
     """Autonomous State Machine for modal detection, countdown, floating HUD, and fail-safe dispatch."""
@@ -858,6 +1155,7 @@ class AutoCommanderEngine:
     def run(self):
         TerminalDashboard.print_banner(self.config)
         tick = 0
+        last_not_open_log = 0.0
 
         while self.is_running:
             try:
@@ -866,6 +1164,18 @@ class AutoCommanderEngine:
                 # -------------------------------------------------------------
                 if self.current_state == "SCANNING":
                     tick += 1
+
+                    # Check Antigravity process and window state
+                    is_ready, msg, hwnd = AntigravityWindowManager.check_and_foreground()
+
+                    if not is_ready:
+                        now = time.time()
+                        if now - last_not_open_log >= 5.0:
+                            print(f"\n{TerminalDashboard.YELLOW}[ANTIGRAVITY]{TerminalDashboard.RESET} {msg}")
+                            last_not_open_log = now
+                        time.sleep(self.config.check_interval_ms / 1000.0)
+                        continue
+
                     TerminalDashboard.render_scanning(tick)
 
                     result = self.detector.detect()
@@ -943,7 +1253,7 @@ class AutoCommanderEngine:
                 self.current_state = "COOLDOWN"
                 return
 
-            # Countdown reached 0 -> Execute Auto-Selection!
+            # Countdown reached 0 -> Execute 2-Step Auto-Selection!
             if remaining <= 0:
                 break
 
@@ -951,54 +1261,99 @@ class AutoCommanderEngine:
             time.sleep(poll_interval)
 
         # ---------------------------------------------------------------------
-        # Final Verification & Smooth Mouse Glide
+        # 2-Step Execution: Step 1 (Option) -> Step 2 (Submit)
         # ---------------------------------------------------------------------
         if not self.user_interrupted and self.is_running:
             target_cx, target_cy = result.center
-            TerminalDashboard.render_clicking(target_cx, target_cy)
+            TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", target_cx, target_cy)
 
-            # Perform human-like mouse glide & click
-            success = self.mouse_ctrl.glide_and_click(
+            if self.config.floating_hud_enabled:
+                self.hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding to (Recommended) option...", "#89B4FA")
+
+            success_step1 = self.mouse_ctrl.glide_and_click(
                 target_cx,
                 target_cy,
                 check_interrupted_fn=self._check_mouse_interrupted,
             )
 
-            if success:
-                TerminalDashboard.render_completed()
-                if self.config.floating_hud_enabled:
-                    self.hud.flash_success()
-                if self.config.sound_notification:
-                    try:
-                        import winsound
-                        winsound.MessageBeep(winsound.MB_OK)
-                    except Exception:
-                        pass
-                self.current_state = "COOLDOWN"
-            else:
-                print("\033[93m[NOTICE] Click cancelled due to motion or boundary condition.\033[0m")
+            if not success_step1:
+                print("\033[93m[NOTICE] Step 1 cancelled due to motion or boundary condition.\033[0m")
                 if self.config.floating_hud_enabled:
                     self.hud.flash_cancelled()
                 self.current_state = "COOLDOWN"
+                return
+
+            print(f"{TerminalDashboard.GREEN}✓ Step 1 Complete: Option 1 Selected.{TerminalDashboard.RESET}")
+            time.sleep(0.35)
+
+            # Step 2: Detect and click Submit button
+            submit_result = self.detector.detect_submit_button(option_result=result)
+            if submit_result:
+                sub_cx, sub_cy = submit_result.center
+                TerminalDashboard.render_clicking(2, 2, "Submit button", sub_cx, sub_cy)
+
+                if self.config.floating_hud_enabled:
+                    self.hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding to Submit button...", "#A6E3A1")
+
+                success_step2 = self.mouse_ctrl.glide_and_click(
+                    sub_cx,
+                    sub_cy,
+                    check_interrupted_fn=self._check_mouse_interrupted,
+                )
+
+                if success_step2:
+                    TerminalDashboard.render_completed()
+                    if self.config.floating_hud_enabled:
+                        self.hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
+                    if self.config.sound_notification:
+                        try:
+                            import winsound
+                            winsound.MessageBeep(winsound.MB_OK)
+                        except Exception:
+                            pass
+                    self.current_state = "COOLDOWN"
+                else:
+                    print("\033[93m[NOTICE] Step 2 cancelled due to motion or boundary condition.\033[0m")
+                    if self.config.floating_hud_enabled:
+                        self.hud.flash_cancelled()
+                    self.current_state = "COOLDOWN"
+            else:
+                TerminalDashboard.render_completed()
+                if self.config.floating_hud_enabled:
+                    self.hud.flash_success()
+                self.current_state = "COOLDOWN"
 
 
 # =============================================================================
-# 11. Built-In Interactive Live Visual Simulator (--test / --simulate)
+# 12. Built-In Interactive Live Visual Simulator (--test / --simulate / --demo)
 # =============================================================================
-def launch_simulator():
-    """Spawns mock Antigravity modal, floating HUD, and physically glides mouse to Option 1."""
+def launch_simulator(countdown_seconds: float = 10.0):
+    """
+    Spawns mock Antigravity modal, floating HUD, and physically glides mouse in a full 2-step flow:
+    Step 1: Glide to Option 1 (Recommended) -> Firm click (Option 1 highlights & selects).
+    Step 2: Glide to Submit button -> Firm click (Submit activates with chime & confirmation).
+    """
     try:
         import tkinter as tk
     except ImportError:
         print("[ERROR] Tkinter is required for simulator mode.")
         return
 
-    print("\n\033[96m[SIMULATION MODE] Launching mock Antigravity Decision Modal & Floating HUD...\033[0m")
+    print("\n\033[96m[SIMULATION MODE] Launching mock Antigravity Decision Modal & Floating HUD (2-Step Flow)...\033[0m")
     root = tk.Tk()
     root.title("Antigravity - Interactive Decision Modal (Live Demo)")
-    root.geometry("680x400+320+220")
+    root.geometry("700x460+300+180")
     root.configure(bg="#1E1E2E")
     root.attributes("-topmost", True)
+
+    # Ensure window is visible and active in foreground without moving mouse
+    root.update_idletasks()
+    try:
+        hwnd = root.winfo_id()
+        top_hwnd = ctypes.windll.user32.GetParent(hwnd) or hwnd
+        AntigravityWindowManager.bring_to_foreground(top_hwnd)
+    except Exception:
+        pass
 
     header = tk.Label(
         root,
@@ -1016,15 +1371,95 @@ def launch_simulator():
         font=("Segoe UI", 10),
         fg="#CDD6F4",
         bg="#1E1E2E",
-        wraplength=600,
+        wraplength=620,
         justify="left",
     )
     desc.pack(pady=4)
 
-    def on_opt1_clicked():
-        btn1.config(bg="#A6E3A1", fg="#11111B")
+    # Variable to track selected option (Step 1)
+    selected_option = tk.StringVar(value="")
+
+    # Option 1 Container Frame
+    opt1_frame = tk.Frame(root, bg="#313244", highlightbackground="#45475A", highlightthickness=1)
+    opt1_frame.pack(pady=8, fill="x", padx=40)
+
+    radio1_lbl = tk.Label(opt1_frame, text="○", font=("Segoe UI", 14), fg="#BAC2DE", bg="#313244")
+    radio1_lbl.pack(side="left", padx=(12, 6), pady=8)
+
+    opt1_text_lbl = tk.Label(
+        opt1_frame,
+        text="Option 1: (Recommended) GitHub पर कमिट चेंजेस पुश करना",
+        font=("Segoe UI", 11, "bold"),
+        fg="#A6E3A1",
+        bg="#313244",
+        cursor="hand2",
+    )
+    opt1_text_lbl.pack(side="left", pady=8, fill="x", expand=True, anchor="w")
+
+    # Option 2 Container Frame
+    opt2_frame = tk.Frame(root, bg="#313244", highlightbackground="#45475A", highlightthickness=1)
+    opt2_frame.pack(pady=4, fill="x", padx=40)
+
+    radio2_lbl = tk.Label(opt2_frame, text="○", font=("Segoe UI", 14), fg="#BAC2DE", bg="#313244")
+    radio2_lbl.pack(side="left", padx=(12, 6), pady=6)
+
+    opt2_text_lbl = tk.Label(
+        opt2_frame,
+        text="Option 2: नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है",
+        font=("Segoe UI", 10),
+        fg="#BAC2DE",
+        bg="#313244",
+        cursor="hand2",
+    )
+    opt2_text_lbl.pack(side="left", pady=6, fill="x", expand=True, anchor="w")
+
+    # Selection handlers
+    def select_option_1():
+        selected_option.set("option_1")
+        radio1_lbl.config(text="●", fg="#A6E3A1", bg="#263b36")
+        opt1_frame.config(bg="#263b36", highlightbackground="#A6E3A1", highlightthickness=2)
+        opt1_text_lbl.config(bg="#263b36", fg="#A6E3A1")
+
+        radio2_lbl.config(text="○", fg="#BAC2DE", bg="#313244")
+        opt2_frame.config(bg="#313244", highlightbackground="#45475A", highlightthickness=1)
+        opt2_text_lbl.config(bg="#313244", fg="#BAC2DE")
+
         status_lbl.config(
-            text="✅ Option 1 CLICKED! AutoSelect-Commander Succeeded with 100% Precision!",
+            text="Step 1/2 Complete: Option 1 Selected! Moving to Submit button...",
+            fg="#A6E3A1",
+            font=("Segoe UI", 10, "bold"),
+        )
+        submit_btn.config(state="normal", bg="#89B4FA", fg="#11111B")
+
+    def select_option_2():
+        selected_option.set("option_2")
+        radio2_lbl.config(text="●", fg="#F9E2AF", bg="#3c3836")
+        opt2_frame.config(bg="#3c3836", highlightbackground="#F9E2AF", highlightthickness=2)
+        opt2_text_lbl.config(bg="#3c3836", fg="#F9E2AF")
+
+        radio1_lbl.config(text="○", fg="#BAC2DE", bg="#313244")
+        opt1_frame.config(bg="#313244", highlightbackground="#45475A", highlightthickness=1)
+        opt1_text_lbl.config(bg="#313244", fg="#A6E3A1")
+
+        status_lbl.config(text="Option 2 selected manually by developer.", fg="#F9E2AF")
+        submit_btn.config(state="normal", bg="#89B4FA", fg="#11111B")
+
+    opt1_frame.bind("<Button-1>", lambda e: select_option_1())
+    opt1_text_lbl.bind("<Button-1>", lambda e: select_option_1())
+    radio1_lbl.bind("<Button-1>", lambda e: select_option_1())
+
+    opt2_frame.bind("<Button-1>", lambda e: select_option_2())
+    opt2_text_lbl.bind("<Button-1>", lambda e: select_option_2())
+    radio2_lbl.bind("<Button-1>", lambda e: select_option_2())
+
+    # Step 2: Submit Button at bottom
+    def on_submit_clicked():
+        if not selected_option.get():
+            status_lbl.config(text="⚠️ Please select an option first!", fg="#F38BA8")
+            return
+        submit_btn.config(text="✅ Submitted / पुष्टि हो गई!", bg="#A6E3A1", fg="#11111B")
+        status_lbl.config(
+            text="🎉 Step 2/2 Complete: Form Submitted! Agent unblocked and resuming autonomously.",
             fg="#A6E3A1",
             font=("Segoe UI", 11, "bold"),
         )
@@ -1033,62 +1468,43 @@ def launch_simulator():
             winsound.MessageBeep(winsound.MB_OK)
         except Exception:
             pass
-        root.after(1600, root.destroy)
+        root.after(1800, root.destroy)
 
-    def on_opt2_clicked():
-        status_lbl.config(text="Option 2 clicked manually by developer.", fg="#F9E2AF")
-        root.after(1600, root.destroy)
+    submit_frame = tk.Frame(root, bg="#1E1E2E")
+    submit_frame.pack(pady=12)
 
-    # Option 1 (Recommended) Button
-    btn1 = tk.Button(
-        root,
-        text="Option 1: (Recommended) GitHub पर कमिट चेंजेस पुश करना",
+    submit_btn = tk.Button(
+        submit_frame,
+        text="🚀 Submit / पुष्टि करें",
         font=("Segoe UI", 11, "bold"),
-        bg="#313244",
-        fg="#A6E3A1",
-        activebackground="#45475A",
-        activeforeground="#A6E3A1",
+        bg="#45475A",
+        fg="#BAC2DE",
+        activebackground="#A6E3A1",
+        activeforeground="#11111B",
         relief="raised",
         bd=2,
-        padx=15,
+        padx=24,
         pady=8,
-        command=on_opt1_clicked,
+        cursor="hand2",
+        command=on_submit_clicked,
     )
-    btn1.pack(pady=12, fill="x", padx=40)
-
-    # Option 2 Button
-    btn2 = tk.Button(
-        root,
-        text="Option 2: नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है",
-        font=("Segoe UI", 10),
-        bg="#313244",
-        fg="#BAC2DE",
-        activebackground="#45475A",
-        activeforeground="#BAC2DE",
-        relief="raised",
-        bd=1,
-        padx=15,
-        pady=6,
-        command=on_opt2_clicked,
-    )
-    btn2.pack(pady=4, fill="x", padx=40)
+    submit_btn.pack()
 
     status_lbl = tk.Label(
         root,
-        text="AutoSelect-Commander active. Countdown in progress...",
+        text="AutoSelect-Commander active. 10-second countdown in progress...",
         font=("Segoe UI", 9, "italic"),
         fg="#9399B2",
         bg="#1E1E2E",
-        pady=10,
+        pady=6,
     )
     status_lbl.pack()
 
-    # Create Floating HUD attached to root
+    # Floating HUD overlay initialized to configured countdown duration
     hud = FloatingHUD(alpha=0.92)
-    countdown_duration = 5.0
+    countdown_duration = float(countdown_seconds)
     hud.show(countdown_duration, "Option 1: (Recommended) GitHub", master=root)
 
-    # Mouse motion tracker
     start_time = time.time()
     initial_mouse = pyautogui.position() if pyautogui else (0, 0)
     cancelled = [False]
@@ -1097,6 +1513,14 @@ def launch_simulator():
     def sim_tick():
         if cancelled[0]:
             return
+
+        # Auto-foregrounding check during countdown
+        try:
+            if root.state() == "iconic":
+                root.deiconify()
+                root.lift()
+        except Exception:
+            pass
 
         elapsed = time.time() - start_time
         remaining = max(0.0, countdown_duration - elapsed)
@@ -1118,37 +1542,58 @@ def launch_simulator():
         hud.update_countdown(remaining)
 
         if remaining <= 0:
-            # Reached zero -> Glide cursor and click Option 1!
-            hud.lbl_status.config(text="[ACTION] Auto-selecting Option 1...", fg="#89B4FA")
-            hud.root.update()
-
+            # -------------------------------------------------------------
+            # STEP 1: Glide to Option 1 and Firm Click
+            # -------------------------------------------------------------
+            hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding cursor smoothly to (Recommended)...", "#89B4FA")
+            status_lbl.config(text="[STEP 1/2] Gliding cursor to Option 1 (Recommended)...", fg="#89B4FA")
             root.update_idletasks()
-            btn1.update_idletasks()
+            opt1_frame.update_idletasks()
 
-            # Target exact center of Button 1
-            bx = btn1.winfo_rootx() + btn1.winfo_width() // 2
-            by = btn1.winfo_rooty() + btn1.winfo_height() // 2
+            o1_x = opt1_frame.winfo_rootx() + opt1_frame.winfo_width() // 2
+            o1_y = opt1_frame.winfo_rooty() + opt1_frame.winfo_height() // 2
 
             def check_cancel():
                 return cancelled[0]
 
-            success = mouse_ctrl.glide_and_click(bx, by, check_interrupted_fn=check_cancel)
-            if success:
-                hud.flash_success()
-                on_opt1_clicked()
+            success_step1 = mouse_ctrl.glide_and_click(o1_x, o1_y, check_interrupted_fn=check_cancel)
+            if not success_step1:
+                hud.flash_cancelled()
+                return
+
+            select_option_1()
+            root.update()
+
+            # Small natural dwell between Step 1 and Step 2
+            time.sleep(0.35)
+
+            # -------------------------------------------------------------
+            # STEP 2: Glide to Submit Button and Firm Click
+            # -------------------------------------------------------------
+            hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding cursor smoothly to Submit button...", "#A6E3A1")
+            status_lbl.config(text="[STEP 2/2] Gliding cursor to Submit / पुष्टि करें...", fg="#A6E3A1")
+            root.update_idletasks()
+            submit_btn.update_idletasks()
+
+            sb_x = submit_btn.winfo_rootx() + submit_btn.winfo_width() // 2
+            sb_y = submit_btn.winfo_rooty() + submit_btn.winfo_height() // 2
+
+            success_step2 = mouse_ctrl.glide_and_click(sb_x, sb_y, check_interrupted_fn=check_cancel)
+            if success_step2:
+                hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
+                on_submit_clicked()
             else:
                 hud.flash_cancelled()
             return
 
         root.after(50, sim_tick)
 
-    # Start simulation tick after 200ms
     root.after(200, sim_tick)
     root.mainloop()
 
 
 # =============================================================================
-# 12. Screen & Window Diagnostics Probe (--diagnostics)
+# 13. Screen & Window Diagnostics Probe (--diagnostics)
 # =============================================================================
 def run_diagnostics(config: Config):
     """Deep screen, window, and text diagnostic probe."""
@@ -1166,8 +1611,22 @@ def run_diagnostics(config: Config):
     else:
         print("  • PyAutoGUI not available.")
 
-    # 2. Windows Native OCR Status
-    print("\n[2] WINDOWS WINRT OCR STATUS")
+    # 2. Antigravity Process & Window Status
+    print("\n[2] ANTIGRAVITY PROCESS & WINDOW STATUS")
+    is_proc = AntigravityWindowManager.is_process_running()
+    hwnd = AntigravityWindowManager.find_antigravity_window()
+    print(f"  • Process Active     : {is_proc}")
+    print(f"  • Window Handle      : {hwnd if hwnd else 'None'}")
+    if hwnd:
+        is_min = AntigravityWindowManager.is_minimized(hwnd)
+        is_fg = AntigravityWindowManager.is_foreground(hwnd)
+        print(f"  • Minimized (Iconic) : {is_min}")
+        print(f"  • Is Foreground      : {is_fg}")
+    else:
+        print("  • Notice             : 'एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)'")
+
+    # 3. Windows Native OCR Status
+    print("\n[3] WINDOWS WINRT OCR STATUS")
     ocr_det = WindowsOcrDetector(config.target_keywords, ocr_enabled=config.ocr_enabled)
     print(f"  • WinSDK Available   : {WINSDK_OCR_AVAILABLE}")
     print(f"  • OCR Engine Ready   : {ocr_det.is_available()}")
@@ -1179,8 +1638,8 @@ def run_diagnostics(config: Config):
         except Exception:
             pass
 
-    # 3. Visible Windows Probe
-    print("\n[3] VISIBLE WINDOWS PROBE")
+    # 4. Visible Windows Probe
+    print("\n[4] VISIBLE WINDOWS PROBE")
     if gw is not None:
         try:
             active_win = gw.getActiveWindow()
@@ -1198,8 +1657,8 @@ def run_diagnostics(config: Config):
     else:
         print("  • pygetwindow not available.")
 
-    # 4. OCR Live Screen Text Probe
-    print("\n[4] OCR LIVE SCREEN TEXT PROBE")
+    # 5. OCR Live Screen Text Probe
+    print("\n[5] OCR LIVE SCREEN TEXT PROBE")
     if ocr_det.is_available() and ImageGrab is not None:
         try:
             print("  • Capturing desktop surface for OCR text extraction...")
@@ -1220,7 +1679,6 @@ def run_diagnostics(config: Config):
                 for line in ocr_res.lines[:10]:
                     print(f"    - \"{line.text}\"")
 
-                # Check if target keywords are found
                 matches = []
                 for line in ocr_res.lines:
                     for kw in config.target_keywords:
@@ -1236,12 +1694,11 @@ def run_diagnostics(config: Config):
                 print("  • No text detected on current desktop.")
         except Exception as e:
             print(f"  • OCR Screen Grab Notice: {e}")
-            print("    (Note: If running in non-interactive background agent session, screen grab is restricted by Windows OS Session boundaries.)")
     else:
         print("  • OCR probe skipped (OCR or ImageGrab unavailable).")
 
-    # 5. UIAutomation Tree Probe
-    print("\n[5] UIAUTOMATION TREE PROBE")
+    # 6. UIAutomation Tree Probe
+    print("\n[6] UIAUTOMATION TREE PROBE")
     if auto is not None:
         try:
             root = auto.GetRootControl()
@@ -1260,7 +1717,7 @@ def run_diagnostics(config: Config):
 
 
 # =============================================================================
-# 13. CLI Entry Point
+# 14. CLI Entry Point
 # =============================================================================
 def main():
     parser = argparse.ArgumentParser(
@@ -1269,6 +1726,8 @@ def main():
     parser.add_argument(
         "--test",
         "--simulate",
+        "--demo",
+        dest="test",
         action="store_true",
         help="Launch interactive simulation window for instant visual end-to-end verification",
     )
@@ -1294,7 +1753,7 @@ def main():
         "--timeout",
         type=int,
         default=None,
-        help="Override countdown duration in seconds",
+        help="Override countdown duration in seconds (default: 10s)",
     )
     args = parser.parse_args()
 
@@ -1310,7 +1769,7 @@ def main():
         return
 
     if args.test:
-        launch_simulator()
+        launch_simulator(cfg.countdown_seconds)
         return
 
     # Initialize and run engine

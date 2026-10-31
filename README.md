@@ -6,6 +6,7 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python: 3.10+](https://img.shields.io/badge/Python-3.10%2B-brightgreen.svg)](https://www.python.org/)
 [![Platform: Windows 11](https://img.shields.io/badge/Platform-Windows%2011%20%7C%2010-blue.svg)](https://www.microsoft.com/)
+[![Timer: 10s Default](https://img.shields.io/badge/Timer-10s%20Default-brightgreen.svg)](#modes-of-operation--cli-flags)
 [![Fail-Safe: Active](https://img.shields.io/badge/Fail--Safe-Instant%20Mouse%20Override-red.svg)](#fail-safe--safety-features)
 [![Overlay: Floating HUD](https://img.shields.io/badge/Overlay-Floating%20HUD%20(Top--Most)-brightgreen.svg)](#floating-on-screen-hud-overlay)
 [![Engine: WinRT OCR](https://img.shields.io/badge/Engine-Windows%20Native%20OCR%20(50ms)-blue.svg)](#triple-engine-detection-architecture)
@@ -17,19 +18,26 @@
 ### What is AutoSelect-Commander?
 When running long autonomous coding sessions with **Antigravity** (e.g. overnight testing, multi-file refactoring, git push gates), the agent prompts the developer with interactive modal cards via `ask_question`, where the recommended option is marked **`(Recommended)`**.
 
-If you step away from your workstation, this halts the entire pair programming flow indefinitely. **AutoSelect-Commander v1.1.0** solves this completely:
-1. **Interactive 1-Click Launcher Menu (`run.bat`):** Launch directly with a 5-second automatic countdown defaulting to **[1] Live Visual Demo**, giving you instant proof on screen!
-2. **Always-On-Top Floating HUD Overlay:** When a decision modal appears, a sleek floating HUD pops up at the very top of your display (`⏱️ AutoSelect-Commander: [████████░░░░] 25s remaining | Move mouse to cancel`), ensuring you see the timer even if your terminal is minimized or behind your IDE.
-3. **Triple-Engine Detection (WinRT OCR + UIA + Vision):** Uses native Windows 10/11 WinRT OCR (`Windows.Media.Ocr`) to locate text regardless of font, theme, or workspace window title in under 50ms, with zero API token spend.
-4. **Instant Human Fail-Safe:** If you move the physical mouse (> 15 pixels), the countdown aborts immediately, yielding 100% control back to you.
-5. **Smooth Cubic Easing Glide:** If untouched, it smoothly glides the mouse cursor with human-like easing (`easeInOutQuad`) and auto-selects the `(Recommended)` option.
+If you step away from your workstation, this halts the entire pair programming flow indefinitely. **AutoSelect-Commander v1.2.0** solves this completely:
+1. **Interactive 1-Click Launcher Menu (`run.bat`):** Launch directly with `run.bat 1` (Live Demo), `run.bat 2` (Background Sentinel), or `run.bat 3` (Diagnostics), or let the 5-second automatic countdown default to Demo mode!
+2. **10-Second Countdown Default:** High-efficiency 10-second default countdown timer across config, CLI, HUD, and demo.
+3. **Reliable Firm Click:** Uses an explicit `mouseDown()` + 80ms dwell + `mouseUp()` sequence, eliminating dropped synthetic clicks on Electron, Chromium, and native Windows controls.
+4. **Complete 2-Step Decision Flow:**
+   - **Step 1:** Smoothly glides cursor to Option 1 `(Recommended)` and clicks firmly to select/highlight it.
+   - **Step 2:** Smoothly glides cursor to the `Submit / पुष्टि करें` button and clicks firmly to confirm and submit.
+5. **Antigravity Tracking & Auto-Foregrounding:** Detects if Antigravity is open/running. If closed, it notifies clearly: `एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)`. If minimized or running in the background, it restores (`SW_RESTORE`) and foregrounds it automatically without moving the mouse before starting countdown.
+6. **Always-On-Top Floating HUD Overlay:** When a decision modal appears, a sleek floating HUD pops up at the very top of your display (`⏱️ AutoSelect-Commander: [████████░░░░] 8.2s remaining | Move mouse to cancel`), ensuring full visibility even if your terminal is minimized.
+7. **Triple-Engine Detection (WinRT OCR + UIA + Vision):** Uses native Windows 10/11 WinRT OCR (`Windows.Media.Ocr`) to locate text regardless of font, theme, or window title in under 50ms, with zero API token spend.
+8. **Instant Human Fail-Safe:** If you move the physical mouse (> 15 pixels), the countdown aborts immediately, yielding 100% control back to you.
 
 ### ऑटो-सेलेक्ट कमांडर क्या है?
 जब आप एंटीग्रेविटी (Antigravity) में ऑटोमेशन या लंबे कोडिंग टास्क चलाते हैं, तो यह स्क्रीन पर `ask_question` कार्ड दिखाता है (जैसे `Option 1: (Recommended) GitHub पर कमिट चेंजेस पुश करना`)। यदि आप डेस्क पर नहीं हैं, तो पूरा काम रुक जाता है।  
-**AutoSelect-Commander v1.1.0** इस समस्या का संपूर्ण समाधान है:
-- **1-क्लिक इंटरएक्टिव मेनू (`run.bat`):** 5 सेकंड में डिफ़ॉल्ट रूप से लाइव डेमो शुरू करता है ताकि आपको तुरंत काम करते हुए दिखाई दे!
-- **फ्लोटिंग स्क्रीन टाइमर (Floating HUD):** स्क्रीन के सबसे ऊपर एक सुंदर तैरता हुआ टाइमर बार दिखाता है—टर्मिनल बैकग्राउंड में होने पर भी सब कुछ स्पष्ट दिखता है।
-- **विंडोज़ नेटिव ओसीआर (WinRT OCR):** 50 मिलीसेकंड में स्क्रीन पर किसी भी फॉन्ट/थीम में लिखे `(Recommended)` शब्द को पकड़ लेता है।
+**AutoSelect-Commander v1.2.0** इस समस्या का संपूर्ण समाधान है:
+- **10 सेकंड का डिफ़ॉल्ट टाइमर:** तेज़ी से काम पूरा करने के लिए 10 सेकंड का टाइमर।
+- **2-स्टेप कन्फर्मेशन फ्लो:** पहले Option 1 पर फर्म क्लिक करके चुनता है, फिर नीचे `Submit / पुष्टि करें` बटन पर क्लिक करके फॉर्म सबमिट करता है।
+- **फर्म क्लिक (Firm Click):** माउस को 80ms तक दबाकर विश्वसनीय क्लिक करता है, ताकि इलेक्ट्रॉन/वेब यूआई कोई क्लिक मिस न करे।
+- **ऑटो-विंडो फोरग्राउंडिंग:** यदि एंटीग्रेविटी मिनिमाइज़ या बैकग्राउंड में है, तो बिना माउस हिलाए उसे खुद फोरग्राउंड में लाता है। यदि ओपन नहीं है, तो स्पष्ट मैसेज देता है: `एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)`।
+- **फ्लोटिंग स्क्रीन टाइमर (Floating HUD):** स्क्रीन के सबसे ऊपर एक सुंदर तैरता हुआ टाइमर बार दिखाता है।
 - **इंस्टेंट माउस कंट्रोल:** माउस जरा सा (15px) हिलाते ही टाइमर तुरंत कैंसिल हो जाता है और पूरा नियंत्रण आपके हाथ में आ जाता है।
 
 ---
@@ -37,7 +45,14 @@ If you step away from your workstation, this halts the entire pair programming f
 ## 🚀 1-Click Interactive Launcher / शुरू कैसे करें
 
 ### 1-Click Launcher Menu (`run.bat`)
-Simply double-click `run.bat` on your Desktop:
+Simply double-click `run.bat` on your Desktop, or pass direct arguments:
+```cmd
+run.bat 1    # Directly launch Live Visual Demo Mode
+run.bat 2    # Directly launch Active Background Sentinel
+run.bat 3    # Directly launch Screen & Window Diagnostics
+```
+
+Or run `run.bat` interactively:
 ```cmd
 =============================================================================
                             SELECT EXECUTION MODE
@@ -52,13 +67,12 @@ Simply double-click `run.bat` on your Desktop:
   [3] Screen & Window Diagnostics
       -> Scans screen, tests OCR, lists detected windows and text.
 
+  [4] Exit
+
 -----------------------------------------------------------------------------
-Auto-launching [1] Demo Mode in 5 seconds (Press 1, 2, or 3 to choose now)...
+Auto-launching [1] Demo Mode in 5 seconds (Press 1, 2, 3, or 4 to choose now)...
 -----------------------------------------------------------------------------
 ```
-- If you don't press any key, it **automatically launches Option [1] Demo Mode in 5 seconds**, showing you a mock question card, the floating HUD, and the smooth mouse glide right before your eyes!
-- Press **`2`** to start the continuous Background Sentinel daemon.
-- Press **`3`** to run deep Screen & Window Diagnostics.
 
 ---
 
@@ -69,13 +83,13 @@ Whenever an Antigravity question card is detected (or during Demo mode), the bui
 ```
 ┌────────────────────────────────────────────────────────────────────────┐
 │  ⏱️ AutoSelect-Commander | Auto-Selecting: (Recommended) Option       │
-│  [████████████████░░░░░░] 22.4s remaining | Move mouse to cancel       │
+│  [████████████████░░░░░░]  8.4s remaining | Move mouse to cancel       │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
 - **Top-Most & Semi-Transparent:** Stays visible above Visual Studio Code, Antigravity, Chrome, and full-screen windows.
-- **Dynamic Color Gradient:** Progress bar shifts smoothly from Green (> 10s) ➔ Warm Yellow (> 5s) ➔ Soft Red (≤ 5s).
-- **Zero Extra Dependencies:** Powered by Python's built-in `tkinter` library.
+- **Dynamic Color Gradient:** Progress bar shifts smoothly from Green (> 6s) ➔ Warm Yellow (> 3s) ➔ Soft Red (≤ 3s).
+- **2-Step Progress Badges:** Dynamically updates: `Step 1/2: Selecting Option 1...` ➔ `Step 2/2: Confirming Submission...`.
 
 ---
 
@@ -91,23 +105,25 @@ Whenever an Antigravity question card is detected (or during Demo mode), the bui
 
 ## 🧪 Modes of Operation & CLI Flags
 
-### 1. Live Visual Demo (`--simulate` / `--test`)
+### 1. Live Visual Demo (`--demo` / `--simulate` / `--test`)
 ```powershell
-python auto_commander.py --simulate
+python auto_commander.py --demo
 ```
-Spawns a mock Antigravity question card, shows the floating HUD at the top, and smoothly glides the mouse cursor to click `Option 1: (Recommended) GitHub पर कमिट चेंजेस पुश करना`.
+Spawns a mock Antigravity question card, shows the floating HUD at the top, and demonstrates the complete 2-step flow:
+1. Glides cursor to `Option 1: (Recommended) GitHub पर कमिट चेंजेस पुश करना` and firmly clicks.
+2. Glides cursor to `Submit / पुष्टि करें` button and firmly clicks to submit with sound alert!
 
 ### 2. Active Sentinel Mode (Daemon)
 ```powershell
 python auto_commander.py
 ```
-Monitors your desktop in the background. When an Antigravity prompt appears, it activates the HUD, counts down 30s, and auto-selects.
+Monitors your desktop in the background. When an Antigravity prompt appears, it activates the HUD, counts down 10s, and completes the 2-step submission.
 
 ### 3. Screen Diagnostics (`--diagnostics`)
 ```powershell
 python auto_commander.py --diagnostics
 ```
-Scans your display resolution, checks OCR engine status, enumerates visible windows, and probes text elements.
+Scans display resolution, checks OCR engine status, enumerates visible windows, and probes text elements.
 
 ---
 
@@ -127,7 +143,7 @@ Scans your display resolution, checks OCR engine status, enumerates visible wind
 
 ```json
 {
-  "countdown_seconds": 30,
+  "countdown_seconds": 10,
   "check_interval_ms": 1000,
   "mouse_interruption_threshold_px": 15,
   "smooth_glide_duration_s": 0.8,
@@ -147,6 +163,14 @@ Scans your display resolution, checks OCR engine status, enumerates visible wind
     "(Recommended) GitHub",
     "Proceed"
   ],
+  "submit_keywords": [
+    "Submit",
+    "पुष्टि करें",
+    "Confirm",
+    "Proceed",
+    "Submit / पुष्टि करें",
+    "जारी रखें"
+  ],
   "detection_mode": "auto"
 }
 ```
@@ -158,15 +182,16 @@ Scans your display resolution, checks OCR engine status, enumerates visible wind
 ```
 C:\Users\Atul Verma\Desktop\AutoSelect-Commander\
 ├── auto_commander.py        # Core Python daemon & triple-engine state machine
-├── config.json              # Configurable countdown, HUD, and OCR parameters
+├── config.json              # Configurable countdown (10s), HUD, and OCR parameters
 ├── requirements.txt         # Lightweight Python dependencies (including winsdk)
-├── run.bat                  # 1-Click Interactive Menu launcher (5s default to Demo)
+├── run.bat                  # 1-Click Interactive Menu launcher (supports run.bat 1, 2, 3)
 ├── README.md                # Comprehensive bilingual documentation
 ├── PRD.md                   # Product Requirements Document
+├── changes_log/             # Comprehensive 5-tier audit changes trail
 ├── assets/
 │   └── templates/           # Multi-theme visual templates for OpenCV fallback
 └── tests/
-    └── test_commander.py    # Automated test suite (10/10 tests passing)
+    └── test_commander.py    # Automated test suite (13/13 tests passing)
 ```
 
 ---

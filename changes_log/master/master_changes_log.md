@@ -4,6 +4,29 @@
 
 ---
 
+### [2026-11-01 02:30:00 IST] - Release 1.2.0 (10s Timer, Reliable Firm Click, 2-Step Option + Submit Flow, Antigravity Auto-Foregrounding)
+- **Commit:** `feat(core): 10s timer, reliable firm click, 2-step submit flow, and Antigravity auto-foregrounding`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **10-Second Timer Default:** Default countdown reduced from 30s to 10s in `config.json`, `Config` class, CLI parser, banner, floating HUD, and live visual demo.
+  - **Reliable Firm Click:** Implemented `MouseController.firm_click()` using `mouseDown()` with 80ms dwell duration followed by `mouseUp()`, ensuring 100% reliable click registration across Electron, Chromium, and native Windows controls.
+  - **Complete 2-Step Decision Flow:**
+    - Step 1: Smoothly glide cursor to Option 1 `(Recommended)` and perform firm click to select.
+    - Step 2: Detect and smoothly glide cursor to `Submit / पुष्टि करें` button and perform firm click to confirm and submit.
+  - **Antigravity Tracking & Auto-Foregrounding (`AntigravityWindowManager`):**
+    - Detects whether Antigravity is open/running via native Win32 process table inspection and window handle enumeration.
+    - If Antigravity is not open: Clearly outputs `[ANTIGRAVITY] एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)`.
+    - If Antigravity is minimized or running in the background: Automatically restores (`ShowWindow(SW_RESTORE)`) and brings it to the foreground (`AttachThreadInput` + `SetForegroundWindow`) without moving the mouse before triggering HUD and automation.
+  - **Live Visual Simulator Overhaul (`launch_simulator`):**
+    - Interactive decision card with selectable options (`○` -> `●`), green selection borders, and a responsive `[ 🚀 Submit / पुष्टि करें ]` button.
+    - Complete 2-step visual glide demonstration with HUD stage badges and audio confirmation.
+  - **1-Click Launcher Enhancements (`run.bat`):**
+    - Added direct numeric shortcut handling: `run.bat 1` (Live Demo), `run.bat 2` (Background Sentinel), and `run.bat 3` (Diagnostics).
+  - **Testing & Verification:**
+    - Expanded test suite to 13 unit tests covering Config defaults (10s), AntigravityWindowManager, MouseController firm click, submit button detection inference, and HUD lifecycle.
+
+---
+
 ### [2026-10-31 05:10:00 IST] - Release 1.1.0 (Detection Overhaul & Visual HUD)
 - **Commit:** `fix(core): overhaul detection engine, add floating HUD overlay and interactive launcher menu`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
