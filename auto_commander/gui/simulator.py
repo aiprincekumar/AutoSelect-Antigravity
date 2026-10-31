@@ -130,7 +130,7 @@ def launch_simulator(countdown_seconds: float = 10.0):
             fg="#A6E3A1",
             font=("Segoe UI", 10, "bold"),
         )
-        submit_btn.config(state="normal", bg="#89B4FA", fg="#11111B")
+        submit_btn.config(state="normal", bg="#89B4FA", fg="#11111B", cursor="hand2")
 
     def select_option_2():
         selected_option.set("option_2")
@@ -143,7 +143,7 @@ def launch_simulator(countdown_seconds: float = 10.0):
         opt1_text_lbl.config(bg="#313244", fg="#A6E3A1")
 
         status_lbl.config(text="Option 2 selected manually by developer.", fg="#F9E2AF")
-        submit_btn.config(state="normal", bg="#89B4FA", fg="#11111B")
+        submit_btn.config(state="normal", bg="#89B4FA", fg="#11111B", cursor="hand2")
 
     opt1_frame.bind("<Button-1>", lambda e: select_option_1())
     opt1_text_lbl.bind("<Button-1>", lambda e: select_option_1())
@@ -153,7 +153,7 @@ def launch_simulator(countdown_seconds: float = 10.0):
     opt2_text_lbl.bind("<Button-1>", lambda e: select_option_2())
     radio2_lbl.bind("<Button-1>", lambda e: select_option_2())
 
-    # Step 2: Submit Button at bottom
+    # Step 2: Action Bar at bottom (Disabled Submit + Clickable Skip)
     def on_submit_clicked():
         if not selected_option.get():
             status_lbl.config(text="⚠️ Please select an option first!", fg="#F38BA8")
@@ -171,25 +171,50 @@ def launch_simulator(countdown_seconds: float = 10.0):
             pass
         root.after(1800, root.destroy)
 
-    submit_frame = tk.Frame(root, bg="#1E1E2E")
-    submit_frame.pack(pady=12)
+    def on_skip_clicked():
+        status_lbl.config(text="⏭️ Skipped by developer.", fg="#BAC2DE")
+        root.after(1000, root.destroy)
 
+    action_frame = tk.Frame(root, bg="#1E1E2E")
+    action_frame.pack(pady=12)
+
+    # Submit button: Initially unhighlighted / greyish / disabled / directly unclickable
     submit_btn = tk.Button(
-        submit_frame,
+        action_frame,
         text="🚀 Submit / पुष्टि करें",
         font=("Segoe UI", 11, "bold"),
-        bg="#45475A",
-        fg="#BAC2DE",
-        activebackground="#A6E3A1",
+        bg="#313244",
+        fg="#6C7086",
+        disabledforeground="#6C7086",
+        state="disabled",
+        activebackground="#89B4FA",
         activeforeground="#11111B",
         relief="raised",
         bd=2,
-        padx=24,
+        padx=22,
         pady=8,
-        cursor="hand2",
+        cursor="arrow",
         command=on_submit_clicked,
     )
-    submit_btn.pack()
+    submit_btn.pack(side="left", padx=8)
+
+    # Skip button: Right next to Submit, greyed-out but clickable
+    skip_btn = tk.Button(
+        action_frame,
+        text="⏭️ Skip",
+        font=("Segoe UI", 11),
+        bg="#45475A",
+        fg="#BAC2DE",
+        activebackground="#585B70",
+        activeforeground="#CDD6F4",
+        relief="raised",
+        bd=2,
+        padx=20,
+        pady=8,
+        cursor="hand2",
+        command=on_skip_clicked,
+    )
+    skip_btn.pack(side="left", padx=8)
 
     status_lbl = tk.Label(
         root,

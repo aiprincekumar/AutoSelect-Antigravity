@@ -23,17 +23,25 @@ class Config:
     floating_hud_enabled: bool = True
     floating_hud_alpha: float = 0.92
     ocr_enabled: bool = True
+    action_bar_keywords: Tuple[str, ...] = (
+        "Submit",
+        "Skip",
+        "पुष्टि करें",
+        "Confirm",
+        "Proceed",
+    )
     target_keywords: Tuple[str, ...] = (
         "(Recommended)",
-        "Recommended",
+        "[Recommended]",
         "(अनुशंसित)",
-        "अनुशंसित",
+        "[अनुशंसित]",
         "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
         "(Recommended) GitHub",
         "Proceed",
     )
     submit_keywords: Tuple[str, ...] = (
         "Submit",
+        "Skip",
         "पुष्टि करें",
         "Confirm",
         "Proceed",
@@ -65,6 +73,7 @@ class Config:
                         floating_hud_enabled=bool(data.get("floating_hud_enabled", True)),
                         floating_hud_alpha=float(data.get("floating_hud_alpha", 0.92)),
                         ocr_enabled=bool(data.get("ocr_enabled", True)),
+                        action_bar_keywords=tuple(data.get("action_bar_keywords", cls.action_bar_keywords)),
                         target_keywords=tuple(data.get("target_keywords", cls.target_keywords)),
                         submit_keywords=tuple(data.get("submit_keywords", cls.submit_keywords)),
                         detection_mode=str(data.get("detection_mode", "auto")),
@@ -88,6 +97,7 @@ class Config:
             "floating_hud_enabled": self.floating_hud_enabled,
             "floating_hud_alpha": self.floating_hud_alpha,
             "ocr_enabled": self.ocr_enabled,
+            "action_bar_keywords": list(self.action_bar_keywords),
             "target_keywords": list(self.target_keywords),
             "submit_keywords": list(self.submit_keywords),
             "detection_mode": self.detection_mode,

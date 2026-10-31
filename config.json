@@ -10,17 +10,25 @@
   "floating_hud_enabled": true,
   "floating_hud_alpha": 0.92,
   "ocr_enabled": true,
+  "action_bar_keywords": [
+    "Submit",
+    "Skip",
+    "पुष्टि करें",
+    "Confirm",
+    "Proceed"
+  ],
   "target_keywords": [
     "(Recommended)",
-    "Recommended",
+    "[Recommended]",
     "(अनुशंसित)",
-    "अनुशंसित",
+    "[अनुशंसित]",
     "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
     "(Recommended) GitHub",
     "Proceed"
   ],
   "submit_keywords": [
     "Submit",
+    "Skip",
     "पुष्टि करें",
     "Confirm",
     "Proceed",

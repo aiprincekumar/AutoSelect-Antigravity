@@ -53,8 +53,10 @@ class TestAutoCommander(unittest.TestCase):
         self.assertEqual(cfg.countdown_seconds, 10)
         self.assertTrue(cfg.floating_hud_enabled)
         self.assertTrue(cfg.ocr_enabled)
-        self.assertIn("Recommended", cfg.target_keywords)
+        self.assertIn("(Recommended)", cfg.target_keywords)
         self.assertIn("Submit", cfg.submit_keywords)
+        self.assertIn("Skip", cfg.submit_keywords)
+        self.assertIn("Skip", cfg.action_bar_keywords)
 
     def test_detection_result_center(self):
         result = DetectionResult(
@@ -369,6 +371,80 @@ class TestAutoCommander(unittest.TestCase):
             self.assertIn("Recommended", opt.label)
             self.assertEqual(sub.label, "Submit")
             self.assertGreater(sub.y, opt.y)
+
+    def test_contrast_enhancement(self):
+        img = Image.new("RGB", (100, 100), color=(30, 30, 30))
+        d = ImageDraw.Draw(img)
+        d.text((10, 10), "Submit", fill=(45, 45, 45))
+        enhanced = WindowsOcrDetector._enhance_contrast(img, factor=2.2)
+        self.assertIsNotNone(enhanced)
+        self.assertEqual(enhanced.size, img.size)
+        self.assertEqual(enhanced.mode, "RGB")
+
+    def test_strict_bracketed_recommended_matching(self):
+        # Bracketed forms must match
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("(Recommended)"))
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("[Recommended]"))
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("{Recommended}"))
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("( Recommended )"))
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("Option 1: (Recommended) GitHub Push"))
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("Option 1: (अनुशंसित) गिटहब पुश"))
+        self.assertTrue(WindowsOcrDetector.is_bracketed_target("[अनुशंसित] गिटहब पुश"))
+
+        # Non-bracketed forms must NOT match
+        self.assertFalse(WindowsOcrDetector.is_bracketed_target("recommended"))
+        self.assertFalse(WindowsOcrDetector.is_bracketed_target("I recommended this solution"))
+        self.assertFalse(WindowsOcrDetector.is_bracketed_target("अनुशंसित"))
+        self.assertFalse(WindowsOcrDetector.is_bracketed_target("Recommended action is unknown"))
+
+    def test_ocr_decision_modal_detects_prompt_with_submit_and_skip(self):
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "[Recommended]"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        img_modal = Image.new("RGB", (650, 350), color=(30, 30, 46))
+        d = ImageDraw.Draw(img_modal)
+        d.text((40, 40), "Select an option:", fill=(255, 255, 255))
+        d.text((40, 90), "Option 1: (Recommended) GitHub Commit Push", fill=(166, 227, 161))
+        d.text((40, 130), "Option 2: Cancel inspection", fill=(200, 200, 200))
+
+        # Bottom Action Bar with both Submit and Skip buttons
+        d.rectangle([40, 200, 140, 235], fill=(49, 50, 68))
+        d.text((55, 208), "Submit", fill=(255, 255, 255))
+
+        d.rectangle([180, 200, 270, 235], fill=(69, 71, 90))
+        d.text((200, 208), "Skip", fill=(255, 255, 255))
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
+            match = detector.scan_decision_modal_on_image(img_modal, require_submit=True)
+            self.assertIsNotNone(match, "Modal with Submit + Skip must be detected!")
+            opt, sub = match
+            self.assertIn("Recommended", opt.label)
+            self.assertEqual(sub.label, "Submit")
+            self.assertGreater(sub.y, opt.y)
+
+    def test_ocr_decision_modal_infers_submit_when_only_skip_detected(self):
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "[Recommended]"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        # Simulate image where Submit is faint/unreadable, but Skip is detected
+        img_modal = Image.new("RGB", (650, 350), color=(30, 30, 46))
+        d = ImageDraw.Draw(img_modal)
+        d.text((40, 40), "Select an option:", fill=(255, 255, 255))
+        d.text((40, 90), "Option 1: (Recommended) GitHub Commit Push", fill=(166, 227, 161))
+        d.text((40, 130), "Option 2: Review locally", fill=(200, 200, 200))
+        d.text((180, 208), "Skip", fill=(255, 255, 255))
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
+            match = detector.scan_decision_modal_on_image(img_modal, require_submit=True)
+            self.assertIsNotNone(match, "Modal with Skip must trigger and infer Submit button!")
+            opt, sub = match
+            self.assertIn("Recommended", opt.label)
+            self.assertEqual(sub.label, "Submit")
+            self.assertEqual(sub.source, "WindowsOcr-Inferred")
+            self.assertGreater(sub.y, opt.y)
+            self.assertLess(sub.x, 180, "Inferred Submit must be to the left of Skip button")
 
 
     def test_find_antigravity_window_when_minimized(self):
