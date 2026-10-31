@@ -1206,7 +1206,14 @@ def run_diagnostics(config: Config):
             screen_img = ImageGrab.grab()
             buf = io.BytesIO()
             screen_img.save(buf, format="PNG")
-            ocr_res = asyncio.run(ocr_det._recognize_async(buf.getvalue()))
+            import concurrent.futures
+            with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                future = executor.submit(asyncio.run, ocr_det._recognize_async(buf.getvalue()))
+                try:
+                    ocr_res = future.result(timeout=4.0)
+                except concurrent.futures.TimeoutError:
+                    print("  • OCR Screen Grab Notice: Recognition timed out after 4.0s.")
+                    ocr_res = None
             if ocr_res and ocr_res.lines:
                 print(f"  • Lines Extracted    : {len(ocr_res.lines)}")
                 print("  • Sample Detected Lines (first 10):")

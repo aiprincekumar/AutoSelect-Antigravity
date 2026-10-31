@@ -57,7 +57,7 @@ if not exist ".venv\Scripts\python.exe" (
 
 :: 3. Check and Install Requirements
 if not exist ".venv\.installed_v2" (
-    echo [SETUP] Installing required dependencies (pyautogui, opencv-python, pillow, pynput, pygetwindow, uiautomation, winsdk)...
+    echo [SETUP] Installing required dependencies: pyautogui, opencv-python, pillow, pynput, pygetwindow, uiautomation, winsdk...
     if %USE_UV% equ 1 (
         uv pip install --python ".venv\Scripts\python.exe" -r requirements.txt
     ) else (
@@ -92,35 +92,39 @@ echo.
 echo    [3] Screen ^& Window Diagnostics
 echo        -^> Scans screen, tests OCR, lists detected windows and text.
 echo.
+echo    [4] Exit
+echo.
 echo  -----------------------------------------------------------------------------
-echo  Auto-launching [1] Demo Mode in 5 seconds (Press 1, 2, or 3 to choose now)...
+echo  Auto-launching [1] Demo Mode in 5 seconds (Press 1, 2, 3, or 4 to choose now)...
 echo  -----------------------------------------------------------------------------
 echo.
 
-choice /c 123 /t 5 /d 1 /m "Your selection"
+choice /c 1234 /t 5 /d 1 /m "Your selection"
 
+if %errorlevel% equ 4 goto FINISH
 if %errorlevel% equ 3 goto RUN_DIAGNOSTICS
 if %errorlevel% equ 2 goto RUN_SENTINEL
-goto RUN_DEMO
+if %errorlevel% equ 1 goto RUN_DEMO
+goto FINISH
 
 :RUN_DEMO
 echo.
 echo [LAUNCH] Starting Live Visual Demo Mode...
-echo ───────────────────────────────────────────────────────────────────────────────
+echo -------------------------------------------------------------------------------
 ".venv\Scripts\python.exe" auto_commander.py --simulate
 goto FINISH
 
 :RUN_SENTINEL
 echo.
 echo [LAUNCH] Starting Active Background Sentinel...
-echo ───────────────────────────────────────────────────────────────────────────────
+echo -------------------------------------------------------------------------------
 ".venv\Scripts\python.exe" auto_commander.py
 goto FINISH
 
 :RUN_DIAGNOSTICS
 echo.
 echo [LAUNCH] Running Screen ^& Window Diagnostics...
-echo ───────────────────────────────────────────────────────────────────────────────
+echo -------------------------------------------------------------------------------
 ".venv\Scripts\python.exe" auto_commander.py --diagnostics
 goto FINISH
 
