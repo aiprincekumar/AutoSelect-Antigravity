@@ -4,6 +4,37 @@
 
 ---
 
+### [2026-11-02 04:40:00 IST] - Release 1.8.1 (Browser Disqualification & Strict Antigravity 2.0 Process Targeting)
+- **Commit:** `fix(automation): strictly exclude chrome/browsers and enforce exact Antigravity process targeting`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Browser Disqualification:**
+    - Diagnosed that `chrome.exe` shares class `Chrome_WidgetWin_1` with Antigravity and was receiving positive scores, leading to `Ctrl + L` focusing the Chrome address bar and performing web searches.
+    - Added `DISQUALIFIED_BROWSER_PROCS` across `grill_me_automation.py`, `activating_grill_me.py`, and `win32_window.py`.
+    - Browsers are strictly disqualified (-9999 / filtered out) unless explicitly targeted via CLI.
+  - **Antigravity 2.0 Priority Targeting:**
+    - Enforced process matching against `Antigravity.exe` or process path containing `antigravity`, awarding highest priority (+1000).
+    - Restricted `Chrome_WidgetWin_1` class scoring strictly to verified Antigravity/Electron processes.
+  - **Win32 Image Resolution Fallback:**
+    - Added native `OpenProcess` + `QueryFullProcessImageNameW` in `get_process_info_for_hwnd`.
+  - **Pre-Execution Foreground Gatekeeper:**
+    - Checks foreground window immediately before key simulation; aborts execution if foreground is a browser to protect user tabs.
+  - **Verification:**
+    - Expanded unit tests in `tests/test_grill_me.py` to 17 tests; full suite 93/93 tests passing; gitleaks 0 leaks.
+
+---
+
+### [2026-11-02 04:05:00 IST] - Release 1.8.0 (Antigravity 2.0 Harness Window Restore, Maximize & Force-Focus)
+- **Commit:** `fix(automation): enhance antigravity 2.0 harness window detection, restore, maximize, and force-focus pipeline`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - Resolved window title mismatch for Antigravity 2.0 Harness.
+  - Added multi-layered matching: process name (`Antigravity.exe`), window class (`Chrome_WidgetWin_1`), and multi-keyword comma-separated list.
+  - Thread desktop attachment via `OpenInputDesktop` + `SetThreadDesktop`.
+  - Window restoration (`SW_RESTORE` + `OpenIcon`), full-screen maximization (`SW_MAXIMIZE`), and Windows 10/11 focus lock bypass.
+
+---
+
 ### [2026-11-02 03:25:00 IST] - Release 1.7.0 (Antigravity Window Auto-Target, Restore, Maximize & Focus Subsystem)
 - **Commit:** `feat(automation): add antigravity auto-detect, restore, maximize, and focus subsystem`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)

@@ -501,6 +501,10 @@ class AntigravityFocusManager:
     TARGET_PROCESSES = ("antigravity.exe", "antigravity", "electron.exe")
     TARGET_CLASS = "Chrome_WidgetWin_1"
     TARGET_TITLES = ("antigravity", "gemini", "autoselect-commander", "taskbar hud")
+    DISQUALIFIED_BROWSER_PROCS = {
+        "chrome.exe", "msedge.exe", "firefox.exe", "brave.exe",
+        "opera.exe", "vivaldi.exe", "iexplore.exe", "safari.exe"
+    }
 
     @classmethod
     def get_process_name_for_hwnd(cls, hwnd: int) -> str:
@@ -551,7 +555,9 @@ class AntigravityFocusManager:
 
         blacklisted_procs = {
             "cmd.exe", "powershell.exe", "pwsh.exe", "conhost.exe", "wt.exe",
-            "windowsterminal.exe", "python.exe", "pythonw.exe", "explorer.exe"
+            "windowsterminal.exe", "python.exe", "pythonw.exe", "explorer.exe",
+            "chrome.exe", "msedge.exe", "firefox.exe", "brave.exe",
+            "opera.exe", "vivaldi.exe", "iexplore.exe", "safari.exe"
         }
 
         def enum_cb(hwnd, lparam):

@@ -2,7 +2,7 @@
 
 > **Project:** AutoSelect-Commander (Visual Mouse Automation & Auto-Selector for Antigravity)  
 > **Repository:** `C:\Users\Atul Verma\Desktop\AutoSelect-Commander\`  
-> **Last Updated:** 2026-11-02 03:25:00 IST  
+> **Last Updated:** 2026-11-02 04:40:00 IST  
 > **Author:** Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 ---
@@ -11,6 +11,7 @@
 
 | Change ID | Timestamp | Category | Component | Description | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `CHG-011` | 2026-11-02 04:40:00 IST | `fix` | Keyboard Automation | Strictly exclude chrome/browsers and enforce exact Antigravity process targeting | **VERIFIED** |
 | `CHG-010` | 2026-11-02 04:05:00 IST | `fix` | Keyboard Automation | Enhance Antigravity 2.0 Harness window detection, restore, maximize, and force-focus pipeline | **VERIFIED** |
 | `CHG-009` | 2026-11-02 03:35:00 IST | `feat` | Activating Grill Me Chat | Add Method 1 file system and transcript parsing engine in Activating Grill Me Chat in anti-gravity | **VERIFIED** |
 | `CHG-008` | 2026-11-02 03:25:00 IST | `feat` | Keyboard Automation | Add Antigravity intelligent window auto-detect, restore, maximize, and focus subsystem | **VERIFIED** |

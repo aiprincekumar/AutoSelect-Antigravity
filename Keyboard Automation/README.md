@@ -13,12 +13,13 @@ The **Grill Me Keyboard Automation** suite provides an automated keystroke injec
 
 ### 🌟 Intelligent Auto-Targeting & Maximization Subsystem (Default: Enabled)
 By default, regardless of current desktop state, the suite automatically inspects and prepares the target application window:
-1. **Window Detection & Enumeration:** Scans all top-level windows via Win32 `EnumWindows` and matches the target keyword (default: `"Antigravity"`). Excludes the script's own console window.
-2. **Auto-Restore (Un-minimize):** If Antigravity is minimized (`IsIconic == True`), the subsystem automatically un-minimizes and restores it.
-3. **Auto-Maximize (Full Screen):** If Antigravity is not maximized (`IsZoomed == False`), it automatically maximizes it (`SW_MAXIMIZE`) so the interface expands edge-to-edge.
-4. **Foreground Lock Bypass & Focus:** Uses `AttachThreadInput` and synthetic `Alt` unlock signals to reliably bring Antigravity to the absolute foreground (`BringWindowToTop` / `SetForegroundWindow` / `SetFocus`).
-5. **Geometry Verification & Settling Delay:** Verifies window bounds (`GetWindowRect`) and waits for rendering to stabilize (`--settle-delay 0.5s`) before injecting keystrokes.
-6. **Graceful Fallback:** If the target window is not open, the system logs a clear warning and seamlessly continues using the active foreground window.
+1. **Window Detection & Enumeration:** Scans all top-level windows via Win32 `EnumWindows`, strictly prioritizing `Antigravity.exe` (+1000 score) and Antigravity 2.0 process image paths.
+2. **Web Browser Disqualification Gatekeeper:** Strictly disqualifies and rejects all web browsers (`chrome.exe`, `msedge.exe`, `firefox.exe`, `brave.exe`, `opera.exe`, etc.) to prevent accidental browser focus or address bar typing.
+3. **Auto-Restore (Un-minimize):** If Antigravity is minimized (`IsIconic == True`), the subsystem automatically un-minimizes and restores it.
+4. **Auto-Maximize (Full Screen):** If Antigravity is not maximized (`IsZoomed == False`), it automatically maximizes it (`SW_MAXIMIZE`) so the interface expands edge-to-edge.
+5. **Foreground Lock Bypass & Focus:** Uses `AttachThreadInput` and synthetic `Alt` unlock signals to reliably bring Antigravity to the absolute foreground (`BringWindowToTop` / `SetForegroundWindow` / `SetFocus`).
+6. **Pre-Execution Safety Verification:** Verifies the live foreground window immediately before key simulation; if a browser is detected, key injection aborts immediately.
+7. **Geometry Verification & Settling Delay:** Verifies window bounds (`GetWindowRect`) and waits for rendering to stabilize (`--settle-delay 0.5s`) before injecting keystrokes.
 
 ---
 

@@ -151,6 +151,160 @@ class TestGrillMeAutomation(unittest.TestCase):
             self.assertIn("class", c)
             self.assertIn("process_name", c)
 
+    def test_browser_disqualification_and_antigravity_priority(self):
+        """
+        Verify that web browsers (Chrome, Edge) are strictly disqualified even
+        with window class Chrome_WidgetWin_1, and Antigravity.exe is prioritized.
+        """
+        mock_candidates = [
+            {
+                "hwnd": 1001,
+                "title": "Google Search - Google Chrome",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 4001,
+                "process_name": "chrome.exe",
+                "process_exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+            },
+            {
+                "hwnd": 1002,
+                "title": "Microsoft Edge Browser",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 4002,
+                "process_name": "msedge.exe",
+                "process_exe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+            },
+            {
+                "hwnd": 2001,
+                "title": "AutoSelect-Commander Workspace - Antigravity",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 5001,
+                "process_name": "Antigravity.exe",
+                "process_exe": "C:\\Users\\Atul Verma\\AppData\\Local\\Programs\\antigravity\\Antigravity.exe",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+            },
+        ]
+
+        original_find = grill_me.find_all_candidate_windows
+        try:
+            grill_me.find_all_candidate_windows = lambda: mock_candidates
+            selected = grill_me.select_target_window()
+            self.assertIsNotNone(selected)
+            self.assertEqual(selected[0], 2001)
+            self.assertIn("Antigravity", selected[1])
+        finally:
+            grill_me.find_all_candidate_windows = original_find
+
+    def test_browsers_strictly_rejected_when_no_antigravity(self):
+        """
+        Verify that if only Chrome and Edge are running, select_target_window returns None
+        and NEVER selects the browser.
+        """
+        mock_candidates = [
+            {
+                "hwnd": 1001,
+                "title": "Google Search - AutoSelect-Commander",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 4001,
+                "process_name": "chrome.exe",
+                "process_exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+            },
+            {
+                "hwnd": 1002,
+                "title": "Microsoft Edge - AutoSelect-Commander",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 4002,
+                "process_name": "msedge.exe",
+                "process_exe": "C:\\Program Files (x86)\\Microsoft\\Edge\\Application\\msedge.exe",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+            },
+        ]
+
+        original_find = grill_me.find_all_candidate_windows
+        try:
+            grill_me.find_all_candidate_windows = lambda: mock_candidates
+            selected = grill_me.select_target_window()
+            self.assertIsNone(selected)
+        finally:
+            grill_me.find_all_candidate_windows = original_find
+
+    def test_explicit_browser_target_allowed(self):
+        """
+        Verify that if the user explicitly specifies 'chrome' in CLI target,
+        it is permitted through the filter.
+        """
+        mock_candidates = [
+            {
+                "hwnd": 1001,
+                "title": "Google Chrome Window",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 4001,
+                "process_name": "chrome.exe",
+                "process_exe": "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+            }
+        ]
+
+        original_find = grill_me.find_all_candidate_windows
+        try:
+            grill_me.find_all_candidate_windows = lambda: mock_candidates
+            selected = grill_me.select_target_window("chrome")
+            self.assertIsNotNone(selected)
+            self.assertEqual(selected[0], 1001)
+        finally:
+            grill_me.find_all_candidate_windows = original_find
+
+    def test_automator_aborts_on_browser_foreground(self):
+        """
+        Verify that if the foreground window is chrome.exe, GrillMeAutomator
+        aborts execution to protect the user's browser.
+        """
+        original_proc_info = grill_me.get_process_info_for_hwnd
+        try:
+            grill_me.get_process_info_for_hwnd = lambda hwnd: (4001, "chrome.exe", "C:\\Program Files\\Google\\Chrome\\Application\\chrome.exe")
+            automator = grill_me.GrillMeAutomator(
+                engine="ctypes",
+                auto_focus=False,
+                auto_maximize=False,
+                dry_run=False,
+            )
+            success = automator.execute()
+            self.assertFalse(success)
+        finally:
+            grill_me.get_process_info_for_hwnd = original_proc_info
+
 
 if __name__ == "__main__":
     unittest.main()

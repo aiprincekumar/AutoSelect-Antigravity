@@ -46,7 +46,7 @@ if user32:
     user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
     user32.GetAncestor.restype = wintypes.HWND
 
-# Shell and system processes that must NEVER be targeted or brought to foreground
+# Shell, browser, and system processes that must NEVER be targeted or brought to foreground
 BLACK_LISTED_PROCESS_NAMES = {
     "cmd.exe",
     "powershell.exe",
@@ -57,6 +57,14 @@ BLACK_LISTED_PROCESS_NAMES = {
     "explorer.exe",
     "python.exe",
     "pythonw.exe",
+    "chrome.exe",
+    "msedge.exe",
+    "firefox.exe",
+    "brave.exe",
+    "opera.exe",
+    "vivaldi.exe",
+    "iexplore.exe",
+    "safari.exe",
 }
 
 # Substrings that must NEVER match as real Antigravity IDE (applied to non-Antigravity windows)

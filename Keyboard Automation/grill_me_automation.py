@@ -49,6 +49,31 @@ logging.basicConfig(
 )
 logger = logging.getLogger("GrillMeAutomation")
 
+# Disqualified Web Browsers - Must NEVER be targeted or focused by default
+DISQUALIFIED_BROWSER_PROCS = {
+    "chrome.exe",
+    "msedge.exe",
+    "firefox.exe",
+    "brave.exe",
+    "opera.exe",
+    "vivaldi.exe",
+    "iexplore.exe",
+    "safari.exe",
+}
+
+# Blacklisted Shells & Script Interpreters - Must NEVER be targeted
+BLACK_LISTED_SHELL_PROCS = {
+    "cmd.exe",
+    "powershell.exe",
+    "pwsh.exe",
+    "conhost.exe",
+    "wt.exe",
+    "windowsterminal.exe",
+    "python.exe",
+    "pythonw.exe",
+    "explorer.exe",
+}
+
 # ============================================================================
 # Windows Native ctypes Input Simulation & Window Management Engine
 # ============================================================================
@@ -290,6 +315,21 @@ if IS_WINDOWS:
                 pass
         except Exception:
             pass
+
+        # Robust Win32 fallback via OpenProcess & QueryFullProcessImageNameW
+        if not pname or not pexe:
+            try:
+                h_proc = kernel32.OpenProcess(0x1000, False, pid.value)  # PROCESS_QUERY_LIMITED_INFORMATION
+                if h_proc:
+                    buf = ctypes.create_unicode_buffer(1024)
+                    size = wintypes.DWORD(1024)
+                    if hasattr(kernel32, "QueryFullProcessImageNameW") and kernel32.QueryFullProcessImageNameW(h_proc, 0, buf, ctypes.byref(size)):
+                        pexe = buf.value
+                        pname = os.path.basename(pexe)
+                    kernel32.CloseHandle(h_proc)
+            except Exception:
+                pass
+
         return pid.value, pname, pexe
 
     def get_active_window_title() -> str:
@@ -562,7 +602,13 @@ if IS_WINDOWS:
         default_set = {"antigravity", "antigravity 2.0", "harness", "autoselect-commander"}
         is_custom_filter = not any(k.lower() in default_set for k in keywords)
 
-        scored: List[Tuple[int, int, str]] = []  # (score, hwnd, title)
+        # Check if the user explicitly requested a web browser by name
+        user_explicitly_requested_browser = any(
+            any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
+            for kw in keywords
+        )
+
+        scored: List[Tuple[int, int, str, dict]] = []  # (score, hwnd, title, candidate_dict)
 
         for c in candidates:
             hwnd = c["hwnd"]
@@ -572,12 +618,23 @@ if IS_WINDOWS:
             p_lower = pname.lower()
             cls_name = c["class"]
             pexe = c["process_exe"].lower()
+            pexe_base = os.path.basename(pexe).lower() if pexe else ""
 
             if console_hwnd and hwnd == console_hwnd:
                 continue
 
-            # Skip blacklisted process unless specifically named in keywords
-            is_blacklisted_proc = p_lower in blacklisted_procs
+            # 1. Strict Browser Disqualification
+            is_browser = (
+                p_lower in DISQUALIFIED_BROWSER_PROCS
+                or pexe_base in DISQUALIFIED_BROWSER_PROCS
+                or any(b in p_lower for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
+            )
+            if is_browser and not user_explicitly_requested_browser:
+                # Strictly reject / disqualify any web browser
+                continue
+
+            # 2. Check shell blacklist
+            is_blacklisted_proc = p_lower in BLACK_LISTED_SHELL_PROCS
             kw_mentions_proc = any(kw.lower() in p_lower for kw in keywords)
             if is_blacklisted_proc and not kw_mentions_proc:
                 continue
@@ -592,14 +649,22 @@ if IS_WINDOWS:
 
             score = 0
 
-            # 1. Antigravity 2.0 Harness Process Signature
-            is_antigravity_proc = ("antigravity" in p_lower or "harness" in p_lower or "antigravity" in pexe)
+            # 1. Antigravity 2.0 Harness Process Signature (Highest Priority: +1000)
+            is_antigravity_proc = (
+                "antigravity.exe" in p_lower
+                or p_lower == "antigravity"
+                or "antigravity" in pexe
+            )
             if is_antigravity_proc:
-                score += 120
+                score += 1000
                 if cls_name == "Chrome_WidgetWin_1":
-                    score += 40
+                    score += 100
                 if c["minimized"] or (c["width"] >= 400 and c["height"] >= 300):
-                    score += 25
+                    score += 50
+            elif "electron" in p_lower or "electron" in pexe:
+                score += 200
+                if cls_name == "Chrome_WidgetWin_1":
+                    score += 50
 
             # 2. Keyword matching against process name or executable path
             for kw in keywords:
@@ -618,9 +683,10 @@ if IS_WINDOWS:
                 elif kw_l in t_lower:
                     score += 50
 
-            # 4. Window Class weighting
-            if cls_name == "Chrome_WidgetWin_1":
-                score += 15
+            # 4. Window Class weighting - ONLY for verified Antigravity or Electron apps!
+            # Never assign points for Chrome_WidgetWin_1 to arbitrary or unverified windows.
+            if is_antigravity_proc and cls_name == "Chrome_WidgetWin_1":
+                score += 20
 
             # 5. Visibility and layout bonuses
             if c["visible"]:
@@ -635,12 +701,31 @@ if IS_WINDOWS:
                 if ex.lower() in t_lower and not any(kw.lower() in ex.lower() for kw in keywords):
                     score -= 50
 
+            # Absolute disqualification for web browsers unless explicitly requested
+            if is_browser and not user_explicitly_requested_browser:
+                score = -9999
+
             if score > 0:
-                scored.append((score, hwnd, title))
+                scored.append((score, hwnd, title, c))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         if scored and scored[0][0] > 0:
-            return (scored[0][1], scored[0][2])
+            top_score, top_hwnd, top_title, top_c = scored[0]
+            proc_name = top_c.get("process_name", "")
+            pid = top_c.get("pid", 0)
+            cls_name = top_c.get("class", "")
+
+            logger.info(
+                f"Selected Window: HWND={hex(top_hwnd)}, Process={proc_name} (PID={pid}), "
+                f"Title='{top_title}', Class={cls_name} [Score: {top_score}]"
+            )
+
+            # Defensive verification: Ensure candidate is NEVER a browser
+            if proc_name.lower() in DISQUALIFIED_BROWSER_PROCS and not user_explicitly_requested_browser:
+                logger.error(f"[SECURITY ALERT] Candidate is browser '{proc_name}'. Rejected!")
+                return None
+
+            return (top_hwnd, top_title)
         return None
 
     def ensure_window_on_screen(
@@ -951,10 +1036,25 @@ class GrillMeAutomator:
         self.target_hwnd = hwnd
         self.target_title = title
         info = get_window_info(hwnd)
+        pname_lower = info.get("process_name", "").lower()
         logger.info(
-            f"[+] Target window detected: '{title}' (HWND: {hex(hwnd)}) "
-            f"[Process: {info['process_name']} PID: {info['pid']}]"
+            f"Selected Window: HWND={hex(hwnd)}, Process={info['process_name']} (PID={info['pid']}), "
+            f"Title='{title}', Class={info['class']}"
         )
+
+        # Strict browser disqualification gatekeeper
+        user_wants_browser = any(
+            any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi"))
+            for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
+        )
+        if pname_lower in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+            logger.error(
+                f"[REJECTED] Selected window belongs to disqualified browser '{pname_lower}'. "
+                f"Refusing to focus or send keystrokes to browser!"
+            )
+            self.target_hwnd = None
+            self.target_title = None
+            return False
 
         if self.dry_run:
             logger.info(
@@ -1025,6 +1125,21 @@ class GrillMeAutomator:
 
         active_window = get_active_window_title()
         logger.info(f"Target Foreground Window: '{active_window}'")
+
+        # Double-check: ensure foreground window is NEVER a web browser
+        if IS_WINDOWS and not self.dry_run:
+            fg_hwnd = user32.GetForegroundWindow()
+            _, fg_pname, _ = get_process_info_for_hwnd(fg_hwnd)
+            user_wants_browser = any(
+                any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
+                for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
+            )
+            if fg_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+                logger.error(
+                    f"[ABORT] Foreground window belongs to browser '{fg_pname}' (HWND: {hex(fg_hwnd) if fg_hwnd else 'None'})! "
+                    f"Aborting key simulation to protect user browser tabs and prevent accidental search!"
+                )
+                return False
 
         if self.engine == "none":
             logger.error("No valid automation engine available on this platform.")
