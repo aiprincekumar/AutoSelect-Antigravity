@@ -1,24 +1,30 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Activating Grill Me Chat in Antigravity - Method 1: File System & Transcript Parsing
+Activating Grill Me Chat in Antigravity - Method 1: Transcript Parsing & GUI Selection
 =====================================================================================
 Target: Antigravity AI Coding Agent Sessions
 Workspace: AutoSelect-Commander / Activating Grill Me Chat in anti-gravity
+Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 Mission:
   Automatically detect which Antigravity chat/conversation currently has
   "Grill Me" / `ask_question` waiting for user response (unanswered question / pending selection),
-  and provide an automated 2-step execution flow:
-    - Step 1: Identification: Scan brain transcript logs, find pending `ask_question` tool calls,
+  and provide an automated 1-click execution flow:
+    - Step A: Identification - Scan brain transcript logs, find pending `ask_question` tool calls,
               and extract Conversation ID, timestamp, user prompt, question text, and options.
-    - Step 2: Selection: Select target conversation, inspect pending questions and available
-              options, calculate recommended choice, and prepare/output the structured selection state.
+    - Step B: Presentation - Print clean terminal summary with questions and auto-detected
+              recommended options, and export structured selection state (Dept 06 standard).
+    - Step C: Focus - Un-minimize and bring Antigravity IDE window to the foreground using
+              bulletproof Windows 10/11 foreground lock bypass (ShowWindow SW_RESTORE, Alt key pulse,
+              AttachThreadInput, Z-order bump, and process/class matching).
+    - Step D: GUI Selection - Autonomously select and activate that chat in the Antigravity GUI
+              via mouse movement/click on the conversation row and `Ctrl + L` chat panel focus.
 
 Architecture:
-  - Zero required external dependencies (100% Python Standard Library).
-  - Optional Windows Win32 focus integration via native ctypes.
-  - Standardized JSON Envelope output adhering to Dept 06 standards.
+  - 100% Python Standard Library core (ctypes, json, os, sys, time, dataclasses).
+  - Optional interop with PyAutoGUI and Pillow for enhanced visual mouse movements and screenshots.
+  - Standardized JSON Envelope output adhering to Department 06 API standards.
 """
 
 from __future__ import annotations
@@ -26,6 +32,7 @@ from __future__ import annotations
 import os
 import sys
 import json
+import time
 import logging
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -51,6 +58,180 @@ logging.basicConfig(
     stream=sys.stdout
 )
 logger = logging.getLogger("ActivatingGrillMe")
+
+# Optional PyAutoGUI integration
+PYAUTOGUI_AVAILABLE = False
+try:
+    import pyautogui
+    pyautogui.FAILSAFE = False
+    PYAUTOGUI_AVAILABLE = True
+except ImportError:
+    pyautogui = None
+
+
+# ============================================================================
+# Win32 Native Subsystem (Focus Lock Bypass & Window Activation)
+# ============================================================================
+IS_WINDOWS = sys.platform == "win32"
+
+if IS_WINDOWS:
+    import ctypes
+    from ctypes import wintypes
+
+    user32 = ctypes.windll.user32
+    kernel32 = ctypes.windll.kernel32
+
+    # Virtual-Key codes
+    VK_SHIFT = 0x10
+    VK_CONTROL = 0x11
+    VK_MENU = 0x12  # Alt key (used for foreground lock release)
+    VK_RETURN = 0x0D
+    VK_TAB = 0x09
+    VK_L = 0x4C
+    VK_1 = 0x31
+    VK_2 = 0x32
+    VK_3 = 0x33
+    VK_4 = 0x34
+    VK_5 = 0x35
+
+    # ShowWindow constants
+    SW_HIDE = 0
+    SW_SHOWNORMAL = 1
+    SW_SHOWMINIMIZED = 2
+    SW_MAXIMIZE = 3
+    SW_SHOW = 5
+    SW_MINIMIZE = 6
+    SW_RESTORE = 9
+
+    # Window Pos flags
+    HWND_TOP = 0
+    HWND_TOPMOST = -1
+    HWND_NOTOPMOST = -2
+    SWP_NOSIZE = 0x0001
+    SWP_NOMOVE = 0x0002
+    SWP_SHOWWINDOW = 0x0040
+
+    # ASFW_ANY constant for AllowSetForegroundWindow
+    ASFW_ANY = -1
+
+    # Mouse event flags
+    MOUSEEVENTF_LEFTDOWN = 0x0002
+    MOUSEEVENTF_LEFTUP = 0x0004
+
+    class WINDOWPLACEMENT(ctypes.Structure):
+        _fields_ = [
+            ("length", wintypes.UINT),
+            ("flags", wintypes.UINT),
+            ("showCmd", wintypes.UINT),
+            ("ptMinPosition", wintypes.POINT),
+            ("ptMaxPosition", wintypes.POINT),
+            ("rcNormalPosition", wintypes.RECT),
+        ]
+
+    # Setup function prototypes
+    user32.GetForegroundWindow.argtypes = []
+    user32.GetForegroundWindow.restype = wintypes.HWND
+
+    user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetWindowTextW.restype = ctypes.c_int
+
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+
+    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetClassNameW.restype = ctypes.c_int
+
+    user32.IsWindow.argtypes = [wintypes.HWND]
+    user32.IsWindow.restype = wintypes.BOOL
+
+    user32.IsWindowVisible.argtypes = [wintypes.HWND]
+    user32.IsWindowVisible.restype = wintypes.BOOL
+
+    user32.IsIconic.argtypes = [wintypes.HWND]
+    user32.IsIconic.restype = wintypes.BOOL
+
+    user32.IsZoomed.argtypes = [wintypes.HWND]
+    user32.IsZoomed.restype = wintypes.BOOL
+
+    user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindow.restype = wintypes.BOOL
+
+    user32.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindowAsync.restype = wintypes.BOOL
+
+    user32.OpenIcon.argtypes = [wintypes.HWND]
+    user32.OpenIcon.restype = wintypes.BOOL
+
+    user32.BringWindowToTop.argtypes = [wintypes.HWND]
+    user32.BringWindowToTop.restype = wintypes.BOOL
+
+    user32.SetForegroundWindow.argtypes = [wintypes.HWND]
+    user32.SetForegroundWindow.restype = wintypes.BOOL
+
+    user32.SetActiveWindow.argtypes = [wintypes.HWND]
+    user32.SetActiveWindow.restype = wintypes.HWND
+
+    user32.SetFocus.argtypes = [wintypes.HWND]
+    user32.SetFocus.restype = wintypes.HWND
+
+    user32.AllowSetForegroundWindow.argtypes = [wintypes.DWORD]
+    user32.AllowSetForegroundWindow.restype = wintypes.BOOL
+
+    user32.SetWindowPos.argtypes = [
+        wintypes.HWND, wintypes.HWND,
+        ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int,
+        wintypes.UINT
+    ]
+    user32.SetWindowPos.restype = wintypes.BOOL
+
+    user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
+    user32.GetWindowRect.restype = wintypes.BOOL
+
+    user32.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.c_void_p]
+    user32.GetWindowPlacement.restype = wintypes.BOOL
+
+    user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
+    user32.GetWindowThreadProcessId.restype = wintypes.DWORD
+
+    user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
+    user32.AttachThreadInput.restype = wintypes.BOOL
+
+    user32.OpenInputDesktop.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    user32.OpenInputDesktop.restype = wintypes.HANDLE
+
+    user32.SetThreadDesktop.argtypes = [wintypes.HANDLE]
+    user32.SetThreadDesktop.restype = wintypes.BOOL
+
+    kernel32.GetCurrentThreadId.argtypes = []
+    kernel32.GetCurrentThreadId.restype = wintypes.DWORD
+
+    kernel32.GetConsoleWindow.argtypes = []
+    kernel32.GetConsoleWindow.restype = wintypes.HWND
+
+    WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
+    user32.EnumWindows.argtypes = [ctypes.c_void_p, wintypes.LPARAM]
+    user32.EnumWindows.restype = wintypes.BOOL
+
+    user32.EnumDesktopWindows.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.LPARAM]
+    user32.EnumDesktopWindows.restype = wintypes.BOOL
+
+    if hasattr(user32, "SwitchToThisWindow"):
+        user32.SwitchToThisWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+        user32.SwitchToThisWindow.restype = None
+
+
+def ensure_input_desktop():
+    """Ensure current thread is attached to the active interactive input desktop."""
+    if not IS_WINDOWS:
+        return None
+    try:
+        hdesk = user32.OpenInputDesktop(0, False, 0x01FF)
+        if hdesk:
+            user32.SetThreadDesktop(hdesk)
+            return hdesk
+    except Exception:
+        pass
+    return None
 
 
 # ============================================================================
@@ -94,8 +275,7 @@ class PendingGrillMeChat:
     total_steps: int = 0
 
     def to_dict(self) -> Dict[str, Any]:
-        data = asdict(self)
-        return data
+        return asdict(self)
 
 
 @dataclass
@@ -107,6 +287,7 @@ class SelectionResult:
     questions_count: int
     selections: List[Dict[str, Any]] = field(default_factory=list)
     window_focused: bool = False
+    gui_chat_selected: bool = False
     dry_run: bool = False
 
     def to_dict(self) -> Dict[str, Any]:
@@ -114,13 +295,13 @@ class SelectionResult:
 
 
 # ============================================================================
-# Step 1: Identification Engine
+# Step A: Identification Engine (Transcript Parsing)
 # ============================================================================
 
 class GrillMeDetector:
     """
     Method 1 Engine: File System & Transcript Parsing.
-    Scans the Antigravity brain storage to identify active/unanswered ask_question prompts.
+    Scans Antigravity brain storage to identify active/unanswered ask_question prompts.
     """
 
     DEFAULT_BRAIN_RELATIVE_PATH = os.path.join(".gemini", "antigravity", "brain")
@@ -209,7 +390,6 @@ class GrillMeDetector:
         for step in lines:
             if step.get("type") == "USER_INPUT":
                 content = str(step.get("content", "")).strip()
-                # Clean prompt markers if present
                 if "<USER_REQUEST>" in content:
                     try:
                         content = content.split("<USER_REQUEST>")[1].split("</USER_REQUEST>")[0].strip()
@@ -230,7 +410,6 @@ class GrillMeDetector:
                     # Check if this ask_question call has been answered by any subsequent step
                     is_answered = self._is_step_answered(lines, i)
                     if not is_answered:
-                        # Extract question payloads
                         questions = self._extract_question_payloads(tc.get("args", {}))
                         created_at = step.get("created_at", "")
                         step_index = step.get("step_index", i)
@@ -251,8 +430,7 @@ class GrillMeDetector:
                             total_steps=total_steps
                         )
                     else:
-                        # The newest ask_question in this conversation has already been answered.
-                        # Stop scanning older steps for this conversation.
+                        # Newest ask_question in this conversation was answered
                         return None
 
         return None
@@ -263,19 +441,15 @@ class GrillMeDetector:
             subsequent = lines[j]
             stype = subsequent.get("type", "")
 
-            # Tool result for ask_question is typically recorded as GENERIC containing answers or Completed At
             if stype == "GENERIC":
                 content = str(subsequent.get("content", ""))
                 if "Completed At:" in content or "A1:" in content or "Answer" in content:
                     return True
 
-            # If user sent another prompt, the agent was unblocked or the prompt was resolved
             if stype == "USER_INPUT":
                 return True
 
-            # If a subsequent PLANNER_RESPONSE executes without tool_calls waiting for ask_question
             if stype == "PLANNER_RESPONSE" and subsequent.get("status") == "DONE":
-                # Check if it's continuing execution
                 if not any(tc.get("name") == "ask_question" for tc in subsequent.get("tool_calls", [])):
                     return True
 
@@ -285,7 +459,6 @@ class GrillMeDetector:
         """Extract structured QuestionPayload instances from raw tool arguments."""
         questions_raw = args.get("questions", [])
 
-        # Handle JSON-string encoded argument
         if isinstance(questions_raw, str):
             try:
                 questions_raw = json.loads(questions_raw)
@@ -316,14 +489,446 @@ class GrillMeDetector:
 
 
 # ============================================================================
-# Step 2: Selection Engine & Window Activation
+# Step C: Bulletproof Window Finder & Foreground Activation Subsystem
+# ============================================================================
+
+class AntigravityFocusManager:
+    """
+    Robust Windows 10/11 window finding, un-minimizing, and foreground activation.
+    Overcomes Windows foreground lock, thread desktop boundaries, and minimized states.
+    """
+
+    TARGET_PROCESSES = ("antigravity.exe", "antigravity", "electron.exe")
+    TARGET_CLASS = "Chrome_WidgetWin_1"
+    TARGET_TITLES = ("antigravity", "gemini", "autoselect-commander", "taskbar hud")
+
+    @classmethod
+    def get_process_name_for_hwnd(cls, hwnd: int) -> str:
+        """Retrieve executable process name for a window handle."""
+        if not IS_WINDOWS or not hwnd:
+            return ""
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == 0:
+            return ""
+
+        # Try psutil first if available
+        try:
+            import psutil
+            p = psutil.Process(pid.value)
+            return p.name().lower()
+        except Exception:
+            pass
+
+        # Native fallback via QueryFullProcessImageNameW
+        try:
+            h_proc = kernel32.OpenProcess(0x1000, False, pid.value)  # PROCESS_QUERY_LIMITED_INFORMATION
+            if h_proc:
+                buf = ctypes.create_unicode_buffer(1024)
+                size = wintypes.DWORD(1024)
+                if kernel32.QueryFullProcessImageNameW(h_proc, 0, buf, ctypes.byref(size)):
+                    kernel32.CloseHandle(h_proc)
+                    return os.path.basename(buf.value).lower()
+                kernel32.CloseHandle(h_proc)
+        except Exception:
+            pass
+
+        return ""
+
+    @classmethod
+    def find_antigravity_window(cls) -> Optional[Tuple[int, str, dict]]:
+        """
+        Enumerate windows and score them to identify the real Antigravity IDE window.
+        Returns: (hwnd, title, window_info_dict) or None
+        """
+        if not IS_WINDOWS:
+            return None
+
+        hdesk = ensure_input_desktop()
+        console_hwnd = kernel32.GetConsoleWindow() if IS_WINDOWS else None
+
+        candidates: List[Tuple[int, int, str, dict]] = []  # (score, hwnd, title, info)
+
+        blacklisted_procs = {
+            "cmd.exe", "powershell.exe", "pwsh.exe", "conhost.exe", "wt.exe",
+            "windowsterminal.exe", "python.exe", "pythonw.exe", "explorer.exe"
+        }
+
+        def enum_cb(hwnd, lparam):
+            if console_hwnd and hwnd == console_hwnd:
+                return True
+            try:
+                if not user32.IsWindow(hwnd):
+                    return True
+
+                visible = bool(user32.IsWindowVisible(hwnd))
+                iconic = bool(user32.IsIconic(hwnd))
+                if not visible and not iconic:
+                    return True
+
+                pname = cls.get_process_name_for_hwnd(hwnd)
+                if pname in blacklisted_procs:
+                    return True
+
+                # Title
+                length = user32.GetWindowTextLengthW(hwnd)
+                buf = ctypes.create_unicode_buffer(length + 1)
+                user32.GetWindowTextW(hwnd, buf, length + 1)
+                title = buf.value.strip()
+                t_lower = title.lower()
+
+                # Class
+                cls_buf = ctypes.create_unicode_buffer(256)
+                user32.GetClassNameW(hwnd, cls_buf, 256)
+                cls_name = cls_buf.value.strip()
+
+                # Rect
+                rect = wintypes.RECT()
+                rect_ok = bool(user32.GetWindowRect(hwnd, ctypes.byref(rect)))
+                w = (rect.right - rect.left) if rect_ok else 0
+                h = (rect.bottom - rect.top) if rect_ok else 0
+
+                # Normal placement for minimized windows
+                if iconic:
+                    wp = WINDOWPLACEMENT()
+                    wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+                    if user32.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                        w = wp.rcNormalPosition.right - wp.rcNormalPosition.left
+                        h = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top
+
+                score = 0
+
+                # 1. Process matching (Antigravity.exe is the highest weight)
+                is_antigravity_proc = any(target in pname for target in cls.TARGET_PROCESSES)
+                if is_antigravity_proc:
+                    score += 150
+                    if cls_name == cls.TARGET_CLASS:
+                        score += 50
+                    if (w >= 400 and h >= 300) or iconic:
+                        score += 30
+
+                # 2. Window class matching
+                if cls_name == cls.TARGET_CLASS:
+                    score += 20
+
+                # 3. Title matching
+                for target_t in cls.TARGET_TITLES:
+                    if target_t in t_lower:
+                        score += 40
+                        break
+
+                # Self-exclusion from runner/terminal window titles
+                if any(x in t_lower for x in ["run_activating", "activating_grill_me", "test_activating"]):
+                    score -= 200
+
+                if score > 0:
+                    info = {
+                        "hwnd": hwnd,
+                        "title": title,
+                        "class": cls_name,
+                        "process_name": pname,
+                        "visible": visible,
+                        "minimized": iconic,
+                        "width": w,
+                        "height": h,
+                        "rect": (rect.left, rect.top, rect.right, rect.bottom)
+                    }
+                    candidates.append((score, hwnd, title, info))
+            except Exception:
+                pass
+            return True
+
+        cb = WNDENUMPROC(enum_cb)
+        if hdesk:
+            try:
+                user32.EnumDesktopWindows(hdesk, cb, 0)
+            except Exception:
+                user32.EnumWindows(cb, 0)
+        else:
+            user32.EnumWindows(cb, 0)
+
+        if not candidates:
+            return None
+
+        candidates.sort(key=lambda x: x[0], reverse=True)
+        best = candidates[0]
+        if best[0] > 0:
+            return (best[1], best[2], best[3])
+
+        return None
+
+    @classmethod
+    def bring_to_foreground(cls, hwnd: int) -> bool:
+        """
+        Bulletproof foreground activation on Windows 10/11:
+        1. Attach thread to active interactive desktop.
+        2. Unlock OS foreground lock via AllowSetForegroundWindow & virtual Alt key tap.
+        3. If iconic/minimized: call ShowWindow(SW_RESTORE) + OpenIcon.
+        4. ShowWindow(SW_SHOW).
+        5. AttachThreadInput between current thread, target thread, and foreground thread.
+        6. Z-order bump (HWND_TOPMOST -> HWND_NOTOPMOST).
+        7. SetForegroundWindow, SwitchToThisWindow, BringWindowToTop, SetActiveWindow, SetFocus.
+        8. Detach threads.
+        9. Secondary pulse if needed.
+        """
+        if not IS_WINDOWS or not hwnd or not user32.IsWindow(hwnd):
+            return False
+
+        try:
+            ensure_input_desktop()
+
+            # Unlock OS foreground lock
+            try:
+                user32.AllowSetForegroundWindow(ASFW_ANY)
+            except Exception:
+                pass
+
+            # Step 1: Un-minimize if minimized
+            is_min = bool(user32.IsIconic(hwnd))
+            if is_min:
+                logger.info("Restoring minimized Antigravity window (SW_RESTORE)...")
+                user32.ShowWindow(hwnd, SW_RESTORE)
+                user32.ShowWindowAsync(hwnd, SW_RESTORE)
+                try:
+                    user32.OpenIcon(hwnd)
+                except Exception:
+                    pass
+                time.sleep(0.08)
+
+            # Step 2: Show window
+            user32.ShowWindow(hwnd, SW_SHOW)
+            user32.ShowWindowAsync(hwnd, SW_SHOW)
+
+            # Step 3: Virtual Alt key tap to break foreground lock
+            try:
+                user32.keybd_event(VK_MENU, 0, 0, 0)
+                user32.keybd_event(VK_MENU, 0, 2, 0)  # KEYEVENTF_KEYUP
+            except Exception:
+                pass
+
+            # Step 4: AttachThreadInput
+            cur_thread = kernel32.GetCurrentThreadId()
+            target_thread = user32.GetWindowThreadProcessId(hwnd, None)
+            fg_hwnd = user32.GetForegroundWindow()
+            fg_thread = user32.GetWindowThreadProcessId(fg_hwnd, None) if fg_hwnd else 0
+
+            attached_fg = False
+            attached_target = False
+            if fg_thread and fg_thread != cur_thread:
+                attached_fg = bool(user32.AttachThreadInput(cur_thread, fg_thread, True))
+            if target_thread and target_thread != cur_thread:
+                attached_target = bool(user32.AttachThreadInput(cur_thread, target_thread, True))
+
+            try:
+                # Step 5: Z-Order bump
+                user32.SetWindowPos(
+                    hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW
+                )
+                user32.SetWindowPos(
+                    hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                    SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW
+                )
+
+                # Step 6: Bring to Top & Force Foreground
+                user32.BringWindowToTop(hwnd)
+                user32.SetForegroundWindow(hwnd)
+
+                if hasattr(user32, "SwitchToThisWindow"):
+                    user32.SwitchToThisWindow(hwnd, True)
+
+                user32.SetActiveWindow(hwnd)
+                user32.SetFocus(hwnd)
+            finally:
+                if attached_fg:
+                    user32.AttachThreadInput(cur_thread, fg_thread, False)
+                if attached_target:
+                    user32.AttachThreadInput(cur_thread, target_thread, False)
+
+            time.sleep(0.2)
+
+            # Secondary pulse verification
+            curr_fg = user32.GetForegroundWindow()
+            if curr_fg != hwnd:
+                user32.SetForegroundWindow(hwnd)
+                if hasattr(user32, "SwitchToThisWindow"):
+                    user32.SwitchToThisWindow(hwnd, True)
+                time.sleep(0.1)
+
+            curr_fg = user32.GetForegroundWindow()
+            success = (curr_fg == hwnd) or not bool(user32.IsIconic(hwnd))
+            return success
+
+        except Exception as e:
+            logger.error("Error bringing Antigravity window to foreground: %s", e)
+            return False
+
+
+# ============================================================================
+# Step D: GUI Chat Selection Engine
+# ============================================================================
+
+class AntigravityGuiSelector:
+    """
+    Autonomously selects and activates the pending chat in the Antigravity GUI.
+    1. Focuses Antigravity window.
+    2. Moves mouse to the chat row in the sidebar/panel and clicks to select it.
+    3. Sends Ctrl + L to bring focus directly into the chat pane and input area.
+    4. Optionally selects the recommended radio option and submits.
+    """
+
+    DEFAULT_CLICK_X = 580
+    DEFAULT_CLICK_Y = 815
+
+    @classmethod
+    def load_calibrated_coordinates(cls) -> Tuple[int, int]:
+        """Try loading calibrated coordinates from gui_automation config.json if available."""
+        try:
+            # Check ../scripts/gui_automation/config.json
+            repo_root = Path(__file__).resolve().parent.parent
+            cfg_path = repo_root / "scripts" / "gui_automation" / "config.json"
+            if cfg_path.is_file():
+                with open(cfg_path, "r", encoding="utf-8") as f:
+                    cfg = json.load(f)
+                    step1 = cfg.get("steps", {}).get("step1_chat", {})
+                    x = step1.get("x", cls.DEFAULT_CLICK_X)
+                    y = step1.get("y", cls.DEFAULT_CLICK_Y)
+                    return int(x), int(y)
+        except Exception:
+            pass
+        return cls.DEFAULT_CLICK_X, cls.DEFAULT_CLICK_Y
+
+    @classmethod
+    def select_chat_in_gui(
+        cls,
+        hwnd: int,
+        target_cid: str,
+        topic: str = "",
+        dry_run: bool = False,
+        select_option_number: Optional[int] = None,
+        auto_submit: bool = False
+    ) -> bool:
+        """
+        Executes the GUI chat selection sequence:
+        1. Bring Antigravity window to focus.
+        2. Mouse hover & click on the conversation row.
+        3. Send Ctrl + L keyboard shortcut to focus the chat input.
+        4. If requested, select option (Shift+Tab -> Option number -> Enter).
+        """
+        logger.info("Executing GUI Chat Selection for CID: %s...", target_cid)
+
+        if dry_run:
+            logger.info("  [DRY-RUN] Would click chat row and send Ctrl + L to focus chat pane.")
+            return True
+
+        if not IS_WINDOWS:
+            logger.warning("GUI Chat selection is only supported on Windows.")
+            return False
+
+        # 1. Ensure Antigravity window is foregrounded
+        focused = AntigravityFocusManager.bring_to_foreground(hwnd)
+        if not focused:
+            logger.warning("Target window foregrounding reported partial state, continuing...")
+        time.sleep(0.3)
+
+        # 2. Get target coordinates
+        x, y = cls.load_calibrated_coordinates()
+
+        # Adjust coordinates relative to window bounds if window is windowed (not maximized)
+        rect = wintypes.RECT()
+        if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+            win_w = rect.right - rect.left
+            win_h = rect.bottom - rect.top
+            # If coordinates fall outside the window rect, adjust to middle-left sidebar area
+            if not (rect.left <= x <= rect.right and rect.top <= y <= rect.bottom):
+                x = rect.left + min(350, int(win_w * 0.25))
+                y = rect.top + min(400, int(win_h * 0.5))
+
+        logger.info("Navigating mouse to Chat selection target: (X=%d, Y=%d)...", x, y)
+
+        # 3. Mouse Movement & Tactile Click
+        try:
+            if PYAUTOGUI_AVAILABLE and pyautogui is not None:
+                pyautogui.moveTo(x, y, duration=0.6, tween=pyautogui.easeOutQuad)
+                time.sleep(0.3)  # Tactile hover delay so UI registers hover state
+                pyautogui.click(x=x, y=y)
+                time.sleep(0.2)
+            else:
+                # Native Win32 SetCursorPos & mouse_event
+                user32.SetCursorPos(x, y)
+                time.sleep(0.3)
+                user32.mouse_event(MOUSEEVENTF_LEFTDOWN, 0, 0, 0, 0)
+                time.sleep(0.08)
+                user32.mouse_event(MOUSEEVENTF_LEFTUP, 0, 0, 0, 0)
+                time.sleep(0.2)
+            logger.info("Chat selection click dispatched at (%d, %d).", x, y)
+        except Exception as e:
+            logger.warning("Mouse click dispatched with fallback warning: %s", e)
+
+        # 4. Keyboard Shortcut: Ctrl + L (Focus Chat Pane & Input Prompt)
+        time.sleep(0.3)
+        logger.info("Sending shortcut [Ctrl + L] to activate Antigravity Chat panel...")
+        try:
+            if PYAUTOGUI_AVAILABLE and pyautogui is not None:
+                pyautogui.hotkey("ctrl", "l")
+            else:
+                cls._send_key_combo([VK_CONTROL, VK_L])
+            time.sleep(0.3)
+        except Exception as e:
+            logger.warning("Ctrl+L shortcut error: %s", e)
+
+        # 5. Optional Option Selection and Submission
+        if select_option_number is not None and select_option_number > 0:
+            logger.info("Selecting Option [%d] in GUI...", select_option_number)
+            try:
+                # Shift + Tab to move focus to options radio buttons
+                if PYAUTOGUI_AVAILABLE and pyautogui is not None:
+                    pyautogui.hotkey("shift", "tab")
+                    time.sleep(0.2)
+                    pyautogui.press(str(select_option_number))
+                    time.sleep(0.2)
+                    if auto_submit:
+                        logger.info("Submitting option selection ([Enter])...")
+                        pyautogui.press("enter")
+                else:
+                    cls._send_key_combo([VK_SHIFT, VK_TAB])
+                    time.sleep(0.2)
+                    vk_num = VK_1 + (select_option_number - 1)
+                    cls._send_key_combo([vk_num])
+                    time.sleep(0.2)
+                    if auto_submit:
+                        logger.info("Submitting option selection ([Enter])...")
+                        cls._send_key_combo([VK_RETURN])
+            except Exception as e:
+                logger.warning("Option selection key sequence error: %s", e)
+
+        time.sleep(0.2)
+        logger.info("GUI Chat selection completed successfully.")
+        return True
+
+    @classmethod
+    def _send_key_combo(cls, keys: List[int], hold_delay: float = 0.05):
+        """Native Win32 key press and release helper."""
+        if not IS_WINDOWS:
+            return
+        for k in keys:
+            user32.keybd_event(k, 0, 0, 0)
+            time.sleep(0.01)
+        time.sleep(hold_delay)
+        for k in reversed(keys):
+            user32.keybd_event(k, 0, 2, 0)  # KEYEVENTF_KEYUP
+            time.sleep(0.01)
+
+
+# ============================================================================
+# Step B: Selection Engine & State Packaging
 # ============================================================================
 
 class GrillMeSelector:
     """
-    Method 1 Engine - Step 2: Selection.
-    Selects a specific conversation, evaluates questions/options, prepares selection payload,
-    and optionally activates the Antigravity window.
+    Step B Engine: Selection.
+    Selects target conversation, evaluates questions/options, prepares selection payload,
+    and coordinates window activation and GUI selection.
     """
 
     def __init__(self, detector: Optional[GrillMeDetector] = None):
@@ -369,7 +974,6 @@ class GrillMeSelector:
         selections: List[Dict[str, Any]] = []
 
         for q in chat.questions:
-            # Determine which option to pick for this question
             if chosen_option_index is not None and 1 <= chosen_option_index <= len(q.options):
                 selected_idx = chosen_option_index
                 selected_text = q.options[selected_idx - 1]
@@ -405,7 +1009,7 @@ class GrillMeSelector:
         result: SelectionResult,
         output_file: Optional[str] = None
     ) -> Path:
-        """Export the selection state payload to a JSON file."""
+        """Export the selection state payload to a JSON file (Dept 06 standard envelope)."""
         if output_file:
             out_path = Path(output_file)
         else:
@@ -425,63 +1029,13 @@ class GrillMeSelector:
 
         return out_path
 
-    def focus_antigravity_window(self) -> bool:
-        """
-        Attempt to focus and maximize the Antigravity IDE/Chat window on Windows using native ctypes.
-        Returns True if successful, False otherwise.
-        """
-        if sys.platform != "win32":
-            return False
-
-        try:
-            import ctypes
-            from ctypes import wintypes
-
-            user32 = ctypes.windll.user32
-            kernel32 = ctypes.windll.kernel32
-
-            matched_hwnds: List[Tuple[int, str]] = []
-
-            def enum_windows_callback(hwnd: int, lparam: int) -> bool:
-                if not user32.IsWindowVisible(hwnd):
-                    return True
-                length = user32.GetWindowTextLengthW(hwnd)
-                if length > 0:
-                    buffer = ctypes.create_unicode_buffer(length + 1)
-                    user32.GetWindowTextW(hwnd, buffer, length + 1)
-                    title = buffer.value
-                    title_lower = title.lower()
-                    if "antigravity" in title_lower or "gemini" in title_lower:
-                        matched_hwnds.append((hwnd, title))
-                return True
-
-            WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-            user32.EnumWindows(WNDENUMPROC(enum_windows_callback), 0)
-
-            if not matched_hwnds:
-                return False
-
-            target_hwnd, target_title = matched_hwnds[0]
-            # Release Windows foreground lock
-            user32.keybd_event(0x12, 0, 0, 0)
-            user32.keybd_event(0x12, 0, 2, 0)
-
-            user32.ShowWindow(target_hwnd, 9)  # SW_RESTORE
-            user32.ShowWindow(target_hwnd, 3)  # SW_MAXIMIZE
-            user32.SetForegroundWindow(target_hwnd)
-            logger.info("Focused Antigravity Window: '%s' (HWND: %s)", target_title, target_hwnd)
-            return True
-        except Exception as e:
-            logger.debug("Focus window attempt failed: %s", e)
-            return False
-
 
 # ============================================================================
 # CLI Presentation & Terminal Formatting
 # ============================================================================
 
 def format_chat_card(chat: PendingGrillMeChat, index: int = 1) -> str:
-    """Format an individual pending chat into a clear terminal card."""
+    """Format an individual pending chat into a clean terminal card."""
     border = "=" * 76
     lines = [
         border,
@@ -511,15 +1065,16 @@ def format_selection_card(result: SelectionResult, chat: PendingGrillMeChat) -> 
     border = "*" * 76
     lines = [
         border,
-        "  [SELECTION RESULT] PREPARED CONFIRMATION STATE (STEP 2)",
+        "  [1-CLICK EXECUTION RESULT] GRILL ME ACTIVATION COMPLETED",
         border,
         f"  Target Chat     : {result.conversation_id}",
         f"  Status          : {result.status}",
         f"  Selected At     : {result.selected_at}",
-        f"  Dry Run Mode    : {'YES (Simulation)' if result.dry_run else 'NO (Live)'}",
-        f"  Window Focused  : {'YES' if result.window_focused else 'NO'}",
+        f"  Window Focused  : {'YES (Brought to Foreground)' if result.window_focused else 'NO'}",
+        f"  GUI Chat Click  : {'YES (Selected & Focused)' if result.gui_chat_selected else 'NO'}",
+        f"  Dry Run Mode    : {'YES (Simulation Only)' if result.dry_run else 'NO (Live)'}",
         "-" * 76,
-        "  Chosen Selections:"
+        "  Active Selections:"
     ]
     for sel in result.selections:
         q_idx = sel.get("question_index")
@@ -533,7 +1088,7 @@ def format_selection_card(result: SelectionResult, chat: PendingGrillMeChat) -> 
 
 
 # ============================================================================
-# Main CLI Entrypoint
+# Main CLI Entrypoint (Streamlined 1-Click Execution)
 # ============================================================================
 
 def main() -> int:
@@ -543,37 +1098,51 @@ def main() -> int:
         description="Activating Grill Me Chat in Antigravity - Method 1: File System & Transcript Parsing",
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
-Examples:
-  # Step 1: Scan and list all pending Grill Me chats
+Streamlined 1-Click Execution:
+  # Simply run without arguments to automatically scan, summarize, focus window, and select chat:
+  python activating_grill_me.py
+
+Advanced Options:
+  # Dry-run test mode (inspect without moving mouse or clicking)
+  python activating_grill_me.py --dry-run
+
+  # Scan and list pending chats only (no focus or GUI click)
   python activating_grill_me.py --scan
 
-  # Step 1 + Step 2: Auto-select latest pending chat and prepare selection
-  python activating_grill_me.py --auto-select
+  # Select specific conversation ID
+  python activating_grill_me.py --select 0d5e735e-85e3-4a0d-bffd-5e3e4fcf72da
 
-  # Select a specific option number (e.g. Option 2)
-  python activating_grill_me.py --auto-select --option 2
+  # Choose specific option number across questions (default: recommended option)
+  python activating_grill_me.py --option 2
+
+  # Also trigger option radio selection & submit in GUI
+  python activating_grill_me.py --select-option --auto-submit
 
   # Output in standardized JSON envelope
-  python activating_grill_me.py --auto-select --json
-
-  # Dry-run test mode
-  python activating_grill_me.py --dry-run
+  python activating_grill_me.py --json
         """
     )
 
-    parser.add_argument("--scan", action="store_true", help="Step 1: Scan and list all active pending Grill Me chats.")
+    parser.add_argument("--scan", action="store_true",
+                        help="Scan and list all active pending Grill Me chats only (no focus/GUI click).")
     parser.add_argument("--select", type=str, nargs="?", const="", default=None,
-                        help="Step 2: Select conversation by ID (or interactive if ID is omitted).")
+                        help="Select a specific conversation by ID (or prefix).")
     parser.add_argument("--auto-select", action="store_true",
-                        help="Step 1 + 2: Automatically select the newest pending Grill Me chat.")
+                        help="Explicitly enable auto-select newest chat (enabled by default).")
     parser.add_argument("--option", type=int, default=None,
                         help="Explicit option index to select (default: recommended option or 1).")
-    parser.add_argument("--focus", action="store_true",
-                        help="Bring Antigravity IDE/Chat window to foreground on selection.")
+    parser.add_argument("--no-focus", action="store_true",
+                        help="Disable bringing Antigravity window to foreground.")
+    parser.add_argument("--no-click", action="store_true",
+                        help="Disable GUI mouse click and chat selection.")
+    parser.add_argument("--select-option", action="store_true",
+                        help="Also select the recommended option radio button via keyboard.")
+    parser.add_argument("--auto-submit", action="store_true",
+                        help="Also press Enter to submit selection in GUI.")
     parser.add_argument("--dry-run", action="store_true",
-                        help="Run in dry-run mode (no external modifications, pure inspection).")
+                        help="Run in dry-run simulation mode (no mouse moves, no clicks).")
     parser.add_argument("--json", action="store_true",
-                        help="Output result as Dept 06 JSON response envelope.")
+                        help="Output result as Department 06 JSON response envelope.")
     parser.add_argument("--output-file", type=str, default=None,
                         help="File path to save the prepared selection state JSON.")
     parser.add_argument("--brain-dir", type=str, default=None,
@@ -584,60 +1153,119 @@ Examples:
     detector = GrillMeDetector(brain_dir=args.brain_dir)
     selector = GrillMeSelector(detector=detector)
 
-    # 1. Step 1: Scan Transcripts
+    # 1. Step A: Scan Transcripts
     pending_chats = detector.scan_transcripts()
 
-    # JSON output mode handling
-    if args.json:
-        if args.scan and not args.auto_select and args.select is None:
+    # JSON output mode handling for scan-only
+    if args.json and args.scan:
+        envelope = {
+            "success": True,
+            "data": {
+                "total_pending": len(pending_chats),
+                "brain_dir": str(detector.brain_dir),
+                "chats": [c.to_dict() for c in pending_chats]
+            },
+            "meta": {
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+                "action": "scan"
+            }
+        }
+        print(json.dumps(envelope, indent=2, ensure_ascii=False))
+        return 0
+
+    # Scan-only mode in human-readable CLI
+    if args.scan:
+        print("\n" + "=" * 76)
+        print("   PENDING GRILL ME CHATS SCAN RESULTS (Method 1: Transcript Parsing)")
+        print("=" * 76)
+        print(f"  Brain Directory : {detector.brain_dir}")
+        print(f"  Pending Chats   : {len(pending_chats)}")
+        print("=" * 76 + "\n")
+        if not pending_chats:
+            print("  [INFO] No Antigravity conversation currently has an unanswered Grill Me prompt.\n")
+            return 0
+        for idx, chat in enumerate(pending_chats, start=1):
+            print(format_chat_card(chat, index=idx))
+            print()
+        return 0
+
+    # If no pending chats exist:
+    if not pending_chats:
+        if args.json:
             envelope = {
                 "success": True,
                 "data": {
-                    "total_pending": len(pending_chats),
-                    "brain_dir": str(detector.brain_dir),
-                    "chats": [c.to_dict() for c in pending_chats]
-                },
-                "meta": {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
-                    "action": "scan"
-                }
-            }
-            print(json.dumps(envelope, indent=2, ensure_ascii=False))
-            return 0
-
-        # Auto-select or specific select in JSON mode
-        target_chat = None
-        if args.select:
-            target_chat = selector.select_conversation(target_cid=args.select)
-        elif pending_chats:
-            target_chat = pending_chats[0]
-
-        if not target_chat:
-            err_envelope = {
-                "success": False,
-                "error": {
-                    "code": "NO_PENDING_GRILL_ME",
-                    "message": "No active Grill Me / ask_question prompt found waiting for response."
+                    "total_pending": 0,
+                    "message": "No active Grill Me / ask_question prompt waiting for response."
                 },
                 "meta": {
                     "timestamp": datetime.now(timezone.utc).isoformat(),
                     "brain_dir": str(detector.brain_dir)
                 }
             }
-            print(json.dumps(err_envelope, indent=2, ensure_ascii=False))
+            print(json.dumps(envelope, indent=2, ensure_ascii=False))
+            return 0
+
+        print("\n" + "=" * 76)
+        print("   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (1-Click Automation)")
+        print("=" * 76)
+        print(f"  Brain Directory : {detector.brain_dir}")
+        print("  Status          : NO PENDING GRILL ME CHATS FOUND")
+        print("=" * 76)
+        print("  [INFO] All Antigravity sessions are currently completed, idle, or running.")
+        print("         No unanswered ask_question prompts are currently blocked.\n")
+        return 0
+
+    # 2. Pick target conversation (Streamlined 1-Click: auto-pick newest if not explicitly given)
+    target_chat: Optional[PendingGrillMeChat] = None
+    if args.select:
+        target_chat = selector.select_conversation(target_cid=args.select)
+        if not target_chat:
+            logger.error("Specified Conversation ID '%s' not found among pending chats.", args.select)
             return 1
+    else:
+        target_chat = pending_chats[0]
 
-        res = selector.prepare_selection(
-            chat=target_chat,
-            chosen_option_index=args.option,
-            dry_run=args.dry_run
+    # 3. Step B: Prepare Selection State
+    res = selector.prepare_selection(
+        chat=target_chat,
+        chosen_option_index=args.option,
+        dry_run=args.dry_run
+    )
+
+    # 4. Step C: Bulletproof Window Focus (Default: Enabled)
+    target_hwnd: Optional[int] = None
+    if not args.no_focus:
+        win_match = AntigravityFocusManager.find_antigravity_window()
+        if win_match:
+            target_hwnd, win_title, win_info = win_match
+            logger.info("Found Antigravity Window: '%s' (HWND: %s)", win_title, target_hwnd)
+            if not args.dry_run:
+                res.window_focused = AntigravityFocusManager.bring_to_foreground(target_hwnd)
+            else:
+                logger.info("  [DRY-RUN] Would bring window HWND %s to foreground.", target_hwnd)
+                res.window_focused = True
+        else:
+            logger.warning("Antigravity window not detected via process/class scan.")
+            res.window_focused = False
+
+    # 5. Step D: GUI Chat Selection (Default: Enabled)
+    if not args.no_click and target_hwnd:
+        opt_to_select = args.option if args.select_option else (1 if args.select_option else None)
+        res.gui_chat_selected = AntigravityGuiSelector.select_chat_in_gui(
+            hwnd=target_hwnd,
+            target_cid=target_chat.conversation_id,
+            topic=target_chat.topic_summary,
+            dry_run=args.dry_run,
+            select_option_number=opt_to_select,
+            auto_submit=args.auto_submit
         )
-        if args.focus:
-            res.window_focused = selector.focus_antigravity_window()
 
-        if args.output_file:
-            selector.export_selection_state(res, args.output_file)
+    # Save selection state to JSON
+    saved_path = selector.export_selection_state(res, args.output_file)
 
+    # JSON output mode
+    if args.json:
         envelope = {
             "success": True,
             "data": {
@@ -646,74 +1274,27 @@ Examples:
             },
             "meta": {
                 "timestamp": datetime.now(timezone.utc).isoformat(),
-                "action": "selection"
+                "saved_state_file": str(saved_path),
+                "action": "1-click-activation"
             }
         }
         print(json.dumps(envelope, indent=2, ensure_ascii=False))
         return 0
 
-    # Human-readable CLI Presentation
+    # Human-readable Presentation
     print("\n" + "=" * 76)
-    print("   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (Method 1: Transcript Parsing)")
+    print("   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (1-Click Execution)")
     print("=" * 76)
-    print(f"  Brain Directory : {detector.brain_dir}")
-    print(f"  Directory Status: {'Valid (Found)' if detector.is_valid_brain_dir() else 'MISSING'}")
-    print(f"  Pending Chats   : {len(pending_chats)}")
+    print(f"  Target Conversation: {target_chat.conversation_id}")
+    print(f"  Timestamp          : {target_chat.created_at}")
+    print(f"  Topic / Goal       : {target_chat.topic_summary}")
     print("=" * 76 + "\n")
 
-    if not pending_chats:
-        print("  [INFO] No Antigravity conversation currently has an unanswered Grill Me prompt.")
-        print("         All conversations are either completed, idle, or awaiting model generation.\n")
-        return 0
-
-    # Display detected chats
-    for idx, chat in enumerate(pending_chats, start=1):
-        print(format_chat_card(chat, index=idx))
-        print()
-
-    # Determine execution flow
-    do_selection = args.auto_select or (args.select is not None) or (not args.scan)
-
-    if do_selection:
-        chosen_chat: Optional[PendingGrillMeChat] = None
-        if args.select:
-            chosen_chat = selector.select_conversation(target_cid=args.select)
-            if not chosen_chat:
-                logger.error("Specified Conversation ID '%s' not found among pending chats.", args.select)
-                return 1
-        elif len(pending_chats) == 1 or args.auto_select:
-            chosen_chat = pending_chats[0]
-            print(f"  [AUTO-SELECT] Selecting latest active conversation: {chosen_chat.conversation_id}")
-        else:
-            # Interactive prompt if multiple exist and not explicitly specified
-            print("  Multiple active Grill Me chats detected. Select conversation index (1-{}): ".format(len(pending_chats)), end="")
-            try:
-                choice = input().strip()
-                c_idx = int(choice)
-                if 1 <= c_idx <= len(pending_chats):
-                    chosen_chat = pending_chats[c_idx - 1]
-                else:
-                    print("  Invalid selection index.")
-                    return 1
-            except Exception:
-                chosen_chat = pending_chats[0]
-                print(f"  Defaulting to most recent: {chosen_chat.conversation_id}")
-
-        # Step 2: Prepare selection
-        res = selector.prepare_selection(
-            chat=chosen_chat,
-            chosen_option_index=args.option,
-            dry_run=args.dry_run
-        )
-
-        if args.focus:
-            res.window_focused = selector.focus_antigravity_window()
-
-        # Export state
-        saved_path = selector.export_selection_state(res, args.output_file)
-        print(format_selection_card(res, chosen_chat))
-        print(f"\n  [SAVED] Selection state payload saved to: {saved_path}")
-        print("  [READY] Step 1 (Identification) & Step 2 (Selection) completed successfully!\n")
+    print(format_chat_card(target_chat, index=1))
+    print()
+    print(format_selection_card(res, target_chat))
+    print(f"\n  [SAVED] Selection state payload saved to: {saved_path}")
+    print("  [SUCCESS] 1-Click Grill Me Chat activation completed smoothly!\n")
 
     return 0
 

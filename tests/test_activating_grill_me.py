@@ -293,6 +293,55 @@ class TestActivatingGrillMe(unittest.TestCase):
         default_detector = agm.GrillMeDetector()
         self.assertTrue(default_detector.is_valid_brain_dir())
 
+    def test_focus_manager_window_finder_api(self):
+        """Test that AntigravityFocusManager find_antigravity_window runs and returns valid tuple or None."""
+        match = agm.AntigravityFocusManager.find_antigravity_window()
+        if match is not None:
+            hwnd, title, info = match
+            self.assertIsInstance(hwnd, int)
+            self.assertGreater(hwnd, 0)
+            self.assertIsInstance(title, str)
+            self.assertIsInstance(info, dict)
+            self.assertIn("class", info)
+            self.assertIn("process_name", info)
+
+    def test_gui_selector_calibrated_coordinates(self):
+        """Test loading calibrated coordinates or sensible default fallback."""
+        x, y = agm.AntigravityGuiSelector.load_calibrated_coordinates()
+        self.assertIsInstance(x, int)
+        self.assertIsInstance(y, int)
+        self.assertGreater(x, 0)
+        self.assertGreater(y, 0)
+
+    def test_gui_selector_dry_run(self):
+        """Test GUI selector in dry-run mode returns True without modifying system state."""
+        success = agm.AntigravityGuiSelector.select_chat_in_gui(
+            hwnd=12345,
+            target_cid="mock-cid-001",
+            topic="Mock Topic",
+            dry_run=True,
+            select_option_number=1,
+            auto_submit=False
+        )
+        self.assertTrue(success)
+
+    def test_selection_result_includes_gui_fields(self):
+        """Test SelectionResult data model includes window_focused and gui_chat_selected flags."""
+        res = agm.SelectionResult(
+            conversation_id="conv-123",
+            selected_at="2026-11-01T22:00:00Z",
+            status="READY_FOR_CONFIRMATION",
+            questions_count=1,
+            selections=[],
+            window_focused=True,
+            gui_chat_selected=True,
+            dry_run=False
+        )
+        d = res.to_dict()
+        self.assertTrue(d["window_focused"])
+        self.assertTrue(d["gui_chat_selected"])
+        self.assertFalse(d["dry_run"])
+
 
 if __name__ == "__main__":
     unittest.main()
