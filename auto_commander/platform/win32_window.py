@@ -59,9 +59,8 @@ BLACK_LISTED_PROCESS_NAMES = {
     "pythonw.exe",
 }
 
-# Substrings that must NEVER match as real Antigravity IDE
+# Substrings that must NEVER match as real Antigravity IDE (applied to non-Antigravity windows)
 EXCLUDED_WINDOW_TITLE_KEYWORDS = {
-    "autoselect-commander",
     "command prompt",
     "windows powershell",
     "file explorer",
@@ -259,10 +258,6 @@ class AntigravityWindowManager:
                 title = buf.value
             title_lower = title.lower()
 
-            # Enforce self-exclusion on title
-            if any(k in title_lower for k in EXCLUDED_WINDOW_TITLE_KEYWORDS):
-                return 1
-
             # Get window class
             class_buf = ctypes.create_unicode_buffer(256)
             user32.GetClassNameW(hwnd, class_buf, 256)
@@ -276,6 +271,10 @@ class AntigravityWindowManager:
 
             # Production Antigravity IDE detection
             is_antigravity_proc = any(target in pname for target in cls.PROCESS_NAMES)
+
+            # Enforce self-exclusion on title (only for non-Antigravity processes)
+            if not is_antigravity_proc and any(k in title_lower for k in EXCLUDED_WINDOW_TITLE_KEYWORDS):
+                return 1
             if is_antigravity_proc:
                 is_iconic = bool(user32.IsIconic(hwnd))
 

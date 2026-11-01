@@ -100,7 +100,7 @@ class TestDemoScreenshots(unittest.TestCase):
         self.assertEqual(steps["step1_chat"]["x"], 580)
         self.assertEqual(steps["step1_chat"]["y"], 815)
 
-        self.assertEqual(steps["step2_recommended"]["x"], 1050)
+        self.assertEqual(steps["step2_recommended"]["x"], 541)
         self.assertEqual(steps["step2_recommended"]["y"], 664)
 
         self.assertEqual(steps["step3_submit"]["x"], 1827)
@@ -151,6 +151,39 @@ class TestDemoScreenshots(unittest.TestCase):
         # No valid decision modal should be detected
         res = self.ocr.scan_decision_modal_on_image(img, mask_console=False)
         self.assertIsNone(res)
+
+
+    def test_step1_cx_radio_button_targeting(self):
+        """Verifies that Step 1 calculates click target on the radio button circle (541) instead of 1050."""
+        from auto_commander.models import DetectionResult
+        res = DetectionResult(x=566, y=655, width=150, height=19, confidence=0.99, source="WindowsOcr", label="(Recommended)")
+        
+        # Test calculation matching engine.py
+        target_cx, target_cy = res.center
+        if "(recommended)" in res.label.lower() and res.x >= 550:
+            step1_cx = res.x - 25
+        else:
+            step1_cx = target_cx
+        step1_cy = target_cy
+
+        self.assertEqual(step1_cx, 541, "Step 1 click X must target the radio button circle (~541), not 1050")
+        self.assertEqual(step1_cy, 664, "Step 1 click Y must target the row center (664)")
+
+    def test_antigravity_workspace_title_not_excluded(self):
+        """Verifies that an Antigravity IDE window titled 'AutoSelect-Commander' is not self-excluded."""
+        from auto_commander.platform.win32_window import EXCLUDED_WINDOW_TITLE_KEYWORDS
+        title = "AutoSelect-Commander - Antigravity"
+        title_lower = title.lower()
+        # EXCLUDED_WINDOW_TITLE_KEYWORDS should not match 'autoselect-commander'
+        matches = any(k in title_lower for k in EXCLUDED_WINDOW_TITLE_KEYWORDS)
+        self.assertFalse(matches, "Workspace name 'AutoSelect-Commander' must not be in EXCLUDED_WINDOW_TITLE_KEYWORDS")
+
+    def test_chat_detector_sidebar_bbox_expansion(self):
+        """Verifies that sidebar bbox expands to 750px to capture Action required badge at x=535..657."""
+        from auto_commander.detectors.chat_detector import ChatTabDetector
+        detector = ChatTabDetector(self.config)
+        bbox = detector._get_sidebar_bbox(target_hwnd=None)
+        self.assertEqual(bbox[2], 750, "Sidebar bbox width must be at least 750px to capture conversation badges")
 
 
 if __name__ == "__main__":

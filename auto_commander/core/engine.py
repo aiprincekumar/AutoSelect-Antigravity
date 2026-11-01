@@ -386,13 +386,17 @@ class AutoCommanderEngine:
         if not self.user_interrupted and self.is_running:
             target_cx, target_cy = result.center
 
-            # Zone safety for Step 1 (Option 1):
-            # In Antigravity wide displays, Option 1 is a full-width selectable row
-            # spanning from x=504 to x=1898 across the chat work area (right side).
-            # When target_cx < 900 (e.g. 641 from '(Recommended)' text near the left border),
-            # clicking directly at target_cx risks clicking inside the project explorer if sidebar expands.
-            # We ensure the click target lands securely in the chat work area on the right side (x=1050):
-            step1_cx = 1050 if target_cx < 900 else target_cx
+            # Calibrated Target for Step 1 (Option 1):
+            # In Antigravity decision modals, Option 1 contains a radio button circle
+            # centered ~25px to the left of the '(Recommended)' text (x ~ 541, y ~ 664).
+            # The green arrow in Screenshot (455).png explicitly points to this radio button circle at (551, 664).
+            # Clicking at the radio button circle (x=541, y=664) or on the '(Recommended)' text label (x=641)
+            # reliably toggles the radio button in the Antigravity webview.
+            # Banned: x=1050 (which clicked in empty void outside the clickable radio/label elements).
+            if "(recommended)" in result.label.lower() and result.x >= 550:
+                step1_cx = result.x - 25  # Dead-center on the radio button circle (~541)
+            else:
+                step1_cx = target_cx
             step1_cy = target_cy
 
             TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", step1_cx, step1_cy)

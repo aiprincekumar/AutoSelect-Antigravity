@@ -93,11 +93,8 @@ class MultiEngineDetector:
     def detect_submit_button(self, option_result: Optional[DetectionResult] = None, screen_img: Optional[Any] = None) -> Optional[DetectionResult]:
         """
         Detects the 'Submit / पुष्टि करें' button on the active Antigravity modal.
-        Uses cached detection from detect() -> Active Blue Vision -> OCR -> UIA -> Layout Inference.
+        Checks Active Blue Vision first (fresh state after option click) -> cached OCR submit -> fresh OCR -> UIA -> Layout Inference.
         """
-        if self.last_detected_submit:
-            return self.last_detected_submit
-
         min_y = (option_result.y + option_result.height) if option_result else 0
 
         # 1. Computer Vision Active Blue Button Detector (Fastest and 100% immune to font scaling/glyphs)
@@ -108,6 +105,9 @@ class MultiEngineDetector:
                     return active_blue
             except Exception:
                 pass
+
+        if self.last_detected_submit:
+            return self.last_detected_submit
 
         # 2. Windows Native OCR scan
         if self.config.detection_mode in ("auto", "ocr"):

@@ -102,15 +102,15 @@ class ChatTabDetector(BaseDetector):
         if target_hwnd:
             rect = AntigravityWindowManager.get_window_rect(target_hwnd)
             if rect:
-                # Sidebar and conversation drawer spans leftmost ~530px of the window
+                # Sidebar and conversation drawer/tabs span leftmost ~750px of the window
                 x1 = rect.left
                 y1 = rect.top
-                x2 = min(rect.left + 530, rect.right)
+                x2 = min(rect.left + 750, rect.right)
                 y2 = rect.bottom
                 return (max(0, x1), max(0, y1), max(0, x2), max(0, y2))
 
-        # Fallback to general left screen strip (0 to 530px)
-        return (0, 0, 530, 1080)
+        # Fallback to general left screen strip (0 to 750px)
+        return (0, 0, 750, 1080)
 
     def _scan_sidebar_template(self, target_hwnd: Optional[int] = None) -> Optional[DetectionResult]:
         """Runs multi-scale normalized cross-correlation for the (?) badge in the sidebar region."""
