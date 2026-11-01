@@ -1,0 +1,119 @@
+<#
+.SYNOPSIS
+    PowerShell runner for the Grill Me Keyboard Automation suite.
+
+.DESCRIPTION
+    Runs grill_me_automation.py with configurable parameters, automatically locating
+    the local project virtual environment or system Python.
+
+.PARAMETER Countdown
+    Seconds to count down before sending keystrokes (default: 5).
+
+.PARAMETER StepDelay
+    Delay in seconds between keystrokes (default: 0.35s / 350ms).
+
+.PARAMETER Option
+    Option number to choose (default: "1").
+
+.PARAMETER SkipCtrlL
+    Skip sending Ctrl + L.
+
+.PARAMETER SkipEnter
+    Skip sending Enter.
+
+.PARAMETER DryRun
+    Simulate execution without sending keystrokes.
+
+.PARAMETER Engine
+    Simulation engine ('auto', 'ctypes', or 'pyautogui').
+
+.PARAMETER Repeat
+    Number of times to run sequence (default: 1).
+
+.EXAMPLE
+    .\run_grill_me.ps1 -Countdown 5 -Option "1"
+
+.EXAMPLE
+    .\run_grill_me.ps1 -DryRun
+#>
+
+[CmdletBinding()]
+param(
+    [Parameter(Position = 0)]
+    [int]$Countdown = 5,
+
+    [Parameter(Position = 1)]
+    [double]$StepDelay = 0.35,
+
+    [Parameter(Position = 2)]
+    [string]$Option = "1",
+
+    [switch]$SkipCtrlL,
+    [switch]$SkipEnter,
+    [switch]$DryRun,
+    [ValidateSet("auto", "ctypes", "pyautogui")]
+    [string]$Engine = "auto",
+    [int]$Repeat = 1
+)
+
+$ErrorActionPreference = "Stop"
+
+Write-Host "=====================================================================" -ForegroundColor Cyan
+Write-Host "            GRILL ME KEYBOARD AUTOMATION LAUNCHER (PowerShell)        " -ForegroundColor Yellow
+Write-Host "                 AutoSelect-Commander Suite                          " -ForegroundColor Cyan
+Write-Host "=====================================================================" -ForegroundColor Cyan
+Write-Host ""
+
+# Locate Python
+$scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
+$venvPython = Join-Path (Split-Path -Parent $scriptDir) ".venv\Scripts\python.exe"
+
+$pythonCmd = $null
+if (Test-Path $venvPython) {
+    $pythonCmd = $venvPython
+    Write-Host "[*] Found project virtualenv: $pythonCmd" -ForegroundColor Green
+} elseif (Get-Command python -ErrorAction SilentlyContinue) {
+    $pythonCmd = (Get-Command python).Source
+    Write-Host "[*] Found system Python: $pythonCmd" -ForegroundColor Green
+} elseif (Get-Command py -ErrorAction SilentlyContinue) {
+    $pythonCmd = "py"
+    Write-Host "[*] Found Windows py launcher" -ForegroundColor Green
+} else {
+    Write-Error "[!] Python was not found on PATH or in .venv. Please install Python 3.8+."
+    exit 1
+}
+
+$pyScript = Join-Path $scriptDir "grill_me_automation.py"
+
+# Build arguments
+$argList = @(
+    "`"$pyScript`"",
+    "-c", "$Countdown",
+    "-d", "$StepDelay",
+    "-o", "$Option",
+    "-e", "$Engine",
+    "-r", "$Repeat"
+)
+
+if ($SkipCtrlL) { $argList += "--skip-ctrl-l" }
+if ($SkipEnter) { $argList += "--skip-enter" }
+if ($DryRun) { $argList += "--dry-run" }
+
+Write-Host "[*] Launching: $pythonCmd $($argList -join ' ')" -ForegroundColor DarkGray
+Write-Host ""
+
+try {
+    & $pythonCmd $argList
+    $exitCode = $LASTEXITCODE
+    if ($exitCode -eq 0) {
+        Write-Host ""
+        Write-Host "[+] Automation successfully completed! (Exit Code: 0)" -ForegroundColor Green
+    } else {
+        Write-Host ""
+        Write-Host "[!] Automation finished with exit code: $exitCode" -ForegroundColor Red
+    }
+    exit $exitCode
+} catch {
+    Write-Error "[!] Failed to execute automation script: $_"
+    exit 1
+}

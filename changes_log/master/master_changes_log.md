@@ -4,6 +4,25 @@
 
 ---
 
+### [2026-11-02 02:50:00 IST] - Release 1.6.0 (Grill Me Keyboard Automation Suite)
+- **Commit:** `feat(automation): add grill me keyboard automation scripts suite`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Grill Me Keyboard Automation Suite (`Keyboard Automation/`):**
+    - High-reliability hybrid focus + automated keyboard sequence for interactive `/grill-me` options in Antigravity and IDEs.
+    - Zero-dependency native Windows `ctypes` engine using `SendInput` and `keybd_event` (runs out-of-the-box on standard Python with no pip packages required).
+    - Optional interop and auto-fallback with `pyautogui` when installed.
+    - Real-time countdown timer with continuous Win32 foreground window title detection.
+    - 4-step sequence: `Ctrl + L` -> `Shift + Tab` -> Option `1` -> `Enter` with configurable delays and dry-run simulation mode.
+    - Windows double-click batch launcher (`run_grill_me.bat`) and PowerShell launcher (`run_grill_me.ps1`).
+    - Dedicated unit test suite in `tests/test_grill_me.py` (5/5 passed).
+- **Verification & Testing:**
+  - Syntax compilation verified clean with `python -m py_compile`.
+  - Dry-run verification passed across Python, PowerShell, and Batch runners with exit code 0.
+  - Full unit test matrix (`tests/test_commander.py` and `tests/test_grill_me.py`) confirmed 62/62 tests passing.
+
+---
+
 ### [2026-11-01 11:45:00 IST] - Release 1.5.0 (Modular Step-by-Step GUI Automation Pipeline & Calibrator)
 - **Commit:** `feat(automation): integrate modular step-by-step GUI automation pipeline and calibrator into scripts/gui_automation/`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
