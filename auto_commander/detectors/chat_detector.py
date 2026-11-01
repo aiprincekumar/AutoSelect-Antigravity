@@ -43,7 +43,7 @@ class ChatTabDetector(BaseDetector):
         self.template_path = template_path
         self.templates: List[Tuple[str, "np.ndarray"]] = []
         self.ocr_detector = WindowsOcrDetector(
-            target_keywords=("?", "(?)", "Action required", "Conversations"),
+            target_keywords=("?", "(?)", "Action required"),
             ocr_enabled=config.ocr_enabled,
         )
         self.uia_detector = UIAutomationDetector(
@@ -134,7 +134,7 @@ class ChatTabDetector(BaseDetector):
 
             highest_score = 0.82  # Robust threshold for the distinct circular ? badge
             best_match: Optional[DetectionResult] = None
-            scales = [0.9, 1.0, 1.1]
+            scales = [0.5, 0.75, 0.9, 1.0, 1.1, 1.25, 1.5]
 
             for tpl_name, tpl_gray in self.templates:
                 th, tw = tpl_gray.shape[:2]
@@ -152,16 +152,19 @@ class ChatTabDetector(BaseDetector):
                         highest_score = max_val
                         abs_x = bbox[0] + max_loc[0]
                         abs_y = bbox[1] + max_loc[1]
+                        badge_cx = abs_x + nw // 2
+                        badge_cy = abs_y + nh // 2
 
                         # Clickable target is the conversation row containing this badge.
-                        # Row extends ~200px to the left of the badge.
-                        row_x = max(bbox[0] + 20, abs_x - 120)
+                        # In the sidebar, conversation row spans leftwards from the badge.
                         row_w = 160
                         row_h = max(nh, 28)
+                        row_x = max(bbox[0] + 30, badge_cx - 100)
+                        row_y = badge_cy - row_h // 2
 
                         best_match = DetectionResult(
                             x=row_x,
-                            y=abs_y - 4,
+                            y=row_y,
                             width=row_w,
                             height=row_h,
                             confidence=float(max_val),
@@ -191,12 +194,16 @@ class ChatTabDetector(BaseDetector):
                 mask_console=False,
             )
             if match:
-                # Target the entire conversation row
+                # Target the entire conversation row dynamically centered on the matched badge / text
+                row_w = 160
+                row_h = max(match.height, 28)
+                row_x = max(bbox[0] + 30, match.center[0] - 100)
+                row_y = match.center[1] - row_h // 2
                 return DetectionResult(
-                    x=max(bbox[0] + 20, match.x - 100),
-                    y=match.y - 4,
-                    width=160,
-                    height=max(match.height, 28),
+                    x=row_x,
+                    y=row_y,
+                    width=row_w,
+                    height=row_h,
                     confidence=match.confidence,
                     source="OcrChatBadge",
                     label="Pending Chat (?) Action Required",

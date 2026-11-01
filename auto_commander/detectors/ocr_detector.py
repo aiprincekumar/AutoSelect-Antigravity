@@ -249,8 +249,10 @@ class WindowsOcrDetector(BaseDetector):
                     actual_w = int(word_max_x - word_min_x)
                     actual_h = int(word_max_y - word_min_y)
 
-                    # Top bar & HUD rejection: Antigravity question card is never at top menu bar (y < 160) or on HUD
+                    # Top bar, sidebar & HUD rejection: Option 1 is strictly inside chat area (500 <= actual_x < 1200, actual_y >= 160)
                     if (img.height >= 600 or (offset_y + img.height) >= 600) and actual_y < 160:
+                        continue
+                    if (img.width >= 1200 or (offset_x + img.width) >= 1200) and (actual_x < 500 or actual_x >= 1200):
                         continue
                     if active_hud_rect and (active_hud_rect.contains(actual_x, actual_y) or active_hud_rect.contains(actual_x + actual_w // 2, actual_y + actual_h // 2)):
                         continue
@@ -287,11 +289,11 @@ class WindowsOcrDetector(BaseDetector):
                     # Match logic: substring, token matching, or fuzzy word matching
                     has_match = (kw_clean in line_lower)
                     if not has_match and kw_tokens:
-                        if all(any(token in wc or wc in token for wc in line_words_clean) for token in kw_tokens):
+                        if all(any(token in wc or (len(wc) >= 4 and wc in token) for wc in line_words_clean) for token in kw_tokens):
                             has_match = True
                     if not has_match:
                         for wc in line_words_clean:
-                            if kw_clean in wc or (len(kw_clean) >= 4 and difflib.SequenceMatcher(None, wc, kw_clean).ratio() >= 0.75):
+                            if (len(wc) >= 4 and (kw_clean in wc or wc in kw_clean)) or (len(kw_clean) >= 4 and len(wc) >= 4 and difflib.SequenceMatcher(None, wc, kw_clean).ratio() >= 0.75):
                                 has_match = True
                                 break
 
@@ -301,7 +303,7 @@ class WindowsOcrDetector(BaseDetector):
                         for word in line.words:
                             wc = word.text.lower().strip("()[]:., ")
                             if (line_has_bracketed_rec and ("commend" in wc or "अनुशंसित" in wc or wc in ("(", ")", "[", "]", "{", "}"))) or any(
-                                token in wc or wc in token or (len(token) >= 4 and difflib.SequenceMatcher(None, wc, token).ratio() >= 0.70)
+                                token in wc or (len(wc) >= 4 and wc in token) or (len(token) >= 4 and len(wc) >= 4 and difflib.SequenceMatcher(None, wc, token).ratio() >= 0.70)
                                 for token in target_tokens
                             ):
                                 matched_words.append(word)
@@ -538,11 +540,11 @@ class WindowsOcrDetector(BaseDetector):
                         okw_tokens = [t.strip("()[]:., ") for t in okw_lower.split() if t.strip("()[]:., ")]
                         has_opt_match = (okw_clean in line_lower)
                         if not has_opt_match and okw_tokens:
-                            if all(any(token in wc or wc in token for wc in line_words_clean) for token in okw_tokens):
+                            if all(any(token in wc or (len(wc) >= 4 and wc in token) for wc in line_words_clean) for token in okw_tokens):
                                 has_opt_match = True
                         if not has_opt_match:
                             for wc in line_words_clean:
-                                if okw_clean in wc or (len(okw_clean) >= 4 and difflib.SequenceMatcher(None, wc, okw_clean).ratio() >= 0.75):
+                                if (len(wc) >= 4 and (okw_clean in wc or wc in okw_clean)) or (len(okw_clean) >= 4 and len(wc) >= 4 and difflib.SequenceMatcher(None, wc, okw_clean).ratio() >= 0.75):
                                     has_opt_match = True
                                     break
                         if has_opt_match:
@@ -559,7 +561,7 @@ class WindowsOcrDetector(BaseDetector):
                             or "अनुशंसित" in wc
                             or wc in ("(", ")", "[", "]", "{", "}")
                             or wc in ("option", "1", "one", "opt")
-                            or any(token in wc or wc in token for token in target_tokens)
+                            or any(token in wc or (len(wc) >= 4 and wc in token) for token in target_tokens)
                         ):
                             matched_words.append(word)
 
@@ -587,8 +589,8 @@ class WindowsOcrDetector(BaseDetector):
                     if any(act in line_lower for act in ("submit", "confirm", "proceed", "skip", "छोड़ें", "पुष्टि")) and not is_strong_opt1:
                         continue
 
-                    # Layout filter: In Antigravity work area, Option 1 is strictly located on the left
-                    # (500 <= act_x < 1200). Never confuse Submit button (x >= 1200) with Option 1 (x < 1200).
+                    # Layout filter: In Antigravity work area, Option 1 is strictly located on the left of chat area
+                    # (500 <= act_x < 1200). Never confuse sidebar (act_x < 500) or Submit button (x >= 1200) with Option 1.
                     if (img.width >= 1200 or offset_x + img.width >= 1200):
                         if act_x < 500 or act_x >= 1200:
                             continue
@@ -773,7 +775,9 @@ class WindowsOcrDetector(BaseDetector):
 
                     bbox = (x1, y1, x2, y2)
                     win_img = ImageGrab.grab(bbox=bbox)
-                    res = self.scan_image(win_img, offset_x=bbox[0], offset_y=bbox[1])
+                    scan_min_x = 500 if (win_img.width >= 1200 or (bbox[0] + win_img.width) >= 1200) else 0
+                    scan_min_y = 160 if (win_img.height >= 600 or (bbox[1] + win_img.height) >= 600) else 0
+                    res = self.scan_image(win_img, offset_x=bbox[0], offset_y=bbox[1], min_x=scan_min_x, min_y=scan_min_y)
                     if res:
                         return res
             except Exception:
@@ -793,7 +797,9 @@ class WindowsOcrDetector(BaseDetector):
 
                     bbox = (x1, y1, x2, y2)
                     win_img = ImageGrab.grab(bbox=bbox)
-                    res = self.scan_image(win_img, offset_x=bbox[0], offset_y=bbox[1])
+                    scan_min_x = 500 if (win_img.width >= 1200 or (bbox[0] + win_img.width) >= 1200) else 0
+                    scan_min_y = 160 if (win_img.height >= 600 or (bbox[1] + win_img.height) >= 600) else 0
+                    res = self.scan_image(win_img, offset_x=bbox[0], offset_y=bbox[1], min_x=scan_min_x, min_y=scan_min_y)
                     if res:
                         return res
         except Exception:
@@ -802,6 +808,8 @@ class WindowsOcrDetector(BaseDetector):
         # Strategy 2: Full screen screenshot scan
         try:
             screen_img = ImageGrab.grab()
-            return self.scan_image(screen_img, offset_x=0, offset_y=0)
+            scan_min_x = 500 if screen_img.width >= 1200 else 0
+            scan_min_y = 160 if screen_img.height >= 600 else 0
+            return self.scan_image(screen_img, offset_x=0, offset_y=0, min_x=scan_min_x, min_y=scan_min_y)
         except Exception:
             return None

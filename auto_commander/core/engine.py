@@ -428,8 +428,10 @@ class AutoCommanderEngine:
                 step1_cx = 541  # Fallback to calibrated Option 1 radio button X (never confuse with submit button)
             elif result.x >= 550:
                 step1_cx = max(520, min(1150, result.x - 24))
+            elif result.x >= 520:
+                step1_cx = result.x
             else:
-                step1_cx = result.x if result.x >= 520 else result.center[0]
+                step1_cx = 541  # Strictly reject sidebar coordinates (x < 520), clamp to calibrated Option 1 radio button X
 
             TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", step1_cx, step1_cy)
 
@@ -502,8 +504,16 @@ class AutoCommanderEngine:
             self.initial_mouse_pos = self._get_mouse_position()
 
             if success_step2:
+                # Determine if modal was confirmed present before/during submission
+                modal_was_confirmed = bool(
+                    (result.source != "FallbackGuarantee" and result.x >= 500)
+                    or (submit_result is not None)
+                )
+
                 # Step 4: Strict Post-Submit Verification (Eliminates False Success)
-                is_verified = self._verify_submission_dismissed(result, sub_cx, sub_cy)
+                is_verified = self._verify_submission_dismissed(
+                    result, sub_cx, sub_cy, modal_was_confirmed=modal_was_confirmed
+                )
                 if is_verified:
                     TerminalDashboard.render_completed()
                     if self.config.floating_hud_enabled:
@@ -517,7 +527,7 @@ class AutoCommanderEngine:
                     self.current_state = "COOLDOWN"
                 else:
                     TerminalDashboard._safe_print(
-                        f"{TerminalDashboard.YELLOW}[UNVERIFIED] Modal card is still present on screen; click did not dismiss the card. "
+                        f"{TerminalDashboard.YELLOW}[UNVERIFIED] Modal card is still present on screen or was unconfirmed; click did not dismiss the card. "
                         f"Avoiding false success. Entering cooldown to re-evaluate.{TerminalDashboard.RESET}"
                     )
                     if self.config.floating_hud_enabled:
@@ -529,17 +539,31 @@ class AutoCommanderEngine:
                     self.hud.flash_cancelled()
                 self.current_state = "COOLDOWN"
 
-    def _verify_submission_dismissed(self, option_result: DetectionResult, submit_cx: int, submit_cy: int) -> bool:
+    def _verify_submission_dismissed(
+        self,
+        option_result: DetectionResult,
+        submit_cx: int,
+        submit_cy: int,
+        modal_was_confirmed: bool = True,
+    ) -> bool:
         """
         Strict Post-Submit Verification:
         Verifies that clicking Submit actually dismissed the decision modal card.
         Confirms whether the action bar (Submit/Skip buttons) and Option 1 have disappeared from screen.
+        CRITICAL GUARD: If modal_was_confirmed is False (no modal or submit button was ever confirmed
+        present on screen before clicking), returns False immediately to avoid false success on empty windows.
         If still visible after polling (0.8s - 1.2s):
           - Logs [UNVERIFIED] Modal card is still present on screen; click did not dismiss the card.
           - Performs a single retry: re-locates live Option 1 radio button in chat area (y >= 200),
             firm click, waits 0.35s, clicks active Submit button, and re-verifies.
         Only returns True if modal is verified dismissed.
         """
+        if not modal_was_confirmed:
+            TerminalDashboard._safe_print(
+                f"{TerminalDashboard.YELLOW}[UNVERIFIED] Modal was never confirmed present on screen before click; submission cannot be certified.{TerminalDashboard.RESET}"
+            )
+            return False
+
         time.sleep(0.8)
         verify_start = time.time()
         verify_timeout = 1.2

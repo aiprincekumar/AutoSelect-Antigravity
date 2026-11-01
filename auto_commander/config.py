@@ -38,7 +38,6 @@ class Config:
         "[अनुशंसित]",
         "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
         "(Recommended) GitHub",
-        "Proceed",
     )
     submit_keywords: Tuple[str, ...] = (
         "Submit",
