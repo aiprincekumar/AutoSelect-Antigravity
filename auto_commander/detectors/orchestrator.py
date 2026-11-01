@@ -55,6 +55,20 @@ class MultiEngineDetector:
                     self.last_detected_submit = sub_res
                     return opt_res
 
+                # Robust Fallback: If require_submit failed (e.g. Submit button is disabled/faint before Option 1 is clicked),
+                # do not discard the detected dynamic Option 1 position!
+                if require_submit:
+                    modal_pair = self.ocr_detector.scan_decision_modal(
+                        target_hwnd=target_hwnd,
+                        target_keywords=self.config.target_keywords,
+                        submit_keywords=self.config.submit_keywords,
+                        require_submit=False,
+                    )
+                    if modal_pair:
+                        opt_res, sub_res = modal_pair
+                        self.last_detected_submit = sub_res
+                        return opt_res
+
         # Strategy 2: UIAutomation Tree Search
         if mode in ("auto", "uia"):
             opt_res = self.uia_detector.scan()
@@ -93,9 +107,9 @@ class MultiEngineDetector:
     def detect_submit_button(self, option_result: Optional[DetectionResult] = None, screen_img: Optional[Any] = None) -> Optional[DetectionResult]:
         """
         Detects the 'Submit / पुष्टि करें' button on the active Antigravity modal.
-        Checks Active Blue Vision first (fresh state after option click) -> cached OCR submit -> fresh OCR -> UIA -> Layout Inference.
+        Checks Active Blue Vision first (fresh state after option click) -> cached OCR submit -> fresh OCR (Submit & Skip) -> UIA -> Dynamic Layout Inference.
         """
-        min_y = (option_result.y + option_result.height) if option_result else 0
+        min_y = (option_result.y + 10) if option_result else 0
 
         # 1. Computer Vision Active Blue Button Detector (Fastest and 100% immune to font scaling/glyphs)
         if hasattr(self, "vision_detector") and self.vision_detector:
@@ -106,41 +120,75 @@ class MultiEngineDetector:
             except Exception:
                 pass
 
-        if self.last_detected_submit:
+        if self.last_detected_submit and (not option_result or self.last_detected_submit.y >= option_result.y - 15):
             return self.last_detected_submit
 
-        # 2. Windows Native OCR scan
+        # 2. Windows Native OCR scan below Option 1
         if self.config.detection_mode in ("auto", "ocr"):
             if self.ocr_detector.is_available() and ImageGrab is not None:
                 try:
                     img = screen_img if screen_img is not None else ImageGrab.grab()
+                    # Check for explicit Submit button text
                     res = self.ocr_detector.scan_image(
                         img,
                         offset_x=0,
                         offset_y=0,
-                        keywords=self.config.submit_keywords,
+                        keywords=("Submit", "पुष्टि करें", "Confirm", "Proceed", "Submit / पुष्टि करें", "जारी रखें", "Continue", "OK"),
                         min_y=min_y,
                     )
-                    if res:
+                    if res and (img.width < 1200 or res.x >= 800):
                         return res
+
+                    # Check for Skip button on same action bar row and infer Submit next to it
+                    skip_res = self.ocr_detector.scan_image(
+                        img,
+                        offset_x=0,
+                        offset_y=0,
+                        keywords=("Skip", "छोड़ें"),
+                        min_y=min_y,
+                    )
+                    if skip_res and (img.width < 1200 or skip_res.x >= 700):
+                        sub_w = max(skip_res.width + 30, 95)
+                        sub_h = max(skip_res.height, 34)
+                        sub_y = skip_res.y
+                        sub_x = int(skip_res.x + skip_res.width + 35)
+                        return DetectionResult(
+                            x=sub_x,
+                            y=sub_y,
+                            width=sub_w,
+                            height=sub_h,
+                            confidence=0.96,
+                            source="WindowsOcr-Inferred",
+                            label="Submit",
+                        )
                 except Exception:
                     pass
 
         # 3. UIAutomation scan
         if self.config.detection_mode in ("auto", "uia"):
             res = self.uia_detector.find_by_keywords(self.config.submit_keywords)
-            if res:
+            if res and (not option_result or res.y >= option_result.y - 15):
                 return res
 
-        # 4. Layout Inference Fallback: Standard Antigravity modal places Submit below option
+        # 4. Dynamic Layout Inference Fallback:
+        # Standard Antigravity modal places Submit right-aligned below the option rows
         if option_result:
+            sw = 1920
+            try:
+                import ctypes
+                sw = ctypes.windll.user32.GetSystemMetrics(0)
+            except Exception:
+                pass
+            target_sub_x = min(sw - 93, 1827)
+            # Distance from Option 1 row to Submit row: dynamically scales based on option_result.y
+            dynamic_sub_y = int(option_result.y + (185 if (option_result.y == 664 and option_result.height == 0) else (option_result.height + 155)))
             return DetectionResult(
-                x=option_result.x,
-                y=option_result.y + option_result.height + 65,
-                width=min(option_result.width, 160),
+                x=target_sub_x,
+                y=dynamic_sub_y,
+                width=115,
                 height=38,
-                confidence=0.85,
-                source="LayoutInference",
+                confidence=0.88,
+                source="DynamicLayoutInference",
                 label="Submit / पुष्टि करें",
             )
 

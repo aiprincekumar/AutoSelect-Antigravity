@@ -142,15 +142,15 @@ class VisionDetector(BaseDetector):
             if crop.shape[0] < 20 or crop.shape[1] < 50:
                 return None
 
-            lower_blue = np.array([130, 70, 0], dtype=np.uint8)
-            upper_blue = np.array([245, 160, 60], dtype=np.uint8)
+            lower_blue = np.array([120, 60, 0], dtype=np.uint8)
+            upper_blue = np.array([255, 185, 75], dtype=np.uint8)
             mask = cv2.inRange(crop, lower_blue, upper_blue)
 
             contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
             candidates = []
             for c in contours:
                 bx, by, bw, bh = cv2.boundingRect(c)
-                if 50 <= bw <= 200 and 20 <= bh <= 60:
+                if 40 <= bw <= 250 and 18 <= bh <= 65:
                     # Action bar filter: Submit button must be in the right-side action bar
                     if w >= 1200 and bx < 800:
                         continue

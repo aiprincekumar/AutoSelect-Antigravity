@@ -5,6 +5,7 @@ Manages states:
   SCANNING -> [STEP 0: Chat Navigation if (?)] -> COUNTDOWN -> STEP 1 -> STEP 2 -> COOLDOWN.
 """
 
+import ctypes
 import math
 import signal
 import sys
@@ -328,8 +329,10 @@ class AutoCommanderEngine:
             time.sleep(modal_poll_interval)
 
         # Fallback guarantee: Because we KNOW this chat had the (?) Action required badge,
-        # if OCR still hasn't matched after the retry window, use fallback Option 1 target (541, 664)!
-        # DO NOT ABORT OR GET STUCK!
+        # if OCR still hasn't matched after the retry window, check full window OCR before fallback
+        if not result:
+            result = self.detector.ocr_detector.scan(target_hwnd=self.active_hwnd)
+
         if not result:
             TerminalDashboard._safe_print(
                 f"{TerminalDashboard.YELLOW}[FALLBACK GUARANTEE]{TerminalDashboard.RESET} "
@@ -338,8 +341,8 @@ class AutoCommanderEngine:
             result = DetectionResult(
                 x=541,
                 y=664,
-                width=24,
-                height=24,
+                width=0,
+                height=0,
                 confidence=1.0,
                 source="FallbackGuarantee",
                 label="(Recommended) Option 1",
@@ -410,20 +413,17 @@ class AutoCommanderEngine:
         if not self.user_interrupted and self.is_running:
             target_cx, target_cy = result.center
 
-            # Calibrated Target for Step 1 (Option 1):
-            # In Antigravity decision modals, Option 1 contains a radio button circle
-            # centered ~25px to the left of the '(Recommended)' text (x ~ 541, y ~ 664).
-            # The green arrow in Screenshot (455).png explicitly points to this radio button circle at (551, 664).
-            # Clicking at the radio button circle (x=541, y=664) or on the '(Recommended)' text label (x=641)
-            # reliably toggles the radio button in the Antigravity webview.
-            if result.source == "FallbackGuarantee":
-                step1_cx, step1_cy = 541, 664
-            elif "(recommended)" in result.label.lower() and result.x >= 550:
-                step1_cx = result.x - 25  # Dead-center on the radio button circle (~541)
-                step1_cy = target_cy
+            # -----------------------------------------------------------------
+            # 100% Dynamic Target Calculation for Step 1 (Option 1):
+            # Target Y must ALWAYS be: target_y = opt.y + opt.height // 2 (row center)
+            # Target X: target_x = max(520, opt.x - 24) (the radio button circle right in front of Option 1)
+            # or text center if opt.x < 550
+            # -----------------------------------------------------------------
+            step1_cy = result.y + result.height // 2
+            if result.x >= 550:
+                step1_cx = max(520, result.x - 24)
             else:
-                step1_cx = target_cx
-                step1_cy = target_cy
+                step1_cx = result.x if result.x >= 520 else result.center[0]
 
             TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", step1_cx, step1_cy)
 
@@ -459,12 +459,19 @@ class AutoCommanderEngine:
             time.sleep(0.35)
             self.initial_mouse_pos = self._get_mouse_position()
 
-            # Step 2: Detect and click Submit button (with calibrated fallback guarantee)
+            # Step 2: Detect and click Submit button (100% dynamic search)
             submit_result = self.detector.detect_submit_button(option_result=result)
             if submit_result:
                 sub_cx, sub_cy = submit_result.center
             else:
-                sub_cx, sub_cy = 1827, 849
+                # Dynamic fallback relative to result: NEVER hardcode static 849!
+                sw = 1920
+                try:
+                    sw = ctypes.windll.user32.GetSystemMetrics(0)
+                except Exception:
+                    pass
+                sub_cx = min(sw - 93, 1827)
+                sub_cy = int(result.y + (185 if result.y == 664 and result.height == 0 else result.height + 155))
 
             TerminalDashboard.render_clicking(2, 2, "Submit button", sub_cx, sub_cy)
 
@@ -489,18 +496,93 @@ class AutoCommanderEngine:
             self.initial_mouse_pos = self._get_mouse_position()
 
             if success_step2:
-                TerminalDashboard.render_completed()
-                if self.config.floating_hud_enabled:
-                    self.hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
-                if self.config.sound_notification:
-                    try:
-                        import winsound
-                        winsound.MessageBeep(winsound.MB_OK)
-                    except Exception:
-                        pass
-                self.current_state = "COOLDOWN"
+                # Step 4: Verification of Submission (Eliminates False Success)
+                is_verified = self._verify_submission(result, sub_cx, sub_cy)
+                if is_verified:
+                    TerminalDashboard.render_completed()
+                    if self.config.floating_hud_enabled:
+                        self.hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
+                    if self.config.sound_notification:
+                        try:
+                            import winsound
+                            winsound.MessageBeep(winsound.MB_OK)
+                        except Exception:
+                            pass
+                    self.current_state = "COOLDOWN"
+                else:
+                    TerminalDashboard._safe_print(
+                        f"{TerminalDashboard.YELLOW}[UNCONFIRMED] Decision modal still active after Submit click. "
+                        f"Avoiding false success. Entering cooldown to re-evaluate.{TerminalDashboard.RESET}"
+                    )
+                    if self.config.floating_hud_enabled:
+                        self.hud.flash_cancelled()
+                    self.current_state = "COOLDOWN"
             else:
                 print("\033[93m[NOTICE] Step 2 cancelled due to motion or boundary condition.\033[0m")
                 if self.config.floating_hud_enabled:
                     self.hud.flash_cancelled()
                 self.current_state = "COOLDOWN"
+
+    def _verify_submission(self, option_result: DetectionResult, submit_cx: int, submit_cy: int) -> bool:
+        """
+        Verifies that the decision modal actually closed or submitted after clicking Submit.
+        Eliminates false success: confirms that active blue Submit button and Option 1 have disappeared.
+        Polls for up to 1.2s. If still visible, attempts one direct re-click on the confirmed Submit button.
+        """
+        time.sleep(0.2)
+        verify_start = time.time()
+        verify_timeout = 1.2
+        poll_interval = 0.25
+
+        while time.time() - verify_start < verify_timeout and self.is_running:
+            still_active_blue = False
+            if hasattr(self.detector, "vision_detector") and self.detector.vision_detector:
+                try:
+                    btn = self.detector.vision_detector.detect_active_blue_submit_button(
+                        min_y=max(0, option_result.y - 50)
+                    )
+                    if btn and abs(btn.center[0] - submit_cx) < 150 and abs(btn.center[1] - submit_cy) < 100:
+                        still_active_blue = True
+                except Exception:
+                    pass
+
+            still_modal = False
+            try:
+                mod = self.detector.ocr_detector.scan_decision_modal(
+                    target_hwnd=self.active_hwnd,
+                    require_submit=False,
+                )
+                if mod:
+                    opt_res, _ = mod
+                    if abs(opt_res.y - option_result.y) < 60:
+                        still_modal = True
+            except Exception:
+                pass
+
+            if not still_active_blue and not still_modal:
+                return True
+
+            time.sleep(poll_interval)
+
+        # If modal is STILL visible after timeout, attempt one re-click
+        TerminalDashboard._safe_print(
+            f"{TerminalDashboard.YELLOW}[VERIFY RETRY] Modal still active; retrying Submit click at ({submit_cx}, {submit_cy})...{TerminalDashboard.RESET}"
+        )
+        self.mouse_ctrl.glide_and_click(
+            submit_cx,
+            submit_cy,
+            check_interrupted_fn=self._check_mouse_interrupted,
+            target_hwnd=self.active_hwnd,
+        )
+        time.sleep(0.3)
+
+        # Final check
+        if hasattr(self.detector, "vision_detector") and self.detector.vision_detector:
+            try:
+                btn = self.detector.vision_detector.detect_active_blue_submit_button(min_y=max(0, option_result.y - 50))
+                if btn:
+                    return False
+            except Exception:
+                pass
+
+        return True

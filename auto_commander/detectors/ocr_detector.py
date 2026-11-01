@@ -77,6 +77,64 @@ class WindowsOcrDetector(BaseDetector):
         t = text.lower()
         return bool(re.search(r"[\(\[\{][^\)\]\}]{0,6}(?:recommend|ecommend|commend|अनुशंसित)[^\)\]\}]*[\)\]\}]", t))
 
+    @staticmethod
+    def is_option_1_match(text: str) -> Tuple[bool, bool]:
+        """
+        Matches any line that represents Option 1 / Recommended option.
+        Matches any line containing:
+          - (recommended) OR recommended OR recommendation OR अनुशंसित
+          - COMBINED WITH OR NEAR: 1, one, option 1, option, or option markers ○/●
+        Tolerates OCR variations: presence or absence of brackets, colons, punctuation.
+        Returns: (is_match, is_bracketed_or_strong)
+        """
+        t = text.lower().strip()
+        if not t:
+            return False, False
+
+        # Reject conversational questions: lines ending with '?' or starting with question words
+        if t.endswith("?") or any(t.startswith(q) for q in ("which ", "what ", "why ", "how ", "is ", "do ", "can ", "should ")):
+            return False, False
+
+        # Reject if explicitly identified as other option (e.g. Option 2, Option 3, Option 4)
+        if re.search(r"\b(?:option|opt)\s*[2-9]\b", t):
+            return False, False
+
+        # Pattern 1: Bracketed recommendation (Recommended), [Recommended], {Recommendation}, (अनुशंसित)
+        has_bracketed = bool(re.search(
+            r"[\(\[\{<][^\)\]\}>]{0,8}(?:recommend|ecommend|commend|अनुशंसित)[^\)\]\}>]*[\)\]\}>]?",
+            t
+        ))
+
+        # Pattern 2: Recommendation words
+        has_rec_word = bool(
+            "recommend" in t
+            or "commend" in t
+            or "अनुशंसित" in t
+        )
+
+        # Pattern 3: Option 1 / Number 1 indicators
+        has_opt1_indicator = bool(re.search(
+            r"(?:option\s*1\b|opt\s*1\b|\b1\b|\bone\b|[○●]\s*1|[○●]|\(\s*1\s*\)|\[\s*1\s*\])",
+            t
+        ))
+
+        # Pattern 4: Generic option indicator
+        has_generic_opt = bool(re.search(r"(?:option|opt|[○●])", t))
+
+        # Strong Match 1: Bracketed recommendation
+        if has_bracketed:
+            return True, True
+
+        # Strong Match 2: Recommendation word + Option 1 indicator
+        if has_rec_word and has_opt1_indicator:
+            return True, True
+
+        # Moderate Match 3: Recommendation word + Generic option marker
+        if has_rec_word and has_generic_opt:
+            return True, True
+
+        return False, False
+
     async def _recognize_async(self, image_bytes: bytes):
         """Asynchronously feeds PNG bytes to Windows.Media.Ocr within current apartment."""
         if not win_ocr:
@@ -157,6 +215,31 @@ class WindowsOcrDetector(BaseDetector):
                 line_lower = line.text.lower()
                 line_words_clean = [w.text.lower().strip("()[]:., ") for w in line.words]
                 line_has_bracketed_rec = self.is_bracketed_target(line.text)
+
+                # Check dynamic Option 1 detection
+                is_opt1, is_strong_opt1 = self.is_option_1_match(line.text)
+                if is_opt1 and any("recommend" in kw.lower() or "अनुशंसित" in kw for kw in kw_list) and line.words:
+                    min_x = min(w.bounding_rect.x for w in line.words)
+                    w_min_y = min(w.bounding_rect.y for w in line.words)
+                    max_x = max(w.bounding_rect.x + w.bounding_rect.width for w in line.words)
+                    max_y = max(w.bounding_rect.y + w.bounding_rect.height for w in line.words)
+
+                    actual_x = int(min_x + offset_x)
+                    actual_y = int(w_min_y + offset_y)
+                    actual_w = int(max_x - min_x)
+                    actual_h = int(max_y - w_min_y)
+
+                    if not (min_y > 0 and actual_y < min_y) and not (min_x > 0 and actual_x < min_x):
+                        if not (console_rect and (console_rect.contains(actual_x, actual_y) or console_rect.contains(actual_x + actual_w // 2, actual_y + actual_h // 2))):
+                            return DetectionResult(
+                                x=actual_x,
+                                y=actual_y,
+                                width=actual_w,
+                                height=actual_h,
+                                confidence=0.99 if is_strong_opt1 else 0.96,
+                                source="WindowsOcr",
+                                label="(Recommended) Option 1",
+                            )
 
                 # Check line level matching first
                 for kw in kw_list:
@@ -384,73 +467,83 @@ class WindowsOcrDetector(BaseDetector):
                                 label="Skip",
                             ))
 
-                # 2. Check for Option candidate
+                # 2. Check for Option 1 candidate
                 line_has_bracketed_rec = self.is_bracketed_target(line_text)
-                for okw in opt_kw_list:
-                    okw_lower = okw.lower()
-                    okw_clean = okw_lower.strip("()[] ")
-                    if not okw_clean:
-                        continue
+                is_opt1_match, is_strong_opt1 = self.is_option_1_match(line_text)
 
-                    # If okw specifies bracketed (Recommended), strictly enforce bracketed match
-                    is_bracketed_kw = ("(" in okw and ")" in okw) or ("[" in okw and "]" in okw)
-                    if is_bracketed_kw and not line_has_bracketed_rec:
-                        continue
+                matched_opt_kw = None
+                if is_opt1_match:
+                    matched_opt_kw = "(Recommended)" if is_strong_opt1 else line_text
+                else:
+                    for okw in opt_kw_list:
+                        okw_lower = okw.lower()
+                        okw_clean = okw_lower.strip("()[] ")
+                        if not okw_clean:
+                            continue
 
-                    okw_tokens = [t.strip("()[]:., ") for t in okw_lower.split() if t.strip("()[]:., ")]
-                    has_opt_match = (okw_clean in line_lower)
-                    if not has_opt_match and okw_tokens:
-                        if all(any(token in wc or wc in token for wc in line_words_clean) for token in okw_tokens):
-                            has_opt_match = True
-                    if not has_opt_match:
-                        for wc in line_words_clean:
-                            if okw_clean in wc or (len(okw_clean) >= 4 and difflib.SequenceMatcher(None, wc, okw_clean).ratio() >= 0.75):
+                        # If okw specifies bracketed (Recommended), enforce bracketed match
+                        is_bracketed_kw = ("(" in okw and ")" in okw) or ("[" in okw and "]" in okw)
+                        if is_bracketed_kw and not line_has_bracketed_rec:
+                            continue
+
+                        okw_tokens = [t.strip("()[]:., ") for t in okw_lower.split() if t.strip("()[]:., ")]
+                        has_opt_match = (okw_clean in line_lower)
+                        if not has_opt_match and okw_tokens:
+                            if all(any(token in wc or wc in token for wc in line_words_clean) for token in okw_tokens):
                                 has_opt_match = True
-                                break
-
-                    if has_opt_match and line.words:
-                        matched_words = []
-                        target_tokens = set(okw_tokens) if okw_tokens else {okw_clean}
-                        for word in line.words:
-                            wc = word.text.lower().strip("()[]:., ")
-                            if (line_has_bracketed_rec and ("commend" in wc or "अनुशंसित" in wc or wc in ("(", ")", "[", "]", "{", "}"))) or any(
-                                token in wc or wc in token or (len(token) >= 4 and difflib.SequenceMatcher(None, wc, token).ratio() >= 0.70)
-                                for token in target_tokens
-                            ):
-                                matched_words.append(word)
-
-                        words_to_measure = matched_words if matched_words else list(line.words)
-                        if words_to_measure:
-                            min_x = min(w.bounding_rect.x for w in words_to_measure)
-                            w_min_y = min(w.bounding_rect.y for w in words_to_measure)
-                            max_x = max(w.bounding_rect.x + w.bounding_rect.width for w in words_to_measure)
-                            max_y = max(w.bounding_rect.y + w.bounding_rect.height for w in words_to_measure)
-
-                            act_x = int(min_x + offset_x)
-                            act_y = int(w_min_y + offset_y)
-                            act_w = int(max_x - min_x)
-                            act_h = int(max_y - w_min_y)
-
-                            if console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
-                                continue
-
-                            # Project explorer filter: Reject any option candidate located in the left project explorer/sidebar (< 500px)
-                            if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 500:
-                                continue
-
-                            res = DetectionResult(
-                                x=act_x,
-                                y=act_y,
-                                width=act_w,
-                                height=act_h,
-                                confidence=0.99 if line_has_bracketed_rec else 0.95,
-                                source="WindowsOcr",
-                                label=okw,
-                            )
-                            option_candidates.append((res, line_has_bracketed_rec))
+                        if not has_opt_match:
+                            for wc in line_words_clean:
+                                if okw_clean in wc or (len(okw_clean) >= 4 and difflib.SequenceMatcher(None, wc, okw_clean).ratio() >= 0.75):
+                                    has_opt_match = True
+                                    break
+                        if has_opt_match:
+                            matched_opt_kw = okw
                             break
 
-            # Prioritize options with strict (Recommended) bracketed match
+                if matched_opt_kw and line.words:
+                    matched_words = []
+                    target_tokens = {"recommend", "recommended", "recommendation", "अनुशंसित", "option", "1", "one"}
+                    for word in line.words:
+                        wc = word.text.lower().strip("()[]:., ")
+                        if (
+                            "commend" in wc
+                            or "अनुशंसित" in wc
+                            or wc in ("(", ")", "[", "]", "{", "}")
+                            or wc in ("option", "1", "one", "opt")
+                            or any(token in wc or wc in token for token in target_tokens)
+                        ):
+                            matched_words.append(word)
+
+                    words_to_measure = matched_words if matched_words else list(line.words)
+                    min_x = min(w.bounding_rect.x for w in words_to_measure)
+                    w_min_y = min(w.bounding_rect.y for w in words_to_measure)
+                    max_x = max(w.bounding_rect.x + w.bounding_rect.width for w in words_to_measure)
+                    max_y = max(w.bounding_rect.y + w.bounding_rect.height for w in words_to_measure)
+
+                    act_x = int(min_x + offset_x)
+                    act_y = int(w_min_y + offset_y)
+                    act_w = int(max_x - min_x)
+                    act_h = int(max_y - w_min_y)
+
+                    if console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
+                        continue
+
+                    # Project explorer filter: Reject any candidate located in sidebar (< 500px)
+                    if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 500:
+                        continue
+
+                    res = DetectionResult(
+                        x=act_x,
+                        y=act_y,
+                        width=act_w,
+                        height=act_h,
+                        confidence=0.99 if is_strong_opt1 else 0.95,
+                        source="WindowsOcr",
+                        label=matched_opt_kw,
+                    )
+                    option_candidates.append((res, is_strong_opt1))
+
+            # Prioritize options with strong match and topmost Y position (Option 1 is at top of option list)
             option_candidates.sort(key=lambda item: (1 if item[1] else 0, -item[0].y), reverse=True)
 
             # Pair Option candidates with corresponding Action Bar (Submit and/or Skip)
@@ -460,11 +553,11 @@ class WindowsOcrDetector(BaseDetector):
                 # while Submit / Skip action bar is right-aligned (~1100-1300px horizontal offset).
                 matching_subs = [
                     sub for sub in submit_candidates
-                    if (sub.y >= opt.y - 15) and (sub.y - opt.y <= 650) and (sub.x >= opt.x - 100) and (abs(sub.x - opt.x) <= 1600)
+                    if (sub.y >= opt.y - 15) and (sub.y - opt.y <= 950) and (sub.x >= opt.x - 100) and (abs(sub.x - opt.x) <= 1600)
                 ]
                 matching_skips = [
                     sk for sk in skip_candidates
-                    if (sk.y >= opt.y - 15) and (sk.y - opt.y <= 650) and (sk.x >= opt.x - 100) and (abs(sk.x - opt.x) <= 1600)
+                    if (sk.y >= opt.y - 15) and (sk.y - opt.y <= 950) and (sk.x >= opt.x - 100) and (abs(sk.x - opt.x) <= 1600)
                 ]
 
                 # Case 1: Both Submit and Skip are detected
@@ -507,6 +600,7 @@ class WindowsOcrDetector(BaseDetector):
                     )
                     return (opt, inferred_sub)
 
+                # Case 4: When require_submit is False, return option without paired submit
                 elif not require_submit:
                     return (opt, None)
 

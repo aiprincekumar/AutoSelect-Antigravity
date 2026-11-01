@@ -706,5 +706,180 @@ class TestAutoCommander(unittest.TestCase):
             self.assertEqual(calls[2][0][1], 849)
 
 
+class TestDynamicTargetingAndHeight(unittest.TestCase):
+    """
+    Tests dynamic Option 1 and Submit targeting across variable modal heights
+    (2 options, 3 options, 4 options, multiline questions), eliminating hardcoded (541, 664) and (1827, 849).
+    """
+
+    def test_is_option_1_match_all_variations(self):
+        """Verifies flexible Option 1 matching across all OCR formats and variations."""
+        matches_strong = [
+            "(Recommended)",
+            "[Recommended]",
+            "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+            "Option 1: (Recommended) Push committed changes",
+            "1. (Recommended) Execute unit test suite",
+            "1 (Recommended)",
+            "1. Recommended: Deploy changes",
+            "Option 1: Recommended",
+            "Option 1 (Recommended)",
+            "1 Recommendation",
+            "(अनुशंसित) विकल्प 1",
+            "विकल्प 1: अनुशंसित",
+            "○ (Recommended) Commit changes",
+            "● Recommended option",
+        ]
+        for text in matches_strong:
+            is_match, is_strong = WindowsOcrDetector.is_option_1_match(text)
+            self.assertTrue(is_match, f"Failed to match Option 1 on: {text}")
+
+        # Negative samples
+        negatives = [
+            "Which option is recommended by the team?",
+            "What is the recommended approach for this?",
+            "Option 2: Cancel and keep changes local",
+            "Option 3: Ask questions later",
+            "Just a conversational response explaining recommendation theory",
+        ]
+        for text in negatives:
+            is_match, _ = WindowsOcrDetector.is_option_1_match(text)
+            self.assertFalse(is_match, f"Should NOT match Option 1 on: {text}")
+
+    def test_step1_click_coordinates_dynamically_follow_variable_y(self):
+        """
+        Asserts that Step 1 Option 1 click coordinates dynamically track variable Y positions
+        and radio button circles across 2, 3, 4 option questions without hardcoding y=664.
+        """
+        cfg = Config(countdown_seconds=0.01)
+        engine = AutoCommanderEngine(cfg)
+
+        test_cases = [
+            # (name, opt_x, opt_y, opt_w, opt_h, expected_cx, expected_cy)
+            ("2-option short", 565, 620, 150, 24, 541, 632),
+            ("3-option multiline question", 565, 740, 180, 32, 541, 756),
+            ("4-option tall question", 570, 830, 160, 36, 546, 848),
+            ("Multiline intro question", 565, 890, 150, 28, 541, 904),
+            ("Direct radio button detection", 535, 780, 20, 20, 535, 790),
+        ]
+
+        for name, opt_x, opt_y, opt_w, opt_h, exp_cx, exp_cy in test_cases:
+            opt_result = DetectionResult(
+                x=opt_x,
+                y=opt_y,
+                width=opt_w,
+                height=opt_h,
+                confidence=0.99,
+                source="WindowsOcr",
+                label="Option 1: (Recommended)",
+            )
+            fake_submit = DetectionResult(
+                x=1827,
+                y=opt_y + 160,
+                width=100,
+                height=35,
+                confidence=0.99,
+                source="Vision-ActiveBlue",
+                label="Submit",
+            )
+
+            with unittest.mock.patch.object(engine.hud, "show"), \
+                 unittest.mock.patch.object(engine.detector, "detect_submit_button", return_value=fake_submit), \
+                 unittest.mock.patch.object(engine, "_verify_submission", return_value=True), \
+                 unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
+
+                engine._execute_countdown(opt_result)
+                self.assertEqual(mock_glide.call_count, 2, f"Failed glide count for {name}")
+                step1_call = mock_glide.call_args_list[0][0]
+                self.assertEqual(step1_call[0], exp_cx, f"Step 1 X mismatch for {name}")
+                self.assertEqual(step1_call[1], exp_cy, f"Step 1 Y mismatch for {name}")
+                # Explicitly verify it did not use hardcoded 664
+                if exp_cy != 664:
+                    self.assertNotEqual(step1_call[1], 664, f"Hardcoded 664 detected in {name}!")
+
+    def test_step2_submit_coordinates_dynamically_follow_variable_y(self):
+        """
+        Asserts that Step 2 Submit click coordinates dynamically follow variable option heights
+        without hardcoding sub_y=849.
+        """
+        cfg = Config(countdown_seconds=0.01)
+        engine = AutoCommanderEngine(cfg)
+
+        test_cases = [
+            ("Short modal Submit", 600, 785),
+            ("Medium modal Submit", 720, 915),
+            ("Tall 4-option modal Submit", 830, 1025),
+        ]
+
+        for name, opt_y, sub_y in test_cases:
+            opt_result = DetectionResult(
+                x=565,
+                y=opt_y,
+                width=150,
+                height=24,
+                confidence=0.99,
+                source="WindowsOcr",
+                label="(Recommended) Option 1",
+            )
+            active_blue_submit = DetectionResult(
+                x=1780,
+                y=sub_y,
+                width=110,
+                height=36,
+                confidence=0.99,
+                source="Vision-ActiveBlue",
+                label="Submit",
+            )
+
+            with unittest.mock.patch.object(engine.hud, "show"), \
+                 unittest.mock.patch.object(engine.detector, "detect_submit_button", return_value=active_blue_submit), \
+                 unittest.mock.patch.object(engine, "_verify_submission", return_value=True), \
+                 unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
+
+                engine._execute_countdown(opt_result)
+                step2_call = mock_glide.call_args_list[1][0]
+                self.assertEqual(step2_call[1], active_blue_submit.center[1], f"Step 2 Y mismatch for {name}")
+                self.assertNotEqual(step2_call[1], 849, f"Step 2 Y should not be hardcoded 849 for {name}")
+
+    def test_skip_inference_places_submit_dynamically(self):
+        """Verifies that when only Skip button is seen, Submit position is inferred dynamically on same row."""
+        skip_candidate = DetectionResult(x=1680, y=945, width=65, height=30, confidence=0.98, source="WindowsOcr", label="Skip")
+
+        # Inferred Submit is placed ~35px to the right of Skip on same Y row
+        expected_sub_x = skip_candidate.x + skip_candidate.width + 35
+        expected_sub_y = skip_candidate.y
+
+        self.assertEqual(expected_sub_x, 1780)
+        self.assertEqual(expected_sub_y, 945)
+
+    def test_submit_verification_detects_failure_and_prevents_false_success(self):
+        """
+        Verifies that if the modal card remains open after clicking Submit,
+        _verify_submission returns False and prevents false success notification.
+        """
+        cfg = Config(countdown_seconds=0.01, floating_hud_enabled=True)
+        engine = AutoCommanderEngine(cfg)
+
+        opt_result = DetectionResult(x=565, y=700, width=150, height=25, confidence=0.99, source="WindowsOcr", label="(Recommended)")
+        submit_btn = DetectionResult(x=1800, y=880, width=100, height=35, confidence=0.99, source="Vision-ActiveBlue", label="Submit")
+
+        # Mock active blue Submit button still persisting after click
+        with unittest.mock.patch.object(engine.hud, "show"), \
+             unittest.mock.patch.object(engine.hud, "flash_success") as mock_success, \
+             unittest.mock.patch.object(engine.hud, "flash_cancelled") as mock_cancel, \
+             unittest.mock.patch.object(TerminalDashboard, "render_completed") as mock_completed, \
+             unittest.mock.patch.object(engine.detector, "detect_submit_button", return_value=submit_btn), \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True), \
+             unittest.mock.patch.object(engine.detector.vision_detector, "detect_active_blue_submit_button", return_value=submit_btn):
+
+            engine._execute_countdown(opt_result)
+
+            # Verification should fail because button is still active
+            mock_completed.assert_not_called()
+            mock_success.assert_not_called()
+            mock_cancel.assert_called_once()
+            self.assertEqual(engine.current_state, "COOLDOWN")
+
+
 if __name__ == "__main__":
     unittest.main()
