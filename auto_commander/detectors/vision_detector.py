@@ -118,3 +118,50 @@ class VisionDetector(BaseDetector):
             return best_match
         except Exception:
             return None
+
+    def detect_active_blue_submit_button(self, img_bgr: Optional[Any] = None, min_y: int = 0) -> Optional[DetectionResult]:
+        """
+        Detects the active bright-blue Submit button in Antigravity.
+        Active blue color is ~#0371BB (BGR around [187, 113, 3]).
+        """
+        if cv2 is None or np is None:
+            return None
+        try:
+            if img_bgr is None:
+                if ImageGrab is None:
+                    return None
+                screenshot = ImageGrab.grab()
+                img_bgr = cv2.cvtColor(np.array(screenshot), cv2.COLOR_RGB2BGR)
+
+            h, w = img_bgr.shape[:2]
+            y_start = max(0, min_y)
+            crop = img_bgr[y_start:, :]
+            if crop.shape[0] < 20 or crop.shape[1] < 50:
+                return None
+
+            lower_blue = np.array([130, 70, 0], dtype=np.uint8)
+            upper_blue = np.array([245, 160, 60], dtype=np.uint8)
+            mask = cv2.inRange(crop, lower_blue, upper_blue)
+
+            contours, _ = cv2.findContours(mask, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE)
+            candidates = []
+            for c in contours:
+                bx, by, bw, bh = cv2.boundingRect(c)
+                if 50 <= bw <= 200 and 20 <= bh <= 60:
+                    candidates.append((bx, by + y_start, bw, bh))
+
+            if candidates:
+                candidates.sort(key=lambda b: (b[0] + b[2]), reverse=True)
+                bx, by, bw, bh = candidates[0]
+                return DetectionResult(
+                    x=bx,
+                    y=by,
+                    width=bw,
+                    height=bh,
+                    confidence=0.99,
+                    source="Vision-ActiveBlue",
+                    label="Submit",
+                )
+        except Exception:
+            return None
+        return None

@@ -2,7 +2,7 @@
   "screen": {
     "expected_width": 1920,
     "expected_height": 1080,
-    "note": "Full HD default resolution. Calibrate with calibrate_coordinates.py for your exact layout."
+    "note": "Full HD 1920x1080 native resolution calibrated to Demo SS screenshots. Calibrate with calibrate_coordinates.py if your window layout differs."
   },
   "settings": {
     "failsafe_enabled": false,
@@ -20,22 +20,22 @@
   "steps": {
     "step1_chat": {
       "name": "Step 1: Open & Focus Chat Area",
-      "name_hi": "स्टेप 1: चैट एरिया पर क्लिक व फोकस करना",
+      "name_hi": "स्टेप 1: चैट एरिया / (?) बैज पर क्लिक व फोकस करना",
       "enabled": true,
-      "x": 1450,
-      "y": 800,
+      "x": 580,
+      "y": 815,
       "move_duration": 0.8,
       "hover_delay": 0.5,
       "clicks": 1,
       "button": "left",
-      "description": "Hover over chat prompt / input area and click to bring focus"
+      "description": "Hover over chat conversation row with (?) Action required badge and click to bring focus"
     },
     "step2_recommended": {
       "name": "Step 2: Select (Recommended) Option",
       "name_hi": "स्टेप 2: (Recommended) ऑप्शन / रेडियो बटन चुनना",
       "enabled": true,
-      "x": 1450,
-      "y": 870,
+      "x": 600,
+      "y": 664,
       "move_duration": 0.8,
       "hover_delay": 0.7,
       "clicks": 1,
@@ -46,13 +46,13 @@
       "name": "Step 3: Click Submit / Confirm Button",
       "name_hi": "स्टेप 3: सबमिट / कन्फर्म बटन पर क्लिक करना",
       "enabled": true,
-      "x": 1450,
-      "y": 940,
+      "x": 1827,
+      "y": 849,
       "move_duration": 0.7,
       "hover_delay": 0.6,
       "clicks": 1,
       "button": "left",
-      "description": "Hover over the Submit / Proceed button and click to confirm"
+      "description": "Hover over the active bright-blue Submit button at bottom right and click to confirm"
     },
     "step4_verify": {
       "name": "Step 4: Verify Execution & Settle State",

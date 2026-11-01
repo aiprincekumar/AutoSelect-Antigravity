@@ -5,7 +5,7 @@ Coordinates Windows Native WinRT OCR, UIAutomation, Vision Template Matching,
 and Step 0 Pending Chat Navigation.
 """
 
-from typing import Optional
+from typing import Any, Optional
 
 try:
     from PIL import ImageGrab
@@ -88,28 +88,32 @@ class MultiEngineDetector:
         """
         return self.chat_detector.detect_pending_chat(target_hwnd=target_hwnd)
 
-    def detect_submit_button(self, option_result: Optional[DetectionResult] = None) -> Optional[DetectionResult]:
+    def detect_submit_button(self, option_result: Optional[DetectionResult] = None, screen_img: Optional[Any] = None) -> Optional[DetectionResult]:
         """
         Detects the 'Submit / पुष्टि करें' button on the active Antigravity modal.
-        Uses cached detection from detect() -> UIA -> OCR -> Layout Inference fallback.
+        Uses cached detection from detect() -> Active Blue Vision -> OCR -> UIA -> Layout Inference.
         """
         if self.last_detected_submit:
             return self.last_detected_submit
 
-        # 1. UIAutomation scan
-        if self.config.detection_mode in ("auto", "uia"):
-            res = self.uia_detector.find_by_keywords(self.config.submit_keywords)
-            if res:
-                return res
+        min_y = (option_result.y + option_result.height) if option_result else 0
+
+        # 1. Computer Vision Active Blue Button Detector (Fastest and 100% immune to font scaling/glyphs)
+        if hasattr(self, "vision_detector") and self.vision_detector:
+            try:
+                active_blue = self.vision_detector.detect_active_blue_submit_button(min_y=min_y)
+                if active_blue:
+                    return active_blue
+            except Exception:
+                pass
 
         # 2. Windows Native OCR scan
         if self.config.detection_mode in ("auto", "ocr"):
             if self.ocr_detector.is_available() and ImageGrab is not None:
                 try:
-                    screen_img = ImageGrab.grab()
-                    min_y = (option_result.y + option_result.height) if option_result else 0
+                    img = screen_img if screen_img is not None else ImageGrab.grab()
                     res = self.ocr_detector.scan_image(
-                        screen_img,
+                        img,
                         offset_x=0,
                         offset_y=0,
                         keywords=self.config.submit_keywords,
@@ -120,7 +124,13 @@ class MultiEngineDetector:
                 except Exception:
                     pass
 
-        # 3. Layout Inference Fallback: Standard Antigravity modal places Submit ~65px below option
+        # 3. UIAutomation scan
+        if self.config.detection_mode in ("auto", "uia"):
+            res = self.uia_detector.find_by_keywords(self.config.submit_keywords)
+            if res:
+                return res
+
+        # 4. Layout Inference Fallback: Standard Antigravity modal places Submit below option
         if option_result:
             return DetectionResult(
                 x=option_result.x,

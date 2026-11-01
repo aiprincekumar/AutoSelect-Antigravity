@@ -131,9 +131,6 @@ class WindowsOcrDetector(BaseDetector):
                     draw = ImageDraw.Draw(working_img)
                     draw.rectangle([rel_x1, rel_y1, rel_x2, rel_y2], fill=(0, 0, 0))
 
-            if enhance_contrast:
-                working_img = self._enhance_contrast(working_img, factor=2.2)
-
             buf = io.BytesIO()
             working_img.save(buf, format="PNG")
             image_bytes = buf.getvalue()
@@ -142,6 +139,15 @@ class WindowsOcrDetector(BaseDetector):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(asyncio.run, self._recognize_async(image_bytes))
                 result = future.result(timeout=3.5)
+
+            # If no lines were recognized and contrast enhancement requested, retry with enhanced contrast
+            if (not result or not result.lines) and enhance_contrast:
+                enh_img = self._enhance_contrast(working_img, factor=1.8)
+                buf_enh = io.BytesIO()
+                enh_img.save(buf_enh, format="PNG")
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(asyncio.run, self._recognize_async(buf_enh.getvalue()))
+                    result = future.result(timeout=3.5)
 
             if not result or not result.lines:
                 return None
@@ -161,6 +167,9 @@ class WindowsOcrDetector(BaseDetector):
                     # If kw requires brackets, ensure line has bracketed target
                     is_bracketed_kw = ("(" in kw and ")" in kw) or ("[" in kw and "]" in kw)
                     if is_bracketed_kw and not line_has_bracketed_rec:
+                        continue
+
+                    if kw_clean == "select" and any("selection" in wc for wc in line_words_clean):
                         continue
 
                     kw_tokens = [t.strip("()[]:., ") for t in kw_lower.split() if t.strip("()[]:., ")]
@@ -244,7 +253,7 @@ class WindowsOcrDetector(BaseDetector):
 
         opt_kw_list = target_keywords if target_keywords is not None else self.target_keywords
         sub_kw_list = submit_keywords if submit_keywords is not None else (
-            "Submit", "Skip", "पुष्टि करें", "Confirm", "Proceed", "Submit / पुष्टि करें", "जारी रखें", "Continue", "Select"
+            "Submit", "Skip", "पुष्टि करें", "Confirm", "Proceed", "Submit / पुष्टि करें", "जारी रखें", "Continue", "OK"
         )
 
         try:
@@ -260,9 +269,6 @@ class WindowsOcrDetector(BaseDetector):
                     draw = ImageDraw.Draw(working_img)
                     draw.rectangle([rel_x1, rel_y1, rel_x2, rel_y2], fill=(0, 0, 0))
 
-            if enhance_contrast:
-                working_img = self._enhance_contrast(working_img, factor=2.2)
-
             buf = io.BytesIO()
             working_img.save(buf, format="PNG")
             image_bytes = buf.getvalue()
@@ -270,6 +276,15 @@ class WindowsOcrDetector(BaseDetector):
             with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
                 future = executor.submit(asyncio.run, self._recognize_async(image_bytes))
                 result = future.result(timeout=3.5)
+
+            # Retry with contrast enhancement if raw image yielded no lines
+            if (not result or not result.lines) and enhance_contrast:
+                enh_img = self._enhance_contrast(working_img, factor=1.8)
+                buf_enh = io.BytesIO()
+                enh_img.save(buf_enh, format="PNG")
+                with concurrent.futures.ThreadPoolExecutor(max_workers=1) as executor:
+                    future = executor.submit(asyncio.run, self._recognize_async(buf_enh.getvalue()))
+                    result = future.result(timeout=3.5)
 
             if not result or not result.lines:
                 return None
@@ -290,7 +305,7 @@ class WindowsOcrDetector(BaseDetector):
                     sub_match_words = []
                     for w in line.words:
                         wc = w.text.lower().strip("()[]:., ")
-                        if wc in ("submit", "confirm", "proceed", "select", "ok") or any(
+                        if wc in ("submit", "confirm", "proceed", "ok") or any(
                             s in wc for s in ("submit", "पुष्टि", "confirm", "proceed", "जारी")
                         ):
                             sub_match_words.append(w)
@@ -300,7 +315,9 @@ class WindowsOcrDetector(BaseDetector):
                             skw_clean = skw.lower().strip("()[] ")
                             if skw_clean in ("skip", "छोड़ें"):
                                 continue  # Handled separately below
-                            if skw_clean and (skw_clean in line_lower or any(skw_clean == wc for wc in line_words_clean)):
+                            if skw_clean == "select" and any("selection" in wc for wc in line_words_clean):
+                                continue
+                            if skw_clean and (any(skw_clean == wc for wc in line_words_clean) or (skw_clean in line_lower and not any("selection" in wc for wc in line_words_clean))):
                                 sub_match_words = list(line.words)
                                 break
 
@@ -425,14 +442,16 @@ class WindowsOcrDetector(BaseDetector):
 
             # Pair Option candidates with corresponding Action Bar (Submit and/or Skip)
             for opt, is_bracketed in option_candidates:
-                # Find submit button located below option within the modal/card area
+                # Find submit button located below option within the modal/card area.
+                # In full-width / standard Antigravity layouts, Option 1 is left-aligned
+                # while Submit / Skip action bar is right-aligned (~1100-1300px horizontal offset).
                 matching_subs = [
                     sub for sub in submit_candidates
-                    if (sub.y >= opt.y - 15) and (sub.y - opt.y <= 650) and (abs(sub.x - opt.x) <= 650)
+                    if (sub.y >= opt.y - 15) and (sub.y - opt.y <= 650) and (sub.x >= opt.x - 100) and (abs(sub.x - opt.x) <= 1600)
                 ]
                 matching_skips = [
                     sk for sk in skip_candidates
-                    if (sk.y >= opt.y - 15) and (sk.y - opt.y <= 650) and (abs(sk.x - opt.x) <= 650)
+                    if (sk.y >= opt.y - 15) and (sk.y - opt.y <= 650) and (sk.x >= opt.x - 100) and (abs(sk.x - opt.x) <= 1600)
                 ]
 
                 # Case 1: Both Submit and Skip are detected
@@ -456,18 +475,13 @@ class WindowsOcrDetector(BaseDetector):
                     matching_skips.sort(key=lambda s: s.y - opt.y)
                     best_skip = matching_skips[0]
 
-                    # Infer Submit position right next to Skip
-                    # In Antigravity ask_question modal: [ Submit ]  [ Skip ]
-                    sub_w = max(best_skip.width, 95)
+                    # Infer Submit position right next to Skip.
+                    # In Antigravity ask_question modal: [ Skip ]  [ Submit ↵ ]
+                    # Submit is located ~30-50px to the RIGHT of Skip.
+                    sub_w = max(best_skip.width + 30, 95)
                     sub_h = max(best_skip.height, 34)
                     sub_y = best_skip.y
-
-                    if best_skip.x >= 90:
-                        # Submit is located ~95-120px to the left of Skip
-                        sub_x = int(best_skip.x - max(best_skip.width + 25, 105))
-                    else:
-                        # If Skip is docked at the very left edge, Submit is to the right
-                        sub_x = int(best_skip.x + best_skip.width + 25)
+                    sub_x = int(best_skip.x + best_skip.width + 35)
 
                     inferred_sub = DetectionResult(
                         x=sub_x,

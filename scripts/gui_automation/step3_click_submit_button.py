@@ -42,8 +42,8 @@ def run_step3(x=None, y=None, hover_delay=None, move_duration=None, drag_mode=Fa
     step_cfg = config.get("steps", {}).get("step3_submit", {})
     settings = config.get("settings", {})
 
-    target_x = x if x is not None else step_cfg.get("x", 1450)
-    target_y = y if y is not None else step_cfg.get("y", 940)
+    target_x = x if x is not None else step_cfg.get("x", 1827)
+    target_y = y if y is not None else step_cfg.get("y", 849)
     hover = hover_delay if hover_delay is not None else step_cfg.get("hover_delay", 0.6)
     duration = move_duration if move_duration is not None else step_cfg.get("move_duration", 0.7)
     easing = settings.get("easing_function", "easeOutQuad")

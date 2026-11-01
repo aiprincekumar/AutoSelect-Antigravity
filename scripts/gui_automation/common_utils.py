@@ -163,8 +163,13 @@ def hover_and_click(
 
     # 3. Click
     if not dry_run:
-        print(f"  [CLICK] Dispatched {clicks} '{button}'-click(s) at ({x}, {y})")
-        pyautogui.click(x=x, y=y, clicks=clicks, button=button)
+        print(f"  [CLICK] Dispatched firm {clicks} '{button}'-click(s) with dwell at ({x}, {y})")
+        for _ in range(clicks):
+            pyautogui.mouseDown(x=x, y=y, button=button)
+            time.sleep(0.08)
+            pyautogui.mouseUp(x=x, y=y, button=button)
+            if clicks > 1:
+                time.sleep(0.05)
         # Short settle delay
         time.sleep(0.3)
     else:
