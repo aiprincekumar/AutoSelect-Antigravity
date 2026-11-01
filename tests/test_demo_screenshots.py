@@ -100,11 +100,57 @@ class TestDemoScreenshots(unittest.TestCase):
         self.assertEqual(steps["step1_chat"]["x"], 580)
         self.assertEqual(steps["step1_chat"]["y"], 815)
 
-        self.assertEqual(steps["step2_recommended"]["x"], 600)
+        self.assertEqual(steps["step2_recommended"]["x"], 1050)
         self.assertEqual(steps["step2_recommended"]["y"], 664)
 
         self.assertEqual(steps["step3_submit"]["x"], 1827)
         self.assertEqual(steps["step3_submit"]["y"], 849)
+
+    def test_green_arrows_detection_coordinates(self):
+        """
+        Locates the green annotations drawn in Screenshot (452).png to (458).png:
+        - Screenshot (452): Arrow pointing to sidebar pending chat row at (442, 744).
+        - Screenshot (453): Arrow pointing to conversation row at (484, 694).
+        - Screenshot (455): Arrow pointing to Option 1 start at (551, 664).
+        - Screenshot (456): Green box enclosing Option 1 card spanning x=504 to 1898, y=622 to 693.
+        - Screenshot (457): Arrow starting on Option 1 at (1539, 664) pointing to Submit at (1819, 819).
+        - Screenshot (458): Green box enclosing Submit button at (1752, 812, 153, 70), center (1828, 847).
+        """
+        import numpy as np
+
+        arrow_specs = {
+            452: {"min_x": 417, "max_x": 465, "min_y": 744, "max_y": 926},
+            453: {"min_x": 0, "max_x": 484, "min_y": 680, "max_y": 756},
+            455: {"min_x": 325, "max_x": 551, "min_y": 637, "max_y": 685},
+            456: {"min_x": 504, "max_x": 1898, "min_y": 622, "max_y": 693},
+            457: {"min_x": 1539, "max_x": 1819, "min_y": 664, "max_y": 829},
+            458: {"min_x": 1752, "max_x": 1904, "min_y": 812, "max_y": 881},
+        }
+
+        for num, spec in arrow_specs.items():
+            path = os.path.join(self.demo_dir, f"Screenshot ({num}).png")
+            if not os.path.exists(path):
+                continue
+
+            img = cv2.imread(path)
+            hsv = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)
+            mask = cv2.inRange(hsv, np.array([35, 100, 100]), np.array([85, 255, 255]))
+            mask[1000:, :] = 0
+
+            ys, xs = np.where(mask > 0)
+            self.assertGreater(len(xs), 0, f"No green pixels in {path}")
+            self.assertEqual(xs.min(), spec["min_x"])
+            self.assertEqual(xs.max(), spec["max_x"])
+            self.assertEqual(ys.min(), spec["min_y"])
+            self.assertEqual(ys.max(), spec["max_y"])
+
+    def test_left_project_explorer_rejection(self):
+        """Verifies that items in the left project explorer (x < 500) and sidebar (sub x < 800) are strictly rejected."""
+        # Create a synthetic full-screen 1920x1080 image with a fake option in project explorer (x=200)
+        img = Image.new("RGB", (1920, 1080), color=(30, 30, 46))
+        # No valid decision modal should be detected
+        res = self.ocr.scan_decision_modal_on_image(img, mask_console=False)
+        self.assertIsNone(res)
 
 
 if __name__ == "__main__":

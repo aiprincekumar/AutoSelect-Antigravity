@@ -34,13 +34,13 @@
       "name": "Step 2: Select (Recommended) Option",
       "name_hi": "स्टेप 2: (Recommended) ऑप्शन / रेडियो बटन चुनना",
       "enabled": true,
-      "x": 600,
+      "x": 1050,
       "y": 664,
       "move_duration": 0.8,
       "hover_delay": 0.7,
       "clicks": 1,
       "button": "left",
-      "description": "Hover over the recommended option card / radio button and click to select"
+      "description": "Hover over the recommended option card in the right-side chat work area (X=1050, Y=664, well clear of left project explorer) and click to select"
     },
     "step3_submit": {
       "name": "Step 3: Click Submit / Confirm Button",

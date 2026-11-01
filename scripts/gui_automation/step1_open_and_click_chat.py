@@ -7,7 +7,7 @@ Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 Usage:
   python step1_open_and_click_chat.py
-  python step1_open_and_click_chat.py --x 1450 --y 800
+  python step1_open_and_click_chat.py --x 580 --y 815
   python step1_open_and_click_chat.py --no-countdown
   python step1_open_and_click_chat.py --dry-run
 """

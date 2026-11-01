@@ -7,7 +7,7 @@ Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 Usage:
   python step2_select_recommended_option.py
-  python step2_select_recommended_option.py --x 1450 --y 870
+  python step2_select_recommended_option.py --x 1050 --y 664
   python step2_select_recommended_option.py --no-countdown
   python step2_select_recommended_option.py --dry-run
 """
@@ -42,7 +42,7 @@ def run_step2(x=None, y=None, hover_delay=None, move_duration=None, drag_mode=Fa
     step_cfg = config.get("steps", {}).get("step2_recommended", {})
     settings = config.get("settings", {})
 
-    target_x = x if x is not None else step_cfg.get("x", 600)
+    target_x = x if x is not None else step_cfg.get("x", 1050)
     target_y = y if y is not None else step_cfg.get("y", 664)
     hover = hover_delay if hover_delay is not None else step_cfg.get("hover_delay", 0.7)
     duration = move_duration if move_duration is not None else step_cfg.get("move_duration", 0.8)

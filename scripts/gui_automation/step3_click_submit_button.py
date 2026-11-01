@@ -7,7 +7,7 @@ Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 Usage:
   python step3_click_submit_button.py
-  python step3_click_submit_button.py --x 1450 --y 940
+  python step3_click_submit_button.py --x 1827 --y 849
   python step3_click_submit_button.py --no-countdown
   python step3_click_submit_button.py --dry-run
 """

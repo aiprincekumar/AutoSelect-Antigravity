@@ -109,6 +109,7 @@ class WindowsOcrDetector(BaseDetector):
         offset_y: int = 0,
         keywords: Optional[Tuple[str, ...]] = None,
         min_y: int = 0,
+        min_x: int = 0,
         mask_console: bool = True,
         enhance_contrast: bool = True,
     ) -> Optional[DetectionResult]:
@@ -210,6 +211,8 @@ class WindowsOcrDetector(BaseDetector):
                             actual_h = int(max_y - w_min_y)
 
                             if min_y > 0 and actual_y < min_y:
+                                continue
+                            if min_x > 0 and actual_x < min_x:
                                 continue
 
                             # Console boundary filter: never return detection inside console window
@@ -333,6 +336,9 @@ class WindowsOcrDetector(BaseDetector):
                         act_h = int(max_y - w_min_y)
 
                         if not (console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2))):
+                            # Chat action bar boundary filter: Submit button must be in the right-side action bar
+                            if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 800:
+                                continue
                             submit_candidates.append(DetectionResult(
                                 x=act_x,
                                 y=act_y,
@@ -365,6 +371,9 @@ class WindowsOcrDetector(BaseDetector):
                         act_h = int(max_y - w_min_y)
 
                         if not (console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2))):
+                            # Action bar filter: Skip button must be in the right-side action bar
+                            if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 700:
+                                continue
                             skip_candidates.append(DetectionResult(
                                 x=act_x,
                                 y=act_y,
@@ -423,6 +432,10 @@ class WindowsOcrDetector(BaseDetector):
                             act_h = int(max_y - w_min_y)
 
                             if console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
+                                continue
+
+                            # Project explorer filter: Reject any option candidate located in the left project explorer/sidebar (< 500px)
+                            if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 500:
                                 continue
 
                             res = DetectionResult(

@@ -58,8 +58,10 @@ class MultiEngineDetector:
         # Strategy 2: UIAutomation Tree Search
         if mode in ("auto", "uia"):
             opt_res = self.uia_detector.scan()
-            if opt_res:
+            if opt_res and opt_res.x >= 500:
                 sub_res = self.uia_detector.find_by_keywords(self.config.submit_keywords)
+                if sub_res and sub_res.x < 800:
+                    sub_res = None
                 if require_submit:
                     if sub_res and sub_res.y >= opt_res.y - 15:
                         self.last_detected_submit = sub_res
@@ -71,11 +73,11 @@ class MultiEngineDetector:
         # Strategy 3: Computer Vision Multi-Scale Template Fallback
         if mode in ("auto", "vision"):
             opt_res = self.vision_detector.scan()
-            if opt_res:
+            if opt_res and opt_res.x >= 500:
                 if not require_submit:
                     return opt_res
                 sub_res = self.detect_submit_button(option_result=opt_res)
-                if sub_res and sub_res.source != "LayoutInference":
+                if sub_res and sub_res.x >= 800 and sub_res.source != "LayoutInference":
                     self.last_detected_submit = sub_res
                     return opt_res
 

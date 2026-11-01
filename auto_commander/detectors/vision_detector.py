@@ -104,6 +104,9 @@ class VisionDetector(BaseDetector):
                     min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 
                     if max_val > highest_score:
+                        # Reject matches in the left project explorer / sidebar
+                        if screen_gray.shape[1] >= 1200 and max_loc[0] < 500:
+                            continue
                         highest_score = max_val
                         best_match = DetectionResult(
                             x=max_loc[0],
@@ -148,6 +151,9 @@ class VisionDetector(BaseDetector):
             for c in contours:
                 bx, by, bw, bh = cv2.boundingRect(c)
                 if 50 <= bw <= 200 and 20 <= bh <= 60:
+                    # Action bar filter: Submit button must be in the right-side action bar
+                    if w >= 1200 and bx < 800:
+                        continue
                     candidates.append((bx, by + y_start, bw, bh))
 
             if candidates:
