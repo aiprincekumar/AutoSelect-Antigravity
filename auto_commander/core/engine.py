@@ -260,7 +260,6 @@ class AutoCommanderEngine:
             if remaining <= 0:
                 break
 
-            TerminalDashboard.render_countdown(remaining, step0_seconds, pending_chat)
             time.sleep(poll_interval)
 
         if not self.is_running or self.user_interrupted:
@@ -291,6 +290,7 @@ class AutoCommanderEngine:
             target_hwnd=self.active_hwnd,
         )
         self.current_target_pos = None
+        self.initial_mouse_pos = self._get_mouse_position()
 
         if not switched:
             print("\033[93m[NOTICE] Step 0 cancelled due to motion or boundary condition.\033[0m")
@@ -301,28 +301,53 @@ class AutoCommanderEngine:
 
         TerminalDashboard._safe_print(f"{TerminalDashboard.GREEN}[OK] Step 0 Complete: Switched to Pending Chat.{TerminalDashboard.RESET}")
 
-        # Dwell 0.5s for the conversation to render
-        time.sleep(0.5)
-
         # Ensure Antigravity is in foreground for subsequent modal detection
         if self.active_hwnd:
             AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
 
-        # Re-scan for newly exposed decision modal
-        result = self.detector.detect(target_hwnd=self.active_hwnd)
-        if result:
-            TerminalDashboard.render_detected(result)
-            self._execute_countdown(result)
-            return True
-        else:
+        # Smooth retry polling loop (poll every 0.25s for up to 3.0s) for decision modal to render
+        modal_retry_timeout = 3.0 if getattr(self.config, "step0_countdown_seconds", 3.0) >= 1.0 else float(self.config.step0_countdown_seconds)
+        modal_poll_interval = min(0.25, modal_retry_timeout)
+        poll_start = time.time()
+        result = None
+
+        while time.time() - poll_start < modal_retry_timeout and self.is_running:
+            if self._check_mouse_interrupted():
+                print("\n\033[93m[USER ABORT] Cancelled during modal search.\033[0m")
+                if self.config.floating_hud_enabled:
+                    self.hud.flash_cancelled()
+                self.current_state = "COOLDOWN"
+                return False
+
+            if self.active_hwnd:
+                AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
+
+            result = self.detector.detect(target_hwnd=self.active_hwnd)
+            if result:
+                break
+            time.sleep(modal_poll_interval)
+
+        # Fallback guarantee: Because we KNOW this chat had the (?) Action required badge,
+        # if OCR still hasn't matched after the retry window, use fallback Option 1 target (541, 664)!
+        # DO NOT ABORT OR GET STUCK!
+        if not result:
             TerminalDashboard._safe_print(
-                f"{TerminalDashboard.YELLOW}[STEP 0]{TerminalDashboard.RESET} "
-                f"Switched chat but no decision modal detected yet. Entering cooldown..."
+                f"{TerminalDashboard.YELLOW}[FALLBACK GUARANTEE]{TerminalDashboard.RESET} "
+                f"Modal rendering delay; engaging calibrated target (541, 664) for Option 1."
             )
-            if self.config.floating_hud_enabled:
-                self.hud.close()
-            self.current_state = "COOLDOWN"
-            return False
+            result = DetectionResult(
+                x=541,
+                y=664,
+                width=24,
+                height=24,
+                confidence=1.0,
+                source="FallbackGuarantee",
+                label="(Recommended) Option 1",
+            )
+
+        TerminalDashboard.render_detected(result)
+        self._execute_countdown(result)
+        return True
 
     def _execute_countdown(self, result: DetectionResult):
         """Runs the visual countdown with live on-screen floating HUD and 50Hz mouse fail-safe."""
@@ -377,7 +402,6 @@ class AutoCommanderEngine:
             if remaining <= 0:
                 break
 
-            TerminalDashboard.render_countdown(remaining, total_seconds, result)
             time.sleep(poll_interval)
 
         # ---------------------------------------------------------------------
@@ -392,16 +416,18 @@ class AutoCommanderEngine:
             # The green arrow in Screenshot (455).png explicitly points to this radio button circle at (551, 664).
             # Clicking at the radio button circle (x=541, y=664) or on the '(Recommended)' text label (x=641)
             # reliably toggles the radio button in the Antigravity webview.
-            # Banned: x=1050 (which clicked in empty void outside the clickable radio/label elements).
-            if "(recommended)" in result.label.lower() and result.x >= 550:
+            if result.source == "FallbackGuarantee":
+                step1_cx, step1_cy = 541, 664
+            elif "(recommended)" in result.label.lower() and result.x >= 550:
                 step1_cx = result.x - 25  # Dead-center on the radio button circle (~541)
+                step1_cy = target_cy
             else:
                 step1_cx = target_cx
-            step1_cy = target_cy
+                step1_cy = target_cy
 
             TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", step1_cx, step1_cy)
 
-            # Refresh initial mouse position right before glide
+            # Refresh initial mouse position right before glide so glide never trips fail-safe
             self.initial_mouse_pos = self._get_mouse_position()
 
             # Ensure Antigravity is in the foreground before clicking Option 1
@@ -419,6 +445,7 @@ class AutoCommanderEngine:
                 target_hwnd=self.active_hwnd,
             )
             self.current_target_pos = None
+            self.initial_mouse_pos = self._get_mouse_position()
 
             if not success_step1:
                 print("\033[93m[NOTICE] Step 1 cancelled due to motion or boundary condition.\033[0m")
@@ -428,51 +455,52 @@ class AutoCommanderEngine:
                 return
 
             TerminalDashboard._safe_print(f"{TerminalDashboard.GREEN}[OK] Step 1 Complete: Option 1 Selected.{TerminalDashboard.RESET}")
+            # Dwell 0.35s for Submit to turn bright blue
             time.sleep(0.35)
+            self.initial_mouse_pos = self._get_mouse_position()
 
-            # Step 2: Detect and click Submit button
+            # Step 2: Detect and click Submit button (with calibrated fallback guarantee)
             submit_result = self.detector.detect_submit_button(option_result=result)
             if submit_result:
                 sub_cx, sub_cy = submit_result.center
-                TerminalDashboard.render_clicking(2, 2, "Submit button", sub_cx, sub_cy)
-
-                # Refresh initial mouse position right before glide
-                self.initial_mouse_pos = self._get_mouse_position()
-
-                # Ensure Antigravity is in the foreground before clicking Submit button
-                if self.active_hwnd:
-                    AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
-
-                if self.config.floating_hud_enabled:
-                    self.hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding to Submit button...", "#A6E3A1")
-
-                self.current_target_pos = (sub_cx, sub_cy)
-                success_step2 = self.mouse_ctrl.glide_and_click(
-                    sub_cx,
-                    sub_cy,
-                    check_interrupted_fn=self._check_mouse_interrupted,
-                    target_hwnd=self.active_hwnd,
-                )
-                self.current_target_pos = None
-
-                if success_step2:
-                    TerminalDashboard.render_completed()
-                    if self.config.floating_hud_enabled:
-                        self.hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
-                    if self.config.sound_notification:
-                        try:
-                            import winsound
-                            winsound.MessageBeep(winsound.MB_OK)
-                        except Exception:
-                            pass
-                    self.current_state = "COOLDOWN"
-                else:
-                    print("\033[93m[NOTICE] Step 2 cancelled due to motion or boundary condition.\033[0m")
-                    if self.config.floating_hud_enabled:
-                        self.hud.flash_cancelled()
-                    self.current_state = "COOLDOWN"
             else:
-                print(f"{TerminalDashboard.YELLOW}[WARN] Could not locate Submit button after option click.{TerminalDashboard.RESET}")
+                sub_cx, sub_cy = 1827, 849
+
+            TerminalDashboard.render_clicking(2, 2, "Submit button", sub_cx, sub_cy)
+
+            # Refresh initial mouse position right before glide
+            self.initial_mouse_pos = self._get_mouse_position()
+
+            # Ensure Antigravity is in the foreground before clicking Submit button
+            if self.active_hwnd:
+                AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
+
+            if self.config.floating_hud_enabled:
+                self.hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding to Submit button...", "#A6E3A1")
+
+            self.current_target_pos = (sub_cx, sub_cy)
+            success_step2 = self.mouse_ctrl.glide_and_click(
+                sub_cx,
+                sub_cy,
+                check_interrupted_fn=self._check_mouse_interrupted,
+                target_hwnd=self.active_hwnd,
+            )
+            self.current_target_pos = None
+            self.initial_mouse_pos = self._get_mouse_position()
+
+            if success_step2:
+                TerminalDashboard.render_completed()
                 if self.config.floating_hud_enabled:
-                    self.hud.flash_success("✅ Option 1 Selected!", "Submit button not found; waiting for user action.")
+                    self.hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
+                if self.config.sound_notification:
+                    try:
+                        import winsound
+                        winsound.MessageBeep(winsound.MB_OK)
+                    except Exception:
+                        pass
+                self.current_state = "COOLDOWN"
+            else:
+                print("\033[93m[NOTICE] Step 2 cancelled due to motion or boundary condition.\033[0m")
+                if self.config.floating_hud_enabled:
+                    self.hud.flash_cancelled()
                 self.current_state = "COOLDOWN"

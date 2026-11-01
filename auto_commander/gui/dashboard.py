@@ -72,15 +72,8 @@ class TerminalDashboard:
 
     @classmethod
     def render_countdown(cls, remaining: float, total: float, result: DetectionResult):
-        cx, cy = result.center
-        bar_length = 30
-        pct = max(0.0, min(1.0, remaining / total)) if total > 0 else 0.0
-        filled = int(bar_length * pct)
-        bar = "█" * filled + "░" * (bar_length - filled)
-        color = cls.GREEN if remaining > (total * 0.6) else (cls.YELLOW if remaining > (total * 0.3) else cls.RED)
-        cls._safe_write(
-            f"{cls.CLEAR_LINE}{color}[COUNTDOWN]{cls.RESET} [{bar}] {cls.BOLD}{remaining:4.1f}s{cls.RESET} remaining | Target: ({cx}, {cy}) | {cls.YELLOW}Move mouse to cancel{cls.RESET}"
-        )
+        """Countdown is displayed exclusively in the floating HUD to keep terminal clean and quiet."""
+        pass
 
     @classmethod
     def render_interrupted(cls, distance: float, threshold: float):

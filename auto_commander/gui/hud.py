@@ -17,7 +17,7 @@ class FloatingHUD:
         self.master = None
         self.lbl_title = None
         self.lbl_status = None
-        self.total_seconds = 10.0
+        self.total_seconds = 3.0
         self.is_visible = False
 
     def show(self, total_seconds: float, label: str, master=None):

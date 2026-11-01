@@ -1,6 +1,6 @@
 {
-  "countdown_seconds": 10,
-  "step0_countdown_seconds": 5.0,
+  "countdown_seconds": 3,
+  "step0_countdown_seconds": 3.0,
   "check_interval_ms": 1000,
   "mouse_interruption_threshold_px": 15,
   "smooth_glide_duration_s": 0.8,

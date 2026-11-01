@@ -37,7 +37,8 @@ import auto_commander.platform.win32_window as win32_mod
 class TestAutoCommander(unittest.TestCase):
     def test_config_defaults(self):
         cfg = Config()
-        self.assertEqual(cfg.countdown_seconds, 10)
+        self.assertEqual(cfg.countdown_seconds, 3)
+        self.assertEqual(cfg.step0_countdown_seconds, 3.0)
         self.assertEqual(cfg.check_interval_ms, 1000)
         self.assertEqual(cfg.mouse_interruption_threshold_px, 15)
         self.assertEqual(cfg.smooth_glide_duration_s, 0.8)
@@ -51,7 +52,8 @@ class TestAutoCommander(unittest.TestCase):
 
     def test_config_load_from_json(self):
         cfg = Config.load("config.json")
-        self.assertEqual(cfg.countdown_seconds, 10)
+        self.assertEqual(cfg.countdown_seconds, 3)
+        self.assertEqual(cfg.step0_countdown_seconds, 3.0)
         self.assertTrue(cfg.floating_hud_enabled)
         self.assertTrue(cfg.ocr_enabled)
         self.assertIn("(Recommended)", cfg.target_keywords)
@@ -310,7 +312,7 @@ class TestAutoCommander(unittest.TestCase):
         self.assertFalse(hud.is_visible)
         self.assertIsNone(hud.root)
         self.assertEqual(hud.alpha, 0.92)
-        self.assertEqual(hud.total_seconds, 10.0)
+        self.assertEqual(hud.total_seconds, 3.0)
         hud.close()
         self.assertFalse(hud.is_visible)
 
@@ -526,7 +528,7 @@ class TestAutoCommander(unittest.TestCase):
                     self.assertEqual(res, dummy_uia)
 
     def test_step_0_execution_foregrounds_and_passes_target_hwnd(self):
-        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=False)
+        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=False)
         engine = AutoCommanderEngine(cfg)
         engine.active_hwnd = 12345
 
@@ -534,7 +536,7 @@ class TestAutoCommander(unittest.TestCase):
 
         with unittest.mock.patch.object(TerminalDashboard, "print_banner"), \
              unittest.mock.patch.object(TerminalDashboard, "render_scanning"), \
-             unittest.mock.patch.object(engine.detector, "detect", side_effect=[None, None]), \
+             unittest.mock.patch.object(engine.detector, "detect", return_value=None), \
              unittest.mock.patch.object(engine.detector, "detect_pending_chat", side_effect=[fake_chat, None]), \
              unittest.mock.patch.object(AntigravityWindowManager, "check_and_foreground", return_value=(True, "Ready", 12345)), \
              unittest.mock.patch.object(AntigravityWindowManager, "bring_to_foreground") as mock_bring_fg, \
@@ -553,7 +555,7 @@ class TestAutoCommander(unittest.TestCase):
             self.assertEqual(call_kwargs.get("target_hwnd"), 12345)
 
     def test_step_0_countdown_floating_hud_and_initial_pos_initialization(self):
-        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=True)
+        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=True)
         engine = AutoCommanderEngine(cfg)
         fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
 
@@ -564,10 +566,10 @@ class TestAutoCommander(unittest.TestCase):
              unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
 
             res = engine._execute_step0_countdown(fake_chat)
-            mock_hud_show.assert_called_with(0.01, "Action Required (?) on Chat Item")
+            mock_hud_show.assert_any_call(0.01, "Action Required (?) on Chat Item")
             mock_hud_step.assert_called()
             self.assertEqual(engine.initial_mouse_pos, (100, 100))
-            mock_glide.assert_called_once()
+            self.assertTrue(mock_glide.called)
 
     def test_step_0_failsafe_mouse_interruption(self):
         cfg = Config(step0_countdown_seconds=2.0, mouse_interruption_threshold_px=15, floating_hud_enabled=True)
@@ -618,20 +620,31 @@ class TestAutoCommander(unittest.TestCase):
             self.assertEqual(engine.current_state, "COOLDOWN", "Must enter COOLDOWN on switch failure!")
             mock_hud_cancel.assert_called_once()
 
-    def test_step_0_success_no_modal_enters_cooldown(self):
-        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=True)
+    def test_step_0_fallback_guarantee_proceeds_to_option1_and_submit(self):
+        """Verifies that when modal is not detected after switch, fallback guarantee engages (541, 664) and (1827, 849) without getting stuck."""
+        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=True)
         engine = AutoCommanderEngine(cfg)
         fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
 
         with unittest.mock.patch.object(engine.hud, "show"), \
-             unittest.mock.patch.object(engine.hud, "close") as mock_hud_close, \
              unittest.mock.patch.object(engine.detector, "detect", return_value=None), \
-             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True):
+             unittest.mock.patch.object(engine.detector, "detect_submit_button", return_value=None), \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
 
             res = engine._execute_step0_countdown(fake_chat)
-            self.assertFalse(res)
-            self.assertEqual(engine.current_state, "COOLDOWN", "Must enter COOLDOWN when no modal found after switch!")
-            mock_hud_close.assert_called_once()
+            self.assertTrue(res, "Must return True and execute fallback guarantee flow!")
+            # 3 glides: Step 0 chat (154, 719), Step 1 Option 1 (541, 664), Step 2 Submit (1827, 849)
+            self.assertEqual(mock_glide.call_count, 3)
+            calls = mock_glide.call_args_list
+            # Call 0: chat switch
+            self.assertEqual(calls[0][0][0], 161)
+            self.assertEqual(calls[0][0][1], 726)
+            # Call 1: Option 1 fallback target (541, 664)
+            self.assertEqual(calls[1][0][0], 541)
+            self.assertEqual(calls[1][0][1], 664)
+            # Call 2: Submit fallback target (1827, 849)
+            self.assertEqual(calls[2][0][0], 1827)
+            self.assertEqual(calls[2][0][1], 849)
 
     def test_check_mouse_interrupted_with_target_pos_tolerance(self):
         cfg = Config(mouse_interruption_threshold_px=15)
@@ -651,6 +664,46 @@ class TestAutoCommander(unittest.TestCase):
         # Mouse snatched by user during glide to (800, 200) -> dist ~300px > 25px -> True (interrupted)
         with unittest.mock.patch.object(engine, "_get_mouse_position", return_value=(800, 200)):
             self.assertTrue(engine._check_mouse_interrupted(), "Cursor diverted away from target must trigger fail-safe!")
+
+    def test_terminal_countdown_is_quiet(self):
+        """Verifies TerminalDashboard.render_countdown does not write anything to terminal."""
+        dummy_result = DetectionResult(x=100, y=100, width=50, height=20, confidence=0.99, source="OCR", label="Option 1")
+        import io
+        captured = io.StringIO()
+        old_stdout = sys.stdout
+        try:
+            sys.stdout = captured
+            TerminalDashboard.render_countdown(2.5, 3.0, dummy_result)
+        finally:
+            sys.stdout = old_stdout
+        self.assertEqual(captured.getvalue(), "", "TerminalDashboard.render_countdown must remain completely quiet!")
+
+    def test_step_0_retry_polling_detects_modal_on_subsequent_poll(self):
+        """Verifies that retry polling loop detects modal if rendered after initial switch delay."""
+        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=False)
+        engine = AutoCommanderEngine(cfg)
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+        detected_modal = DetectionResult(x=566, y=664, width=200, height=30, confidence=0.95, source="OCR", label="(Recommended) Push commits")
+        submit_btn = DetectionResult(x=1827, y=849, width=0, height=0, confidence=0.95, source="OCR", label="Submit")
+
+        # detect() returns None on poll 1, then returns detected_modal on poll 2
+        with unittest.mock.patch.object(engine.detector, "detect", side_effect=[None, detected_modal]), \
+             unittest.mock.patch.object(engine.detector, "detect_submit_button", return_value=submit_btn), \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
+
+            res = engine._execute_step0_countdown(fake_chat)
+            self.assertTrue(res)
+            # Verify 3 glides occurred
+            self.assertEqual(mock_glide.call_count, 3)
+            calls = mock_glide.call_args_list
+            # Call 0: Chat row
+            self.assertEqual(calls[0][0][0], 161)
+            # Call 1: Option 1 radio button (x - 25 = 566 - 25 = 541, y = 664)
+            self.assertEqual(calls[1][0][0], 541)
+            self.assertEqual(calls[1][0][1], 664)
+            # Call 2: Submit button (1827, 849)
+            self.assertEqual(calls[2][0][0], 1827)
+            self.assertEqual(calls[2][0][1], 849)
 
 
 if __name__ == "__main__":
