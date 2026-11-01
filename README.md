@@ -177,6 +177,21 @@ Scans display resolution, checks OCR engine status, enumerates visible windows, 
 
 ---
 
+## 🖱️ Modular Step-by-Step GUI Automation Pipeline (`scripts/gui_automation/`)
+
+For fine-grained or isolated execution where each action must run independently (e.g., when debugging cursor movement, hover timing, or specific button selection), a dedicated modular pipeline is provided in [`scripts/gui_automation/`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/):
+
+| Script | Purpose | Execution |
+| :--- | :--- | :--- |
+| [`run_pipeline.py`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/run_pipeline.py) | **Master Runner:** Executes Step 1 -> 2 -> 3 -> 4 sequentially with configurable delay. | `python scripts/gui_automation/run_pipeline.py` |
+| [`step1_open_and_click_chat.py`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/step1_open_and_click_chat.py) | **Step 1:** Glides cursor to chat area, hovers, and clicks to focus. | `python scripts/gui_automation/step1_open_and_click_chat.py` |
+| [`step2_select_recommended_option.py`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/step2_select_recommended_option.py) | **Step 2:** Navigates smoothly to `(Recommended)` option, hovers, and clicks. | `python scripts/gui_automation/step2_select_recommended_option.py` |
+| [`step3_click_submit_button.py`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/step3_click_submit_button.py) | **Step 3:** Glides smoothly to Submit / Confirm button, hovers, and submits. | `python scripts/gui_automation/step3_click_submit_button.py` |
+| [`step4_verify_execution.py`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/step4_verify_execution.py) | **Step 4:** Verifies mouse release, UI state settle, and captures evidence screenshot. | `python scripts/gui_automation/step4_verify_execution.py` |
+| [`calibrate_coordinates.py`](file:///C:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/scripts/gui_automation/calibrate_coordinates.py) | **Calibrator:** Interactive calibration wizard to record (X, Y) coordinates for your layout. | `python scripts/gui_automation/calibrate_coordinates.py` |
+
+---
+
 ## 🏛️ Project Structure
 
 ```
@@ -190,8 +205,10 @@ C:\Users\Atul Verma\Desktop\AutoSelect-Commander\
 ├── changes_log/             # Comprehensive 5-tier audit changes trail
 ├── assets/
 │   └── templates/           # Multi-theme visual templates for OpenCV fallback
+├── scripts/
+│   └── gui_automation/      # Modular step-by-step mouse automation pipeline & calibrator
 └── tests/
-    └── test_commander.py    # Automated test suite (13/13 tests passing)
+    └── test_commander.py    # Automated test suite (43/43 tests passing)
 ```
 
 ---

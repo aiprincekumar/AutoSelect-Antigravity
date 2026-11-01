@@ -11,6 +11,7 @@
 
 | Change ID | Timestamp | Category | Component | Description | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `CHG-006` | 2026-11-01 11:45:00 IST | `feat` | Modular GUI Pipeline | Relocate & integrate modular step-by-step GUI mouse automation suite in `scripts/gui_automation/` | **VERIFIED** |
 | `CHG-005` | 2026-11-01 06:30:00 IST | `feat` | Chat Navigation & Demo Purge | Step 0 (?) chat badge navigation, purge demo code into standalone files, streamline production run.bat | **VERIFIED** |
 | `CHG-004` | 2026-11-01 03:05:00 IST | `refactor` | Architecture & Window Tracking | Decompose monolithic code into modular package, fix Antigravity process/window tracking, self-exclusion, and click safety | **VERIFIED** |
 | `CHG-003` | 2026-11-01 02:30:00 IST | `feat` | Core Engine & Flow | 10s countdown timer default, firm click, 2-step Option + Submit flow, Antigravity window auto-foregrounding, run.bat shortcuts | **VERIFIED** |

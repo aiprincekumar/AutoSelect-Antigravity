@@ -4,6 +4,25 @@
 
 ---
 
+### [2026-11-01 11:45:00 IST] - Release 1.5.0 (Modular Step-by-Step GUI Automation Pipeline & Calibrator)
+- **Commit:** `feat(automation): integrate modular step-by-step GUI automation pipeline and calibrator into scripts/gui_automation/`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Modular Step-by-Step Architecture (`scripts/gui_automation/`):**
+    - Eliminates single-loop automation freeze by dividing actions into 4 isolated, independently runnable Python scripts:
+      - `step1_open_and_click_chat.py`: Chat area target navigation and focus click.
+      - `step2_select_recommended_option.py`: Option 1 / `(Recommended)` radio button selection.
+      - `step3_click_submit_button.py`: Confirmation click on Submit button.
+      - `step4_verify_execution.py`: State verification and evidence screenshot capture.
+    - Master Runner (`run_pipeline.py`): Orchestrates all steps sequentially with customizable inter-step render delays (`--delay`) and `--dry-run` inspection mode.
+    - Interactive Screen Calibrator (`calibrate_coordinates.py`): Real-time interactive tool for recording screen coordinates for different display geometries and resolutions.
+    - Unified Engine & Config: `common_utils.py` with smooth Bezier mouse travel (`easeOutQuad`) and `config.json` matrix.
+  - **Verification & Testing:**
+    - Full dry-run across all 4 stages executed successfully with zero errors (exit code 0).
+    - Unit test suite (`unittest discover tests`) confirmed 43/43 tests passing.
+
+---
+
 ### [2026-11-01 06:30:00 IST] - Release 1.4.0 (Step 0 Chat Navigation via (?) Badge & Demo Code Separation)
 - **Commit:** `feat(navigation): add Step 0 (?) chat badge navigation, purge demo code into standalone files, streamline production run.bat`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
