@@ -2,7 +2,7 @@
 
 > **Project:** AutoSelect-Commander (Visual Mouse Automation & Auto-Selector for Antigravity)  
 > **Repository:** `C:\Users\Atul Verma\Desktop\AutoSelect-Commander\`  
-> **Last Updated:** 2026-11-02 02:50:00 IST  
+> **Last Updated:** 2026-11-02 03:25:00 IST  
 > **Author:** Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 ---
@@ -11,6 +11,7 @@
 
 | Change ID | Timestamp | Category | Component | Description | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `CHG-008` | 2026-11-02 03:25:00 IST | `feat` | Keyboard Automation | Add Antigravity intelligent window auto-detect, restore, maximize, and focus subsystem | **VERIFIED** |
 | `CHG-007` | 2026-11-02 02:50:00 IST | `feat` | Keyboard Automation | Add Grill Me Keyboard Automation suite with ctypes SendInput engine, .bat/.ps1 launchers, and unit tests | **VERIFIED** |
 | `CHG-006` | 2026-11-01 11:45:00 IST | `feat` | Modular GUI Pipeline | Relocate & integrate modular step-by-step GUI mouse automation suite in `scripts/gui_automation/` | **VERIFIED** |
 | `CHG-005` | 2026-11-01 06:30:00 IST | `feat` | Chat Navigation & Demo Purge | Step 0 (?) chat badge navigation, purge demo code into standalone files, streamline production run.bat | **VERIFIED** |

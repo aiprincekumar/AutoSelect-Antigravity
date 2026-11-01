@@ -34,14 +34,20 @@ if exist "%~dp0..\.venv\Scripts\python.exe" (
 )
 
 echo.
+echo Intelligent Auto-Targeting:
+echo   - Auto-Detects target window (Default: Antigravity)
+echo   - If minimized -^> Restores automatically
+echo   - If small/normal -^> Maximizes to full screen
+echo   - Brings window to foreground focus with OS lock bypass
+echo.
 echo Key Sequence to execute:
 echo   1. Ctrl + L    ^> Focus chat input prompt
 echo   2. Shift + Tab ^> Shift focus to option selection buttons
 echo   3. 1           ^> Select Option 1 (Recommended answer)
 echo   4. Enter       ^> Confirm and submit
 echo.
-echo A 5-second countdown will start after launch.
-echo Switch to or click on your target chat window during countdown.
+echo A countdown will start after launch. Target window will be
+echo automatically maximized and focused before keystrokes are sent.
 echo =====================================================================
 echo.
 

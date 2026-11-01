@@ -4,6 +4,29 @@
 
 ---
 
+### [2026-11-02 03:25:00 IST] - Release 1.7.0 (Antigravity Window Auto-Target, Restore, Maximize & Focus Subsystem)
+- **Commit:** `feat(automation): add antigravity auto-detect, restore, maximize, and focus subsystem`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Intelligent Window Detection & Targeting (`Keyboard Automation/`):**
+    - Win32 `EnumWindows` and `GetWindowTextW` integration to locate target window by keyword (default: `"Antigravity"`).
+    - Window title scoring algorithm and console runner exclusion via `kernel32.GetConsoleWindow`.
+  - **Auto-Restore & Maximize Subsystem:**
+    - Checks `user32.IsIconic(hwnd)`: if minimized, automatically restores window state (`SW_RESTORE`).
+    - Checks `user32.IsZoomed(hwnd)`: if not maximized, automatically expands window to full screen (`SW_MAXIMIZE`).
+  - **Robust Foreground Activation:**
+    - Thread input attachment (`AttachThreadInput`) and synthetic `Alt` key event (`VK_MENU = 0x12`) to bypass Windows OS foreground lock restrictions.
+    - Activates foreground focus using `BringWindowToTop`, `SetForegroundWindow`, and `SetFocus`.
+  - **Geometry Bounds Verification & Settling Delay:**
+    - Checks window geometry bounds using `user32.GetWindowRect`.
+    - 500ms default settle delay (`--settle-delay`) to ensure UI rendering is complete before key injection.
+  - **Runner Enhancements:**
+    - Updated `run_grill_me.bat` and `run_grill_me.ps1` with auto-targeting and maximize support.
+    - Updated `Keyboard Automation/README.md` with complete architecture workflow and CLI reference.
+    - Expanded unit tests (`tests/test_grill_me.py`) to 11/11 passing tests.
+
+---
+
 ### [2026-11-02 02:50:00 IST] - Release 1.6.0 (Grill Me Keyboard Automation Suite)
 - **Commit:** `feat(automation): add grill me keyboard automation scripts suite`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)

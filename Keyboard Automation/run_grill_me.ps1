@@ -4,7 +4,11 @@
 
 .DESCRIPTION
     Runs grill_me_automation.py with configurable parameters, automatically locating
-    the local project virtual environment or system Python.
+    the local project virtual environment or system Python. Features automatic window
+    detection, un-minimizing, full-screen maximizing, and foreground focus.
+
+.PARAMETER TargetWindow
+    Window title keyword to identify and auto-maximize (default: "Antigravity").
 
 .PARAMETER Countdown
     Seconds to count down before sending keystrokes (default: 5).
@@ -15,11 +19,23 @@
 .PARAMETER Option
     Option number to choose (default: "1").
 
+.PARAMETER SettleDelay
+    Delay in seconds after window maximize/focus before keystroke sequence (default: 0.5s).
+
 .PARAMETER SkipCtrlL
     Skip sending Ctrl + L.
 
 .PARAMETER SkipEnter
     Skip sending Enter.
+
+.PARAMETER NoAutoFocus
+    Disable automatic foreground window focus.
+
+.PARAMETER NoAutoMaximize
+    Disable automatic window maximization.
+
+.PARAMETER NoCountdown
+    Execute immediately without countdown.
 
 .PARAMETER DryRun
     Simulate execution without sending keystrokes.
@@ -34,7 +50,7 @@
     .\run_grill_me.ps1 -Countdown 5 -Option "1"
 
 .EXAMPLE
-    .\run_grill_me.ps1 -DryRun
+    .\run_grill_me.ps1 -TargetWindow "Antigravity" -DryRun
 #>
 
 [CmdletBinding()]
@@ -48,8 +64,14 @@ param(
     [Parameter(Position = 2)]
     [string]$Option = "1",
 
+    [string]$TargetWindow = "Antigravity",
+    [double]$SettleDelay = 0.5,
+
     [switch]$SkipCtrlL,
     [switch]$SkipEnter,
+    [switch]$NoAutoFocus,
+    [switch]$NoAutoMaximize,
+    [switch]$NoCountdown,
     [switch]$DryRun,
     [ValidateSet("auto", "ctypes", "pyautogui")]
     [string]$Engine = "auto",
@@ -88,15 +110,20 @@ $pyScript = Join-Path $scriptDir "grill_me_automation.py"
 # Build arguments
 $argList = @(
     "`"$pyScript`"",
+    "-t", "$TargetWindow",
     "-c", "$Countdown",
     "-d", "$StepDelay",
     "-o", "$Option",
     "-e", "$Engine",
-    "-r", "$Repeat"
+    "-r", "$Repeat",
+    "--settle-delay", "$SettleDelay"
 )
 
 if ($SkipCtrlL) { $argList += "--skip-ctrl-l" }
 if ($SkipEnter) { $argList += "--skip-enter" }
+if ($NoAutoFocus) { $argList += "--no-auto-focus" }
+if ($NoAutoMaximize) { $argList += "--no-auto-maximize" }
+if ($NoCountdown) { $argList += "--no-countdown" }
 if ($DryRun) { $argList += "--dry-run" }
 
 Write-Host "[*] Launching: $pythonCmd $($argList -join ' ')" -ForegroundColor DarkGray
