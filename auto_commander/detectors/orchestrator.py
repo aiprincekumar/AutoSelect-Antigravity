@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Multi-Engine Detection Orchestrator.
-Coordinates Windows Native WinRT OCR, UIAutomation, and Vision Template Matching.
+Coordinates Windows Native WinRT OCR, UIAutomation, Vision Template Matching,
+and Step 0 Pending Chat Navigation.
 """
 
 from typing import Optional
@@ -12,6 +13,7 @@ except ImportError:
     ImageGrab = None
 
 from auto_commander.config import Config
+from auto_commander.detectors.chat_detector import ChatTabDetector
 from auto_commander.detectors.ocr_detector import WindowsOcrDetector, WINSDK_OCR_AVAILABLE
 from auto_commander.detectors.uia_detector import UIAutomationDetector
 from auto_commander.detectors.vision_detector import VisionDetector
@@ -19,13 +21,14 @@ from auto_commander.models import DetectionResult
 
 
 class MultiEngineDetector:
-    """Coordinates Windows Native OCR, UIAutomation, and Vision Detection."""
+    """Coordinates Windows Native OCR, UIAutomation, Vision Detection, and Chat Navigation."""
 
     def __init__(self, config: Config):
         self.config = config
         self.ocr_detector = WindowsOcrDetector(config.target_keywords, ocr_enabled=config.ocr_enabled)
         self.uia_detector = UIAutomationDetector(config.window_title_filter, config.target_keywords)
         self.vision_detector = VisionDetector(target_keywords=config.target_keywords)
+        self.chat_detector = ChatTabDetector(config)
         self.last_detected_submit: Optional[DetectionResult] = None
 
     def detect(self, target_hwnd: Optional[int] = None) -> Optional[DetectionResult]:
@@ -77,6 +80,13 @@ class MultiEngineDetector:
                     return opt_res
 
         return None
+
+    def detect_pending_chat(self, target_hwnd: Optional[int] = None) -> Optional[DetectionResult]:
+        """
+        Step 0: Detects a pending chat in the sidebar or tabs awaiting user input
+        (displaying the question mark (?) badge or 'Action required' marker).
+        """
+        return self.chat_detector.detect_pending_chat(target_hwnd=target_hwnd)
 
     def detect_submit_button(self, option_result: Optional[DetectionResult] = None) -> Optional[DetectionResult]:
         """

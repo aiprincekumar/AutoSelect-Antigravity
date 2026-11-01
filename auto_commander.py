@@ -6,7 +6,7 @@ AutoSelect-Commander: Visual Mouse Automation & Auto-Selector for Antigravity
 ===============================================================================
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Repository: C:\Users\Atul Verma\Desktop\AutoSelect-Commander\
-Version: 1.3.0
+Version: 1.4.0
 
 Backward-Compatible Root Facade:
 All internal logic is modularized inside the `auto_commander` package:
@@ -21,11 +21,11 @@ All internal logic is modularized inside the `auto_commander` package:
   │   ├── ocr_detector.py    # Windows WinRT native OCR
   │   ├── uia_detector.py    # UIAutomation detector
   │   ├── vision_detector.py # OpenCV template matching
+  │   ├── chat_detector.py   # Chat tab & (?) action badge navigation detector
   │   └── orchestrator.py    # MultiEngineDetector
   ├── gui/
   │   ├── hud.py             # Always-on-top FloatingHUD
-  │   ├── dashboard.py       # Terminal ANSI dashboard
-  │   └── simulator.py       # High-fidelity Antigravity mock decision modal
+  │   └── dashboard.py       # Terminal ANSI dashboard
   ├── core/
   │   ├── engine.py          # AutoCommanderEngine state machine
   │   └── diagnostics.py     # System & OCR diagnostics probe
@@ -49,7 +49,6 @@ from auto_commander import (
     DualModeDetector,
     FloatingHUD,
     TerminalDashboard,
-    launch_simulator,
     AutoCommanderEngine,
     run_diagnostics,
     main,

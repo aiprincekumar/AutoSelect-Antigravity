@@ -4,6 +4,23 @@
 
 ---
 
+### [2026-11-01 06:30:00 IST] - Release 1.4.0 (Step 0 Chat Navigation via (?) Badge & Demo Code Separation)
+- **Commit:** `feat(navigation): add Step 0 (?) chat badge navigation, purge demo code into standalone files, streamline production run.bat`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Step 0 Chat Navigation via (?) Badge (`ChatTabDetector`):**
+    - Identifies conversation tabs/sidebar items awaiting confirmation using multi-scale template matching (`assets/badge_question_template.png`), WinRT OCR (`?`, `(?)`, `Action required`), and UIAutomation tree search.
+    - Resolves multi-chat deadlock: automatically switches from inactive/background chats to the pending conversation, waits 0.4s for rendering, then seamlessly triggers Step 1 (Option 1) and Step 2 (Submit).
+  - **Purge & Complete Architectural Separation of Demo Simulator:**
+    - Fully decoupled test simulator from production codebase into `standalone_demo.py` and dedicated `run_demo.bat`.
+    - Deleted `auto_commander/gui/simulator.py` and removed all demo overrides (`is_demo`, `DEMO_WINDOW_TITLE_KEYWORDS`) from production modules.
+  - **Fast Production Launcher (`run.bat`):**
+    - Streamlined `run.bat` to launch the production daemon directly without delay or prompt menus.
+  - **Testing & Verification:**
+    - Expanded test suite to 31 tests with 100% green pass rate in 0.78s.
+
+---
+
 ### [2026-11-01 03:05:00 IST] - Release 1.3.0 (Modular Package Deconstruction & Window Tracking Fixes)
 - **Commit:** `refactor(architecture): decompose into modular auto_commander package, fix Antigravity window tracking and click safety`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)

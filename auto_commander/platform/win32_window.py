@@ -72,11 +72,6 @@ class AntigravityWindowManager:
     """
 
     PROCESS_NAMES = ("antigravity.exe", "antigravity")
-    DEMO_WINDOW_TITLE_KEYWORDS = (
-        "antigravity - interactive decision modal",
-        "antigravity decision simulator",
-        "interactive decision modal (live demo)",
-    )
 
     @classmethod
     def attach_to_input_desktop(cls) -> bool:
@@ -217,9 +212,9 @@ class AntigravityWindowManager:
         return False
 
     @classmethod
-    def find_antigravity_window(cls, is_demo: bool = False, title_filter: str = "") -> Optional[int]:
+    def find_antigravity_window(cls, title_filter: str = "") -> Optional[int]:
         """
-        Locates the exact HWND for Antigravity IDE or Demo Simulator window.
+        Locates the exact HWND for Antigravity IDE window.
         Strictly excludes cmd.exe, PowerShell, File Explorer, and own processes.
         """
         if not user32:
@@ -262,9 +257,7 @@ class AntigravityWindowManager:
 
             # Enforce self-exclusion on title
             if any(k in title_lower for k in EXCLUDED_WINDOW_TITLE_KEYWORDS):
-                # Only accept if strictly in demo mode and this is the simulator modal
-                if not (is_demo and any(dk in title_lower for dk in cls.DEMO_WINDOW_TITLE_KEYWORDS)):
-                    return 1
+                return 1
 
             # Get window class
             class_buf = ctypes.create_unicode_buffer(256)
@@ -277,14 +270,7 @@ class AntigravityWindowManager:
             width = rect.right - rect.left
             height = rect.bottom - rect.top
 
-            # Case 1: In Demo mode, locate the Simulator window
-            if is_demo:
-                if any(dk in title_lower for dk in cls.DEMO_WINDOW_TITLE_KEYWORDS):
-                    matched_hwnds.append((100, hwnd))
-                    return 0  # Found exact demo target
-                return 1
-
-            # Case 2: Production Antigravity IDE detection
+            # Production Antigravity IDE detection
             is_antigravity_proc = any(target in pname for target in cls.PROCESS_NAMES)
             if is_antigravity_proc:
                 is_iconic = bool(user32.IsIconic(hwnd))
@@ -314,7 +300,7 @@ class AntigravityWindowManager:
                     matched_hwnds.append((priority, hwnd))
                     return 1
 
-            # Case 3: Title filter fallback (if specified and not blacklisted)
+            # Title filter fallback (if specified and not blacklisted)
             if title_filter and title_filter.lower() in title_lower and ((width >= 300 and height >= 200) or user32.IsIconic(hwnd)):
                 matched_hwnds.append((30, hwnd))
 
@@ -391,13 +377,11 @@ class AntigravityWindowManager:
         x: int,
         y: int,
         target_hwnd: Optional[int] = None,
-        is_demo: bool = False,
     ) -> Tuple[bool, str]:
         """
         Validates that click coordinates:
-        1. When is_demo=True or targeting demo window: verifies coordinates fall within demo window bounds and permits click even if console is behind it.
-        2. In standard mode: strictly checks that coordinates do NOT fall inside own console window (prevents clicking cmd.exe).
-        3. Strictly fall inside the target window's bounding box if target_hwnd is provided.
+        1. Fall strictly inside the target window's bounding box if target_hwnd is provided.
+        2. Do NOT fall inside own console window (prevents clicking cmd.exe / terminal).
         """
         target_rect = cls.get_window_rect(target_hwnd) if target_hwnd else None
 
@@ -405,23 +389,10 @@ class AntigravityWindowManager:
         if target_hwnd and target_rect:
             if not target_rect.contains(x, y):
                 return False, f"Click at ({x}, {y}) is outside target window bounds ({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety."
-            if is_demo:
-                # Topmost demo modal is valid and intended even if console window is underneath
-                return True, "Click target coordinate valid (Demo Mode target window validated)."
-
-        # Fallback check for demo mode without explicit target_rect
-        if is_demo and not target_rect:
-            demo_hwnd = cls.find_antigravity_window(is_demo=True)
-            if demo_hwnd:
-                d_rect = cls.get_window_rect(demo_hwnd)
-                if d_rect and d_rect.contains(x, y):
-                    return True, "Click target coordinate valid (Demo Mode window verified)."
 
         # Check console boundary for self-click prevention
         console_rect = cls.get_console_window_rect()
         if console_rect and console_rect.contains(x, y):
-            if is_demo and target_rect and target_rect.contains(x, y):
-                return True, "Click target coordinate valid (Demo Mode target window override)."
             return False, f"Click at ({x}, {y}) falls inside console window! Blocked to prevent self-clicking."
 
         return True, "Click target coordinate valid."
@@ -484,15 +455,15 @@ class AntigravityWindowManager:
             return False
 
     @classmethod
-    def check_and_foreground(cls, is_demo: bool = False, title_filter: str = "") -> Tuple[bool, str, Optional[int]]:
+    def check_and_foreground(cls, title_filter: str = "") -> Tuple[bool, str, Optional[int]]:
         """
         Verifies if Antigravity is open/running and brings it to foreground if minimized or in background.
         Returns: (is_ready, message, hwnd)
         """
         proc_running = cls.is_process_running()
-        hwnd = cls.find_antigravity_window(is_demo=is_demo, title_filter=title_filter)
+        hwnd = cls.find_antigravity_window(title_filter=title_filter)
 
-        if not proc_running and not hwnd and not is_demo:
+        if not proc_running and not hwnd:
             return False, "एंटी-ग्रैविटी अभी ओपन नहीं है (Antigravity is currently not open)", None
 
         if hwnd:

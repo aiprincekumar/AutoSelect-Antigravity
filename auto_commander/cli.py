@@ -10,7 +10,6 @@ import sys
 from auto_commander.config import Config
 from auto_commander.core.diagnostics import run_diagnostics
 from auto_commander.core.engine import AutoCommanderEngine
-from auto_commander.gui.simulator import launch_simulator
 
 
 def configure_windows_environment():
@@ -46,14 +45,6 @@ def main():
 
     parser = argparse.ArgumentParser(
         description="AutoSelect-Commander: Visual Mouse Automation for Antigravity"
-    )
-    parser.add_argument(
-        "--test",
-        "--simulate",
-        "--demo",
-        dest="test",
-        action="store_true",
-        help="Launch interactive simulation window for instant visual end-to-end verification",
     )
     parser.add_argument(
         "--diagnostics",
@@ -92,11 +83,7 @@ def main():
         run_diagnostics(cfg)
         return
 
-    if args.test:
-        launch_simulator(cfg.countdown_seconds)
-        return
-
-    # Initialize and run engine
+    # Initialize and run production engine
     engine = AutoCommanderEngine(cfg)
     try:
         engine.run()

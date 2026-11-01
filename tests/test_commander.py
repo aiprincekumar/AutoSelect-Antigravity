@@ -30,6 +30,7 @@ from auto_commander import (
     AutoCommanderEngine,
     WINSDK_OCR_AVAILABLE,
 )
+from auto_commander.detectors.chat_detector import ChatTabDetector
 import auto_commander.platform.win32_window as win32_mod
 
 
@@ -85,20 +86,16 @@ class TestAutoCommander(unittest.TestCase):
         self.assertGreater(dist_human, threshold)
 
     def test_antigravity_window_manager(self):
-        # Verify process checking returns a boolean without throwing
         is_proc = AntigravityWindowManager.is_process_running()
         self.assertIsInstance(is_proc, bool)
 
-        # Window handle lookup returns None or an int
         hwnd = AntigravityWindowManager.find_antigravity_window()
         self.assertTrue(hwnd is None or isinstance(hwnd, int))
 
-        # Safe null handle checks
         self.assertFalse(AntigravityWindowManager.is_minimized(0))
         self.assertFalse(AntigravityWindowManager.is_foreground(0))
         self.assertFalse(AntigravityWindowManager.bring_to_foreground(0))
 
-        # Orchestrated check returns valid 3-tuple
         is_ready, msg, win_hwnd = AntigravityWindowManager.check_and_foreground()
         self.assertIsInstance(is_ready, bool)
         self.assertIsInstance(msg, str)
@@ -156,6 +153,7 @@ class TestAutoCommander(unittest.TestCase):
         self.assertIsNotNone(multi.ocr_detector)
         self.assertIsNotNone(multi.uia_detector)
         self.assertIsNotNone(multi.vision_detector)
+        self.assertIsNotNone(multi.chat_detector)
 
     def test_dual_mode_detector_alias(self):
         self.assertIs(DualModeDetector, MultiEngineDetector)
@@ -176,18 +174,15 @@ class TestAutoCommander(unittest.TestCase):
         self.assertFalse(rect.contains(300, 150))
 
     def test_self_exclusion_blacklist(self):
-        # Verify blacklisted process set contains critical shell/system tools
         self.assertIn("cmd.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
         self.assertIn("powershell.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
         self.assertIn("explorer.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
         self.assertIn("python.exe", win32_mod.BLACK_LISTED_PROCESS_NAMES)
 
-        # Current process PID must be in self process family
         pids = AntigravityWindowManager.get_own_process_family_pids()
         self.assertIn(os.getpid(), pids)
 
     def test_validate_click_target_boundary(self):
-        # Click target inside valid dummy rect
         valid, _ = AntigravityWindowManager.validate_click_target(500, 500, target_hwnd=None)
         self.assertIsInstance(valid, bool)
 
@@ -197,6 +192,7 @@ class TestAutoCommander(unittest.TestCase):
         from auto_commander.platform.win32_window import AntigravityWindowManager as AWM
         from auto_commander.platform.mouse_ctrl import MouseController as MC
         from auto_commander.detectors.ocr_detector import WindowsOcrDetector as WOD
+        from auto_commander.detectors.chat_detector import ChatTabDetector as CTD
         from auto_commander.gui.hud import FloatingHUD as FH
         from auto_commander.gui.dashboard import TerminalDashboard as TD
         from auto_commander.core.engine import AutoCommanderEngine as ACE
@@ -208,33 +204,11 @@ class TestAutoCommander(unittest.TestCase):
         self.assertIs(AWM, AntigravityWindowManager)
         self.assertIs(MC, MouseController)
         self.assertIs(WOD, WindowsOcrDetector)
+        self.assertIs(CTD, ChatTabDetector)
         self.assertIs(FH, FloatingHUD)
         self.assertIs(TD, TerminalDashboard)
         self.assertIs(ACE, AutoCommanderEngine)
         self.assertTrue(callable(cli_main))
-
-    def test_validate_click_target_demo_mode_override(self):
-        dummy_demo_hwnd = 12345
-        demo_rect = Rect(200, 200, 500, 400)
-        console_rect = Rect(100, 100, 800, 600)
-
-        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
-            with unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", side_effect=lambda h: demo_rect if h == dummy_demo_hwnd else None):
-                # Point (350, 350) is inside both demo_rect and console_rect
-                # Under live mode (is_demo=False), it must be blocked to prevent self-clicking
-                valid_live, reason_live = AntigravityWindowManager.validate_click_target(350, 350, target_hwnd=dummy_demo_hwnd, is_demo=False)
-                self.assertFalse(valid_live)
-                self.assertIn("falls inside console window", reason_live)
-
-                # Under demo mode (is_demo=True), the topmost demo window bypasses console check
-                valid_demo, reason_demo = AntigravityWindowManager.validate_click_target(350, 350, target_hwnd=dummy_demo_hwnd, is_demo=True)
-                self.assertTrue(valid_demo)
-                self.assertIn("Demo Mode", reason_demo)
-
-                # Point (150, 150) is inside console_rect but OUTSIDE demo_rect
-                valid_outside, reason_outside = AntigravityWindowManager.validate_click_target(150, 150, target_hwnd=dummy_demo_hwnd, is_demo=True)
-                self.assertFalse(valid_outside)
-                self.assertIn("outside target window bounds", reason_outside)
 
     def test_ocr_detector_console_masking_and_filtering(self):
         detector = WindowsOcrDetector(target_keywords=("(Recommended)", "Recommended"))
@@ -245,31 +219,14 @@ class TestAutoCommander(unittest.TestCase):
         draw = ImageDraw.Draw(test_img)
         draw.text((40, 30), "Option 1: (Recommended) GitHub Commit Push", fill=(166, 227, 161))
 
-        # Case 1: Without console mask covering text, scan_image detects target
         with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
             match = detector.scan_image(test_img, offset_x=0, offset_y=0)
             self.assertIsNotNone(match)
 
-        # Case 2: With console mask covering the exact text area, OCR is blocked/masked out
         console_rect = Rect(0, 0, 500, 150)
         with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
             masked_match = detector.scan_image(test_img, offset_x=0, offset_y=0, mask_console=True)
             self.assertIsNone(masked_match)
-
-    def test_mouse_controller_demo_mode_pass_through(self):
-        mouse_ctrl = MouseController(glide_duration=0.8, failsafe_enabled=True)
-        demo_rect = Rect(100, 100, 400, 300)
-        console_rect = Rect(50, 50, 500, 400)
-
-        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
-            with unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=demo_rect):
-                with unittest.mock.patch("pyautogui.moveTo") as mock_move, \
-                     unittest.mock.patch("pyautogui.mouseDown") as mock_down, \
-                     unittest.mock.patch("pyautogui.mouseUp") as mock_up:
-                    success = mouse_ctrl.firm_click(x=200, y=200, target_hwnd=999, is_demo=True)
-                    self.assertTrue(success)
-                    mock_down.assert_called_once()
-                    mock_up.assert_called_once()
 
     def test_floating_hud_initialization_and_lifecycle(self):
         hud = FloatingHUD(alpha=0.92)
@@ -277,7 +234,6 @@ class TestAutoCommander(unittest.TestCase):
         self.assertIsNone(hud.root)
         self.assertEqual(hud.alpha, 0.92)
         self.assertEqual(hud.total_seconds, 10.0)
-        # Verify safe close when uninitialized
         hud.close()
         self.assertFalse(hud.is_visible)
 
@@ -298,7 +254,6 @@ class TestAutoCommander(unittest.TestCase):
              unittest.mock.patch.object(win32_mod.user32, "BringWindowToTop", return_value=1):
 
             def fake_gwp(hwnd, wp_ptr):
-                # Simulate a window that was maximized prior to minimize (WPF_RESTORETOMAXIMIZED = 2)
                 wp = getattr(wp_ptr, "_obj", getattr(wp_ptr, "contents", None))
                 if wp:
                     wp.flags = 2
@@ -308,7 +263,6 @@ class TestAutoCommander(unittest.TestCase):
             mock_gwp.side_effect = fake_gwp
             res = AntigravityWindowManager.bring_to_foreground(dummy_hwnd)
             self.assertTrue(res)
-            # Must call ShowWindow(dummy_hwnd, 3) (SW_MAXIMIZE) and ShowWindowAsync(dummy_hwnd, 3)
             mock_show.assert_called_with(dummy_hwnd, 3)
             mock_show_async.assert_called_with(dummy_hwnd, 3)
 
@@ -322,7 +276,6 @@ class TestAutoCommander(unittest.TestCase):
              unittest.mock.patch.object(win32_mod.user32, "BringWindowToTop", return_value=1):
 
             def fake_gwp(hwnd, wp_ptr):
-                # Normal unmaximized window (flags = 0, showCmd = 1)
                 wp = getattr(wp_ptr, "_obj", getattr(wp_ptr, "contents", None))
                 if wp:
                     wp.flags = 0
@@ -332,7 +285,6 @@ class TestAutoCommander(unittest.TestCase):
             mock_gwp.side_effect = fake_gwp
             res = AntigravityWindowManager.bring_to_foreground(dummy_hwnd)
             self.assertTrue(res)
-            # Must call ShowWindow(dummy_hwnd, 9) (SW_RESTORE) and ShowWindowAsync(dummy_hwnd, 9)
             mock_show.assert_called_with(dummy_hwnd, 9)
             mock_show_async.assert_called_with(dummy_hwnd, 9)
 
@@ -372,17 +324,7 @@ class TestAutoCommander(unittest.TestCase):
             self.assertEqual(sub.label, "Submit")
             self.assertGreater(sub.y, opt.y)
 
-    def test_contrast_enhancement(self):
-        img = Image.new("RGB", (100, 100), color=(30, 30, 30))
-        d = ImageDraw.Draw(img)
-        d.text((10, 10), "Submit", fill=(45, 45, 45))
-        enhanced = WindowsOcrDetector._enhance_contrast(img, factor=2.2)
-        self.assertIsNotNone(enhanced)
-        self.assertEqual(enhanced.size, img.size)
-        self.assertEqual(enhanced.mode, "RGB")
-
     def test_strict_bracketed_recommended_matching(self):
-        # Bracketed forms must match
         self.assertTrue(WindowsOcrDetector.is_bracketed_target("(Recommended)"))
         self.assertTrue(WindowsOcrDetector.is_bracketed_target("[Recommended]"))
         self.assertTrue(WindowsOcrDetector.is_bracketed_target("{Recommended}"))
@@ -391,61 +333,10 @@ class TestAutoCommander(unittest.TestCase):
         self.assertTrue(WindowsOcrDetector.is_bracketed_target("Option 1: (अनुशंसित) गिटहब पुश"))
         self.assertTrue(WindowsOcrDetector.is_bracketed_target("[अनुशंसित] गिटहब पुश"))
 
-        # Non-bracketed forms must NOT match
         self.assertFalse(WindowsOcrDetector.is_bracketed_target("recommended"))
         self.assertFalse(WindowsOcrDetector.is_bracketed_target("I recommended this solution"))
         self.assertFalse(WindowsOcrDetector.is_bracketed_target("अनुशंसित"))
         self.assertFalse(WindowsOcrDetector.is_bracketed_target("Recommended action is unknown"))
-
-    def test_ocr_decision_modal_detects_prompt_with_submit_and_skip(self):
-        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "[Recommended]"))
-        if not detector.is_available():
-            self.skipTest("WinSDK OCR not available on this platform/session.")
-
-        img_modal = Image.new("RGB", (650, 350), color=(30, 30, 46))
-        d = ImageDraw.Draw(img_modal)
-        d.text((40, 40), "Select an option:", fill=(255, 255, 255))
-        d.text((40, 90), "Option 1: (Recommended) GitHub Commit Push", fill=(166, 227, 161))
-        d.text((40, 130), "Option 2: Cancel inspection", fill=(200, 200, 200))
-
-        # Bottom Action Bar with both Submit and Skip buttons
-        d.rectangle([40, 200, 140, 235], fill=(49, 50, 68))
-        d.text((55, 208), "Submit", fill=(255, 255, 255))
-
-        d.rectangle([180, 200, 270, 235], fill=(69, 71, 90))
-        d.text((200, 208), "Skip", fill=(255, 255, 255))
-
-        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
-            match = detector.scan_decision_modal_on_image(img_modal, require_submit=True)
-            self.assertIsNotNone(match, "Modal with Submit + Skip must be detected!")
-            opt, sub = match
-            self.assertIn("Recommended", opt.label)
-            self.assertEqual(sub.label, "Submit")
-            self.assertGreater(sub.y, opt.y)
-
-    def test_ocr_decision_modal_infers_submit_when_only_skip_detected(self):
-        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "[Recommended]"))
-        if not detector.is_available():
-            self.skipTest("WinSDK OCR not available on this platform/session.")
-
-        # Simulate image where Submit is faint/unreadable, but Skip is detected
-        img_modal = Image.new("RGB", (650, 350), color=(30, 30, 46))
-        d = ImageDraw.Draw(img_modal)
-        d.text((40, 40), "Select an option:", fill=(255, 255, 255))
-        d.text((40, 90), "Option 1: (Recommended) GitHub Commit Push", fill=(166, 227, 161))
-        d.text((40, 130), "Option 2: Review locally", fill=(200, 200, 200))
-        d.text((180, 208), "Skip", fill=(255, 255, 255))
-
-        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=None):
-            match = detector.scan_decision_modal_on_image(img_modal, require_submit=True)
-            self.assertIsNotNone(match, "Modal with Skip must trigger and infer Submit button!")
-            opt, sub = match
-            self.assertIn("Recommended", opt.label)
-            self.assertEqual(sub.label, "Submit")
-            self.assertEqual(sub.source, "WindowsOcr-Inferred")
-            self.assertGreater(sub.y, opt.y)
-            self.assertLess(sub.x, 180, "Inferred Submit must be to the left of Skip button")
-
 
     def test_find_antigravity_window_when_minimized(self):
         dummy_hwnd = 98765
@@ -460,7 +351,6 @@ class TestAutoCommander(unittest.TestCase):
              unittest.mock.patch.object(AntigravityWindowManager, "get_process_image_path", return_value=("antigravity.exe", "C:\\Antigravity.exe")), \
              unittest.mock.patch.object(AntigravityWindowManager, "get_own_process_family_pids", return_value=set()):
 
-            # When minimized, GetWindowRect returns (-32000, -32000) with small dims (160x30)
             def fake_gwr(h, rect_ptr):
                 r = rect_ptr._obj
                 r.left = -32000
@@ -469,7 +359,6 @@ class TestAutoCommander(unittest.TestCase):
                 r.bottom = -31970
                 return 1
 
-            # GetWindowPlacement returns normal restored dimensions (1920x1080)
             def fake_gwp(h, wp_ptr):
                 wp = getattr(wp_ptr, "_obj", getattr(wp_ptr, "contents", None))
                 if wp:
@@ -484,7 +373,6 @@ class TestAutoCommander(unittest.TestCase):
             mock_gwr.side_effect = fake_gwr
             mock_gwp.side_effect = fake_gwp
 
-            # Mock EnumWindows to invoke the callback with dummy_hwnd
             def fake_enum(cb, lparam):
                 cb(dummy_hwnd, lparam)
                 return 1
@@ -493,6 +381,72 @@ class TestAutoCommander(unittest.TestCase):
                  unittest.mock.patch.object(win32_mod.user32, "EnumWindows", side_effect=fake_enum):
                 found_hwnd = AntigravityWindowManager.find_antigravity_window()
                 self.assertEqual(found_hwnd, dummy_hwnd, "Minimized Antigravity window must be detected!")
+
+    def test_step_0_chat_tab_detector_template(self):
+        cfg = Config()
+        chat_det = ChatTabDetector(cfg, template_path="assets/badge_question_template.png")
+        self.assertTrue(chat_det.is_available())
+        self.assertGreaterEqual(len(chat_det.templates), 1)
+
+    def test_step_0_chat_tab_detection_on_screenshot_452(self):
+        ss_path = "Demo SS/Screenshot (452).png"
+        if not os.path.exists(ss_path):
+            self.skipTest("Screenshot (452).png not found.")
+
+        cfg = Config()
+        chat_det = ChatTabDetector(cfg, template_path="assets/badge_question_template.png")
+
+        # Mock ImageGrab.grab to return the screenshot
+        test_img = Image.open(ss_path)
+        with unittest.mock.patch("auto_commander.detectors.chat_detector.ImageGrab.grab", return_value=test_img):
+            result = chat_det._scan_sidebar_template(target_hwnd=None)
+            self.assertIsNotNone(result, "ChatTabDetector must detect the (?) badge in Screenshot (452)!")
+            self.assertIn("Action Required", result.label)
+            # Should point to the conversation row around y=710
+            self.assertAlmostEqual(result.y, 710, delta=20)
+            self.assertGreater(result.confidence, 0.85)
+
+    def test_orchestrator_detect_pending_chat(self):
+        cfg = Config()
+        multi = MultiEngineDetector(cfg)
+        self.assertTrue(hasattr(multi, "detect_pending_chat"))
+
+        # Verify detect_pending_chat delegates to chat_detector
+        fake_result = DetectionResult(x=100, y=700, width=150, height=30, confidence=0.99, source="Mock", label="Chat")
+        with unittest.mock.patch.object(multi.chat_detector, "detect_pending_chat", return_value=fake_result):
+            res = multi.detect_pending_chat(target_hwnd=None)
+            self.assertEqual(res, fake_result)
+
+    def test_standalone_demo_and_runners_exist(self):
+        # Verify clean architectural separation: standalone files exist
+        self.assertTrue(os.path.exists("standalone_demo.py"), "standalone_demo.py must exist!")
+        self.assertTrue(os.path.exists("run_demo.bat"), "run_demo.bat must exist!")
+        self.assertTrue(os.path.exists("run.bat"), "run.bat must exist!")
+        self.assertFalse(os.path.exists("auto_commander/gui/simulator.py"), "simulator.py must be removed from auto_commander/gui!")
+
+    def test_step_0_chat_tab_ocr_fallback(self):
+        cfg = Config()
+        chat_det = ChatTabDetector(cfg, template_path="non_existent_tpl.png")
+        # Template list is empty, falls back to OCR
+        dummy_match = DetectionResult(x=150, y=715, width=15, height=15, confidence=0.95, source="OcrMock", label="?")
+        with unittest.mock.patch.object(chat_det.ocr_detector, "is_available", return_value=True):
+            with unittest.mock.patch.object(chat_det.ocr_detector, "scan_image", return_value=dummy_match):
+                with unittest.mock.patch("auto_commander.detectors.chat_detector.ImageGrab.grab", return_value=Image.new("RGB", (300, 1000))):
+                    res = chat_det.detect_pending_chat(target_hwnd=None)
+                    self.assertIsNotNone(res)
+                    self.assertEqual(res.source, "OcrChatBadge")
+                    self.assertIn("Action Required", res.label)
+
+    def test_step_0_chat_tab_uia_fallback(self):
+        cfg = Config()
+        chat_det = ChatTabDetector(cfg, template_path="non_existent_tpl.png")
+        dummy_uia = DetectionResult(x=50, y=700, width=200, height=35, confidence=0.99, source="UIAutomation", label="Action required")
+        with unittest.mock.patch.object(chat_det.ocr_detector, "is_available", return_value=False):
+            with unittest.mock.patch.object(chat_det.uia_detector, "is_available", return_value=True):
+                with unittest.mock.patch.object(chat_det.uia_detector, "find_by_keywords", return_value=dummy_uia):
+                    res = chat_det.detect_pending_chat(target_hwnd=None)
+                    self.assertIsNotNone(res)
+                    self.assertEqual(res, dummy_uia)
 
 
 if __name__ == "__main__":

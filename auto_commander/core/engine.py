@@ -1,7 +1,8 @@
 # -*- coding: utf-8 -*-
 """
 Core Engine Orchestrator and State Machine for AutoSelect-Commander.
-Manages states: SCANNING -> COUNTDOWN -> STEP 1 -> STEP 2 -> COOLDOWN.
+Manages states:
+  SCANNING -> [STEP 0: Chat Navigation if (?)] -> COUNTDOWN -> STEP 1 -> STEP 2 -> COOLDOWN.
 """
 
 import math
@@ -30,7 +31,7 @@ from auto_commander.platform.win32_window import AntigravityWindowManager
 
 
 class AutoCommanderEngine:
-    """Autonomous State Machine for modal detection, countdown, floating HUD, and fail-safe dispatch."""
+    """Autonomous State Machine for chat navigation, modal detection, countdown, floating HUD, and fail-safe dispatch."""
 
     def __init__(self, config: Config):
         self.config = config
@@ -130,10 +131,39 @@ class AutoCommanderEngine:
 
                     TerminalDashboard.render_scanning(tick)
 
+                    # Step 1: Check if an interactive decision modal is directly visible in active chat
                     result = self.detector.detect(target_hwnd=self.active_hwnd)
                     if result:
                         TerminalDashboard.render_detected(result)
                         self._execute_countdown(result)
+                        time.sleep(self.config.check_interval_ms / 1000.0)
+                        continue
+
+                    # Step 0: If no active decision modal in view, scan for a chat tab/sidebar item with (?) badge
+                    pending_chat = self.detector.detect_pending_chat(target_hwnd=self.active_hwnd)
+                    if pending_chat:
+                        chat_cx, chat_cy = pending_chat.center
+                        print(
+                            f"\n{TerminalDashboard.CYAN}[STEP 0]{TerminalDashboard.RESET} "
+                            f"Action required (?) detected on chat item at ({chat_cx}, {chat_cy})! Switching conversation..."
+                        )
+
+                        # Glide to chat item and firm click to bring it into view
+                        switched = self.mouse_ctrl.glide_and_click(
+                            chat_cx,
+                            chat_cy,
+                            check_interrupted_fn=self._check_mouse_interrupted,
+                            target_hwnd=self.active_hwnd,
+                        )
+
+                        if switched:
+                            # Allow chat view to render
+                            time.sleep(0.4)
+                            # Re-scan for newly exposed decision modal
+                            result = self.detector.detect(target_hwnd=self.active_hwnd)
+                            if result:
+                                TerminalDashboard.render_detected(result)
+                                self._execute_countdown(result)
 
                     time.sleep(self.config.check_interval_ms / 1000.0)
 

@@ -2,10 +2,10 @@
 chcp 65001 >nul
 setlocal enabledelayedexpansion
 
-title AutoSelect-Commander Launcher
+title AutoSelect-Commander Daemon
 
 echo ===============================================================================
-echo                AutoSelect-Commander for Antigravity (1-Click)
+echo                AutoSelect-Commander for Antigravity (Production)
 echo ===============================================================================
 echo.
 
@@ -71,67 +71,11 @@ if not exist ".venv\.installed_v2" (
     echo.
 )
 
-:: 4. If command-line arguments are provided, handle numeric shortcuts or pass flags directly
-if not "%~1"=="" (
-    if "%~1"=="1" goto RUN_DEMO
-    if "%~1"=="2" goto RUN_SENTINEL
-    if "%~1"=="3" goto RUN_DIAGNOSTICS
-    ".venv\Scripts\python.exe" auto_commander.py %*
-    goto FINISH
-)
-
-:: 5. Interactive Mode Selection Menu (5s Default to Demo Mode)
-echo.
-echo  =============================================================================
-echo                              SELECT EXECUTION MODE
-echo  =============================================================================
-echo.
-echo    [1] Live Visual Demo / Test Mode (Recommended)
-echo        -^> Spawns mock question card, floating countdown HUD ^& glides mouse!
-echo.
-echo    [2] Active Background Sentinel
-echo        -^> Monitors live screen for Antigravity decision modals.
-echo.
-echo    [3] Screen ^& Window Diagnostics
-echo        -^> Scans screen, tests OCR, lists detected windows and text.
-echo.
-echo    [4] Exit
-echo.
-echo  -----------------------------------------------------------------------------
-echo  Auto-launching [1] Demo Mode in 5 seconds (Press 1, 2, 3, or 4 to choose now)...
-echo  -----------------------------------------------------------------------------
-echo.
-
-choice /c 1234 /t 5 /d 1 /m "Your selection"
-
-if %errorlevel% equ 4 goto FINISH
-if %errorlevel% equ 3 goto RUN_DIAGNOSTICS
-if %errorlevel% equ 2 goto RUN_SENTINEL
-if %errorlevel% equ 1 goto RUN_DEMO
-goto FINISH
-
-:RUN_DEMO
-echo.
-echo [LAUNCH] Starting Live Visual Demo Mode...
+:: 4. Direct Autonomous Production Launch
+echo [LAUNCH] Starting AutoSelect-Commander Active Daemon...
 echo -------------------------------------------------------------------------------
-".venv\Scripts\python.exe" auto_commander.py --simulate
-goto FINISH
+".venv\Scripts\python.exe" auto_commander.py %*
 
-:RUN_SENTINEL
-echo.
-echo [LAUNCH] Starting Active Background Sentinel...
-echo -------------------------------------------------------------------------------
-".venv\Scripts\python.exe" auto_commander.py
-goto FINISH
-
-:RUN_DIAGNOSTICS
-echo.
-echo [LAUNCH] Running Screen ^& Window Diagnostics...
-echo -------------------------------------------------------------------------------
-".venv\Scripts\python.exe" auto_commander.py --diagnostics
-goto FINISH
-
-:FINISH
 if %errorlevel% neq 0 (
     echo.
     echo [INFO] Process terminated with code %errorlevel%.

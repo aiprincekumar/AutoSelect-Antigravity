@@ -1,12 +1,14 @@
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-High-Fidelity Interactive Decision Simulator (--demo / --simulate / --test).
+Standalone Visual Demo / Simulator for AutoSelect-Commander.
 Spawns a mock Antigravity decision card, renders the floating HUD overlay,
-and demonstrates the 2-step autonomous selection workflow with physical mouse glide.
+and demonstrates the autonomous selection workflow with smooth mouse glide.
 """
 
 import ctypes
 import math
+import sys
 import time
 
 try:
@@ -14,29 +16,19 @@ try:
 except ImportError:
     pyautogui = None
 
+import tkinter as tk
 from auto_commander.gui.hud import FloatingHUD
 from auto_commander.platform.mouse_ctrl import MouseController
 from auto_commander.platform.win32_window import AntigravityWindowManager
 
 
-def launch_simulator(countdown_seconds: float = 10.0):
-    """
-    Spawns mock Antigravity modal, floating HUD, and physically glides mouse in a full 2-step flow:
-    Step 1: Glide to Option 1 (Recommended) -> Firm click (Option 1 highlights & selects).
-    Step 2: Glide to Submit button -> Firm click (Submit activates with chime & confirmation).
-    """
-    try:
-        import tkinter as tk
-    except ImportError:
-        print("[ERROR] Tkinter is required for simulator mode.")
-        return
-
-    print("\n\033[96m[SIMULATION MODE] Launching mock Antigravity Decision Modal & Floating HUD (2-Step Flow)...\033[0m")
+def launch_standalone_demo(countdown_seconds: float = 10.0):
+    """Spawns mock Antigravity modal, floating HUD, and physically glides mouse in a 2-step flow."""
+    print("\n\033[96m[STANDALONE DEMO] Launching mock Antigravity Decision Modal & Floating HUD...\033[0m")
     root = tk.Tk()
     root.title("Antigravity - Interactive Decision Modal (Live Demo)")
     root.update_idletasks()
 
-    # Position demo window nicely centered on screen
     screen_w = root.winfo_screenwidth()
     screen_h = root.winfo_screenheight()
     win_w, win_h = 700, 460
@@ -50,7 +42,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
     sim_hwnd = None
     try:
         raw_hwnd = root.winfo_id()
-        # GA_ROOT = 2 retrieves the root window handle for the specified window
         sim_hwnd = ctypes.windll.user32.GetAncestor(raw_hwnd, 2) or ctypes.windll.user32.GetParent(raw_hwnd) or raw_hwnd
         AntigravityWindowManager.bring_to_foreground(sim_hwnd)
     except Exception:
@@ -77,7 +68,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
     )
     desc.pack(pady=4)
 
-    # Variable to track selected option (Step 1)
     selected_option = tk.StringVar(value="")
 
     # Option 1 Container Frame
@@ -114,7 +104,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
     )
     opt2_text_lbl.pack(side="left", pady=6, fill="x", expand=True, anchor="w")
 
-    # Selection handlers
     def select_option_1():
         selected_option.set("option_1")
         radio1_lbl.config(text="●", fg="#A6E3A1", bg="#263b36")
@@ -153,7 +142,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
     opt2_text_lbl.bind("<Button-1>", lambda e: select_option_2())
     radio2_lbl.bind("<Button-1>", lambda e: select_option_2())
 
-    # Step 2: Action Bar at bottom (Disabled Submit + Clickable Skip)
     def on_submit_clicked():
         if not selected_option.get():
             status_lbl.config(text="⚠️ Please select an option first!", fg="#F38BA8")
@@ -178,7 +166,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
     action_frame = tk.Frame(root, bg="#1E1E2E")
     action_frame.pack(pady=12)
 
-    # Submit button: Initially unhighlighted / greyish / disabled / directly unclickable
     submit_btn = tk.Button(
         action_frame,
         text="🚀 Submit / पुष्टि करें",
@@ -198,7 +185,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
     )
     submit_btn.pack(side="left", padx=8)
 
-    # Skip button: Right next to Submit, greyed-out but clickable
     skip_btn = tk.Button(
         action_frame,
         text="⏭️ Skip",
@@ -226,10 +212,9 @@ def launch_simulator(countdown_seconds: float = 10.0):
     )
     status_lbl.pack()
 
-    # Floating HUD overlay initialized to configured countdown duration
     hud = FloatingHUD(alpha=0.92)
     countdown_duration = float(countdown_seconds)
-    hud.show(countdown_duration, "Option 1: [Recommended Option] GitHub", master=root)
+    hud.show(countdown_duration, "Option 1: (Recommended) GitHub Commit Push", master=root)
 
     start_time = time.time()
     initial_mouse = [None]
@@ -240,7 +225,6 @@ def launch_simulator(countdown_seconds: float = 10.0):
         if cancelled[0]:
             return
 
-        # Auto-foregrounding check during countdown
         try:
             if root.state() == "iconic":
                 root.deiconify()
@@ -248,14 +232,12 @@ def launch_simulator(countdown_seconds: float = 10.0):
         except Exception:
             pass
 
-        # Capture initial mouse position on first tick when window is shown and countdown starts
         if pyautogui and initial_mouse[0] is None:
             initial_mouse[0] = pyautogui.position()
 
         elapsed = time.time() - start_time
         remaining = max(0.0, countdown_duration - elapsed)
 
-        # Check for user mouse movement fail-safe
         if pyautogui and initial_mouse[0] is not None:
             curr_pos = pyautogui.position()
             dist = math.hypot(curr_pos[0] - initial_mouse[0][0], curr_pos[1] - initial_mouse[0][1])
@@ -272,11 +254,8 @@ def launch_simulator(countdown_seconds: float = 10.0):
         hud.update_countdown(remaining)
 
         if remaining <= 0:
-            # -------------------------------------------------------------
-            # STEP 1: Glide to Option 1 and Firm Click
-            # -------------------------------------------------------------
-            hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding cursor smoothly to [Recommended Option]...", "#89B4FA")
-            status_lbl.config(text="[STEP 1/2] Gliding cursor to Option 1 [Recommended Option]...", fg="#89B4FA")
+            hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding cursor smoothly to (Recommended) option...", "#89B4FA")
+            status_lbl.config(text="[STEP 1/2] Gliding cursor to Option 1 (Recommended)...", fg="#89B4FA")
             root.update_idletasks()
             opt1_frame.update_idletasks()
 
@@ -286,49 +265,48 @@ def launch_simulator(countdown_seconds: float = 10.0):
             def check_cancel():
                 return cancelled[0]
 
-            success_step1 = mouse_ctrl.glide_and_click(
-                o1_x,
-                o1_y,
-                check_interrupted_fn=check_cancel,
-                target_hwnd=sim_hwnd,
-                is_demo=True,
-            )
-            if not success_step1:
-                hud.flash_cancelled()
-                return
+            if pyautogui:
+                pyautogui.moveTo(o1_x, o1_y, duration=0.8, tween=pyautogui.easeInOutQuad)
+                time.sleep(0.06)
+                pyautogui.mouseDown()
+                time.sleep(0.08)
+                pyautogui.mouseUp()
 
             select_option_1()
             root.update()
 
-            # Small natural dwell between Step 1 and Step 2
             time.sleep(0.35)
 
-            # -------------------------------------------------------------
-            # STEP 2: Glide to Submit Button and Firm Click
-            # -------------------------------------------------------------
             hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding cursor smoothly to Submit button...", "#A6E3A1")
-            status_lbl.config(text="[STEP 2/2] Gliding cursor to Submit / पुष्टि करें...", fg="#A6E3A1")
+            status_lbl.config(text="[STEP 2/2] Gliding cursor to Submit button...", fg="#A6E3A1")
             root.update_idletasks()
             submit_btn.update_idletasks()
 
             sb_x = submit_btn.winfo_rootx() + submit_btn.winfo_width() // 2
             sb_y = submit_btn.winfo_rooty() + submit_btn.winfo_height() // 2
 
-            success_step2 = mouse_ctrl.glide_and_click(
-                sb_x,
-                sb_y,
-                check_interrupted_fn=check_cancel,
-                target_hwnd=sim_hwnd,
-                is_demo=True,
-            )
-            if success_step2:
-                hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
-                on_submit_clicked()
-            else:
-                hud.flash_cancelled()
+            if pyautogui:
+                pyautogui.moveTo(sb_x, sb_y, duration=0.8, tween=pyautogui.easeInOutQuad)
+                time.sleep(0.06)
+                pyautogui.mouseDown()
+                time.sleep(0.08)
+                pyautogui.mouseUp()
+
+            hud.flash_success("✅ 2-STEP AUTO-SELECTION & SUBMISSION COMPLETE!", "Form submitted! Agent unblocked and resuming autonomously.")
+            on_submit_clicked()
             return
 
         root.after(50, sim_tick)
 
     root.after(200, sim_tick)
     root.mainloop()
+
+
+if __name__ == "__main__":
+    dur = 10.0
+    if len(sys.argv) > 1:
+        try:
+            dur = float(sys.argv[1])
+        except ValueError:
+            pass
+    launch_standalone_demo(dur)
