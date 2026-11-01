@@ -11,6 +11,8 @@
 
 | Change ID | Timestamp | Category | Component | Description | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `CHG-010` | 2026-11-02 04:05:00 IST | `fix` | Keyboard Automation | Enhance Antigravity 2.0 Harness window detection, restore, maximize, and force-focus pipeline | **VERIFIED** |
+| `CHG-009` | 2026-11-02 03:35:00 IST | `feat` | Activating Grill Me Chat | Add Method 1 file system and transcript parsing engine in Activating Grill Me Chat in anti-gravity | **VERIFIED** |
 | `CHG-008` | 2026-11-02 03:25:00 IST | `feat` | Keyboard Automation | Add Antigravity intelligent window auto-detect, restore, maximize, and focus subsystem | **VERIFIED** |
 | `CHG-007` | 2026-11-02 02:50:00 IST | `feat` | Keyboard Automation | Add Grill Me Keyboard Automation suite with ctypes SendInput engine, .bat/.ps1 launchers, and unit tests | **VERIFIED** |
 | `CHG-006` | 2026-11-01 11:45:00 IST | `feat` | Modular GUI Pipeline | Relocate & integrate modular step-by-step GUI mouse automation suite in `scripts/gui_automation/` | **VERIFIED** |

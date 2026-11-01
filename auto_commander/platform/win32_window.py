@@ -33,7 +33,7 @@ if user32:
     user32.OpenInputDesktop.restype = wintypes.HANDLE
     user32.SetThreadDesktop.argtypes = [wintypes.HANDLE]
     user32.SetThreadDesktop.restype = wintypes.BOOL
-    user32.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.POINTER(WINDOWPLACEMENT)]
+    user32.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.c_void_p]
     user32.GetWindowPlacement.restype = wintypes.BOOL
     user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
     user32.ShowWindow.restype = wintypes.BOOL
@@ -312,9 +312,10 @@ class AntigravityWindowManager:
         WNDENUMPROC = ctypes.WINFUNCTYPE(wintypes.BOOL, wintypes.HWND, wintypes.LPARAM)
         cb_func = WNDENUMPROC(enum_cb)
         if h_input:
-            user32.EnumDesktopWindows.argtypes = [wintypes.HANDLE, WNDENUMPROC, wintypes.LPARAM]
+            user32.EnumDesktopWindows.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.LPARAM]
             user32.EnumDesktopWindows(h_input, cb_func, 0)
         else:
+            user32.EnumWindows.argtypes = [ctypes.c_void_p, wintypes.LPARAM]
             user32.EnumWindows(cb_func, 0)
 
         if matched_hwnds:

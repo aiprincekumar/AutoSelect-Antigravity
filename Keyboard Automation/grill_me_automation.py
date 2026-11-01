@@ -4,19 +4,22 @@
 Grill Me Automation - Hybrid Keyboard & Focus Automation Suite
 =============================================================
 Workspace: AutoSelect-Commander
-Target: Antigravity / IDE / Browser / Terminal Chat Window
+Target: Antigravity 2.0 Harness / IDE / Browser / Terminal Chat Window
 Workflow:
   1. User triggers automation script (via CLI, .bat, or .ps1).
-  2. Countdown timer runs (default 5s) allowing user to switch to or click the target chat window.
-  3. Script detects and logs the active foreground window.
-  4. Script executes the sequence:
+  2. Intelligent window detection locates Antigravity 2.0 Harness by process name
+     ('Antigravity.exe'), window class ('Chrome_WidgetWin_1'), or multi-keyword titles.
+  3. Window is automatically un-minimized (restored), maximized to full screen,
+     and brought to the foreground with Windows 10/11 focus lock bypass.
+  4. Countdown timer runs (default 5s) allowing user visual confirmation.
+  5. Script executes the sequence:
      [Step 1] Ctrl + L    -> Focus chat input prompt
      [Step 2] Shift + Tab -> Move focus backward to option buttons
      [Step 3] 1           -> Select Option 1 (or configured option)
      [Step 4] Enter       -> Submit / confirm selection
-  5. Provides clean terminal logs, error recovery, and optional loop/repeat support.
+  6. Provides clean terminal logs, error recovery, and optional loop/repeat support.
 
-Supports zero external dependencies via native Windows ctypes (SendInput / keybd_event)
+Supports zero external dependencies via native Windows ctypes (SendInput / keybd_event / Win32 API)
 with automatic fallback/interop for PyAutoGUI if installed.
 """
 
@@ -25,7 +28,7 @@ import sys
 import time
 import argparse
 import logging
-from typing import Optional, List, Tuple
+from typing import Optional, List, Tuple, Dict, Any
 
 # Safe stdout encoding configuration for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
@@ -47,7 +50,7 @@ logging.basicConfig(
 logger = logging.getLogger("GrillMeAutomation")
 
 # ============================================================================
-# Windows Native ctypes Input Simulation Engine (Zero Dependency)
+# Windows Native ctypes Input Simulation & Window Management Engine
 # ============================================================================
 IS_WINDOWS = sys.platform == "win32"
 
@@ -89,14 +92,19 @@ if IS_WINDOWS:
     SW_RESTORE = 9
     SW_SHOWDEFAULT = 10
 
-    # RECT structure for window geometry
-    class RECT(ctypes.Structure):
-        _fields_ = [
-            ("left", wintypes.LONG),
-            ("top", wintypes.LONG),
-            ("right", wintypes.LONG),
-            ("bottom", wintypes.LONG),
-        ]
+    # Window Pos flags
+    HWND_TOP = 0
+    HWND_BOTTOM = 1
+    HWND_TOPMOST = -1
+    HWND_NOTOPMOST = -2
+    SWP_NOSIZE = 0x0001
+    SWP_NOMOVE = 0x0002
+    SWP_NOZORDER = 0x0004
+    SWP_NOACTIVATE = 0x0010
+    SWP_SHOWWINDOW = 0x0040
+
+    # ASFW_ANY constant for AllowSetForegroundWindow
+    ASFW_ANY = -1
 
     # SendInput constants
     INPUT_KEYBOARD = 1
@@ -144,6 +152,16 @@ if IS_WINDOWS:
             ("union", _INPUT_UNION),
         ]
 
+    class WINDOWPLACEMENT(ctypes.Structure):
+        _fields_ = [
+            ("length", wintypes.UINT),
+            ("flags", wintypes.UINT),
+            ("showCmd", wintypes.UINT),
+            ("ptMinPosition", wintypes.POINT),
+            ("ptMaxPosition", wintypes.POINT),
+            ("rcNormalPosition", wintypes.RECT),
+        ]
+
     # Function prototypes
     user32.SendInput.argtypes = [wintypes.UINT, ctypes.POINTER(INPUT), ctypes.c_int]
     user32.SendInput.restype = wintypes.UINT
@@ -156,6 +174,12 @@ if IS_WINDOWS:
 
     user32.GetWindowTextW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
     user32.GetWindowTextW.restype = ctypes.c_int
+
+    user32.GetWindowTextLengthW.argtypes = [wintypes.HWND]
+    user32.GetWindowTextLengthW.restype = ctypes.c_int
+
+    user32.GetClassNameW.argtypes = [wintypes.HWND, wintypes.LPWSTR, ctypes.c_int]
+    user32.GetClassNameW.restype = ctypes.c_int
 
     user32.IsWindow.argtypes = [wintypes.HWND]
     user32.IsWindow.restype = wintypes.BOOL
@@ -172,23 +196,51 @@ if IS_WINDOWS:
     user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
     user32.ShowWindow.restype = wintypes.BOOL
 
+    user32.ShowWindowAsync.argtypes = [wintypes.HWND, ctypes.c_int]
+    user32.ShowWindowAsync.restype = wintypes.BOOL
+
+    user32.OpenIcon.argtypes = [wintypes.HWND]
+    user32.OpenIcon.restype = wintypes.BOOL
+
     user32.BringWindowToTop.argtypes = [wintypes.HWND]
     user32.BringWindowToTop.restype = wintypes.BOOL
 
     user32.SetForegroundWindow.argtypes = [wintypes.HWND]
     user32.SetForegroundWindow.restype = wintypes.BOOL
 
+    user32.SetActiveWindow.argtypes = [wintypes.HWND]
+    user32.SetActiveWindow.restype = wintypes.HWND
+
     user32.SetFocus.argtypes = [wintypes.HWND]
     user32.SetFocus.restype = wintypes.HWND
 
-    user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(RECT)]
+    user32.AllowSetForegroundWindow.argtypes = [wintypes.DWORD]
+    user32.AllowSetForegroundWindow.restype = wintypes.BOOL
+
+    user32.SetWindowPos.argtypes = [wintypes.HWND, wintypes.HWND, ctypes.c_int, ctypes.c_int, ctypes.c_int, ctypes.c_int, wintypes.UINT]
+    user32.SetWindowPos.restype = wintypes.BOOL
+
+    # Standard wintypes.RECT to avoid conflicting with other modules
+    user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user32.GetWindowRect.restype = wintypes.BOOL
+
+    user32.GetWindowPlacement.argtypes = [wintypes.HWND, ctypes.c_void_p]
+    user32.GetWindowPlacement.restype = wintypes.BOOL
 
     user32.GetWindowThreadProcessId.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.DWORD)]
     user32.GetWindowThreadProcessId.restype = wintypes.DWORD
 
     user32.AttachThreadInput.argtypes = [wintypes.DWORD, wintypes.DWORD, wintypes.BOOL]
     user32.AttachThreadInput.restype = wintypes.BOOL
+
+    user32.OpenInputDesktop.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+    user32.OpenInputDesktop.restype = wintypes.HANDLE
+
+    user32.SetThreadDesktop.argtypes = [wintypes.HANDLE]
+    user32.SetThreadDesktop.restype = wintypes.BOOL
+
+    user32.CloseDesktop.argtypes = [wintypes.HANDLE]
+    user32.CloseDesktop.restype = wintypes.BOOL
 
     kernel32.GetCurrentThreadId.argtypes = []
     kernel32.GetCurrentThreadId.restype = wintypes.DWORD
@@ -197,12 +249,53 @@ if IS_WINDOWS:
     kernel32.GetConsoleWindow.restype = wintypes.HWND
 
     WNDENUMPROC = ctypes.WINFUNCTYPE(ctypes.c_bool, wintypes.HWND, wintypes.LPARAM)
-    user32.EnumWindows.argtypes = [WNDENUMPROC, wintypes.LPARAM]
+    user32.EnumWindows.argtypes = [ctypes.c_void_p, wintypes.LPARAM]
     user32.EnumWindows.restype = wintypes.BOOL
+
+    user32.EnumDesktopWindows.argtypes = [wintypes.HANDLE, ctypes.c_void_p, wintypes.LPARAM]
+    user32.EnumDesktopWindows.restype = wintypes.BOOL
+
+    if hasattr(user32, "SwitchToThisWindow"):
+        user32.SwitchToThisWindow.argtypes = [wintypes.HWND, wintypes.BOOL]
+        user32.SwitchToThisWindow.restype = None
+
+    def ensure_input_desktop():
+        """Ensure current thread is attached to active input desktop."""
+        try:
+            hdesk = user32.OpenInputDesktop(0, False, 0x01FF)
+            if hdesk:
+                user32.SetThreadDesktop(hdesk)
+                return hdesk
+        except Exception:
+            pass
+        return None
+
+    def get_process_info_for_hwnd(hwnd: int) -> Tuple[int, str, str]:
+        """Retrieve PID, process name, and executable path for a window handle."""
+        if not hwnd or not user32.IsWindow(hwnd):
+            return 0, "", ""
+        pid = wintypes.DWORD()
+        user32.GetWindowThreadProcessId(hwnd, ctypes.byref(pid))
+        if pid.value == 0:
+            return 0, "", ""
+        pname = ""
+        pexe = ""
+        try:
+            import psutil
+            p = psutil.Process(pid.value)
+            pname = p.name()
+            try:
+                pexe = p.exe()
+            except Exception:
+                pass
+        except Exception:
+            pass
+        return pid.value, pname, pexe
 
     def get_active_window_title() -> str:
         """Get the title of the current foreground active window."""
         try:
+            ensure_input_desktop()
             hwnd = user32.GetForegroundWindow()
             if not hwnd:
                 return "<No Active Window>"
@@ -247,12 +340,10 @@ if IS_WINDOWS:
 
     def send_key_combo(keys: List[int], hold_delay: float = 0.05) -> bool:
         """Press down a sequence of keys, hold briefly, then release in reverse order."""
-        # Press all keys in order
         for key in keys:
             _send_key_event(key, key_up=False)
             time.sleep(0.01)
         time.sleep(hold_delay)
-        # Release all keys in reverse order
         for key in reversed(keys):
             _send_key_event(key, key_up=True)
             time.sleep(0.01)
@@ -266,108 +357,291 @@ if IS_WINDOWS:
     # Window Auto-Targeting, Geometry, and Focus Subsystem (Win32)
     # ------------------------------------------------------------------------
     def get_window_info(hwnd: int) -> dict:
-        """Retrieve comprehensive window state, visibility, and geometry info."""
+        """Retrieve comprehensive window state, visibility, process info, and geometry info."""
         if not hwnd or not user32.IsWindow(hwnd):
-            return {"hwnd": hwnd, "title": "", "exists": False, "visible": False, "minimized": False, "maximized": False, "rect": (0, 0, 0, 0), "width": 0, "height": 0}
+            return {
+                "hwnd": hwnd,
+                "title": "",
+                "class": "",
+                "process_name": "",
+                "process_exe": "",
+                "pid": 0,
+                "exists": False,
+                "visible": False,
+                "minimized": False,
+                "maximized": False,
+                "rect": (0, 0, 0, 0),
+                "width": 0,
+                "height": 0
+            }
         try:
+            ensure_input_desktop()
             visible = bool(user32.IsWindowVisible(hwnd))
             iconic = bool(user32.IsIconic(hwnd))
             zoomed = bool(user32.IsZoomed(hwnd))
             buf = ctypes.create_unicode_buffer(512)
             length = user32.GetWindowTextW(hwnd, buf, 512)
             title = buf.value.strip() if length > 0 else ""
-            rect = RECT()
+
+            cls_buf = ctypes.create_unicode_buffer(256)
+            user32.GetClassNameW(hwnd, cls_buf, 256)
+            cls_name = cls_buf.value.strip()
+
+            pid, pname, pexe = get_process_info_for_hwnd(hwnd)
+
+            rect = wintypes.RECT()
             rect_ok = bool(user32.GetWindowRect(hwnd, ctypes.byref(rect)))
+
+            # If minimized, GetWindowRect returns (-32000, -32000). Check WINDOWPLACEMENT for restored size
+            width = (rect.right - rect.left) if rect_ok else 0
+            height = (rect.bottom - rect.top) if rect_ok else 0
+            if iconic or (rect_ok and rect.left <= -30000):
+                wp = WINDOWPLACEMENT()
+                wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+                if user32.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                    width = wp.rcNormalPosition.right - wp.rcNormalPosition.left
+                    height = wp.rcNormalPosition.bottom - wp.rcNormalPosition.top
+
             return {
                 "hwnd": hwnd,
                 "title": title,
+                "class": cls_name,
+                "process_name": pname,
+                "process_exe": pexe,
+                "pid": pid,
                 "exists": True,
                 "visible": visible,
                 "minimized": iconic,
                 "maximized": zoomed,
                 "rect": (rect.left, rect.top, rect.right, rect.bottom) if rect_ok else (0, 0, 0, 0),
-                "width": (rect.right - rect.left) if rect_ok else 0,
-                "height": (rect.bottom - rect.top) if rect_ok else 0,
+                "width": width,
+                "height": height,
             }
         except Exception as e:
-            return {"hwnd": hwnd, "title": "", "exists": False, "visible": False, "minimized": False, "maximized": False, "rect": (0, 0, 0, 0), "width": 0, "height": 0, "error": str(e)}
+            return {
+                "hwnd": hwnd,
+                "title": "",
+                "class": "",
+                "process_name": "",
+                "process_exe": "",
+                "pid": 0,
+                "exists": False,
+                "visible": False,
+                "minimized": False,
+                "maximized": False,
+                "rect": (0, 0, 0, 0),
+                "width": 0,
+                "height": 0,
+                "error": str(e)
+            }
 
-    def find_windows_by_title(keywords: List[str], exclude_console: bool = True) -> List[Tuple[int, str]]:
+    def find_all_candidate_windows() -> List[dict]:
         """
-        Enumerate all visible top-level windows whose title contains any keyword (case-insensitive).
-        Safeguarded to exclude the runner's own console window.
+        Enumerate all top-level candidate windows on active desktop,
+        capturing title, class name, process info, visibility, iconic/zoomed state, and rect.
         """
-        matches: List[Tuple[int, str]] = []
-        console_hwnd = kernel32.GetConsoleWindow() if exclude_console else 0
+        if not IS_WINDOWS:
+            return []
+
+        hdesk = ensure_input_desktop()
+        console_hwnd = kernel32.GetConsoleWindow()
+        candidates: List[dict] = []
 
         def enum_cb(hwnd, lparam):
-            if exclude_console and console_hwnd and hwnd == console_hwnd:
+            if console_hwnd and hwnd == console_hwnd:
                 return True
             try:
-                if user32.IsWindowVisible(hwnd):
-                    buf = ctypes.create_unicode_buffer(512)
-                    length = user32.GetWindowTextW(hwnd, buf, 512)
-                    if length > 0:
-                        title = buf.value.strip()
-                        title_lower = title.lower()
-                        for kw in keywords:
-                            if kw.lower() in title_lower:
-                                matches.append((hwnd, title))
-                                break
+                if not user32.IsWindow(hwnd):
+                    return True
+
+                visible = bool(user32.IsWindowVisible(hwnd))
+                iconic = bool(user32.IsIconic(hwnd))
+                zoomed = bool(user32.IsZoomed(hwnd))
+
+                # Length check
+                length = user32.GetWindowTextLengthW(hwnd)
+                title = ""
+                if length > 0:
+                    buf = ctypes.create_unicode_buffer(length + 1)
+                    user32.GetWindowTextW(hwnd, buf, length + 1)
+                    title = buf.value.strip()
+
+                cls_buf = ctypes.create_unicode_buffer(256)
+                user32.GetClassNameW(hwnd, cls_buf, 256)
+                cls_name = cls_buf.value.strip()
+
+                pid, pname, pexe = get_process_info_for_hwnd(hwnd)
+
+                rect = wintypes.RECT()
+                rect_ok = bool(user32.GetWindowRect(hwnd, ctypes.byref(rect)))
+                w = (rect.right - rect.left) if rect_ok else 0
+                h = (rect.bottom - rect.top) if rect_ok else 0
+
+                # Include if titled or if matching Antigravity/Electron class
+                p_lower = pname.lower()
+                is_antigravity = "antigravity" in p_lower or "electron" in p_lower
+                if (title or (is_antigravity and cls_name == "Chrome_WidgetWin_1")) and (visible or iconic):
+                    candidates.append({
+                        "hwnd": hwnd,
+                        "title": title,
+                        "class": cls_name,
+                        "pid": pid,
+                        "process_name": pname,
+                        "process_exe": pexe,
+                        "visible": visible,
+                        "minimized": iconic,
+                        "maximized": zoomed,
+                        "width": w,
+                        "height": h,
+                        "rect": (rect.left, rect.top, rect.right, rect.bottom) if rect_ok else (0, 0, 0, 0),
+                    })
             except Exception:
                 pass
             return True
 
         cb = WNDENUMPROC(enum_cb)
-        user32.EnumWindows(cb, 0)
+        if hdesk:
+            try:
+                user32.EnumDesktopWindows(hdesk, cb, 0)
+            finally:
+                try:
+                    user32.CloseDesktop(hdesk)
+                except Exception:
+                    pass
+        else:
+            user32.EnumWindows(cb, 0)
+
+        return candidates
+
+    def find_windows_by_title(keywords: List[str], exclude_console: bool = True) -> List[Tuple[int, str]]:
+        """
+        Enumerate all visible top-level windows whose title contains any keyword (case-insensitive).
+        Maintained for backward compatibility.
+        """
+        matches: List[Tuple[int, str]] = []
+        candidates = find_all_candidate_windows()
+        for c in candidates:
+            t_lower = c["title"].lower()
+            for kw in keywords:
+                if kw.lower() in t_lower:
+                    matches.append((c["hwnd"], c["title"]))
+                    break
         return matches
 
-    def select_target_window(target_keyword: str, exclude_terms: Optional[List[str]] = None) -> Optional[Tuple[int, str]]:
+    def select_target_window(
+        target_keyword: str = "Antigravity,Antigravity 2.0,Harness,AutoSelect-Commander",
+        exclude_terms: Optional[List[str]] = None
+    ) -> Optional[Tuple[int, str]]:
         """
-        Search and score visible top-level windows to identify the best match for the target keyword.
-        Prioritizes exact/strong matches and de-prioritizes terminal/runner windows.
+        Search and score candidate windows to identify the best match for Antigravity 2.0 Harness,
+        IDE, or chat interfaces.
+
+        Supports multi-keyword comma-separated strings (e.g. "Antigravity,Harness,AutoSelect-Commander"),
+        process executable matching ('Antigravity.exe'), class inspection ('Chrome_WidgetWin_1'),
+        and title matching.
         """
-        keywords = [target_keyword] if target_keyword else ["Antigravity", "antigravity"]
-        candidates = find_windows_by_title(keywords, exclude_console=True)
+        # Parse multi-keywords
+        raw_kws = target_keyword.replace("|", ",").split(",") if target_keyword else ["Antigravity"]
+        keywords = [k.strip() for k in raw_kws if k.strip()]
+        if not keywords:
+            keywords = ["Antigravity", "Antigravity 2.0", "Harness", "AutoSelect-Commander"]
+
+        candidates = find_all_candidate_windows()
         if not candidates:
             return None
 
-        default_excludes = ["grill_me", "run_grill_me", "test_grill_me", "powershell", "cmd.exe"]
-        excludes = default_excludes + (exclude_terms or [])
+        console_hwnd = kernel32.GetConsoleWindow()
+        blacklisted_procs = {
+            "cmd.exe", "powershell.exe", "pwsh.exe", "conhost.exe", "wt.exe",
+            "python.exe", "pythonw.exe", "explorer.exe"
+        }
+        blacklisted_titles = ["grill_me", "run_grill_me", "test_grill_me", "powershell", "cmd.exe"]
+        excludes = blacklisted_titles + (exclude_terms or [])
+
+        # Distinguish between default search vs user-specified custom filter
+        default_set = {"antigravity", "antigravity 2.0", "harness", "autoselect-commander"}
+        is_custom_filter = not any(k.lower() in default_set for k in keywords)
 
         scored: List[Tuple[int, int, str]] = []  # (score, hwnd, title)
-        kw_primary = target_keyword.lower() if target_keyword else "antigravity"
 
-        for hwnd, title in candidates:
-            t_low = title.lower()
+        for c in candidates:
+            hwnd = c["hwnd"]
+            title = c["title"]
+            t_lower = title.lower()
+            pname = c["process_name"]
+            p_lower = pname.lower()
+            cls_name = c["class"]
+            pexe = c["process_exe"].lower()
+
+            if console_hwnd and hwnd == console_hwnd:
+                continue
+
+            # Skip blacklisted process unless specifically named in keywords
+            is_blacklisted_proc = p_lower in blacklisted_procs
+            kw_mentions_proc = any(kw.lower() in p_lower for kw in keywords)
+            if is_blacklisted_proc and not kw_mentions_proc:
+                continue
+
+            # Check if keyword matches process or title
+            kw_matches_proc = any(kw.lower() in p_lower or (pexe and kw.lower() in pexe) for kw in keywords)
+            kw_matches_title = any(kw.lower() in t_lower for kw in keywords)
+
+            # If user specified a specific custom filter, require a match
+            if is_custom_filter and not (kw_matches_proc or kw_matches_title):
+                continue
+
             score = 0
-            if t_low == kw_primary:
-                score += 100
-            elif t_low.startswith(kw_primary):
-                score += 80
-            elif kw_primary in t_low:
-                score += 50
 
-            # Penalize if it contains runner/terminal terms and the keyword isn't specifically that runner
+            # 1. Antigravity 2.0 Harness Process Signature
+            is_antigravity_proc = ("antigravity" in p_lower or "harness" in p_lower or "antigravity" in pexe)
+            if is_antigravity_proc:
+                score += 120
+                if cls_name == "Chrome_WidgetWin_1":
+                    score += 40
+                if c["minimized"] or (c["width"] >= 400 and c["height"] >= 300):
+                    score += 25
+
+            # 2. Keyword matching against process name or executable path
+            for kw in keywords:
+                kw_l = kw.lower()
+                if kw_l in p_lower or (pexe and kw_l in pexe):
+                    score += 70
+                    break
+
+            # 3. Keyword matching against window title
+            for kw in keywords:
+                kw_l = kw.lower()
+                if kw_l == t_lower:
+                    score += 100
+                elif t_lower.startswith(kw_l):
+                    score += 80
+                elif kw_l in t_lower:
+                    score += 50
+
+            # 4. Window Class weighting
+            if cls_name == "Chrome_WidgetWin_1":
+                score += 15
+
+            # 5. Visibility and layout bonuses
+            if c["visible"]:
+                score += 15
+            if c["maximized"]:
+                score += 10
+            elif not c["minimized"] and c["width"] >= 600 and c["height"] >= 400:
+                score += 10
+
+            # 6. Exclusions and runner penalties
             for ex in excludes:
-                if ex.lower() in t_low and kw_primary not in ex.lower():
-                    score -= 40
+                if ex.lower() in t_lower and not any(kw.lower() in ex.lower() for kw in keywords):
+                    score -= 50
 
-            # Prefer non-iconic and already zoomed windows
-            try:
-                if not user32.IsIconic(hwnd):
-                    score += 10
-                if user32.IsZoomed(hwnd):
-                    score += 5
-            except Exception:
-                pass
-
-            scored.append((score, hwnd, title))
+            if score > 0:
+                scored.append((score, hwnd, title))
 
         scored.sort(key=lambda x: x[0], reverse=True)
         if scored and scored[0][0] > 0:
             return (scored[0][1], scored[0][2])
-        return candidates[0] if candidates else None
+        return None
 
     def ensure_window_on_screen(
         hwnd: int,
@@ -378,74 +652,119 @@ if IS_WINDOWS:
         """
         Ensures the target window is restored if minimized, maximized to full-screen
         (if requested), and brought to foreground focus with verified geometry.
+        Incorporates Windows 10/11 foreground lock bypass, thread input attachment,
+        Z-order bumping, and Electron window refresh.
         """
         if not hwnd or not user32.IsWindow(hwnd):
             logger.error(f"Invalid window handle: {hex(hwnd) if hwnd else '0'}")
             return False
 
+        ensure_input_desktop()
         info = get_window_info(hwnd)
-        logger.info(f"Target Window Found: '{info['title']}' (HWND: {hex(hwnd)})")
-        logger.info(f"Initial State: Minimized={'YES' if info['minimized'] else 'NO'}, Maximized={'YES' if info['maximized'] else 'NO'}, Dimensions={info['width']}x{info['height']}")
+        logger.info(
+            f"Target Window Found: '{info['title']}' (HWND: {hex(hwnd)}) | "
+            f"Process: {info['process_name']} (PID: {info['pid']}) | Class: {info['class']}"
+        )
+        logger.info(
+            f"Initial State: Minimized={'YES' if info['minimized'] else 'NO'}, "
+            f"Maximized={'YES' if info['maximized'] else 'NO'}, Dimensions={info['width']}x{info['height']}"
+        )
 
         try:
-            # Step 1: Check if minimized. If minimized, restore window.
-            if info['minimized']:
-                logger.info("Target window is minimized. Restoring window state...")
+            # Unlock Windows OS foreground lock
+            try:
+                user32.AllowSetForegroundWindow(ASFW_ANY)
+            except Exception:
+                pass
+
+            # Step 1: Un-minimize / restore if minimized (iconic)
+            if user32.IsIconic(hwnd) or info["minimized"]:
+                logger.info("Target window is minimized. Restoring window state (SW_RESTORE)...")
                 user32.ShowWindow(hwnd, SW_RESTORE)
+                user32.ShowWindowAsync(hwnd, SW_RESTORE)
+                try:
+                    user32.OpenIcon(hwnd)
+                except Exception:
+                    pass
                 time.sleep(0.08)
 
-            # Step 2: Check if maximized. If not maximized and auto_maximize requested, maximize.
+            # Step 2: Maximize to full screen if requested
             if auto_maximize:
                 if not user32.IsZoomed(hwnd):
-                    logger.info("Target window is not maximized. Maximizing to full screen...")
+                    logger.info("Target window is not maximized. Maximizing to full screen (SW_MAXIMIZE)...")
                     user32.ShowWindow(hwnd, SW_MAXIMIZE)
+                    user32.ShowWindowAsync(hwnd, SW_MAXIMIZE)
                     time.sleep(0.08)
                 else:
                     logger.info("Target window is already maximized.")
             else:
-                if not user32.IsWindowVisible(hwnd) or info['minimized']:
+                if not user32.IsWindowVisible(hwnd) or info["minimized"]:
                     user32.ShowWindow(hwnd, SW_SHOW)
+                    user32.ShowWindowAsync(hwnd, SW_SHOW)
                     time.sleep(0.05)
 
-            # Step 3: Bring to Foreground & Focus
+            # Step 3: Bring to Foreground & Force Focus with OS lock release
             if auto_focus:
                 fg_hwnd = user32.GetForegroundWindow()
                 if fg_hwnd != hwnd:
-                    logger.info("Bringing target window to foreground focus...")
-                    cur_thread_id = kernel32.GetCurrentThreadId()
-                    fg_thread_id = user32.GetWindowThreadProcessId(fg_hwnd, None) if fg_hwnd else 0
-                    target_thread_id = user32.GetWindowThreadProcessId(hwnd, None)
+                    logger.info("Engaging force-focus & foreground lock bypass...")
+                    cur_thread = kernel32.GetCurrentThreadId()
+                    fg_thread = user32.GetWindowThreadProcessId(fg_hwnd, None) if fg_hwnd else 0
+                    target_thread = user32.GetWindowThreadProcessId(hwnd, None)
 
                     attached_fg = False
                     attached_target = False
-                    if fg_thread_id and fg_thread_id != cur_thread_id:
-                        attached_fg = bool(user32.AttachThreadInput(cur_thread_id, fg_thread_id, True))
-                    if target_thread_id and target_thread_id != cur_thread_id:
-                        attached_target = bool(user32.AttachThreadInput(cur_thread_id, target_thread_id, True))
+                    if fg_thread and fg_thread != cur_thread:
+                        attached_fg = bool(user32.AttachThreadInput(cur_thread, fg_thread, True))
+                    if target_thread and target_thread != cur_thread:
+                        attached_target = bool(user32.AttachThreadInput(cur_thread, target_thread, True))
 
                     try:
-                        # Windows Foreground Lock Bypass: Simulate Alt keystroke
+                        # Windows Foreground Lock Bypass: Virtual Alt key tap
                         _send_key_event(VK_MENU, key_up=False)
                         _send_key_event(VK_MENU, key_up=True)
 
-                        user32.ShowWindow(hwnd, SW_SHOW)
+                        # Z-Order bump to force window to topmost layer then restore
+                        user32.SetWindowPos(
+                            hwnd, HWND_TOPMOST, 0, 0, 0, 0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW
+                        )
+                        user32.SetWindowPos(
+                            hwnd, HWND_NOTOPMOST, 0, 0, 0, 0,
+                            SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW
+                        )
+
                         user32.BringWindowToTop(hwnd)
                         user32.SetForegroundWindow(hwnd)
+                        if hasattr(user32, "SwitchToThisWindow"):
+                            user32.SwitchToThisWindow(hwnd, True)
+                        user32.SetActiveWindow(hwnd)
                         user32.SetFocus(hwnd)
                     finally:
                         if attached_fg:
-                            user32.AttachThreadInput(cur_thread_id, fg_thread_id, False)
+                            user32.AttachThreadInput(cur_thread, fg_thread, False)
                         if attached_target:
-                            user32.AttachThreadInput(cur_thread_id, target_thread_id, False)
+                            user32.AttachThreadInput(cur_thread, target_thread, False)
 
-            # Step 4: Settling delay for UI rendering
+            # Step 4: Settle delay for UI rendering
             if settle_delay > 0:
                 time.sleep(settle_delay)
 
-            # Step 5: Post-condition verification
+            # Step 5: Post-condition verification & retry loop
             post_info = get_window_info(hwnd)
             curr_fg = user32.GetForegroundWindow()
             is_fg = (curr_fg == hwnd)
+
+            # If not foreground, execute secondary pulse
+            if auto_focus and not is_fg:
+                logger.info("Secondary focus pulse...")
+                user32.SetForegroundWindow(hwnd)
+                if hasattr(user32, "SwitchToThisWindow"):
+                    user32.SwitchToThisWindow(hwnd, True)
+                time.sleep(0.1)
+                curr_fg = user32.GetForegroundWindow()
+                is_fg = (curr_fg == hwnd)
+
             logger.info(
                 f"[VERIFIED] Window On Screen: Foreground={'YES' if is_fg else 'NO'}, "
                 f"Maximized={'YES' if post_info['maximized'] else 'NO'}, "
@@ -471,12 +790,29 @@ else:
         return False
 
     def get_window_info(hwnd: int) -> dict:
-        return {"hwnd": hwnd, "title": "<Non-Windows>", "exists": False, "visible": False, "minimized": False, "maximized": False, "rect": (0, 0, 0, 0), "width": 0, "height": 0}
+        return {
+            "hwnd": hwnd,
+            "title": "<Non-Windows>",
+            "class": "",
+            "process_name": "",
+            "process_exe": "",
+            "pid": 0,
+            "exists": False,
+            "visible": False,
+            "minimized": False,
+            "maximized": False,
+            "rect": (0, 0, 0, 0),
+            "width": 0,
+            "height": 0
+        }
+
+    def find_all_candidate_windows() -> List[dict]:
+        return []
 
     def find_windows_by_title(keywords: List[str], exclude_console: bool = True) -> List[Tuple[int, str]]:
         return []
 
-    def select_target_window(target_keyword: str, exclude_terms: Optional[List[str]] = None) -> Optional[Tuple[int, str]]:
+    def select_target_window(target_keyword: str = "", exclude_terms: Optional[List[str]] = None) -> Optional[Tuple[int, str]]:
         return None
 
     def ensure_window_on_screen(hwnd: int, auto_maximize: bool = True, auto_focus: bool = True, settle_delay: float = 0.5) -> bool:
@@ -530,10 +866,10 @@ def get_option_vk(option_char: str) -> int:
 class GrillMeAutomator:
     """
     Automates the 'Grill Me' keyboard selection sequence with intelligent window auto-targeting:
-    1. Scan & identify target window (e.g. Antigravity)
-    2. Check minimized state -> Restore window
-    3. Check maximized state -> Maximize to full screen
-    4. Robust foreground focus bypass & geometry verification
+    1. Scan & identify target window (e.g. Antigravity 2.0 Harness, IDE, or chat app)
+    2. Check minimized state -> Restore window (SW_RESTORE / OpenIcon)
+    3. Check maximized state -> Maximize to full screen (SW_MAXIMIZE)
+    4. Robust foreground focus bypass (Alt key pulse, thread attach, Z-order bump)
     5. Settle delay (default 500ms) for UI rendering
     6. Execute sequence:
        - Ctrl + L    -> Focus chat input
@@ -541,6 +877,8 @@ class GrillMeAutomator:
        - Option key  -> Select option (default '1')
        - Enter       -> Submit confirmation
     """
+
+    DEFAULT_TARGET = "Antigravity,Antigravity 2.0,Harness,AutoSelect-Commander"
 
     def __init__(
         self,
@@ -551,7 +889,7 @@ class GrillMeAutomator:
         skip_ctrl_l: bool = False,
         skip_enter: bool = False,
         dry_run: bool = False,
-        target_window: str = "Antigravity",
+        target_window: str = DEFAULT_TARGET,
         auto_focus: bool = True,
         auto_maximize: bool = True,
         settle_delay: float = 0.5,
@@ -562,7 +900,7 @@ class GrillMeAutomator:
         self.skip_ctrl_l = skip_ctrl_l
         self.skip_enter = skip_enter
         self.dry_run = dry_run
-        self.target_window = target_window
+        self.target_window = target_window or self.DEFAULT_TARGET
         self.auto_focus = auto_focus
         self.auto_maximize = auto_maximize
         self.settle_delay = max(0.0, settle_delay)
@@ -589,8 +927,8 @@ class GrillMeAutomator:
 
     def prepare_target_window(self) -> bool:
         """
-        Locates target window by title keyword, restores if minimized,
-        maximizes to full screen (if requested), and sets foreground focus.
+        Locates target window by process name, class, or title keywords,
+        restores if minimized, maximizes to full screen, and sets foreground focus.
         """
         if not IS_WINDOWS:
             logger.info("Window auto-focus/maximize is only available on Windows.")
@@ -600,7 +938,7 @@ class GrillMeAutomator:
             logger.info("Window auto-focus and auto-maximize are disabled by user configuration.")
             return True
 
-        logger.info(f"Scanning for target window matching keyword: '{self.target_window}'...")
+        logger.info(f"Scanning for target window matching: '{self.target_window}'...")
         match = select_target_window(self.target_window)
         if not match:
             logger.warning(
@@ -612,7 +950,11 @@ class GrillMeAutomator:
         hwnd, title = match
         self.target_hwnd = hwnd
         self.target_title = title
-        logger.info(f"[+] Target window detected: '{title}' (HWND: {hex(hwnd)})")
+        info = get_window_info(hwnd)
+        logger.info(
+            f"[+] Target window detected: '{title}' (HWND: {hex(hwnd)}) "
+            f"[Process: {info['process_name']} PID: {info['pid']}]"
+        )
 
         if self.dry_run:
             logger.info(
@@ -645,7 +987,6 @@ class GrillMeAutomator:
 
             for remaining in range(seconds, 0, -1):
                 curr_title = get_active_window_title() if IS_WINDOWS else "Active Window"
-                # Truncate title if too long
                 display_title = (curr_title[:45] + "...") if len(curr_title) > 48 else curr_title
                 sys.stdout.write(f"\r  [-] Starting in {remaining:2d}s... | Active Window: [{display_title}]")
                 sys.stdout.flush()
@@ -772,14 +1113,14 @@ class GrillMeAutomator:
 # ============================================================================
 def parse_arguments():
     parser = argparse.ArgumentParser(
-        description="Grill Me Keyboard Automation Suite for Antigravity & Chat Interfaces.",
+        description="Grill Me Keyboard Automation Suite for Antigravity 2.0 Harness & Chat Interfaces.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
         "-t", "--target-window",
         type=str,
-        default="Antigravity",
-        help="Keyword to identify target window (e.g. 'Antigravity') for auto-focus/maximize."
+        default=GrillMeAutomator.DEFAULT_TARGET,
+        help="Keyword(s) to identify target window (e.g. 'Antigravity,Antigravity 2.0,Harness,AutoSelect-Commander'). Supports comma-separated keywords and process image matching."
     )
     parser.add_argument(
         "--auto-focus",

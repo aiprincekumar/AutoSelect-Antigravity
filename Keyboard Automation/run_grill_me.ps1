@@ -8,7 +8,7 @@
     detection, un-minimizing, full-screen maximizing, and foreground focus.
 
 .PARAMETER TargetWindow
-    Window title keyword to identify and auto-maximize (default: "Antigravity").
+    Window title or process keywords to identify and auto-maximize (default: "Antigravity,Antigravity 2.0,Harness,AutoSelect-Commander"). Supports comma-separated keywords and Antigravity 2.0 Harness process signature.
 
 .PARAMETER Countdown
     Seconds to count down before sending keystrokes (default: 5).
@@ -64,7 +64,7 @@ param(
     [Parameter(Position = 2)]
     [string]$Option = "1",
 
-    [string]$TargetWindow = "Antigravity",
+    [string]$TargetWindow = "Antigravity,Antigravity 2.0,Harness,AutoSelect-Commander",
     [double]$SettleDelay = 0.5,
 
     [switch]$SkipCtrlL,

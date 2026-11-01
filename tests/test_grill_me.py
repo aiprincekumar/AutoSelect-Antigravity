@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 """
 Unit tests for Grill Me Keyboard Automation suite.
+Targeting Antigravity 2.0 Harness, Win32 window management, and input pipeline.
 """
 
 import sys
@@ -77,6 +78,9 @@ class TestGrillMeAutomation(unittest.TestCase):
         self.assertIsInstance(info, dict)
         self.assertIn("hwnd", info)
         self.assertIn("title", info)
+        self.assertIn("class", info)
+        self.assertIn("process_name", info)
+        self.assertIn("pid", info)
         self.assertIn("exists", info)
         self.assertIn("visible", info)
         self.assertIn("minimized", info)
@@ -127,6 +131,25 @@ class TestGrillMeAutomation(unittest.TestCase):
         self.assertFalse(automator.auto_maximize)
         res = automator.prepare_target_window()
         self.assertTrue(res)
+
+    def test_multi_keyword_target_parsing(self):
+        """Test parsing and searching via multi-keyword strings."""
+        automator = grill_me.GrillMeAutomator(
+            target_window="Antigravity 2.0,Harness,AutoSelect-Commander",
+            dry_run=True,
+        )
+        self.assertIn("Antigravity 2.0", automator.target_window)
+        self.assertIn("Harness", automator.target_window)
+
+    def test_candidate_enumeration_type(self):
+        """Test candidate window enumeration returns list of structured dicts."""
+        candidates = grill_me.find_all_candidate_windows()
+        self.assertIsInstance(candidates, list)
+        for c in candidates:
+            self.assertIn("hwnd", c)
+            self.assertIn("title", c)
+            self.assertIn("class", c)
+            self.assertIn("process_name", c)
 
 
 if __name__ == "__main__":

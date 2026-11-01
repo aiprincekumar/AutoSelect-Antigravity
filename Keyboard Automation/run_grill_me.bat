@@ -35,10 +35,11 @@ if exist "%~dp0..\.venv\Scripts\python.exe" (
 
 echo.
 echo Intelligent Auto-Targeting:
-echo   - Auto-Detects target window (Default: Antigravity)
-echo   - If minimized -^> Restores automatically
-echo   - If small/normal -^> Maximizes to full screen
-echo   - Brings window to foreground focus with OS lock bypass
+echo   - Auto-Detects target window (Antigravity 2.0 Harness / IDE / Chat)
+echo   - Process-level detection: Antigravity.exe, Chrome_WidgetWin_1, and Titles
+echo   - If minimized -^> Restores automatically (SW_RESTORE / OpenIcon)
+echo   - If small/normal -^> Maximizes to full screen (SW_MAXIMIZE)
+echo   - Brings window to foreground focus with Windows 10/11 OS lock bypass
 echo.
 echo Key Sequence to execute:
 echo   1. Ctrl + L    ^> Focus chat input prompt

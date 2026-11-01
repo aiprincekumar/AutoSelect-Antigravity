@@ -192,6 +192,26 @@ For fine-grained or isolated execution where each action must run independently 
 
 ---
 
+## ⌨️ Hybrid Keyboard Automation & Grill Me Suite (`Keyboard Automation/`)
+
+For instant terminal-driven or headless agent prompt confirmation without moving the mouse pointer, AutoSelect-Commander includes a dedicated **Hybrid Keyboard & Focus Automation Suite** located in [`Keyboard Automation/`](file:///c:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/Keyboard%20Automation/):
+
+- **Targeted for Antigravity 2.0 Harness:** Automatically identifies Antigravity 2.0 Harness even when the window title is customized to a conversation/chat name (e.g. `Identifying Chats With Gr...`) via process executable matching (`Antigravity.exe`), window class inspection (`Chrome_WidgetWin_1`), and multi-keyword title scoring.
+- **Un-Minimize & Restore (`SW_RESTORE` & `OpenIcon`):** If Antigravity is minimized in the taskbar, it is automatically un-minimized and restored.
+- **Full-Screen Maximize (`SW_MAXIMIZE`):** If the window is restored or normal size, it is automatically maximized to full screen.
+- **Windows 10/11 Focus Lock Bypass:** Automatically unlocks OS foreground lock via `AllowSetForegroundWindow(-1)`, thread input attachment (`AttachThreadInput`), virtual Alt key pulse (`VK_MENU`), and Z-order topmost bumping (`SetWindowPos HWND_TOPMOST` / `HWND_NOTOPMOST`).
+- **4-Step Keyboard Execution Sequence:**
+  1. `Ctrl + L` ➔ Focus chat input prompt
+  2. `Shift + Tab` ➔ Shift focus backward to option selection buttons
+  3. `1` (or configured option) ➔ Select Option 1 (Recommended answer)
+  4. `Enter` ➔ Submit and confirm selection
+- **1-Click Launchers:**
+  - Batch: Double-click [`run_grill_me.bat`](file:///c:/Users/Atul%20Verma/Desktop/AutoSelect-Commander/Keyboard%20Automation/run_grill_me.bat)
+  - PowerShell: Run `.\Keyboard Automation\run_grill_me.ps1`
+  - CLI: `python "Keyboard Automation/grill_me_automation.py" -c 5 -o 1`
+
+---
+
 ## 🏛️ Project Structure
 
 ```
