@@ -41,6 +41,10 @@ if user32:
     user32.ShowWindowAsync.restype = wintypes.BOOL
     user32.GetWindowRect.argtypes = [wintypes.HWND, ctypes.POINTER(wintypes.RECT)]
     user32.GetWindowRect.restype = wintypes.BOOL
+    user32.WindowFromPoint.argtypes = [wintypes.POINT]
+    user32.WindowFromPoint.restype = wintypes.HWND
+    user32.GetAncestor.argtypes = [wintypes.HWND, wintypes.UINT]
+    user32.GetAncestor.restype = wintypes.HWND
 
 # Shell and system processes that must NEVER be targeted or brought to foreground
 BLACK_LISTED_PROCESS_NAMES = {
@@ -359,16 +363,60 @@ class AntigravityWindowManager:
         return None
 
     @classmethod
-    def get_console_window_rect(cls) -> Optional[Rect]:
-        """Returns the bounding Rect of own console/terminal window to prevent self-clicks."""
+    def get_console_hwnd(cls) -> Optional[int]:
+        """Returns the HWND of own console window."""
         if not kernel32:
             return None
         try:
-            h_console = kernel32.GetConsoleWindow()
-            if h_console and user32 and user32.IsWindowVisible(h_console):
-                return cls.get_window_rect(h_console)
+            h = kernel32.GetConsoleWindow()
+            return h if h else None
+        except Exception:
+            return None
+
+    @classmethod
+    def is_console_foreground(cls) -> bool:
+        """Returns True if own console window is currently the active foreground window."""
+        h_console = cls.get_console_hwnd()
+        if not h_console or not user32:
+            return False
+        try:
+            return user32.GetForegroundWindow() == h_console
+        except Exception:
+            return False
+
+    @classmethod
+    def minimize_console(cls) -> bool:
+        """Minimizes the console window so it does not obstruct Antigravity."""
+        h_console = cls.get_console_hwnd()
+        if h_console and user32:
+            try:
+                return bool(user32.ShowWindow(h_console, 6))  # SW_MINIMIZE = 6
+            except Exception:
+                pass
+        return False
+
+    @classmethod
+    def get_window_at_point(cls, x: int, y: int) -> Optional[int]:
+        """Returns the root top-level HWND containing screen coordinate (x, y)."""
+        if not user32:
+            return None
+        try:
+            pt = wintypes.POINT(x, y)
+            hwnd_at_pt = user32.WindowFromPoint(pt)
+            if hwnd_at_pt:
+                GA_ROOT = 2
+                root_hwnd = user32.GetAncestor(hwnd_at_pt, GA_ROOT)
+                return root_hwnd or hwnd_at_pt
         except Exception:
             pass
+        return None
+
+    @classmethod
+    def get_console_window_rect(cls) -> Optional[Rect]:
+        """Returns the bounding Rect of own console/terminal window to prevent self-clicks."""
+        h_console = cls.get_console_hwnd()
+        if h_console and user32 and user32.IsWindowVisible(h_console):
+            return cls.get_window_rect(h_console)
         return None
 
     @classmethod
@@ -381,19 +429,52 @@ class AntigravityWindowManager:
         """
         Validates that click coordinates:
         1. Fall strictly inside the target window's bounding box if target_hwnd is provided.
-        2. Do NOT fall inside own console window (prevents clicking cmd.exe / terminal).
+        2. Do NOT fall inside own console window when the console window is active/foreground.
+           If target_hwnd is provided and in foreground (or brought to foreground), console
+           overlap is allowed since the click will land on the target window covering the console.
         """
+        h_console = cls.get_console_hwnd()
+        fg_hwnd = user32.GetForegroundWindow() if user32 else None
+
+        # If own console is currently in foreground and a target_hwnd is given,
+        # automatically bring target_hwnd to the foreground so clicks land on Antigravity.
+        if target_hwnd and h_console and fg_hwnd == h_console:
+            cls.bring_to_foreground(target_hwnd)
+            fg_hwnd = user32.GetForegroundWindow() if user32 else None
+
         target_rect = cls.get_window_rect(target_hwnd) if target_hwnd else None
 
         # Check target window boundary if provided
         if target_hwnd and target_rect:
             if not target_rect.contains(x, y):
-                return False, f"Click at ({x}, {y}) is outside target window bounds ({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety."
+                return (
+                    False,
+                    f"Click at ({x}, {y}) is outside target window bounds "
+                    f"({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety.",
+                )
+
+            # Check if target_hwnd is in the foreground or directly under the cursor
+            is_target_fg = cls.is_foreground(target_hwnd)
+            is_target_at_pt = False
+            root_at_pt = cls.get_window_at_point(x, y)
+            if root_at_pt and (root_at_pt == target_hwnd):
+                is_target_at_pt = True
+
+            # If target_hwnd is in the foreground (or under cursor) and target_rect contains (x, y):
+            # The click lands safely on Antigravity; DO NOT block on console_rect!
+            if is_target_fg or is_target_at_pt or (h_console is None) or (fg_hwnd is not None and fg_hwnd != h_console):
+                return True, "Click target coordinate valid (target window is foreground)."
 
         # Check console boundary for self-click prevention
         console_rect = cls.get_console_window_rect()
         if console_rect and console_rect.contains(x, y):
-            return False, f"Click at ({x}, {y}) falls inside console window! Blocked to prevent self-clicking."
+            # Only block if the console window itself is the foreground window,
+            # or if no target_hwnd was specified.
+            if not target_hwnd or cls.is_console_foreground() or (fg_hwnd and fg_hwnd == h_console):
+                return (
+                    False,
+                    f"Click at ({x}, {y}) falls inside console window! Blocked to prevent self-clicking.",
+                )
 
         return True, "Click target coordinate valid."
 

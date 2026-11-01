@@ -186,6 +186,83 @@ class TestAutoCommander(unittest.TestCase):
         valid, _ = AntigravityWindowManager.validate_click_target(500, 500, target_hwnd=None)
         self.assertIsInstance(valid, bool)
 
+    def test_validate_click_target_allows_target_when_foreground_despite_console_overlap(self):
+        target_hwnd = 11111
+        console_hwnd = 22222
+        target_rect = Rect(0, 0, 1920, 1080)
+        console_rect = Rect(32, 32, 1359, 737)
+        click_x, click_y = 194, 719  # Point inside both target and console (as in Screenshot 452)
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=target_rect), \
+             unittest.mock.patch.object(AntigravityWindowManager, "is_foreground", return_value=True), \
+             unittest.mock.patch.object(win32_mod.user32, "GetForegroundWindow", return_value=target_hwnd):
+
+            valid, reason = AntigravityWindowManager.validate_click_target(click_x, click_y, target_hwnd=target_hwnd)
+            self.assertTrue(valid, f"Target window in foreground should allow click despite console overlap! Reason: {reason}")
+            self.assertIn("target window is foreground", reason)
+
+    def test_validate_click_target_auto_foregrounds_when_console_is_active(self):
+        target_hwnd = 11111
+        console_hwnd = 22222
+        target_rect = Rect(0, 0, 1920, 1080)
+        console_rect = Rect(32, 32, 1359, 737)
+        click_x, click_y = 194, 719
+
+        bring_fg_called = []
+        def fake_bring_to_foreground(h):
+            bring_fg_called.append(h)
+            return True
+
+        fg_returns = [console_hwnd, target_hwnd]
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=target_rect), \
+             unittest.mock.patch.object(AntigravityWindowManager, "bring_to_foreground", side_effect=fake_bring_to_foreground), \
+             unittest.mock.patch.object(AntigravityWindowManager, "is_foreground", return_value=True), \
+             unittest.mock.patch.object(win32_mod.user32, "GetForegroundWindow", side_effect=fg_returns):
+
+            valid, reason = AntigravityWindowManager.validate_click_target(click_x, click_y, target_hwnd=target_hwnd)
+            self.assertTrue(valid)
+            self.assertIn(target_hwnd, bring_fg_called)
+
+    def test_validate_click_target_blocks_when_console_remains_foreground(self):
+        target_hwnd = 11111
+        console_hwnd = 22222
+        target_rect = Rect(0, 0, 1920, 1080)
+        console_rect = Rect(32, 32, 1359, 737)
+        click_x, click_y = 194, 719
+
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=target_rect), \
+             unittest.mock.patch.object(AntigravityWindowManager, "bring_to_foreground", return_value=False), \
+             unittest.mock.patch.object(AntigravityWindowManager, "is_foreground", return_value=False), \
+             unittest.mock.patch.object(AntigravityWindowManager, "is_console_foreground", return_value=True), \
+             unittest.mock.patch.object(win32_mod.user32, "GetForegroundWindow", return_value=console_hwnd):
+
+            valid, reason = AntigravityWindowManager.validate_click_target(click_x, click_y, target_hwnd=target_hwnd)
+            self.assertFalse(valid)
+            self.assertIn("falls inside console window", reason)
+
+    def test_validate_click_target_blocks_outside_bounds(self):
+        target_hwnd = 11111
+        target_rect = Rect(100, 100, 500, 500)
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=target_rect):
+            valid, reason = AntigravityWindowManager.validate_click_target(50, 50, target_hwnd=target_hwnd)
+            self.assertFalse(valid)
+            self.assertIn("outside target window bounds", reason)
+
+    def test_validate_click_target_blocks_none_target_inside_console(self):
+        console_hwnd = 22222
+        console_rect = Rect(0, 0, 800, 600)
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
+            valid, reason = AntigravityWindowManager.validate_click_target(100, 100, target_hwnd=None)
+            self.assertFalse(valid)
+            self.assertIn("falls inside console window", reason)
+
     def test_modular_package_imports_parity(self):
         from auto_commander.config import Config as Cfg
         from auto_commander.models import Point as Pt, Rect as Rc
@@ -447,6 +524,33 @@ class TestAutoCommander(unittest.TestCase):
                     res = chat_det.detect_pending_chat(target_hwnd=None)
                     self.assertIsNotNone(res)
                     self.assertEqual(res, dummy_uia)
+
+    def test_step_0_execution_foregrounds_and_passes_target_hwnd(self):
+        cfg = Config()
+        engine = AutoCommanderEngine(cfg)
+        engine.active_hwnd = 12345
+
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+
+        with unittest.mock.patch.object(TerminalDashboard, "print_banner"), \
+             unittest.mock.patch.object(TerminalDashboard, "render_scanning"), \
+             unittest.mock.patch.object(engine.detector, "detect", side_effect=[None, None]), \
+             unittest.mock.patch.object(engine.detector, "detect_pending_chat", side_effect=[fake_chat, None]), \
+             unittest.mock.patch.object(AntigravityWindowManager, "check_and_foreground", return_value=(True, "Ready", 12345)), \
+             unittest.mock.patch.object(AntigravityWindowManager, "bring_to_foreground") as mock_bring_fg, \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
+
+            def stop_loop(*args, **kwargs):
+                engine.is_running = False
+
+            mock_glide.side_effect = lambda *a, **k: [stop_loop(), True][1]
+
+            engine.run()
+
+            mock_bring_fg.assert_called_with(12345)
+            mock_glide.assert_called()
+            call_kwargs = mock_glide.call_args[1]
+            self.assertEqual(call_kwargs.get("target_hwnd"), 12345)
 
 
 if __name__ == "__main__":

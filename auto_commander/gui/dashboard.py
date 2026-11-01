@@ -35,7 +35,11 @@ class TerminalDashboard:
  {cls.YELLOW}● Emergency Abort:{cls.RESET} Shake/Move Mouse, Press 'Q' or ESC, or Move to Screen Corner
 ────────────────────────────────────────────────────────────────────────────────
 """
-        print(banner)
+        try:
+            print(banner)
+        except UnicodeEncodeError:
+            enc = sys.stdout.encoding or "utf-8"
+            print(banner.encode(enc, errors="replace").decode(enc, errors="replace"))
 
     @classmethod
     def render_scanning(cls, tick: int):

@@ -148,6 +148,14 @@ class AutoCommanderEngine:
                             f"Action required (?) detected on chat item at ({chat_cx}, {chat_cy})! Switching conversation..."
                         )
 
+                        # Ensure Antigravity is in the foreground before gliding to the chat tab
+                        if not self.active_hwnd:
+                            self.active_hwnd = AntigravityWindowManager.find_antigravity_window(
+                                title_filter=self.config.window_title_filter
+                            )
+                        if self.active_hwnd:
+                            AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
+
                         # Glide to chat item and firm click to bring it into view
                         switched = self.mouse_ctrl.glide_and_click(
                             chat_cx,
@@ -159,6 +167,9 @@ class AutoCommanderEngine:
                         if switched:
                             # Allow chat view to render
                             time.sleep(0.4)
+                            # Ensure Antigravity is in foreground for subsequent modal detection
+                            if self.active_hwnd:
+                                AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
                             # Re-scan for newly exposed decision modal
                             result = self.detector.detect(target_hwnd=self.active_hwnd)
                             if result:
@@ -249,6 +260,10 @@ class AutoCommanderEngine:
             target_cx, target_cy = result.center
             TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", target_cx, target_cy)
 
+            # Ensure Antigravity is in the foreground before clicking Option 1
+            if self.active_hwnd:
+                AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
+
             if self.config.floating_hud_enabled:
                 self.hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding to (Recommended) option...", "#89B4FA")
 
@@ -274,6 +289,10 @@ class AutoCommanderEngine:
             if submit_result:
                 sub_cx, sub_cy = submit_result.center
                 TerminalDashboard.render_clicking(2, 2, "Submit button", sub_cx, sub_cy)
+
+                # Ensure Antigravity is in the foreground before clicking Submit button
+                if self.active_hwnd:
+                    AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
 
                 if self.config.floating_hud_enabled:
                     self.hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding to Submit button...", "#A6E3A1")
