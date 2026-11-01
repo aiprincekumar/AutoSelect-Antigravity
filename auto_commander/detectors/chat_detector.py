@@ -24,7 +24,7 @@ from auto_commander.detectors.base import BaseDetector
 from auto_commander.detectors.ocr_detector import WindowsOcrDetector
 from auto_commander.detectors.uia_detector import UIAutomationDetector
 from auto_commander.models import DetectionResult
-from auto_commander.platform.win32_window import AntigravityWindowManager
+from auto_commander.platform.win32_window import AntigravityWindowManager, user32
 
 
 class ChatTabDetector(BaseDetector):
@@ -98,19 +98,29 @@ class ChatTabDetector(BaseDetector):
         return None
 
     def _get_sidebar_bbox(self, target_hwnd: Optional[int] = None) -> Optional[Tuple[int, int, int, int]]:
-        """Calculates screen bounding box for the Antigravity left sidebar and tab header."""
+        """Calculates screen bounding box for the Antigravity left sidebar and tab header, strictly clamped to monitor bounds."""
+        sw = 1920
+        sh = 1080
+        if user32:
+            try:
+                sw = user32.GetSystemMetrics(0)
+                sh = user32.GetSystemMetrics(1)
+            except Exception:
+                pass
+
         if target_hwnd:
             rect = AntigravityWindowManager.get_window_rect(target_hwnd)
-            if rect:
+            if rect and rect.width > 100 and rect.height > 80:
                 # Sidebar and conversation drawer/tabs span leftmost ~750px of the window
-                x1 = rect.left
-                y1 = rect.top
-                x2 = min(rect.left + 750, rect.right)
-                y2 = rect.bottom
-                return (max(0, x1), max(0, y1), max(0, x2), max(0, y2))
+                x1 = max(0, min(rect.left, sw - 1))
+                y1 = max(0, min(rect.top, sh - 1))
+                x2 = max(x1 + 10, min(rect.left + 750, rect.right, sw))
+                y2 = max(y1 + 10, min(rect.bottom, sh))
+                if x2 > x1 and y2 > y1:
+                    return (x1, y1, x2, y2)
 
-        # Fallback to general left screen strip (0 to 750px)
-        return (0, 0, 750, 1080)
+        # Fallback to general left screen strip (0 to min(750, sw))
+        return (0, 0, min(750, sw), sh)
 
     def _scan_sidebar_template(self, target_hwnd: Optional[int] = None) -> Optional[DetectionResult]:
         """Runs multi-scale normalized cross-correlation for the (?) badge in the sidebar region."""

@@ -104,6 +104,14 @@ class WindowsOcrDetector(BaseDetector):
         if re.search(r"\b(?:option|opt)\s*[2-9]\b", t):
             return False, False
 
+        # Reject pure action button lines (Submit, Skip, Proceed, Confirm)
+        action_words = {"submit", "skip", "proceed", "confirm", "cancel", "छोड़ें", "पुष्टि"}
+        tokens = set(re.findall(r"\b[a-zA-Z\u0900-\u097F]+\b", t))
+        if tokens and tokens.issubset(action_words | {"the", "button", "and", "or"}):
+            return False, False
+        if any(t == a or t.startswith(f"{a} ") for a in ("submit", "confirm", "skip", "proceed")) and not any(r in t for r in ("recommend", "अनुशंसित", "option 1", "opt 1")):
+            return False, False
+
         # Pattern 1: Bracketed recommendation (Recommended), [Recommended], {Recommendation}, (अनुशंसित)
         has_bracketed = bool(re.search(
             r"[\(\[\{<][^\)\]\}>]{0,8}(?:recommend|ecommend|commend|अनुशंसित)[^\)\]\}>]*[\)\]\}>]?",
@@ -572,12 +580,18 @@ class WindowsOcrDetector(BaseDetector):
                     if active_hud_rect and (active_hud_rect.contains(act_x, act_y) or active_hud_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
                         continue
 
-                    if console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
+                    if console_rect and AntigravityWindowManager.is_console_foreground() and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
                         continue
 
-                    # Project explorer filter: Reject any candidate located in sidebar (< 500px)
-                    if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 500:
+                    # Reject action button labels (Submit, Skip, Proceed, Confirm) from ever becoming Option 1
+                    if any(act in line_lower for act in ("submit", "confirm", "proceed", "skip", "छोड़ें", "पुष्टि")) and not is_strong_opt1:
                         continue
+
+                    # Layout filter: In Antigravity work area, Option 1 is strictly located on the left
+                    # (500 <= act_x < 1200). Never confuse Submit button (x >= 1200) with Option 1 (x < 1200).
+                    if (img.width >= 1200 or offset_x + img.width >= 1200):
+                        if act_x < 500 or act_x >= 1200:
+                            continue
 
                     res = DetectionResult(
                         x=act_x,
@@ -679,10 +693,10 @@ class WindowsOcrDetector(BaseDetector):
                 if target_rect and target_rect.width > 100 and target_rect.height > 80:
                     sw = user32.GetSystemMetrics(0) if user32 else 1920
                     sh = user32.GetSystemMetrics(1) if user32 else 1080
-                    x1 = max(0, min(target_rect.left, sw - 1))
-                    y1 = max(0, min(target_rect.top, sh - 1))
-                    x2 = max(x1 + 10, min(target_rect.right, sw))
-                    y2 = max(y1 + 10, min(target_rect.bottom, sh))
+                    x1 = max(0, min(target_rect.left, sw - 10))
+                    y1 = max(0, min(target_rect.top, sh - 10))
+                    x2 = min(sw, max(x1 + 10, target_rect.right))
+                    y2 = min(sh, max(y1 + 10, target_rect.bottom))
 
                     win_img = ImageGrab.grab(bbox=(x1, y1, x2, y2))
                     res = self.scan_decision_modal_on_image(
@@ -705,10 +719,10 @@ class WindowsOcrDetector(BaseDetector):
                 if active_win and active_win.width > 100 and active_win.height > 80:
                     sw = user32.GetSystemMetrics(0) if user32 else 1920
                     sh = user32.GetSystemMetrics(1) if user32 else 1080
-                    x1 = max(0, min(active_win.left, sw - 1))
-                    y1 = max(0, min(active_win.top, sh - 1))
-                    x2 = max(x1 + 10, min(active_win.right, sw))
-                    y2 = max(y1 + 10, min(active_win.bottom, sh))
+                    x1 = max(0, min(active_win.left, sw - 10))
+                    y1 = max(0, min(active_win.top, sh - 10))
+                    x2 = min(sw, max(x1 + 10, active_win.right))
+                    y2 = min(sh, max(y1 + 10, active_win.bottom))
 
                     win_img = ImageGrab.grab(bbox=(x1, y1, x2, y2))
                     res = self.scan_decision_modal_on_image(
@@ -752,10 +766,10 @@ class WindowsOcrDetector(BaseDetector):
                 if target_rect and target_rect.width > 100 and target_rect.height > 80:
                     sw = user32.GetSystemMetrics(0) if user32 else 1920
                     sh = user32.GetSystemMetrics(1) if user32 else 1080
-                    x1 = max(0, min(target_rect.left, sw - 1))
-                    y1 = max(0, min(target_rect.top, sh - 1))
-                    x2 = max(x1 + 10, min(target_rect.right, sw))
-                    y2 = max(y1 + 10, min(target_rect.bottom, sh))
+                    x1 = max(0, min(target_rect.left, sw - 10))
+                    y1 = max(0, min(target_rect.top, sh - 10))
+                    x2 = min(sw, max(x1 + 10, target_rect.right))
+                    y2 = min(sh, max(y1 + 10, target_rect.bottom))
 
                     bbox = (x1, y1, x2, y2)
                     win_img = ImageGrab.grab(bbox=bbox)
@@ -772,10 +786,10 @@ class WindowsOcrDetector(BaseDetector):
                 if active_win and active_win.width > 100 and active_win.height > 80:
                     sw = user32.GetSystemMetrics(0) if user32 else 1920
                     sh = user32.GetSystemMetrics(1) if user32 else 1080
-                    x1 = max(0, min(active_win.left, sw - 1))
-                    y1 = max(0, min(active_win.top, sh - 1))
-                    x2 = max(x1 + 10, min(active_win.right, sw))
-                    y2 = max(y1 + 10, min(active_win.bottom, sh))
+                    x1 = max(0, min(active_win.left, sw - 10))
+                    y1 = max(0, min(active_win.top, sh - 10))
+                    x2 = min(sw, max(x1 + 10, active_win.right))
+                    y2 = min(sh, max(y1 + 10, active_win.bottom))
 
                     bbox = (x1, y1, x2, y2)
                     win_img = ImageGrab.grab(bbox=bbox)

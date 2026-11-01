@@ -345,12 +345,36 @@ class AntigravityWindowManager:
 
     @classmethod
     def get_window_rect(cls, hwnd: int) -> Optional[Rect]:
-        """Returns the bounding Rect of a window."""
+        """Returns the bounding Rect of a window, accurately resolving restored normal position for minimized/iconic windows."""
         if not hwnd or not user32:
             return None
         try:
+            # If window is minimized (iconic), GetWindowRect returns (-32000, -32000).
+            # Retrieve normal restored position from WINDOWPLACEMENT
+            if user32.IsIconic(hwnd):
+                wp = WINDOWPLACEMENT()
+                wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+                if user32.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                    return Rect(
+                        x=wp.rcNormalPosition.left,
+                        y=wp.rcNormalPosition.top,
+                        width=wp.rcNormalPosition.right - wp.rcNormalPosition.left,
+                        height=wp.rcNormalPosition.bottom - wp.rcNormalPosition.top,
+                    )
+
             rect = wintypes.RECT()
             if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                # Safeguard against off-screen minimized coordinates (-32000)
+                if rect.left <= -30000:
+                    wp = WINDOWPLACEMENT()
+                    wp.length = ctypes.sizeof(WINDOWPLACEMENT)
+                    if user32.GetWindowPlacement(hwnd, ctypes.byref(wp)):
+                        return Rect(
+                            x=wp.rcNormalPosition.left,
+                            y=wp.rcNormalPosition.top,
+                            width=wp.rcNormalPosition.right - wp.rcNormalPosition.left,
+                            height=wp.rcNormalPosition.bottom - wp.rcNormalPosition.top,
+                        )
                 return Rect(
                     x=rect.left,
                     y=rect.top,
@@ -379,7 +403,8 @@ class AntigravityWindowManager:
         if not h_console or not user32:
             return False
         try:
-            return user32.GetForegroundWindow() == h_console
+            fg = user32.GetForegroundWindow()
+            return fg == h_console or (fg and cls.get_window_at_point(0, 0) == h_console)
         except Exception:
             return False
 
@@ -427,48 +452,52 @@ class AntigravityWindowManager:
     ) -> Tuple[bool, str]:
         """
         Validates that click coordinates:
-        1. Fall strictly inside the target window's bounding box if target_hwnd is provided.
-        2. Do NOT fall inside own console window when the console window is active/foreground.
-           If target_hwnd is provided and in foreground (or brought to foreground), console
-           overlap is allowed since the click will land on the target window covering the console.
+        1. Fall strictly inside physical display boundaries.
+        2. Fall inside the target window's bounding box when targeting Antigravity.
+        3. Never self-clicks the AutoSelect-Commander console.
+           When Antigravity is the target window, the console is safely minimized or pushed
+           behind so Antigravity receives the click cleanly without false safety blocks.
         """
+        sw = user32.GetSystemMetrics(0) if user32 else 1920
+        sh = user32.GetSystemMetrics(1) if user32 else 1080
+        if x < 0 or x >= sw or y < 0 or y >= sh:
+            return (
+                False,
+                f"Click at ({x}, {y}) is outside screen boundaries (0,0 {sw}x{sh})! Blocked for safety.",
+            )
+
+        if not target_hwnd:
+            target_hwnd = cls.find_antigravity_window()
+
         h_console = cls.get_console_hwnd()
         fg_hwnd = user32.GetForegroundWindow() if user32 else None
 
-        # If own console is currently in foreground and a target_hwnd is given,
-        # automatically bring target_hwnd to the foreground so clicks land on Antigravity.
-        if target_hwnd and h_console and fg_hwnd == h_console:
-            cls.bring_to_foreground(target_hwnd)
-            fg_hwnd = user32.GetForegroundWindow() if user32 else None
+        if target_hwnd:
+            # If target window is currently iconic or console is in foreground, bring target to top
+            if cls.is_minimized(target_hwnd) or (h_console and fg_hwnd == h_console):
+                cls.bring_to_foreground(target_hwnd)
+                fg_hwnd = user32.GetForegroundWindow() if user32 else None
 
-        target_rect = cls.get_window_rect(target_hwnd) if target_hwnd else None
+            target_rect = cls.get_window_rect(target_hwnd)
+            if target_rect:
+                if not target_rect.contains(x, y):
+                    return (
+                        False,
+                        f"Click at ({x}, {y}) is outside target window bounds "
+                        f"({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety.",
+                    )
 
-        # Check target window boundary if provided
-        if target_hwnd and target_rect:
-            if not target_rect.contains(x, y):
-                return (
-                    False,
-                    f"Click at ({x}, {y}) is outside target window bounds "
-                    f"({target_rect.left},{target_rect.top} {target_rect.width}x{target_rect.height})! Blocked for safety.",
-                )
+                # Target window contains (x, y) - click is explicitly for Antigravity!
+                # If console window is still foreground / obstructing, minimize it to clear the path
+                if h_console and fg_hwnd == h_console:
+                    cls.minimize_console()
+                    cls.bring_to_foreground(target_hwnd)
 
-            # Check if target_hwnd is in the foreground or directly under the cursor
-            is_target_fg = cls.is_foreground(target_hwnd)
-            is_target_at_pt = False
-            root_at_pt = cls.get_window_at_point(x, y)
-            if root_at_pt and (root_at_pt == target_hwnd):
-                is_target_at_pt = True
-
-            # If target_hwnd is in the foreground (or under cursor) and target_rect contains (x, y):
-            # The click lands safely on Antigravity; DO NOT block on console_rect!
-            if is_target_fg or is_target_at_pt or (h_console is None) or (fg_hwnd is not None and fg_hwnd != h_console):
                 return True, "Click target coordinate valid (target window is foreground)."
 
-        # Check console boundary for self-click prevention
+        # Check console boundary for self-click prevention only when target is not Antigravity
         console_rect = cls.get_console_window_rect()
         if console_rect and console_rect.contains(x, y):
-            # Only block if the console window itself is the foreground window,
-            # or if no target_hwnd was specified.
             if not target_hwnd or cls.is_console_foreground() or (fg_hwnd and fg_hwnd == h_console):
                 return (
                     False,

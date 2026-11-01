@@ -229,24 +229,27 @@ class TestAutoCommander(unittest.TestCase):
             self.assertTrue(valid)
             self.assertIn(target_hwnd, bring_fg_called)
 
-    def test_validate_click_target_blocks_when_console_remains_foreground(self):
+    def test_validate_click_target_minimizes_console_when_active(self):
         target_hwnd = 11111
         console_hwnd = 22222
         target_rect = Rect(0, 0, 1920, 1080)
         console_rect = Rect(32, 32, 1359, 737)
         click_x, click_y = 194, 719
 
+        minimized_calls = []
         with unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
              unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect), \
              unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=target_rect), \
-             unittest.mock.patch.object(AntigravityWindowManager, "bring_to_foreground", return_value=False), \
-             unittest.mock.patch.object(AntigravityWindowManager, "is_foreground", return_value=False), \
+             unittest.mock.patch.object(AntigravityWindowManager, "minimize_console", side_effect=lambda: minimized_calls.append(True) or True), \
+             unittest.mock.patch.object(AntigravityWindowManager, "bring_to_foreground", return_value=True), \
+             unittest.mock.patch.object(AntigravityWindowManager, "is_foreground", return_value=True), \
              unittest.mock.patch.object(AntigravityWindowManager, "is_console_foreground", return_value=True), \
              unittest.mock.patch.object(win32_mod.user32, "GetForegroundWindow", return_value=console_hwnd):
 
             valid, reason = AntigravityWindowManager.validate_click_target(click_x, click_y, target_hwnd=target_hwnd)
-            self.assertFalse(valid)
-            self.assertIn("falls inside console window", reason)
+            self.assertTrue(valid, "Target click inside Antigravity must never be blocked by background/active console!")
+            self.assertIn("target window is foreground", reason)
+            self.assertGreaterEqual(len(minimized_calls), 1, "Console should be minimized to clear path for Antigravity click!")
 
     def test_validate_click_target_blocks_outside_bounds(self):
         target_hwnd = 11111
@@ -259,7 +262,8 @@ class TestAutoCommander(unittest.TestCase):
     def test_validate_click_target_blocks_none_target_inside_console(self):
         console_hwnd = 22222
         console_rect = Rect(0, 0, 800, 600)
-        with unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
+        with unittest.mock.patch.object(AntigravityWindowManager, "find_antigravity_window", return_value=None), \
+             unittest.mock.patch.object(AntigravityWindowManager, "get_console_hwnd", return_value=console_hwnd), \
              unittest.mock.patch.object(AntigravityWindowManager, "get_console_window_rect", return_value=console_rect):
             valid, reason = AntigravityWindowManager.validate_click_target(100, 100, target_hwnd=None)
             self.assertFalse(valid)
@@ -622,7 +626,7 @@ class TestAutoCommander(unittest.TestCase):
 
     def test_step_0_fallback_guarantee_proceeds_to_option1_and_submit(self):
         """Verifies that when modal is not detected after switch, fallback guarantee engages (541, 664) and (1827, 849) without getting stuck."""
-        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=True)
+        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=True, failsafe_enabled=False)
         engine = AutoCommanderEngine(cfg)
         fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
 
@@ -680,7 +684,7 @@ class TestAutoCommander(unittest.TestCase):
 
     def test_step_0_retry_polling_detects_modal_on_subsequent_poll(self):
         """Verifies that retry polling loop detects modal if rendered after initial switch delay."""
-        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=False)
+        cfg = Config(step0_countdown_seconds=0.01, countdown_seconds=0.01, floating_hud_enabled=False, failsafe_enabled=False)
         engine = AutoCommanderEngine(cfg)
         fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
         detected_modal = DetectionResult(x=566, y=664, width=200, height=30, confidence=0.95, source="OCR", label="(Recommended) Push commits")
@@ -946,6 +950,54 @@ class TestDynamicTargetingAndHeight(unittest.TestCase):
              unittest.mock.patch.object(engine.detector.ocr_detector, "scan_decision_modal", return_value=None):
             dismissed = engine._verify_submission_dismissed(opt_result, 1827, 850)
             self.assertTrue(dismissed)
+
+    def test_safety_module_imports_and_parity(self):
+        """Verifies auto_commander.platform.safety module exports and parity."""
+        import auto_commander.platform.safety as safety_mod
+        self.assertTrue(hasattr(safety_mod, "validate_click_target"))
+        self.assertTrue(hasattr(safety_mod, "is_console_foreground"))
+        self.assertTrue(hasattr(safety_mod, "minimize_console"))
+        self.assertTrue(hasattr(safety_mod, "get_console_window_rect"))
+        self.assertTrue(hasattr(safety_mod, "ClickSafetyValidator"))
+
+    def test_option_1_rejects_action_button_labels(self):
+        """Verifies 'Submit', 'Skip', 'Proceed', 'Confirm' are strictly rejected from being Option 1."""
+        for action_label in ("Submit", "Skip", "Proceed", "Confirm", "OK", "Cancel", "पुष्टि करें", "छोड़ें"):
+            is_match, _ = WindowsOcrDetector.is_option_1_match(action_label)
+            self.assertFalse(is_match, f"Action button '{action_label}' must NEVER be matched as Option 1!")
+
+    def test_option_1_targeting_never_targets_x_ge_1200(self):
+        """Verifies Option 1 candidate layout filter rejects x >= 1200 to prevent confusing Submit with Option 1."""
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "Recommended"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        # Test image with (Recommended) text positioned at far right (x >= 1200) simulating a false positive near Submit
+        img = Image.new("RGB", (1920, 1080), color=(30, 30, 46))
+        d = ImageDraw.Draw(img)
+        # Option 1 at x=540
+        d.text((540, 600), "(Recommended) Approve changes", fill=(255, 255, 255))
+        # Submit at x=1820
+        d.text((1820, 800), "Submit", fill=(255, 255, 255))
+
+        pair = detector.scan_decision_modal_on_image(img, offset_x=0, offset_y=0, require_submit=True)
+        self.assertIsNotNone(pair)
+        opt, sub = pair
+        self.assertLess(opt.x, 1200, f"Option 1 must strictly have x < 1200! Got {opt.x}")
+        self.assertGreaterEqual(sub.x, 1200, f"Submit button must strictly have x >= 1200! Got {sub.x}")
+
+    def test_bbox_screen_clamping(self):
+        """Verifies sidebar bbox calculation strictly clamps within screen bounds and avoids OSError."""
+        chat_det = ChatTabDetector(Config())
+        # Large mock rect extending past monitor bounds (e.g. multi-monitor or maximized offset)
+        mock_rect = Rect(x=-8, y=-8, width=2500, height=1400)
+        with unittest.mock.patch.object(AntigravityWindowManager, "get_window_rect", return_value=mock_rect):
+            bbox = chat_det._get_sidebar_bbox(target_hwnd=12345)
+            self.assertIsNotNone(bbox)
+            self.assertGreaterEqual(bbox[0], 0)
+            self.assertGreaterEqual(bbox[1], 0)
+            self.assertGreater(bbox[2], bbox[0])
+            self.assertGreater(bbox[3], bbox[1])
 
 
 if __name__ == "__main__":

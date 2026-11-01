@@ -424,8 +424,10 @@ class AutoCommanderEngine:
             # or text center if opt.x < 550
             # -----------------------------------------------------------------
             step1_cy = max(180, result.y + result.height // 2)
-            if result.x >= 550:
-                step1_cx = max(520, result.x - 24)
+            if result.x >= 1200:
+                step1_cx = 541  # Fallback to calibrated Option 1 radio button X (never confuse with submit button)
+            elif result.x >= 550:
+                step1_cx = max(520, min(1150, result.x - 24))
             else:
                 step1_cx = result.x if result.x >= 520 else result.center[0]
 
@@ -594,11 +596,12 @@ class AutoCommanderEngine:
         except Exception:
             pass
 
-        if retry_modal and retry_modal.y >= 160:
-            retry_opt_cx = max(520, retry_modal.x - 24) if retry_modal.x >= 550 else retry_modal.center[0]
+        if retry_modal and 160 <= retry_modal.y and retry_modal.x < 1200:
+            retry_opt_cx = max(520, min(1150, retry_modal.x - 24)) if retry_modal.x >= 550 else retry_modal.center[0]
             retry_opt_cy = max(200, retry_modal.y + retry_modal.height // 2)
         else:
-            retry_opt_cx = option_result.x - 24 if option_result.x >= 550 else option_result.center[0]
+            base_x = option_result.x if option_result.x < 1200 else 541
+            retry_opt_cx = max(520, min(1150, base_x - 24)) if base_x >= 550 else 541
             retry_opt_cy = max(200, option_result.y + option_result.height // 2)
 
         TerminalDashboard._safe_print(
