@@ -18,6 +18,7 @@ logs/
 # Temp & Ephemeral
 vibe_coding_temp/
 temp_prompt/
+*last_selection_state.json
 
 # System and IDE
 .DS_Store

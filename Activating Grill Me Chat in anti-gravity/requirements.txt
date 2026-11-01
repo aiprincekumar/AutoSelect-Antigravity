@@ -1,0 +1,9 @@
+# Activating Grill Me Chat in Antigravity - Requirements
+# =========================================================
+# Architecture: Zero required external dependencies
+# Uses 100% Python Standard Library (Python 3.10+):
+#   - os, sys, json, time, datetime, pathlib, dataclasses, argparse, logging, ctypes
+
+# Optional packages for enhanced ergonomics (not mandatory):
+# colorama>=0.4.6       # Colored ANSI console output on older Windows cmd
+# pyautogui>=0.9.54      # Optional GUI/keyboard automation fallback
