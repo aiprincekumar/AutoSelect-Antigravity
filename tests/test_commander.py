@@ -526,7 +526,7 @@ class TestAutoCommander(unittest.TestCase):
                     self.assertEqual(res, dummy_uia)
 
     def test_step_0_execution_foregrounds_and_passes_target_hwnd(self):
-        cfg = Config()
+        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=False)
         engine = AutoCommanderEngine(cfg)
         engine.active_hwnd = 12345
 
@@ -551,6 +551,106 @@ class TestAutoCommander(unittest.TestCase):
             mock_glide.assert_called()
             call_kwargs = mock_glide.call_args[1]
             self.assertEqual(call_kwargs.get("target_hwnd"), 12345)
+
+    def test_step_0_countdown_floating_hud_and_initial_pos_initialization(self):
+        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=True)
+        engine = AutoCommanderEngine(cfg)
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+
+        with unittest.mock.patch.object(engine.hud, "show") as mock_hud_show, \
+             unittest.mock.patch.object(engine.hud, "update_step") as mock_hud_step, \
+             unittest.mock.patch.object(engine.hud, "update_countdown") as mock_hud_cnt, \
+             unittest.mock.patch.object(engine, "_get_mouse_position", return_value=(100, 100)), \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True) as mock_glide:
+
+            res = engine._execute_step0_countdown(fake_chat)
+            mock_hud_show.assert_called_with(0.01, "Action Required (?) on Chat Item")
+            mock_hud_step.assert_called()
+            self.assertEqual(engine.initial_mouse_pos, (100, 100))
+            mock_glide.assert_called_once()
+
+    def test_step_0_failsafe_mouse_interruption(self):
+        cfg = Config(step0_countdown_seconds=2.0, mouse_interruption_threshold_px=15, floating_hud_enabled=True)
+        engine = AutoCommanderEngine(cfg)
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+
+        with unittest.mock.patch.object(engine.hud, "show"), \
+             unittest.mock.patch.object(engine.hud, "flash_cancelled") as mock_hud_cancel, \
+             unittest.mock.patch.object(engine, "_get_mouse_position", side_effect=[(100, 100), (150, 150), (150, 150), (150, 150)]), \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click") as mock_glide:
+
+            res = engine._execute_step0_countdown(fake_chat)
+            self.assertFalse(res, "Step 0 countdown must abort on human mouse movement!")
+            self.assertEqual(engine.current_state, "COOLDOWN", "Must enter COOLDOWN on fail-safe abort!")
+            mock_hud_cancel.assert_called_once()
+            mock_glide.assert_not_called()
+
+    def test_step_0_keyboard_abort(self):
+        cfg = Config(step0_countdown_seconds=2.0, floating_hud_enabled=True)
+        engine = AutoCommanderEngine(cfg)
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+
+        def trigger_user_abort(*args, **kwargs):
+            engine.user_interrupted = True
+
+        with unittest.mock.patch.object(engine.hud, "show"), \
+             unittest.mock.patch.object(engine.hud, "update_countdown", side_effect=trigger_user_abort), \
+             unittest.mock.patch.object(engine.hud, "flash_cancelled") as mock_hud_cancel, \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click") as mock_glide:
+
+            res = engine._execute_step0_countdown(fake_chat)
+            self.assertFalse(res, "Step 0 must abort immediately on user_interrupted keyboard event!")
+            self.assertEqual(engine.current_state, "COOLDOWN", "Must enter COOLDOWN on keyboard abort!")
+            mock_hud_cancel.assert_called_once()
+            mock_glide.assert_not_called()
+
+    def test_step_0_failure_enters_cooldown(self):
+        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=True)
+        engine = AutoCommanderEngine(cfg)
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+
+        with unittest.mock.patch.object(engine.hud, "show"), \
+             unittest.mock.patch.object(engine.hud, "flash_cancelled") as mock_hud_cancel, \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=False) as mock_glide:
+
+            res = engine._execute_step0_countdown(fake_chat)
+            self.assertFalse(res)
+            self.assertEqual(engine.current_state, "COOLDOWN", "Must enter COOLDOWN on switch failure!")
+            mock_hud_cancel.assert_called_once()
+
+    def test_step_0_success_no_modal_enters_cooldown(self):
+        cfg = Config(step0_countdown_seconds=0.01, floating_hud_enabled=True)
+        engine = AutoCommanderEngine(cfg)
+        fake_chat = DetectionResult(x=194, y=719, width=15, height=15, confidence=0.95, source="ChatTab", label="Action Required (?)")
+
+        with unittest.mock.patch.object(engine.hud, "show"), \
+             unittest.mock.patch.object(engine.hud, "close") as mock_hud_close, \
+             unittest.mock.patch.object(engine.detector, "detect", return_value=None), \
+             unittest.mock.patch.object(engine.mouse_ctrl, "glide_and_click", return_value=True):
+
+            res = engine._execute_step0_countdown(fake_chat)
+            self.assertFalse(res)
+            self.assertEqual(engine.current_state, "COOLDOWN", "Must enter COOLDOWN when no modal found after switch!")
+            mock_hud_close.assert_called_once()
+
+    def test_check_mouse_interrupted_with_target_pos_tolerance(self):
+        cfg = Config(mouse_interruption_threshold_px=15)
+        engine = AutoCommanderEngine(cfg)
+        engine.initial_mouse_pos = (100, 100)
+
+        # In resting countdown state: mouse moved from (100, 100) to (120, 120) -> dist ~28px > 15px -> True
+        with unittest.mock.patch.object(engine, "_get_mouse_position", return_value=(120, 120)):
+            self.assertTrue(engine._check_mouse_interrupted())
+
+        # When gliding to a target (current_target_pos is set):
+        engine.current_target_pos = (500, 600)
+        # Mouse landed at (501, 602) -> dist ~2.2px <= 25px -> False (NOT interrupted)
+        with unittest.mock.patch.object(engine, "_get_mouse_position", return_value=(501, 602)):
+            self.assertFalse(engine._check_mouse_interrupted(), "Cursor landing on target within tolerance must NOT trigger fail-safe!")
+
+        # Mouse snatched by user during glide to (800, 200) -> dist ~300px > 25px -> True (interrupted)
+        with unittest.mock.patch.object(engine, "_get_mouse_position", return_value=(800, 200)):
+            self.assertTrue(engine._check_mouse_interrupted(), "Cursor diverted away from target must trigger fail-safe!")
 
 
 if __name__ == "__main__":

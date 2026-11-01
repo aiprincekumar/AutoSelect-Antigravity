@@ -22,6 +22,27 @@ class TerminalDashboard:
     CLEAR_LINE = "\033[2K\r"
 
     @classmethod
+    def _safe_write(cls, text: str):
+        try:
+            sys.stdout.write(text)
+            sys.stdout.flush()
+        except UnicodeEncodeError:
+            enc = sys.stdout.encoding or "utf-8"
+            ascii_text = text.replace("█", "=").replace("░", "-")
+            safe_text = ascii_text.encode(enc, errors="replace").decode(enc, errors="replace")
+            sys.stdout.write(safe_text)
+            sys.stdout.flush()
+
+    @classmethod
+    def _safe_print(cls, text: str):
+        try:
+            print(text)
+        except UnicodeEncodeError:
+            enc = sys.stdout.encoding or "utf-8"
+            safe_text = text.encode(enc, errors="replace").decode(enc, errors="replace")
+            print(safe_text)
+
+    @classmethod
     def print_banner(cls, config: Config):
         ocr_status = "WinRT OCR Active" if WINSDK_OCR_AVAILABLE else "OCR Disabled/Not Installed"
         banner = f"""
@@ -35,53 +56,46 @@ class TerminalDashboard:
  {cls.YELLOW}● Emergency Abort:{cls.RESET} Shake/Move Mouse, Press 'Q' or ESC, or Move to Screen Corner
 ────────────────────────────────────────────────────────────────────────────────
 """
-        try:
-            print(banner)
-        except UnicodeEncodeError:
-            enc = sys.stdout.encoding or "utf-8"
-            print(banner.encode(enc, errors="replace").decode(enc, errors="replace"))
+        cls._safe_print(banner)
 
     @classmethod
     def render_scanning(cls, tick: int):
         dots = "." * ((tick % 3) + 1)
         dots_padded = dots.ljust(4)
-        sys.stdout.write(f"{cls.CLEAR_LINE}{cls.CYAN}[SCANNING]{cls.RESET} Monitoring screen for Antigravity decision modals{dots_padded}")
-        sys.stdout.flush()
+        cls._safe_write(f"{cls.CLEAR_LINE}{cls.CYAN}[SCANNING]{cls.RESET} Monitoring screen for Antigravity decision modals{dots_padded}")
 
     @classmethod
     def render_detected(cls, result: DetectionResult):
         cx, cy = result.center
         clean_label = result.label.replace("(Recommended)", "[Recommended Option]").replace("Recommended", "[Recommended Option]")
-        print(f"\n{cls.GREEN}{cls.BOLD}[MODAL DETECTED]{cls.RESET} Engine: {cls.MAGENTA}{result.source}{cls.RESET} | Target: '{clean_label}' at ({cx}, {cy})")
+        cls._safe_print(f"\n{cls.GREEN}{cls.BOLD}[MODAL DETECTED]{cls.RESET} Engine: {cls.MAGENTA}{result.source}{cls.RESET} | Target: '{clean_label}' at ({cx}, {cy})")
 
     @classmethod
     def render_countdown(cls, remaining: float, total: float, result: DetectionResult):
         cx, cy = result.center
         bar_length = 30
-        pct = max(0.0, min(1.0, remaining / total))
+        pct = max(0.0, min(1.0, remaining / total)) if total > 0 else 0.0
         filled = int(bar_length * pct)
         bar = "█" * filled + "░" * (bar_length - filled)
-        color = cls.GREEN if remaining > 6 else (cls.YELLOW if remaining > 3 else cls.RED)
-        sys.stdout.write(
+        color = cls.GREEN if remaining > (total * 0.6) else (cls.YELLOW if remaining > (total * 0.3) else cls.RED)
+        cls._safe_write(
             f"{cls.CLEAR_LINE}{color}[COUNTDOWN]{cls.RESET} [{bar}] {cls.BOLD}{remaining:4.1f}s{cls.RESET} remaining | Target: ({cx}, {cy}) | {cls.YELLOW}Move mouse to cancel{cls.RESET}"
         )
-        sys.stdout.flush()
 
     @classmethod
     def render_interrupted(cls, distance: float, threshold: float):
-        print(f"\n{cls.RED}{cls.BOLD}[FAIL-SAFE TRIGGERED]{cls.RESET} Human mouse movement detected ({distance:.1f}px > {threshold}px)!")
-        print(f"{cls.YELLOW}➜ Yielded full control back to developer. Entering cooldown suppression.{cls.RESET}\n")
+        cls._safe_print(f"\n{cls.RED}{cls.BOLD}[FAIL-SAFE TRIGGERED]{cls.RESET} Human mouse movement detected ({distance:.1f}px > {threshold}px)!")
+        cls._safe_print(f"{cls.YELLOW}➜ Yielded full control back to developer. Entering cooldown suppression.{cls.RESET}\n")
 
     @classmethod
     def render_clicking(cls, step: int, total_steps: int, label: str, x: int, y: int):
         clean_label = label.replace("(Recommended)", "[Recommended Option]").replace("Recommended", "[Recommended Option]")
-        print(f"\n{cls.CYAN}{cls.BOLD}[ACTION STEP {step}/{total_steps}]{cls.RESET} Gliding cursor smoothly to {clean_label} at ({x}, {y}) and clicking...")
+        cls._safe_print(f"\n{cls.CYAN}{cls.BOLD}[ACTION STEP {step}/{total_steps}]{cls.RESET} Gliding cursor smoothly to {clean_label} at ({x}, {y}) and clicking...")
 
     @classmethod
     def render_completed(cls):
-        print(f"{cls.GREEN}{cls.BOLD}[SUCCESS]{cls.RESET} 2-Step Flow complete! Option selected & form submitted. Agent unblocked.\n")
+        cls._safe_print(f"{cls.GREEN}{cls.BOLD}[SUCCESS]{cls.RESET} 2-Step Flow complete! Option selected & form submitted. Agent unblocked.\n")
 
     @classmethod
     def render_cooldown(cls, seconds_left: int):
-        sys.stdout.write(f"{cls.CLEAR_LINE}{cls.YELLOW}[COOLDOWN]{cls.RESET} Resuming scan in {seconds_left}s...")
-        sys.stdout.flush()
+        cls._safe_write(f"{cls.CLEAR_LINE}{cls.YELLOW}[COOLDOWN]{cls.RESET} Resuming scan in {seconds_left}s...")

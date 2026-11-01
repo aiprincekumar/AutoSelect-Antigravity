@@ -13,6 +13,7 @@ from typing import Tuple
 class Config:
     """Runtime configuration settings for AutoSelect-Commander."""
     countdown_seconds: int = 10
+    step0_countdown_seconds: float = 5.0
     check_interval_ms: int = 1000
     mouse_interruption_threshold_px: int = 15
     smooth_glide_duration_s: float = 0.8
@@ -63,6 +64,7 @@ class Config:
                     data = json.load(f)
                     return cls(
                         countdown_seconds=int(data.get("countdown_seconds", 10)),
+                        step0_countdown_seconds=float(data.get("step0_countdown_seconds", 5.0)),
                         check_interval_ms=int(data.get("check_interval_ms", 1000)),
                         mouse_interruption_threshold_px=int(data.get("mouse_interruption_threshold_px", 15)),
                         smooth_glide_duration_s=float(data.get("smooth_glide_duration_s", 0.8)),
@@ -87,6 +89,7 @@ class Config:
         """Save current configuration to JSON file."""
         data = {
             "countdown_seconds": self.countdown_seconds,
+            "step0_countdown_seconds": self.step0_countdown_seconds,
             "check_interval_ms": self.check_interval_ms,
             "mouse_interruption_threshold_px": self.mouse_interruption_threshold_px,
             "smooth_glide_duration_s": self.smooth_glide_duration_s,

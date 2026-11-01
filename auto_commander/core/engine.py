@@ -42,8 +42,9 @@ class AutoCommanderEngine:
         )
         self.hud = FloatingHUD(alpha=config.floating_hud_alpha)
         self.is_running = True
-        self.current_state = "SCANNING"  # SCANNING, COUNTDOWN, COOLDOWN, SHUTDOWN
+        self.current_state = "SCANNING"  # SCANNING, COUNTDOWN, COUNTDOWN_STEP0, COOLDOWN, SHUTDOWN
         self.initial_mouse_pos = (0, 0)
+        self.current_target_pos = None
         self.user_interrupted = False
         self.active_hwnd = None
 
@@ -67,7 +68,7 @@ class AutoCommanderEngine:
         def on_press(key):
             try:
                 if key == keyboard.Key.esc or (hasattr(key, "char") and key.char in ("q", "Q")):
-                    if self.current_state == "COUNTDOWN":
+                    if self.current_state in ("COUNTDOWN", "COUNTDOWN_STEP0"):
                         self.user_interrupted = True
                     else:
                         print("\n\033[93m[EXIT] 'Q' or ESC pressed. Stopping AutoSelect-Commander...\033[0m")
@@ -94,12 +95,30 @@ class AutoCommanderEngine:
         return (0, 0)
 
     def _check_mouse_interrupted(self) -> bool:
-        """Calculates Euclidean distance of mouse movement from countdown snapshot."""
-        curr_x, curr_y = self._get_mouse_position()
-        init_x, init_y = self.initial_mouse_pos
-        dist = math.hypot(curr_x - init_x, curr_y - init_y)
-        if dist > self.config.mouse_interruption_threshold_px:
+        """
+        Calculates Euclidean distance of mouse movement from reference snapshot.
+        - When user pressed ESC/Q: returns True immediately.
+        - When gliding to a target (current_target_pos is set): checks if cursor
+          arrived at target (with tolerance). If cursor diverted > threshold, returns True.
+        - In countdown or resting state: checks if mouse moved from initial resting position (> threshold).
+        """
+        if self.user_interrupted:
             return True
+        if not self.config.failsafe_enabled:
+            return False
+
+        curr_x, curr_y = self._get_mouse_position()
+
+        target_pos = getattr(self, "current_target_pos", None)
+        if target_pos is not None:
+            dist = math.hypot(curr_x - target_pos[0], curr_y - target_pos[1])
+            # Tolerance accounts for random offset (+-2px) and slight boundary adjustments
+            return dist > max(self.config.mouse_interruption_threshold_px, 25)
+
+        if self.initial_mouse_pos:
+            dist = math.hypot(curr_x - self.initial_mouse_pos[0], curr_y - self.initial_mouse_pos[1])
+            if dist > self.config.mouse_interruption_threshold_px:
+                return True
         return False
 
     def run(self):
@@ -142,39 +161,9 @@ class AutoCommanderEngine:
                     # Step 0: If no active decision modal in view, scan for a chat tab/sidebar item with (?) badge
                     pending_chat = self.detector.detect_pending_chat(target_hwnd=self.active_hwnd)
                     if pending_chat:
-                        chat_cx, chat_cy = pending_chat.center
-                        print(
-                            f"\n{TerminalDashboard.CYAN}[STEP 0]{TerminalDashboard.RESET} "
-                            f"Action required (?) detected on chat item at ({chat_cx}, {chat_cy})! Switching conversation..."
-                        )
-
-                        # Ensure Antigravity is in the foreground before gliding to the chat tab
-                        if not self.active_hwnd:
-                            self.active_hwnd = AntigravityWindowManager.find_antigravity_window(
-                                title_filter=self.config.window_title_filter
-                            )
-                        if self.active_hwnd:
-                            AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
-
-                        # Glide to chat item and firm click to bring it into view
-                        switched = self.mouse_ctrl.glide_and_click(
-                            chat_cx,
-                            chat_cy,
-                            check_interrupted_fn=self._check_mouse_interrupted,
-                            target_hwnd=self.active_hwnd,
-                        )
-
-                        if switched:
-                            # Allow chat view to render
-                            time.sleep(0.4)
-                            # Ensure Antigravity is in foreground for subsequent modal detection
-                            if self.active_hwnd:
-                                AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
-                            # Re-scan for newly exposed decision modal
-                            result = self.detector.detect(target_hwnd=self.active_hwnd)
-                            if result:
-                                TerminalDashboard.render_detected(result)
-                                self._execute_countdown(result)
+                        self._execute_step0_countdown(pending_chat)
+                        time.sleep(self.config.check_interval_ms / 1000.0)
+                        continue
 
                     time.sleep(self.config.check_interval_ms / 1000.0)
 
@@ -198,10 +187,148 @@ class AutoCommanderEngine:
             except Exception:
                 time.sleep(1.0)
 
+    def _execute_step0_countdown(self, pending_chat: DetectionResult) -> bool:
+        """
+        Step 0: Visual countdown with Floating HUD before switching to pending conversation.
+        Gives user full control (50Hz fail-safe).
+        Returns True if chat was successfully switched and modal handled, False otherwise.
+        """
+        self.current_state = "COUNTDOWN_STEP0"
+        self.user_interrupted = False
+        self.current_target_pos = None
+        self.initial_mouse_pos = self._get_mouse_position()
+
+        step0_seconds = float(getattr(self.config, "step0_countdown_seconds", 5.0))
+        start_time = time.time()
+        poll_interval = 0.05  # 50 Hz fail-safe polling
+
+        chat_cx, chat_cy = pending_chat.center
+        # Ensure click point lands on the chat row/item (if small badge, offset slightly left)
+        if pending_chat.width < 60:
+            chat_cx = max(30, chat_cx - 40)
+
+        print(
+            f"\n{TerminalDashboard.CYAN}[STEP 0 DETECTED]{TerminalDashboard.RESET} "
+            f"Action required (?) detected on chat item at ({chat_cx}, {chat_cy})! Starting {step0_seconds:.1f}s countdown..."
+        )
+
+        # Show Floating On-Screen HUD Overlay for Step 0
+        if self.config.floating_hud_enabled:
+            self.hud.show(step0_seconds, "Action Required (?) on Chat Item")
+            self.hud.update_step("⏱️ Step 0: Switching to Pending Chat...", "Move mouse to cancel", "#89DCEB")
+
+        # Play sound alert if enabled
+        if self.config.sound_notification:
+            try:
+                import winsound
+                winsound.MessageBeep(winsound.MB_ICONASTERISK)
+            except Exception:
+                pass
+
+        while self.is_running and not self.user_interrupted:
+            elapsed = time.time() - start_time
+            remaining = step0_seconds - elapsed
+
+            # Update Floating HUD
+            if self.config.floating_hud_enabled:
+                self.hud.update_countdown(remaining)
+                self.hud.update_step(
+                    "⏱️ Step 0: Switching to Pending Chat...",
+                    f"[{remaining:4.1f}s] Move mouse to cancel switch",
+                    "#89DCEB",
+                )
+
+            # Check if user moved physical mouse (50Hz)
+            if self._check_mouse_interrupted():
+                curr_x, curr_y = self._get_mouse_position()
+                dist = math.hypot(curr_x - self.initial_mouse_pos[0], curr_y - self.initial_mouse_pos[1])
+                TerminalDashboard.render_interrupted(dist, self.config.mouse_interruption_threshold_px)
+                if self.config.floating_hud_enabled:
+                    self.hud.flash_cancelled()
+                self.current_state = "COOLDOWN"
+                return False
+
+            # Check if user requested keyboard abort
+            if self.user_interrupted:
+                print("\n\033[93m[USER ABORT] Step 0 countdown cancelled via keyboard.\033[0m")
+                if self.config.floating_hud_enabled:
+                    self.hud.flash_cancelled()
+                self.current_state = "COOLDOWN"
+                return False
+
+            # Countdown reached 0 -> Proceed to glide and click
+            if remaining <= 0:
+                break
+
+            TerminalDashboard.render_countdown(remaining, step0_seconds, pending_chat)
+            time.sleep(poll_interval)
+
+        if not self.is_running or self.user_interrupted:
+            self.current_state = "COOLDOWN"
+            return False
+
+        # ONLY when countdown reaches 0s:
+        # Refresh self.initial_mouse_pos right before glide
+        self.initial_mouse_pos = self._get_mouse_position()
+
+        # Ensure Antigravity is in foreground before gliding
+        if not self.active_hwnd:
+            self.active_hwnd = AntigravityWindowManager.find_antigravity_window(
+                title_filter=self.config.window_title_filter
+            )
+        if self.active_hwnd:
+            AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
+
+        TerminalDashboard.render_clicking(0, 2, "Pending Chat (?) Row", chat_cx, chat_cy)
+        if self.config.floating_hud_enabled:
+            self.hud.update_step("⏱️ Step 0: Switching to Pending Chat...", "Gliding cursor to conversation...", "#89DCEB")
+
+        self.current_target_pos = (chat_cx, chat_cy)
+        switched = self.mouse_ctrl.glide_and_click(
+            chat_cx,
+            chat_cy,
+            check_interrupted_fn=self._check_mouse_interrupted,
+            target_hwnd=self.active_hwnd,
+        )
+        self.current_target_pos = None
+
+        if not switched:
+            print("\033[93m[NOTICE] Step 0 cancelled due to motion or boundary condition.\033[0m")
+            if self.config.floating_hud_enabled:
+                self.hud.flash_cancelled()
+            self.current_state = "COOLDOWN"
+            return False
+
+        TerminalDashboard._safe_print(f"{TerminalDashboard.GREEN}[OK] Step 0 Complete: Switched to Pending Chat.{TerminalDashboard.RESET}")
+
+        # Dwell 0.5s for the conversation to render
+        time.sleep(0.5)
+
+        # Ensure Antigravity is in foreground for subsequent modal detection
+        if self.active_hwnd:
+            AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
+
+        # Re-scan for newly exposed decision modal
+        result = self.detector.detect(target_hwnd=self.active_hwnd)
+        if result:
+            TerminalDashboard.render_detected(result)
+            self._execute_countdown(result)
+            return True
+        else:
+            TerminalDashboard._safe_print(
+                f"{TerminalDashboard.YELLOW}[STEP 0]{TerminalDashboard.RESET} "
+                f"Switched chat but no decision modal detected yet. Entering cooldown..."
+            )
+            if self.config.floating_hud_enabled:
+                self.hud.close()
+            self.current_state = "COOLDOWN"
+            return False
+
     def _execute_countdown(self, result: DetectionResult):
         """Runs the visual countdown with live on-screen floating HUD and 50Hz mouse fail-safe."""
         self.current_state = "COUNTDOWN"
         self.user_interrupted = False
+        self.current_target_pos = None
         self.initial_mouse_pos = self._get_mouse_position()
 
         total_seconds = float(self.config.countdown_seconds)
@@ -260,6 +387,9 @@ class AutoCommanderEngine:
             target_cx, target_cy = result.center
             TerminalDashboard.render_clicking(1, 2, f"Option 1 ({result.label})", target_cx, target_cy)
 
+            # Refresh initial mouse position right before glide
+            self.initial_mouse_pos = self._get_mouse_position()
+
             # Ensure Antigravity is in the foreground before clicking Option 1
             if self.active_hwnd:
                 AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
@@ -267,12 +397,14 @@ class AutoCommanderEngine:
             if self.config.floating_hud_enabled:
                 self.hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding to (Recommended) option...", "#89B4FA")
 
+            self.current_target_pos = (target_cx, target_cy)
             success_step1 = self.mouse_ctrl.glide_and_click(
                 target_cx,
                 target_cy,
                 check_interrupted_fn=self._check_mouse_interrupted,
                 target_hwnd=self.active_hwnd,
             )
+            self.current_target_pos = None
 
             if not success_step1:
                 print("\033[93m[NOTICE] Step 1 cancelled due to motion or boundary condition.\033[0m")
@@ -281,7 +413,7 @@ class AutoCommanderEngine:
                 self.current_state = "COOLDOWN"
                 return
 
-            print(f"{TerminalDashboard.GREEN}✓ Step 1 Complete: Option 1 Selected.{TerminalDashboard.RESET}")
+            TerminalDashboard._safe_print(f"{TerminalDashboard.GREEN}[OK] Step 1 Complete: Option 1 Selected.{TerminalDashboard.RESET}")
             time.sleep(0.35)
 
             # Step 2: Detect and click Submit button
@@ -290,6 +422,9 @@ class AutoCommanderEngine:
                 sub_cx, sub_cy = submit_result.center
                 TerminalDashboard.render_clicking(2, 2, "Submit button", sub_cx, sub_cy)
 
+                # Refresh initial mouse position right before glide
+                self.initial_mouse_pos = self._get_mouse_position()
+
                 # Ensure Antigravity is in the foreground before clicking Submit button
                 if self.active_hwnd:
                     AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
@@ -297,12 +432,14 @@ class AutoCommanderEngine:
                 if self.config.floating_hud_enabled:
                     self.hud.update_step("⏱️ Step 2/2: Confirming Submission...", "Gliding to Submit button...", "#A6E3A1")
 
+                self.current_target_pos = (sub_cx, sub_cy)
                 success_step2 = self.mouse_ctrl.glide_and_click(
                     sub_cx,
                     sub_cy,
                     check_interrupted_fn=self._check_mouse_interrupted,
                     target_hwnd=self.active_hwnd,
                 )
+                self.current_target_pos = None
 
                 if success_step2:
                     TerminalDashboard.render_completed()

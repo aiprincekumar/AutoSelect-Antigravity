@@ -86,9 +86,9 @@ class FloatingHUD:
             filled = int(bar_len * pct)
             bar = "█" * filled + "░" * (bar_len - filled)
 
-            if remaining > 6.0:
+            if remaining > (self.total_seconds * 0.6):
                 color = "#A6E3A1"  # Mint Green
-            elif remaining > 3.0:
+            elif remaining > (self.total_seconds * 0.3):
                 color = "#F9E2AF"  # Warm Yellow
             else:
                 color = "#F38BA8"  # Soft Red
