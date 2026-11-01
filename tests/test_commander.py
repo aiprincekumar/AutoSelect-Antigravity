@@ -880,6 +880,73 @@ class TestDynamicTargetingAndHeight(unittest.TestCase):
             mock_cancel.assert_called_once()
             self.assertEqual(engine.current_state, "COOLDOWN")
 
+    def test_floating_hud_rect_and_sanitization(self):
+        """
+        Tests that FloatingHUD correctly manages HUD rect tracking and sanitizes
+        labels so trigger words like (Recommended) or (अनुशंसित) never appear on HUD.
+        """
+        hud = FloatingHUD(alpha=0.92)
+        self.assertIsNone(hud.get_hud_rect())
+        self.assertIsNone(FloatingHUD.get_active_hud_rect())
+
+        # Test text sanitization
+        self.assertEqual(FloatingHUD._sanitize_text("(Recommended) Option 1"), "Option 1")
+        self.assertEqual(FloatingHUD._sanitize_text("[Recommended] Option 1"), "Option 1")
+        self.assertEqual(FloatingHUD._sanitize_text("(अनुशंसित) गिटहब"), "Option 1 गिटहब")
+        self.assertEqual(FloatingHUD._sanitize_text("Auto-Selecting: (Recommended) Option 1"), "Auto-Selecting: Option 1")
+
+        # Simulate show()
+        hud.is_visible = True
+        hud._rect = Rect(x=650, y=20, width=620, height=58)
+        FloatingHUD._active_instance = hud
+        FloatingHUD._active_rect = hud._rect
+
+        self.assertIsNotNone(hud.get_hud_rect())
+        self.assertEqual(hud.get_hud_rect().y, 20)
+        self.assertEqual(FloatingHUD.get_active_hud_rect().width, 620)
+
+        # Simulate close()
+        hud.close()
+        self.assertFalse(hud.is_visible)
+        self.assertIsNone(hud.get_hud_rect())
+        self.assertIsNone(FloatingHUD.get_active_hud_rect())
+
+    def test_ocr_hud_masking_and_y_filter(self):
+        """
+        Tests that WindowsOcrDetector masks out the Floating HUD region and
+        rejects any candidate inside HUD or at y < 160 on full-size frames.
+        """
+        detector = WindowsOcrDetector(target_keywords=("(Recommended)", "Recommended"))
+        if not detector.is_available():
+            self.skipTest("WinSDK OCR not available on this platform/session.")
+
+        hud_rect = Rect(x=200, y=20, width=600, height=60)
+
+        # Image simulating full screen with text inside HUD area (y=35)
+        full_img = Image.new("RGB", (1200, 800), color=(30, 30, 46))
+        d = ImageDraw.Draw(full_img)
+        d.text((250, 35), "AutoSelect: (Recommended) Option 1", fill=(166, 227, 161))
+
+        # With hud_rect masked or with y < 160 filter, this must be rejected!
+        res = detector.scan_image(full_img, offset_x=0, offset_y=0, hud_rect=hud_rect, mask_hud=True)
+        self.assertIsNone(res, "OCR should never detect HUD overlay at top of screen as target!")
+
+    def test_verify_submission_dismissed_when_elements_gone(self):
+        """
+        Tests that _verify_submission_dismissed returns True when the modal
+        elements have disappeared from screen.
+        """
+        cfg = Config(countdown_seconds=0.01, floating_hud_enabled=False)
+        engine = AutoCommanderEngine(cfg)
+
+        opt_result = DetectionResult(x=565, y=700, width=150, height=25, confidence=0.99, source="WindowsOcr", label="(Recommended)")
+
+        # When active blue submit and OCR modal are not found, returns True
+        with unittest.mock.patch.object(engine.detector.vision_detector, "detect_active_blue_submit_button", return_value=None), \
+             unittest.mock.patch.object(engine.detector.ocr_detector, "scan_decision_modal", return_value=None):
+            dismissed = engine._verify_submission_dismissed(opt_result, 1827, 850)
+            self.assertTrue(dismissed)
+
 
 if __name__ == "__main__":
     unittest.main()

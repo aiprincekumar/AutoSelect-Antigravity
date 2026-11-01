@@ -302,6 +302,10 @@ class AutoCommanderEngine:
 
         TerminalDashboard._safe_print(f"{TerminalDashboard.GREEN}[OK] Step 0 Complete: Switched to Pending Chat.{TerminalDashboard.RESET}")
 
+        # Close Step 0 HUD so no stale HUD overlay lingers during modal detection
+        if self.config.floating_hud_enabled:
+            self.hud.close()
+
         # Ensure Antigravity is in foreground for subsequent modal detection
         if self.active_hwnd:
             AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
@@ -419,7 +423,7 @@ class AutoCommanderEngine:
             # Target X: target_x = max(520, opt.x - 24) (the radio button circle right in front of Option 1)
             # or text center if opt.x < 550
             # -----------------------------------------------------------------
-            step1_cy = result.y + result.height // 2
+            step1_cy = max(180, result.y + result.height // 2)
             if result.x >= 550:
                 step1_cx = max(520, result.x - 24)
             else:
@@ -435,7 +439,7 @@ class AutoCommanderEngine:
                 AntigravityWindowManager.bring_to_foreground(self.active_hwnd)
 
             if self.config.floating_hud_enabled:
-                self.hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding to (Recommended) option in work area...", "#89B4FA")
+                self.hud.update_step("⏱️ Step 1/2: Auto-Selecting Option 1...", "Gliding to Option 1 in work area...", "#89B4FA")
 
             self.current_target_pos = (step1_cx, step1_cy)
             success_step1 = self.mouse_ctrl.glide_and_click(
@@ -496,8 +500,8 @@ class AutoCommanderEngine:
             self.initial_mouse_pos = self._get_mouse_position()
 
             if success_step2:
-                # Step 4: Verification of Submission (Eliminates False Success)
-                is_verified = self._verify_submission(result, sub_cx, sub_cy)
+                # Step 4: Strict Post-Submit Verification (Eliminates False Success)
+                is_verified = self._verify_submission_dismissed(result, sub_cx, sub_cy)
                 if is_verified:
                     TerminalDashboard.render_completed()
                     if self.config.floating_hud_enabled:
@@ -511,7 +515,7 @@ class AutoCommanderEngine:
                     self.current_state = "COOLDOWN"
                 else:
                     TerminalDashboard._safe_print(
-                        f"{TerminalDashboard.YELLOW}[UNCONFIRMED] Decision modal still active after Submit click. "
+                        f"{TerminalDashboard.YELLOW}[UNVERIFIED] Modal card is still present on screen; click did not dismiss the card. "
                         f"Avoiding false success. Entering cooldown to re-evaluate.{TerminalDashboard.RESET}"
                     )
                     if self.config.floating_hud_enabled:
@@ -523,23 +527,29 @@ class AutoCommanderEngine:
                     self.hud.flash_cancelled()
                 self.current_state = "COOLDOWN"
 
-    def _verify_submission(self, option_result: DetectionResult, submit_cx: int, submit_cy: int) -> bool:
+    def _verify_submission_dismissed(self, option_result: DetectionResult, submit_cx: int, submit_cy: int) -> bool:
         """
-        Verifies that the decision modal actually closed or submitted after clicking Submit.
-        Eliminates false success: confirms that active blue Submit button and Option 1 have disappeared.
-        Polls for up to 1.2s. If still visible, attempts one direct re-click on the confirmed Submit button.
+        Strict Post-Submit Verification:
+        Verifies that clicking Submit actually dismissed the decision modal card.
+        Confirms whether the action bar (Submit/Skip buttons) and Option 1 have disappeared from screen.
+        If still visible after polling (0.8s - 1.2s):
+          - Logs [UNVERIFIED] Modal card is still present on screen; click did not dismiss the card.
+          - Performs a single retry: re-locates live Option 1 radio button in chat area (y >= 200),
+            firm click, waits 0.35s, clicks active Submit button, and re-verifies.
+        Only returns True if modal is verified dismissed.
         """
-        time.sleep(0.2)
+        time.sleep(0.8)
         verify_start = time.time()
         verify_timeout = 1.2
         poll_interval = 0.25
 
+        card_dismissed = False
         while time.time() - verify_start < verify_timeout and self.is_running:
             still_active_blue = False
             if hasattr(self.detector, "vision_detector") and self.detector.vision_detector:
                 try:
                     btn = self.detector.vision_detector.detect_active_blue_submit_button(
-                        min_y=max(0, option_result.y - 50)
+                        min_y=max(160, option_result.y - 50)
                     )
                     if btn and abs(btn.center[0] - submit_cx) < 150 and abs(btn.center[1] - submit_cy) < 100:
                         still_active_blue = True
@@ -560,29 +570,97 @@ class AutoCommanderEngine:
                 pass
 
             if not still_active_blue and not still_modal:
-                return True
+                card_dismissed = True
+                break
 
             time.sleep(poll_interval)
 
-        # If modal is STILL visible after timeout, attempt one re-click
+        if card_dismissed:
+            return True
+
+        # Modal is still present! Do NOT announce success.
         TerminalDashboard._safe_print(
-            f"{TerminalDashboard.YELLOW}[VERIFY RETRY] Modal still active; retrying Submit click at ({submit_cx}, {submit_cy})...{TerminalDashboard.RESET}"
+            f"{TerminalDashboard.YELLOW}[UNVERIFIED] Modal card is still present on screen; click did not dismiss the card.{TerminalDashboard.RESET}"
+        )
+
+        if not self.is_running or self._check_mouse_interrupted():
+            return False
+
+        # Single Retry:
+        # Locate the live Option 1 radio button in the chat area (y >= 200)
+        retry_modal = None
+        try:
+            retry_modal = self.detector.detect(target_hwnd=self.active_hwnd)
+        except Exception:
+            pass
+
+        if retry_modal and retry_modal.y >= 160:
+            retry_opt_cx = max(520, retry_modal.x - 24) if retry_modal.x >= 550 else retry_modal.center[0]
+            retry_opt_cy = max(200, retry_modal.y + retry_modal.height // 2)
+        else:
+            retry_opt_cx = option_result.x - 24 if option_result.x >= 550 else option_result.center[0]
+            retry_opt_cy = max(200, option_result.y + option_result.height // 2)
+
+        TerminalDashboard._safe_print(
+            f"{TerminalDashboard.CYAN}[RETRY] Re-clicking Option 1 at ({retry_opt_cx}, {retry_opt_cy})...{TerminalDashboard.RESET}"
         )
         self.mouse_ctrl.glide_and_click(
-            submit_cx,
-            submit_cy,
+            retry_opt_cx,
+            retry_opt_cy,
             check_interrupted_fn=self._check_mouse_interrupted,
             target_hwnd=self.active_hwnd,
         )
-        time.sleep(0.3)
+        time.sleep(0.35)
 
-        # Final check
+        if not self.is_running or self._check_mouse_interrupted():
+            return False
+
+        # Click active Submit button
+        retry_sub = self.detector.detect_submit_button(option_result=retry_modal or option_result)
+        rsub_cx, rsub_cy = retry_sub.center if retry_sub else (submit_cx, submit_cy)
+        TerminalDashboard._safe_print(
+            f"{TerminalDashboard.CYAN}[RETRY] Re-clicking Submit button at ({rsub_cx}, {rsub_cy})...{TerminalDashboard.RESET}"
+        )
+        self.mouse_ctrl.glide_and_click(
+            rsub_cx,
+            rsub_cy,
+            check_interrupted_fn=self._check_mouse_interrupted,
+            target_hwnd=self.active_hwnd,
+        )
+        time.sleep(0.8)
+
+        # Final verification check
+        final_active_blue = False
         if hasattr(self.detector, "vision_detector") and self.detector.vision_detector:
             try:
-                btn = self.detector.vision_detector.detect_active_blue_submit_button(min_y=max(0, option_result.y - 50))
+                btn = self.detector.vision_detector.detect_active_blue_submit_button(
+                    min_y=max(160, option_result.y - 50)
+                )
                 if btn:
-                    return False
+                    final_active_blue = True
             except Exception:
                 pass
 
+        final_modal = False
+        try:
+            mod = self.detector.ocr_detector.scan_decision_modal(
+                target_hwnd=self.active_hwnd,
+                require_submit=False,
+            )
+            if mod:
+                opt_res, _ = mod
+                if abs(opt_res.y - option_result.y) < 60:
+                    final_modal = True
+        except Exception:
+            pass
+
+        if final_active_blue or final_modal:
+            TerminalDashboard._safe_print(
+                f"{TerminalDashboard.RED}[RETRY FAILED] Modal card still present after retry. Suppressing success notification.{TerminalDashboard.RESET}"
+            )
+            return False
+
         return True
+
+    # Keep _verify_submission as alias for backwards compatibility
+    _verify_submission = _verify_submission_dismissed

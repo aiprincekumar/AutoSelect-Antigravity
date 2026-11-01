@@ -4,12 +4,18 @@ Floating On-Screen HUD Overlay (Tkinter Top-Most Window).
 Provides a non-intrusive semi-transparent progress countdown and fail-safe notice.
 """
 
+import re
 import time
 from typing import Optional
+
+from auto_commander.models import Rect
 
 
 class FloatingHUD:
     """Always-on-top semi-transparent floating on-screen countdown HUD."""
+
+    _active_instance: Optional["FloatingHUD"] = None
+    _active_rect: Optional[Rect] = None
 
     def __init__(self, alpha: float = 0.92):
         self.alpha = alpha
@@ -19,6 +25,51 @@ class FloatingHUD:
         self.lbl_status = None
         self.total_seconds = 3.0
         self.is_visible = False
+        self._rect: Optional[Rect] = None
+
+    @classmethod
+    def get_active_hud_rect(cls) -> Optional[Rect]:
+        """Returns the screen Rect of currently visible HUD overlay, or None."""
+        if cls._active_instance and cls._active_instance.is_visible:
+            return cls._active_instance.get_hud_rect()
+        return cls._active_rect
+
+    def get_hud_rect(self) -> Optional[Rect]:
+        """Returns the bounding box Rect of this HUD window on screen."""
+        if not self.is_visible:
+            return None
+        if self._rect is not None:
+            return self._rect
+        if self.root:
+            try:
+                rx = self.root.winfo_rootx()
+                ry = self.root.winfo_rooty()
+                rw = self.root.winfo_width()
+                rh = self.root.winfo_height()
+                if rw > 0 and rh > 0:
+                    return Rect(x=rx, y=ry, width=rw, height=rh)
+            except Exception:
+                pass
+        return None
+
+    @staticmethod
+    def _sanitize_text(text: str) -> str:
+        """
+        Sanitizes text displayed on HUD to ensure trigger keywords like
+        (Recommended), (अनुशंसित), etc., never appear on screen in the HUD window.
+        Prevents WinRT OCR from falsely identifying the HUD overlay as Option 1.
+        """
+        if not text:
+            return "Option 1"
+        sanitized = re.sub(
+            r"[\(\[\{<]?(?:recommended|recommendation|recommend|अनुशंसित)[\)\]\}>]?",
+            "Option 1 ",
+            text,
+            flags=re.IGNORECASE,
+        )
+        sanitized = re.sub(r"(?:\bOption\s*1\b\s*)+", "Option 1 ", sanitized, flags=re.IGNORECASE)
+        sanitized = re.sub(r"\s+", " ", sanitized).strip()
+        return sanitized if sanitized else "Option 1"
 
     def show(self, total_seconds: float, label: str, master=None):
         """Displays the floating HUD at the top center of the primary display."""
@@ -47,7 +98,11 @@ class FloatingHUD:
             self.root.geometry(f"{w}x{h}+{x}+{y}")
             self.root.configure(bg="#181825", highlightbackground="#89B4FA", highlightthickness=2)
 
-            clean_label = label.replace("\n", " ")
+            self._rect = Rect(x=x, y=y, width=w, height=h)
+            FloatingHUD._active_instance = self
+            FloatingHUD._active_rect = self._rect
+
+            clean_label = self._sanitize_text(label.replace("\n", " "))
             if len(clean_label) > 42:
                 clean_label = clean_label[:39] + "..."
 
@@ -75,6 +130,10 @@ class FloatingHUD:
         except Exception:
             self.is_visible = False
             self.root = None
+            self._rect = None
+            if FloatingHUD._active_instance is self:
+                FloatingHUD._active_instance = None
+                FloatingHUD._active_rect = None
 
     def update_countdown(self, remaining: float):
         """Updates the countdown bar and seconds remaining."""
@@ -107,8 +166,10 @@ class FloatingHUD:
         if not self.is_visible or not self.root:
             return
         try:
-            self.lbl_title.config(text=step_title, fg=color)
-            self.lbl_status.config(text=step_detail, fg="#CDD6F4")
+            safe_title = self._sanitize_text(step_title)
+            safe_detail = self._sanitize_text(step_detail)
+            self.lbl_title.config(text=safe_title, fg=color)
+            self.lbl_status.config(text=safe_detail, fg="#CDD6F4")
             self.root.update_idletasks()
             self.root.update()
         except Exception:
@@ -139,9 +200,11 @@ class FloatingHUD:
         if not self.is_visible or not self.root:
             return
         try:
+            safe_title = self._sanitize_text(title)
+            safe_detail = self._sanitize_text(detail)
             self.root.configure(highlightbackground="#A6E3A1")
-            self.lbl_title.config(text=title, fg="#A6E3A1")
-            self.lbl_status.config(text=detail, fg="#A6E3A1")
+            self.lbl_title.config(text=safe_title, fg="#A6E3A1")
+            self.lbl_status.config(text=safe_detail, fg="#A6E3A1")
             self.root.update_idletasks()
             self.root.update()
             time.sleep(1.2)
@@ -159,3 +222,7 @@ class FloatingHUD:
                 pass
             self.root = None
         self.is_visible = False
+        self._rect = None
+        if FloatingHUD._active_instance is self:
+            FloatingHUD._active_instance = None
+            FloatingHUD._active_rect = None

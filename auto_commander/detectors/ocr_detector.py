@@ -10,7 +10,7 @@ import ctypes
 import difflib
 import io
 import re
-from typing import Optional, Tuple
+from typing import Any, Optional, Tuple
 
 try:
     user32 = ctypes.windll.user32
@@ -39,6 +39,11 @@ except ImportError:
 from auto_commander.detectors.base import BaseDetector
 from auto_commander.models import DetectionResult
 from auto_commander.platform.win32_window import AntigravityWindowManager
+
+try:
+    from auto_commander.gui.hud import FloatingHUD
+except ImportError:
+    FloatingHUD = None
 
 
 class WindowsOcrDetector(BaseDetector):
@@ -170,6 +175,8 @@ class WindowsOcrDetector(BaseDetector):
         min_x: int = 0,
         mask_console: bool = True,
         enhance_contrast: bool = True,
+        mask_hud: bool = True,
+        hud_rect: Optional[Any] = None,
     ) -> Optional[DetectionResult]:
         """Runs OCR on a PIL Image and matches against target keywords with fuzzy tolerance."""
         if not self.is_available() or img is None:
@@ -177,18 +184,23 @@ class WindowsOcrDetector(BaseDetector):
 
         kw_list = keywords if keywords is not None else self.target_keywords
         try:
-            # Mask out console window if it intersects the image region
+            # Mask out console window and floating HUD if they intersect the image region
             console_rect = AntigravityWindowManager.get_console_window_rect() if mask_console else None
+            active_hud_rect = hud_rect if hud_rect is not None else (FloatingHUD.get_active_hud_rect() if (mask_hud and FloatingHUD is not None) else None)
             working_img = img
-            if console_rect and ImageDraw is not None:
-                rel_x1 = max(0, console_rect.left - offset_x)
-                rel_y1 = max(0, console_rect.top - offset_y)
-                rel_x2 = min(img.width, console_rect.right - offset_x)
-                rel_y2 = min(img.height, console_rect.bottom - offset_y)
-                if rel_x2 > rel_x1 and rel_y2 > rel_y1:
+
+            if ImageDraw is not None:
+                masks = [r for r in (console_rect, active_hud_rect) if r is not None]
+                if masks:
                     working_img = img.copy()
                     draw = ImageDraw.Draw(working_img)
-                    draw.rectangle([rel_x1, rel_y1, rel_x2, rel_y2], fill=(0, 0, 0))
+                    for mrect in masks:
+                        rel_x1 = max(0, mrect.left - offset_x)
+                        rel_y1 = max(0, mrect.top - offset_y)
+                        rel_x2 = min(img.width, mrect.right - offset_x)
+                        rel_y2 = min(img.height, mrect.bottom - offset_y)
+                        if rel_x2 > rel_x1 and rel_y2 > rel_y1:
+                            draw.rectangle([rel_x1, rel_y1, rel_x2, rel_y2], fill=(0, 0, 0))
 
             buf = io.BytesIO()
             working_img.save(buf, format="PNG")
@@ -219,15 +231,21 @@ class WindowsOcrDetector(BaseDetector):
                 # Check dynamic Option 1 detection
                 is_opt1, is_strong_opt1 = self.is_option_1_match(line.text)
                 if is_opt1 and any("recommend" in kw.lower() or "अनुशंसित" in kw for kw in kw_list) and line.words:
-                    min_x = min(w.bounding_rect.x for w in line.words)
-                    w_min_y = min(w.bounding_rect.y for w in line.words)
-                    max_x = max(w.bounding_rect.x + w.bounding_rect.width for w in line.words)
-                    max_y = max(w.bounding_rect.y + w.bounding_rect.height for w in line.words)
+                    word_min_x = min(w.bounding_rect.x for w in line.words)
+                    word_min_y = min(w.bounding_rect.y for w in line.words)
+                    word_max_x = max(w.bounding_rect.x + w.bounding_rect.width for w in line.words)
+                    word_max_y = max(w.bounding_rect.y + w.bounding_rect.height for w in line.words)
 
-                    actual_x = int(min_x + offset_x)
-                    actual_y = int(w_min_y + offset_y)
-                    actual_w = int(max_x - min_x)
-                    actual_h = int(max_y - w_min_y)
+                    actual_x = int(word_min_x + offset_x)
+                    actual_y = int(word_min_y + offset_y)
+                    actual_w = int(word_max_x - word_min_x)
+                    actual_h = int(word_max_y - word_min_y)
+
+                    # Top bar & HUD rejection: Antigravity question card is never at top menu bar (y < 160) or on HUD
+                    if (img.height >= 600 or (offset_y + img.height) >= 600) and actual_y < 160:
+                        continue
+                    if active_hud_rect and (active_hud_rect.contains(actual_x, actual_y) or active_hud_rect.contains(actual_x + actual_w // 2, actual_y + actual_h // 2)):
+                        continue
 
                     if not (min_y > 0 and actual_y < min_y) and not (min_x > 0 and actual_x < min_x):
                         if not (console_rect and (console_rect.contains(actual_x, actual_y) or console_rect.contains(actual_x + actual_w // 2, actual_y + actual_h // 2))):
@@ -298,6 +316,12 @@ class WindowsOcrDetector(BaseDetector):
                             if min_x > 0 and actual_x < min_x:
                                 continue
 
+                            # Top bar & HUD boundary filter: question card is never at top menu bar (y < 160) or inside HUD
+                            if (img.height >= 600 or (offset_y + img.height) >= 600) and actual_y < 160:
+                                continue
+                            if active_hud_rect and (active_hud_rect.contains(actual_x, actual_y) or active_hud_rect.contains(actual_x + actual_w // 2, actual_y + actual_h // 2)):
+                                continue
+
                             # Console boundary filter: never return detection inside console window
                             if console_rect:
                                 if console_rect.contains(actual_x, actual_y) or console_rect.contains(
@@ -328,6 +352,8 @@ class WindowsOcrDetector(BaseDetector):
         require_submit: bool = True,
         mask_console: bool = True,
         enhance_contrast: bool = True,
+        mask_hud: bool = True,
+        hud_rect: Optional[Any] = None,
     ) -> Optional[Tuple[DetectionResult, Optional[DetectionResult]]]:
         """
         Scans an image for an interactive decision modal containing BOTH an option
@@ -344,16 +370,21 @@ class WindowsOcrDetector(BaseDetector):
 
         try:
             console_rect = AntigravityWindowManager.get_console_window_rect() if mask_console else None
+            active_hud_rect = hud_rect if hud_rect is not None else (FloatingHUD.get_active_hud_rect() if (mask_hud and FloatingHUD is not None) else None)
             working_img = img
-            if console_rect and ImageDraw is not None:
-                rel_x1 = max(0, console_rect.left - offset_x)
-                rel_y1 = max(0, console_rect.top - offset_y)
-                rel_x2 = min(img.width, console_rect.right - offset_x)
-                rel_y2 = min(img.height, console_rect.bottom - offset_y)
-                if rel_x2 > rel_x1 and rel_y2 > rel_y1:
+
+            if ImageDraw is not None:
+                masks = [r for r in (console_rect, active_hud_rect) if r is not None]
+                if masks:
                     working_img = img.copy()
                     draw = ImageDraw.Draw(working_img)
-                    draw.rectangle([rel_x1, rel_y1, rel_x2, rel_y2], fill=(0, 0, 0))
+                    for mrect in masks:
+                        rel_x1 = max(0, mrect.left - offset_x)
+                        rel_y1 = max(0, mrect.top - offset_y)
+                        rel_x2 = min(img.width, mrect.right - offset_x)
+                        rel_y2 = min(img.height, mrect.bottom - offset_y)
+                        if rel_x2 > rel_x1 and rel_y2 > rel_y1:
+                            draw.rectangle([rel_x1, rel_y1, rel_x2, rel_y2], fill=(0, 0, 0))
 
             buf = io.BytesIO()
             working_img.save(buf, format="PNG")
@@ -418,6 +449,11 @@ class WindowsOcrDetector(BaseDetector):
                         act_w = int(max_x - min_x)
                         act_h = int(max_y - w_min_y)
 
+                        if (img.height >= 600 or (offset_y + img.height) >= 600) and act_y < 160:
+                            continue
+                        if active_hud_rect and (active_hud_rect.contains(act_x, act_y) or active_hud_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
+                            continue
+
                         if not (console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2))):
                             # Chat action bar boundary filter: Submit button must be in the right-side action bar
                             if (img.width >= 1200 or offset_x + img.width >= 1200) and act_x < 800:
@@ -452,6 +488,11 @@ class WindowsOcrDetector(BaseDetector):
                         act_y = int(w_min_y + offset_y)
                         act_w = int(max_x - min_x)
                         act_h = int(max_y - w_min_y)
+
+                        if (img.height >= 600 or (offset_y + img.height) >= 600) and act_y < 160:
+                            continue
+                        if active_hud_rect and (active_hud_rect.contains(act_x, act_y) or active_hud_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
+                            continue
 
                         if not (console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2))):
                             # Action bar filter: Skip button must be in the right-side action bar
@@ -524,6 +565,12 @@ class WindowsOcrDetector(BaseDetector):
                     act_y = int(w_min_y + offset_y)
                     act_w = int(max_x - min_x)
                     act_h = int(max_y - w_min_y)
+
+                    # Top bar & HUD boundary filter: question card is never at top menu bar (y < 160) or inside HUD
+                    if (img.height >= 600 or (offset_y + img.height) >= 600) and act_y < 160:
+                        continue
+                    if active_hud_rect and (active_hud_rect.contains(act_x, act_y) or active_hud_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
+                        continue
 
                     if console_rect and (console_rect.contains(act_x, act_y) or console_rect.contains(act_x + act_w // 2, act_y + act_h // 2)):
                         continue
