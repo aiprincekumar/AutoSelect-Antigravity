@@ -1,10 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Activating Grill Me Chat in Antigravity - Method 1: Transcript Parsing & GUI Selection
-=====================================================================================
+Activating Grill Me Chat in Antigravity - Master Identification & GUI Suite
+=============================================================================
 Target: Antigravity AI Coding Agent Sessions
-Workspace: AutoSelect-Commander / Activating Grill Me Chat in anti-gravity
+Workspace: AutoSelect-Commander / Keyboard Automation (Master Suite)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 Mission:

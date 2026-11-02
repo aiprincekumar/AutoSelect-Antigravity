@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 :: Activating Grill Me Chat in Antigravity - Step 2 Standalone Runner
 :: ============================================================================
 :: Script: step2_gui_chat_select.py
-:: Workspace: AutoSelect-Commander \ Activating Grill Me Chat in anti-gravity
+:: Workspace: AutoSelect-Commander \ Keyboard Automation (Step 2 of 3)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
 ::   Reads target chat state saved by Step 1, ensures window is foregrounded
@@ -24,6 +24,11 @@ set "PY_CMD="
 
 if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PY_CMD=%SCRIPT_DIR%.venv\Scripts\python.exe"
+    goto :PYTHON_FOUND
+)
+
+if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
+    set "PY_CMD=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
     goto :PYTHON_FOUND
 )
 
@@ -51,16 +56,14 @@ exit /b 1
 
 :PYTHON_FOUND
 echo ============================================================================
-echo   🚀 [STEP 2 / 2] CHAT SEARCH ^& GUI SELECTION (STANDALONE RUNNER)
-echo   (स्टेप 2: एंटी-ग्रैविटी GUI में चैट खोजना, माउस ग्लाइड व सक्रिय करना)
+echo   STEP 2: GUI CHAT SELECTION ^& CHAT PANE ACTIVATION
 echo ============================================================================
 echo   Python Engine : %PY_CMD%
 echo   Target Script : %STEP2_SCRIPT%
-echo   State File    : %STATE_FILE%
+echo   Target State  : %STATE_FILE%
 echo ============================================================================
 echo.
 
-:: 2. Execute Step 2 Script
 "%PY_CMD%" "%STEP2_SCRIPT%" %*
 set "STEP2_EXIT=%ERRORLEVEL%"
 
@@ -71,13 +74,5 @@ if not "%STEP2_EXIT%"=="0" (
 )
 
 echo.
-echo ============================================================================
-echo   ✅ [STEP 2 SUCCESS] Target conversation selected and chat pane focused!
-echo ============================================================================
-echo.
-echo %* | findstr /i "no-pause" >nul
-if errorlevel 1 (
-    echo Press any key to close this runner window...
-    pause >nul
-)
+echo [SUCCESS] Step 2 finished successfully!
 exit /b 0

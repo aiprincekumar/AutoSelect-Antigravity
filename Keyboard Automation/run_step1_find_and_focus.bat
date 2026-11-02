@@ -5,7 +5,7 @@ setlocal enabledelayedexpansion
 :: Activating Grill Me Chat in Antigravity - Step 1 Standalone Runner
 :: ============================================================================
 :: Script: step1_find_and_focus.py
-:: Workspace: AutoSelect-Commander \ Activating Grill Me Chat in anti-gravity
+:: Workspace: AutoSelect-Commander \ Keyboard Automation (Step 1 of 3)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
 ::   Scans Antigravity brain transcripts for pending Grill-Me (ask_question) chats,
@@ -24,6 +24,11 @@ set "PY_CMD="
 
 if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PY_CMD=%SCRIPT_DIR%.venv\Scripts\python.exe"
+    goto :PYTHON_FOUND
+)
+
+if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
+    set "PY_CMD=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
     goto :PYTHON_FOUND
 )
 
@@ -51,16 +56,14 @@ exit /b 1
 
 :PYTHON_FOUND
 echo ============================================================================
-echo   🚀 [STEP 1 / 2] SCAN, STATE STORE ^& WINDOW FOCUS (STANDALONE RUNNER)
-echo   (स्टेप 1: ट्रांसक्रिप्ट स्कैनिंग, स्टेट सेविंग और विंडो मैक्सिमाइज़/फोकस)
+echo   STEP 1: SCAN TRANSCRIPTS, PERSIST STATE ^& FOCUS WINDOW
 echo ============================================================================
 echo   Python Engine : %PY_CMD%
 echo   Target Script : %STEP1_SCRIPT%
-echo   State File    : %STATE_FILE%
+echo   Target State  : %STATE_FILE%
 echo ============================================================================
 echo.
 
-:: 2. Execute Step 1 Script
 "%PY_CMD%" "%STEP1_SCRIPT%" %*
 set "STEP1_EXIT=%ERRORLEVEL%"
 
@@ -71,14 +74,5 @@ if not "%STEP1_EXIT%"=="0" (
 )
 
 echo.
-echo ============================================================================
-echo   ✅ [STEP 1 SUCCESS] Transcripts scanned ^& Antigravity window focused!
-echo      State saved to: %STATE_FILE%
-echo ============================================================================
-echo.
-echo %* | findstr /i "no-pause" >nul
-if errorlevel 1 (
-    echo Press any key to close this runner window...
-    pause >nul
-)
+echo [SUCCESS] Step 1 finished successfully!
 exit /b 0

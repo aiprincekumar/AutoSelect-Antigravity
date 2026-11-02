@@ -3,8 +3,8 @@
 """
 Step 1: Search, State Store & Window Focus
 ==========================================
-Part of: Activating Grill Me Chat in Antigravity (Two-Script Modular Architecture)
-Workspace: AutoSelect-Commander / Activating Grill Me Chat in anti-gravity
+Part of: AutoSelect-Commander 3-Step Automation Pipeline
+Workspace: AutoSelect-Commander / Keyboard Automation (Step 1 of 3)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 Responsibilities (Script 1):

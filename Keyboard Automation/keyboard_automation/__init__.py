@@ -3,10 +3,10 @@
 """
 Step 3: Keyboard Automation Suite for Antigravity 2.0 & AutoSelect-Commander
 ============================================================================
-Pipeline Architecture:
-- Step 1: Scan Transcripts & Focus Window (`Identify Chat/step1_find_and_focus.py`)
-- Step 2: GUI Chat Selection via CDP/DOM (`Identify Chat/step2_gui_chat_select.py`)
-- Step 3: Keyboard Automation & Option Selection (`Keyboard Automation/step3_keyboard_automation.py`)
+Pipeline Architecture (Unified in Keyboard Automation):
+- Step 1: Scan Transcripts & Focus Window (`step1_find_and_focus.py`)
+- Step 2: GUI Chat Selection via CDP/DOM (`step2_gui_chat_select.py`)
+- Step 3: Keyboard Automation & Option Selection (`step3_keyboard_automation.py`)
 
 Modular architecture adhering to Clean Architecture & Single Responsibility:
 - constants: Virtual-key codes, Win32 flags, browser disqualification sets, Step 3 metadata.

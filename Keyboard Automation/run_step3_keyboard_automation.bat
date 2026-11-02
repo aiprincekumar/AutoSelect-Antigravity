@@ -6,7 +6,7 @@ title Step 3: Keyboard Automation Launcher - AutoSelect-Commander
 :: AutoSelect-Commander - Step 3: Keyboard Automation Standalone Runner
 :: ============================================================================
 :: Script: step3_keyboard_automation.py
-:: Subfolder: Keyboard Automation (Pipeline Step: Step 3 of 3)
+:: Workspace: AutoSelect-Commander \ Keyboard Automation (Step 3 of 3)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
 ::   Executes Step 3 of the AutoSelect-Commander pipeline:
@@ -30,11 +30,6 @@ if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
 
 if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
     set "PY_CMD=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-    goto :PYTHON_FOUND
-)
-
-if exist "%SCRIPT_DIR%..\Identify Chat\.venv\Scripts\python.exe" (
-    set "PY_CMD=%SCRIPT_DIR%..\Identify Chat\.venv\Scripts\python.exe"
     goto :PYTHON_FOUND
 )
 
@@ -63,15 +58,12 @@ exit /b 1
 :PYTHON_FOUND
 echo ============================================================================
 echo   ⌨️ [STEP 3 / 3] KEYBOARD AUTOMATION ^& OPTION SELECTION (STANDALONE RUNNER)
-echo   (स्टेप 3: कीबोर्ड ऑटोमेशन - ऑप्शन सिलेक्शन और सबमिशन)
 echo ============================================================================
 echo   Python Engine : %PY_CMD%
 echo   Target Script : %STEP3_SCRIPT%
-echo   Pipeline Step : Step 3 (Option Selection ^& Enter Confirmation)
 echo ============================================================================
 echo.
 
-:: 2. Execute Step 3 Script
 "%PY_CMD%" "%STEP3_SCRIPT%" %*
 set "STEP3_EXIT=%ERRORLEVEL%"
 
@@ -84,12 +76,5 @@ if "%STEP3_EXIT%"=="0" (
 )
 echo ============================================================================
 echo.
-
-:: Check for non-interactive flag before pausing
-echo %* | findstr /i "no-pause" >nul
-if errorlevel 1 (
-    echo Press any key to close this runner window...
-    pause >nul
-)
 
 exit /b %STEP3_EXIT%

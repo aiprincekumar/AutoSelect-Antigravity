@@ -25,18 +25,45 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
     """Unit and simulation tests for dynamic multi-question automation."""
 
     def test_question_detection_from_target_chat(self):
-        """Verify that automator accurately extracts questions count and options from target_chat.json."""
-        automator = GrillMeAutomator(
+        """Verify that automator accurately extracts questions count and options from state file."""
+        with tempfile.NamedTemporaryFile("w+", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump({
+                "success": True,
+                "data": {
+                    "questions_count": 3,
+                    "questions": [
+                        {"recommended_option_index": 1},
+                        {"recommended_option_index": 2},
+                        {"recommended_option_index": 1},
+                    ]
+                }
+            }, f)
+            temp_path = f.name
+
+        try:
+            automator = GrillMeAutomator(
+                questions="auto",
+                state_file=temp_path,
+                dry_run=True,
+                auto_focus=False,
+                auto_maximize=False,
+                step_delay=0.01,
+            )
+            self.assertEqual(automator.total_questions, 3)
+            self.assertEqual(len(automator.options_list), 3)
+            self.assertEqual(automator.options_list, ["1", "2", "1"])
+        finally:
+            Path(temp_path).unlink(missing_ok=True)
+
+        # Also verify default state file auto-detection works when state_file is None
+        default_automator = GrillMeAutomator(
             questions="auto",
             dry_run=True,
             auto_focus=False,
             auto_maximize=False,
             step_delay=0.01,
         )
-        # target_chat.json in Identify Chat currently has 3 questions
-        self.assertEqual(automator.total_questions, 3)
-        self.assertEqual(len(automator.options_list), 3)
-        self.assertEqual(automator.options_list, ["1", "1", "1"])
+        self.assertGreaterEqual(default_automator.total_questions, 1)
 
     def test_single_question_n1(self):
         """Verify N=1: Executes sequence and presses Enter on Question 1."""

@@ -133,6 +133,7 @@ class GrillMeAutomator:
         """
         candidates = [
             Path.cwd() / "target_chat.json",
+            Path(__file__).resolve().parent.parent / "target_chat.json",
             Path.cwd() / "Identify Chat" / "target_chat.json",
             Path.cwd() / ".." / "Identify Chat" / "target_chat.json",
             Path(__file__).resolve().parent.parent / "Identify Chat" / "target_chat.json",
