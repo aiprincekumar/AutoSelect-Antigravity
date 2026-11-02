@@ -236,6 +236,35 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
         ctrl_l_steps = [s for s in executed_steps if "Ctrl + L" in s[1]]
         self.assertEqual(len(ctrl_l_steps), 0)
 
+    def test_step3_identity_and_backward_compatibility(self):
+        """Verify Step 3 naming, constants, and grill_me_automation backward-compatible wrapper."""
+        import step3_keyboard_automation as s3
+        import grill_me_automation as gm
+        from keyboard_automation import Step3KeyboardAutomator, STEP_ID, STEP_NUMBER, STEP_NAME
+
+        # Verify constants
+        self.assertEqual(STEP_ID, "step3")
+        self.assertEqual(STEP_NUMBER, 3)
+        self.assertEqual(STEP_NAME, "Step 3: Keyboard Automation")
+        self.assertEqual(s3.STEP_ID, "step3")
+        self.assertEqual(gm.STEP_ID, "step3")
+
+        # Verify class equivalence
+        self.assertIs(Step3KeyboardAutomator, GrillMeAutomator)
+        self.assertIs(s3.Step3KeyboardAutomator, s3.GrillMeAutomator)
+        self.assertIs(gm.Step3KeyboardAutomator, gm.GrillMeAutomator)
+
+        # Verify dry run execution on Step3KeyboardAutomator
+        s3_automator = Step3KeyboardAutomator(
+            questions=1,
+            option="1",
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            step_delay=0.01,
+        )
+        self.assertTrue(s3_automator.execute())
+
 
 if __name__ == "__main__":
     unittest.main()

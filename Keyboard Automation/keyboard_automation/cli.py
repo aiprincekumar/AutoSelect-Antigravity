@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Command-Line Interface (CLI) Subsystem
-======================================
+Step 3: Command-Line Interface (CLI) Subsystem
+=============================================
+Pipeline Step: STEP 3 (Option Selection & Confirmation)
+Suite: AutoSelect-Commander
 Parses command-line arguments, displays execution banner, orchestrates
 repeat sequences and countdowns, and returns process exit status.
 """
@@ -12,16 +14,16 @@ import time
 import argparse
 import logging
 
-from .constants import IS_WINDOWS, DEFAULT_TARGET_WINDOW
-from .automator import GrillMeAutomator
+from .constants import IS_WINDOWS, DEFAULT_TARGET_WINDOW, STEP_ID, STEP_NUMBER, STEP_NAME
+from .automator import GrillMeAutomator, Step3KeyboardAutomator
 
-logger = logging.getLogger("GrillMeAutomation.CLI")
+logger = logging.getLogger("Step3KeyboardAutomation.CLI")
 
 
 def parse_arguments():
-    """Defines and parses command-line arguments for the Grill Me automation suite."""
+    """Defines and parses command-line arguments for Step 3: Keyboard Automation."""
     parser = argparse.ArgumentParser(
-        description="Grill Me Keyboard Automation Suite for Antigravity 2.0 Harness & Chat Interfaces.",
+        description="STEP 3: Keyboard Automation Suite for Antigravity 2.0 Harness & Chat Interfaces (AutoSelect-Commander Pipeline).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
     )
     parser.add_argument(
@@ -154,10 +156,11 @@ def parse_arguments():
 def print_banner(args, automator=None):
     """Outputs structured execution banner to terminal."""
     print("\n" + "=" * 65)
-    print("      [*] AutoSelect-Commander: Grill Me Keyboard Automation")
+    print("      [+] STEP 3: KEYBOARD AUTOMATION (AutoSelect-Commander)")
     print("=" * 65)
-    print(f" Target Window: '{args.target_window}' (Focus: {args.auto_focus}, Maximize: {args.auto_maximize})")
-    print(f" Engine       : {args.engine.upper()} (Zero-dependency ctypes: {IS_WINDOWS})")
+    print(" Pipeline Step : Step 3 of 3 (Option Selection & Confirmation)")
+    print(f" Target Window : '{args.target_window}' (Focus: {args.auto_focus}, Maximize: {args.auto_maximize})")
+    print(f" Engine        : {args.engine.upper()} (Zero-dependency ctypes: {IS_WINDOWS})")
     
     q_str = f"{automator.total_questions} ({'Auto-detected' if args.questions == 'auto' else 'Explicit'})" if automator else args.questions
     opt_seq = f"{automator.options_list}" if automator else (args.options_list or f"['{args.option}']")

@@ -1,44 +1,100 @@
-# 🎯 Grill Me Keyboard Automation Suite
+# ⌨️ Step 3: Keyboard Automation - Antigravity Chat Activation Suite
 
-> **Subfolder:** `Keyboard Automation` (100% Autonomous, Standalone & Decoupled)  
+> **Pipeline Step:** **STEP 3 OF 3** (`Step 3: Keyboard Automation`)  
+> **Subfolder:** `Keyboard Automation` (Decoupled, Standalone & Pipeline Integrated)  
 > **Target Environment:** Windows 10/11, Antigravity Chat UI, IDEs, and Web Terminals  
-> **Architecture:** Zero-Dependency Native Windows ctypes (`SendInput` / `keybd_event` / `user32` Windowing) + Intelligent Auto-Targeting, Restoration, Full-Screen Maximization & Focus Subsystem.  
-> **Author & Identity:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
+> **Architecture:** Zero-Dependency Native Windows ctypes (`SendInput` / `keybd_event` / `user32` Windowing) + Dynamic Multi-Question Scaling + Intelligent Auto-Targeting, Restoration, Full-Screen Maximization & Focus Subsystem.  
+> **Primary Developer:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
+> **Standard:** Department 06 (Backend & API Engineering) & Universal Rule 15  
+
+---
+
+## 🏛️ AutoSelect-Commander 3-Step Pipeline Context
+
+The `Keyboard Automation` subfolder is specifically designed as **Step 3** of the complete 3-Step AutoSelect-Commander automation architecture:
+
+```
+┌──────────────────────────────────────────────────────────────────────────┐
+│              AutoSelect-Commander 3-Step Pipeline Architecture            │
+├──────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  [Step 1: Scan & Focus] ──────> [Step 2: GUI Chat Select] ─────>         │
+│  `Identify Chat/`                `Identify Chat/`                        │
+│  `step1_find_and_focus.py`       `step2_gui_chat_select.py`              │
+│  - Transcript scan & Q parser   - DevTools CDP/DOM chat locator          │
+│  - target_chat.json persistence - Smooth cursor glide & click            │
+│  - Window un-minimize/maximize  - Focuses chat pane (Ctrl + L)           │
+│                                                                          │
+│  ──────────────────────────────────────────────────────────────>         │
+│  [Step 3: Keyboard Automation]                                           │
+│  `Keyboard Automation/`                                                  │
+│  `step3_keyboard_automation.py`                                          │
+│  - Window safety verification & foreground focus                         │
+│  - Dynamic multi-question loop (Q1..QN)                                  │
+│  - Option navigation (Ctrl+L -> Shift+Tab -> Option)                     │
+│  - The Golden Enter Gate (suppressed on Q1..QN-1, fired ONLY on QN)      │
+│                                                                          │
+└──────────────────────────────────────────────────────────────────────────┘
+```
 
 ---
 
 ## 📖 Overview & Independence
 
-The **Grill Me Keyboard Automation** suite is a completely autonomous, standalone tool. It has **zero dependencies on any other subfolder or external modules** and can be moved, copied, or deployed anywhere on Windows independently.
+While functioning as **Step 3** in the master pipeline, the **Step 3: Keyboard Automation** suite remains 100% autonomous and standalone. It has **zero required dependencies on external libraries or other subfolders** and can be run independently at any time.
 
 It provides an automated keystroke injection and window-management mechanism designed to respond to interactive multi-choice prompts (such as `/grill-me` or interactive task questions) in Antigravity or any chat-based interface.
 
-### 🚀 Quick Start (100% Standalone)
+### 📁 Step 3 File Topology & Identification
 
-#### Prerequisites
+| File | Identity & Role | Status |
+| :--- | :--- | :--- |
+| **`step3_keyboard_automation.py`** | **Primary Step 3 Entry Point:** Main script executing Step 3 keystroke automation, dynamic multi-question scaling, and window focus. | **PRIMARY** |
+| **`run_step3_keyboard_automation.bat`** | **1-Click Step 3 Batch Launcher:** Standardized runner matching Step 1 & 2 batch launchers. | **PRIMARY RUNNER** |
+| **`run_step3.bat`** | **Quick Step 3 Shortcut:** Fast 1-click alias to `run_step3_keyboard_automation.bat`. | **SHORTCUT** |
+| **`run_step3_keyboard_automation.ps1`**| **Step 3 PowerShell Runner:** Native parameter-bound PowerShell launcher. | **PRIMARY RUNNER** |
+| **`grill_me_automation.py`** | **Backward-Compatibility Wrapper:** Delegates directly to `step3_keyboard_automation.py`. Prevents breaking existing scripts. | **LEGACY ALIAS** |
+| **`run_grill_me.bat`** | **Backward-Compatibility Batch Runner:** Legacy launcher pointing to `step3_keyboard_automation.py`. | **LEGACY ALIAS** |
+| **`run_grill_me.ps1`** | **Backward-Compatibility PS1 Runner:** Legacy PowerShell launcher pointing to `step3_keyboard_automation.py`. | **LEGACY ALIAS** |
+| **`keyboard_automation/`** | **Modular Engine Package:** Sub-modules for Win32 API, Input Injector, Window Manager, Automator, CLI, and Constants. | **INTERNAL ENGINE** |
+| **`archive/`** | **Frozen Certified Snapshot:** Historical verified v1.0.0 reference. (Read-only, untouched). | **ARCHIVE** |
+
+---
+
+## 🚀 Quick Start (Step 3 Standalone)
+
+### Prerequisites
 - Windows 10 or 11
-- Python 3.8+ (Zero third-party packages required for standard ctypes engine)
+- Python 3.8+ (Standard library only; zero third-party packages required for standard ctypes engine)
 
-#### Running the Suite
+### Running Step 3
 
-##### Method 1: 1-Click Windows Batch Runner (Recommended)
-Double-click `run_grill_me.bat` or run:
+#### Method 1: 1-Click Windows Batch Runner (Recommended)
+Double-click [`run_step3_keyboard_automation.bat`](./run_step3_keyboard_automation.bat) or [`run_step3.bat`](./run_step3.bat):
+```cmd
+run_step3_keyboard_automation.bat
+```
+
+#### Method 2: PowerShell Runner
+```powershell
+.\run_step3_keyboard_automation.ps1 -Countdown 3 -Option 1
+```
+
+#### Method 3: Direct Python CLI
+```bash
+python step3_keyboard_automation.py -c 3 -o 1
+```
+
+#### Method 4: Backward-Compatible Runner (Legacy)
 ```cmd
 run_grill_me.bat
 ```
 
-##### Method 2: PowerShell Runner
-```powershell
-.\run_grill_me.ps1 -Countdown 3 -Option 1
-```
+---
 
-##### Method 3: Direct Python CLI
-```bash
-python grill_me_automation.py -c 3 -o 1
-```
+## 🌟 Intelligent Auto-Targeting & Maximization Subsystem
 
-### 🌟 Intelligent Auto-Targeting & Maximization Subsystem (Default: Enabled)
-By default, regardless of current desktop state, the suite automatically inspects and prepares the target application window:
+By default, regardless of current desktop state, Step 3 automatically inspects and prepares the target application window:
 1. **Window Detection & Enumeration:** Scans all top-level windows via Win32 `EnumWindows`, strictly prioritizing `Antigravity.exe` (+1000 score) and Antigravity 2.0 process image paths.
 2. **Web Browser Disqualification Gatekeeper:** Strictly disqualifies and rejects all web browsers (`chrome.exe`, `msedge.exe`, `firefox.exe`, `brave.exe`, `opera.exe`, etc.) to prevent accidental browser focus or address bar typing.
 3. **Auto-Restore (Un-minimize):** If Antigravity is minimized (`IsIconic == True`), the subsystem automatically un-minimizes and restores it.
@@ -49,8 +105,9 @@ By default, regardless of current desktop state, the suite automatically inspect
 
 ---
 
-## ⌨️ Keystroke Sequence Workflow
+## ⌨️ Keystroke Sequence & Dynamic Multi-Question Engine
 
+### Single Question Workflow (N = 1)
 ```
 [Target Detection: "Antigravity"]
           │
@@ -60,57 +117,32 @@ By default, regardless of current desktop state, the suite automatically inspect
           └─ Verified Geometry & Settle (500ms delay)
           │
           ▼
-[Step 1]  Ctrl + L        ───>  Focus the chat input field / prompt box
+[Step Q1.1] Ctrl + L        ───>  Focus the chat input field / prompt box
           │ (350ms delay)
           ▼
-[Step 2]  Shift + Tab     ───>  Navigate focus backwards to option choices
+[Step Q1.2] Shift + Tab     ───>  Navigate focus backwards to option choices
           │ (350ms delay)
           ▼
-[Step 3]  1 (or custom)   ───>  Select Option 1 (Recommended answer)
+[Step Q1.3] 1 (or custom)   ───>  Select Option 1 (Recommended answer)
           │ (350ms delay)
           ▼
-[Step 4]  Enter           ───>  Confirm and submit the selection
+[Step Q1.4] Enter           ───>  Confirm and submit the selection
 ```
 
----
+### Multi-Question Workflow (N >= 2) - Dynamic Quiz Mode
+When multiple questions are present (e.g. 2, 3, or more questions in a single card):
+- **For Questions 1 through N-1:**
+  - `Ctrl + L` (Reset focus to chat input)
+  - `Shift + Tab` (Navigate to option choices)
+  - Select Option key (e.g. `1`)
+  - **ENTER IS STRICTLY SUPPRESSED!** (Does NOT submit prematurely).
+- **For Final Question N:**
+  - `Ctrl + L`
+  - `Shift + Tab`
+  - Select Option key
+  - **ENTER IS FIRED!** (Submits all chosen options in one atomic submission).
 
-## 🚀 Quick Start
-
-### Option A: Double-Click Batch File (Fastest)
-Double-click [`run_grill_me.bat`](./run_grill_me.bat).  
-- Auto-locates project `.venv` or system Python.
-- Auto-detects, un-minimizes, maximizes, and focuses Antigravity.
-- Executes the selection sequence and keeps the window open to inspect results.
-
-### Option B: PowerShell Runner
-```powershell
-# Standard run (auto-maximizes Antigravity, 5s countdown, selects Option 1)
-.\run_grill_me.ps1
-
-# Dry-run simulation (safe testing without sending actual keystrokes)
-.\run_grill_me.ps1 -DryRun
-
-# Target custom window keyword (e.g. VS Code) with 3s countdown
-.\run_grill_me.ps1 -TargetWindow "Visual Studio Code" -Countdown 3
-
-# Disable auto-maximize if you prefer a floating window
-.\run_grill_me.ps1 -NoAutoMaximize -Option "2"
-```
-
-### Option C: Direct Python Execution
-```bash
-# Basic run with default auto-focus and auto-maximize
-python grill_me_automation.py
-
-# Dry run to test detection, geometry, and timing
-python grill_me_automation.py --dry-run
-
-# Custom window target with 3-second countdown and 400ms step delay
-python grill_me_automation.py --target-window "Antigravity" --countdown 3 --option 1 --step-delay 0.4
-
-# Repeat twice
-python grill_me_automation.py --repeat 2 --interval 3.0
-```
+Auto-detection can read question counts and recommended options directly from `target_chat.json` generated by Step 1!
 
 ---
 
@@ -118,7 +150,10 @@ python grill_me_automation.py --repeat 2 --interval 3.0
 
 | Argument | Short | Type | Default | Description |
 | :--- | :---: | :---: | :---: | :--- |
-| `--target-window` | `-t` | `str` | `"Antigravity"` | Window title keyword to locate, maximize, and focus. |
+| `--target-window` | `-t` | `str` | `"Antigravity,Antigravity 2.0,Harness,AutoSelect-Commander"` | Window title / process keyword to locate, maximize, and focus. |
+| `--questions` | `-q` | `str` | `"auto"` | Number of questions: `auto` (detect from `target_chat.json`), or integer (`1`, `2`, `3`). |
+| `--options-list` | `-ol` | `str` | `None` | Comma-separated list of options per question (e.g. `1,1` or `1,2,1`). |
+| `--state-file` | - | `str` | `None` | Path to `target_chat.json` state file for auto-detection. |
 | `--auto-focus` | - | `bool` | `True` | Automatically bring target window to foreground before injection. |
 | `--no-auto-focus` | - | `flag` | - | Disable automatic window focusing. |
 | `--auto-maximize` | - | `bool` | `True` | Automatically un-minimize and maximize target window to full screen. |
@@ -127,7 +162,7 @@ python grill_me_automation.py --repeat 2 --interval 3.0
 | `--countdown` | `-c` | `int` | `5` | Countdown in seconds before keystrokes are triggered. |
 | `--step-delay` | `-d` | `float` | `0.35` | Delay in seconds between steps (e.g. 0.35 = 350ms). |
 | `--hold-delay` | - | `float` | `0.05` | Time in seconds each key is held down before release. |
-| `--option` | `-o` | `str` | `"1"` | The option character/number to choose (e.g. `1`, `2`, `y`). |
+| `--option` | `-o` | `str` | `"1"` | The fallback option character/number to choose. |
 | `--skip-ctrl-l`| - | `flag`| `False` | Skip pressing `Ctrl + L` if input is already focused. |
 | `--skip-enter` | - | `flag`| `False` | Skip pressing `Enter` to allow manual review before submitting. |
 | `--dry-run` | - | `flag`| `False` | Simulates and logs all actions without sending physical key events. |
@@ -138,46 +173,38 @@ python grill_me_automation.py --repeat 2 --interval 3.0
 
 ---
 
-## 📦 Zero-Dependency Modular Architecture
-
-The automation suite follows clean Python package design (Clean Architecture & Single Responsibility Principle):
+## 📦 Modular Architecture & Package Layout
 
 ```
 Keyboard Automation/
-├── grill_me_automation.py       # Backward-compatible CLI entry point & proxy (<80 lines)
-├── run_grill_me.bat             # 1-Click Windows Batch launcher
-├── run_grill_me.ps1             # Native PowerShell runner with parameter binding
-├── keyboard_automation/         # Modular Python Package
-│   ├── __init__.py              # Public API re-exports
-│   ├── constants.py             # VK codes, Win32 flags, process blacklists
-│   ├── win32_api.py             # Low-level ctypes bindings, desktop input attachment
-│   ├── input_injector.py        # SendInput key event / combo dispatcher & PyAutoGUI interop
-│   ├── window_manager.py        # Window detection, Antigravity scoring & focus lock bypass
-│   ├── automator.py             # GrillMeAutomator sequence orchestrator
-│   └── cli.py                   # Argument parser and CLI execution banner
-└── archive/                     # Historical frozen v1.0.0-verified snapshot
+├── step3_keyboard_automation.py       # PRIMARY Step 3 CLI entry point & sequence runner
+├── run_step3_keyboard_automation.bat  # PRIMARY 1-Click Windows Batch launcher for Step 3
+├── run_step3.bat                      # PRIMARY Quick shortcut batch launcher
+├── run_step3_keyboard_automation.ps1  # PRIMARY Native PowerShell runner for Step 3
+├── grill_me_automation.py             # Backward-compatible wrapper (<80 lines)
+├── run_grill_me.bat                   # Backward-compatible Windows Batch launcher
+├── run_grill_me.ps1                   # Backward-compatible PowerShell launcher
+├── test_dynamic_questions.py          # Unit & integration regression test suite
+├── requirements.txt                   # Dependency manifest (zero required external deps)
+├── keyboard_automation/               # Modular Python Package
+│   ├── __init__.py                    # Public API exports & Step 3 metadata
+│   ├── constants.py                   # VK codes, Win32 flags, process blacklists, Step metadata
+│   ├── win32_api.py                   # Native ctypes user32/kernel32 bindings
+│   ├── input_injector.py              # SendInput key event / combo dispatcher & PyAutoGUI interop
+│   ├── window_manager.py              # Window discovery, Antigravity scoring & focus lock bypass
+│   ├── automator.py                   # Step3KeyboardAutomator sequence orchestrator
+│   └── cli.py                         # Argument parser & Step 3 execution banner
+└── archive/                           # Historical frozen v1.0.0-verified snapshot (untouched)
 ```
 
-- **Default Engine:** Windows `ctypes.windll.user32` + `kernel32` (SendInput, EnumWindows, ShowWindow, AttachThreadInput).
-- **Requirements:** 100% standard library Python 3.8+ on Windows. **No `pip install` required!**
-- **PyAutoGUI (Optional):** If `pyautogui` is installed and specified via `-e pyautogui`, the script will utilize it seamlessly.
+- **Zero External Dependencies:** Built with native Windows `ctypes.windll.user32` and `kernel32`. Runs on pure standard Python on Windows.
+- **PyAutoGUI Interop:** Automatically detected as optional fallback if installed.
 
 ---
 
-## 🔍 Verification & Safety Features
+## 🔒 Safety & Gatekeeper Guarantees
 
-1. **Intelligent Window Geometry Inspection:** Reads window rect, iconic state, and zoom state before and after repositioning to guarantee full screen readiness.
-2. **Active Window Inspection:** Continuously reads the foreground window handle during countdown so you know exactly which application will receive keystrokes.
-3. **Dry Run Mode:** Passing `--dry-run` logs the full timeline without dispatching actual OS keystroke events.
-4. **Graceful Error Recovery:** Uses try/except blocks and falls back to Win32 `keybd_event` if `SendInput` returns unexpected error codes.
-
----
-
-## 📦 Verified Archive Snapshot
-
-A bit-for-bit certified snapshot of this automation suite is maintained at:
-- **Location:** [`archive/`](./archive/)
-- **Documentation & Hashes:** [`archive/README.md`](./archive/README.md)
-- **Snapshot Version:** `v1.0.0-verified`
-- **Integrity:** SHA-256 validated for all core runners and scripts.
-
+1. **Browser Gatekeeper:** Web browsers (`chrome.exe`, `msedge.exe`, etc.) are disqualified and blocked from being focused or typed into.
+2. **Pre-Execution Check:** Live foreground window is checked before key injection; aborts immediately if an unsafe window is active.
+3. **Dry-Run Validation:** Use `--dry-run` anytime to verify detection, timing, and dynamic multi-question logic without sending real keystrokes.
+4. **Untouched Archive:** The `archive/` folder remains frozen as a permanent reference snapshot.

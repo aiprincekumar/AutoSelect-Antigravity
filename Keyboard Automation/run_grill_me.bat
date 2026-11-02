@@ -1,10 +1,10 @@
 @echo off
 setlocal enabledelayedexpansion
-title Grill Me Automation Launcher - AutoSelect-Commander
+title Step 3: Keyboard Automation (Grill-Me) Launcher - AutoSelect-Commander
 
 echo =====================================================================
-echo            GRILL ME KEYBOARD AUTOMATION LAUNCHER
-echo                 AutoSelect-Commander Suite
+echo       [+] STEP 3: KEYBOARD AUTOMATION LAUNCHER (Grill-Me Mode)
+echo                     AutoSelect-Commander Suite
 echo =====================================================================
 echo.
 
@@ -13,6 +13,9 @@ set "PYTHON_CMD="
 if exist "%~dp0.venv\Scripts\python.exe" (
     set "PYTHON_CMD=%~dp0.venv\Scripts\python.exe"
     echo [*] Using local virtualenv: !PYTHON_CMD!
+) else if exist "%~dp0..\.venv\Scripts\python.exe" (
+    set "PYTHON_CMD=%~dp0..\.venv\Scripts\python.exe"
+    echo [*] Using parent virtualenv: !PYTHON_CMD!
 ) else (
     where python >nul 2>&1
     if !errorlevel! equ 0 (
@@ -34,7 +37,7 @@ if exist "%~dp0.venv\Scripts\python.exe" (
 )
 
 echo.
-echo Intelligent Auto-Targeting:
+echo Intelligent Auto-Targeting (Step 3: Keyboard Automation):
 echo   - Auto-Detects target window (Antigravity 2.0 Harness / IDE / Chat)
 echo   - Process-level detection: Antigravity.exe, Chrome_WidgetWin_1, and Titles
 echo   - If minimized -^> Restores automatically (SW_RESTORE / OpenIcon)
@@ -52,15 +55,18 @@ echo automatically maximized and focused before keystrokes are sent.
 echo =====================================================================
 echo.
 
-"%PYTHON_CMD%" "%~dp0grill_me_automation.py" %*
+set "TARGET_SCRIPT=%~dp0step3_keyboard_automation.py"
+if not exist "!TARGET_SCRIPT!" set "TARGET_SCRIPT=%~dp0grill_me_automation.py"
+
+"%PYTHON_CMD%" "!TARGET_SCRIPT!" %*
 
 set EXITCODE=%errorlevel%
 echo.
 echo =====================================================================
 if !EXITCODE! equ 0 (
-    echo [*] Automation finished successfully. [Exit Code: 0]
+    echo [*] Step 3: Keyboard Automation finished successfully. [Exit Code: 0]
 ) else (
-    echo [!] Automation encountered an error or non-zero exit code: !EXITCODE!
+    echo [!] Step 3: Keyboard Automation encountered exit code: !EXITCODE!
 )
 echo =====================================================================
 echo.

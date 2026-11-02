@@ -1,4 +1,4 @@
-﻿@echo off
+@echo off
 setlocal enabledelayedexpansion
 
 :: ============================================================================
@@ -9,7 +9,7 @@ setlocal enabledelayedexpansion
 :: Architecture:
 ::   - Step 1 (step1_find_and_focus.py): Scan Transcripts, Identify Chat, Focus Window, Save State
 ::   - Step 2 (step2_gui_chat_select.py): CDP/DOM Chat Search, Smooth Glide, GUI Selection & Focus
-::   - Step 3 (grill_me_automation.py): Hybrid Keyboard Automation, Option Selection & Confirmation
+::   - Step 3 (step3_keyboard_automation.py): Step 3: Keyboard Automation, Option Selection & Confirmation
 :: UTF-8 code page configuration for accurate emoji and Unicode output
 
 chcp 65001 >nul
@@ -21,7 +21,11 @@ set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
 
 :: Resolve absolute path for Keyboard Automation
 for %%I in ("%SCRIPT_DIR%..\Keyboard Automation") do set "KEYBOARD_DIR=%%~fI"
-set "STEP3_SCRIPT=%KEYBOARD_DIR%\grill_me_automation.py"
+if exist "%KEYBOARD_DIR%\step3_keyboard_automation.py" (
+    set "STEP3_SCRIPT=%KEYBOARD_DIR%\step3_keyboard_automation.py"
+) else (
+    set "STEP3_SCRIPT=%KEYBOARD_DIR%\grill_me_automation.py"
+)
 
 :: 1. Detect Python Executable (.venv prioritized)
 set "PY_CMD="

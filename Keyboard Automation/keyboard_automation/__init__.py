@@ -1,18 +1,27 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Keyboard Automation Suite for Antigravity 2.0 & AutoSelect-Commander
-=====================================================================
+Step 3: Keyboard Automation Suite for Antigravity 2.0 & AutoSelect-Commander
+============================================================================
+Pipeline Architecture:
+- Step 1: Scan Transcripts & Focus Window (`Identify Chat/step1_find_and_focus.py`)
+- Step 2: GUI Chat Selection via CDP/DOM (`Identify Chat/step2_gui_chat_select.py`)
+- Step 3: Keyboard Automation & Option Selection (`Keyboard Automation/step3_keyboard_automation.py`)
+
 Modular architecture adhering to Clean Architecture & Single Responsibility:
-- constants: Virtual-key codes, Win32 flags, browser disqualification sets.
+- constants: Virtual-key codes, Win32 flags, browser disqualification sets, Step 3 metadata.
 - win32_api: Native ctypes user32/kernel32 bindings, desktop input attachment, process inspection.
 - input_injector: SendInput key combination/single key dispatch with PyAutoGUI fallback.
 - window_manager: Window discovery, scoring, restoration, maximization, and focus enforcement.
-- automator: GrillMeAutomator sequence orchestrator with countdown and dry-run modes.
+- automator: Step3KeyboardAutomator / GrillMeAutomator sequence orchestrator with countdown and dry-run modes.
 - cli: Command-line interface, argument parser, and execution banner.
 """
 
 from .constants import (
+    STEP_ID,
+    STEP_NUMBER,
+    STEP_NAME,
+    STEP_DESCRIPTION,
     DISQUALIFIED_BROWSER_PROCS,
     BLACK_LISTED_SHELL_PROCS,
     DEFAULT_TARGET_WINDOW,
@@ -78,10 +87,14 @@ from .window_manager import (
     select_target_window,
     ensure_window_on_screen,
 )
-from .automator import GrillMeAutomator, execute_multi_question
+from .automator import GrillMeAutomator, Step3KeyboardAutomator, execute_multi_question
 from .cli import parse_arguments, print_banner, main
 
 __all__ = [
+    "STEP_ID",
+    "STEP_NUMBER",
+    "STEP_NAME",
+    "STEP_DESCRIPTION",
     "DISQUALIFIED_BROWSER_PROCS",
     "BLACK_LISTED_SHELL_PROCS",
     "DEFAULT_TARGET_WINDOW",
@@ -141,6 +154,7 @@ __all__ = [
     "select_target_window",
     "ensure_window_on_screen",
     "GrillMeAutomator",
+    "Step3KeyboardAutomator",
     "execute_multi_question",
     "parse_arguments",
     "print_banner",

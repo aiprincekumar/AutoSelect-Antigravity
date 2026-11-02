@@ -1,14 +1,19 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Grill Me Automation - Hybrid Keyboard & Focus Automation Suite
-=============================================================
-Workspace: AutoSelect-Commander
+STEP 3: KEYBOARD AUTOMATION (AutoSelect-Commander) - Backward Compatibility Wrapper
+==================================================================================
+Subfolder: Keyboard Automation
+Pipeline Step: Step 3 of 3 (Option Selection & Confirmation)
+Suite: AutoSelect-Commander
 Target: Antigravity 2.0 Harness / IDE / Browser / Terminal Chat Window
+Primary Developer: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
-This script serves as the primary CLI entry point for the modular
-'keyboard_automation' package while maintaining 100% backward compatibility
-with existing scripts, batch files, runners, and automated tests.
+NOTE ON STEP IDENTIFICATION:
+This script (`grill_me_automation.py`) is the legacy/backward-compatible entrypoint
+for STEP 3: KEYBOARD AUTOMATION. It delegates directly to:
+    `step3_keyboard_automation.py`
+All imports, flags, batch scripts, and tests continue to work with 100% fidelity.
 """
 
 import os
@@ -28,29 +33,18 @@ if hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s [%(levelname)s] %(message)s",
-    datefmt="%H:%M:%S",
-    stream=sys.stdout
-)
-logger = logging.getLogger("GrillMeAutomation")
-
 # Ensure the package directory is resolvable whether invoked from root or Keyboard Automation
 _pkg_dir = Path(__file__).resolve().parent
 if str(_pkg_dir) not in sys.path:
     sys.path.insert(0, str(_pkg_dir))
 
-import keyboard_automation
-import keyboard_automation.constants as _c
-import keyboard_automation.win32_api as _wapi
-import keyboard_automation.input_injector as _inj
-import keyboard_automation.window_manager as _wm
-import keyboard_automation.automator as _aut
-import keyboard_automation.cli as _cli
-
-# Re-export all modular components for backward compatibility
-from keyboard_automation import (
+# Import everything from the primary step3 module
+import step3_keyboard_automation as _step3
+from step3_keyboard_automation import (
+    STEP_ID,
+    STEP_NUMBER,
+    STEP_NAME,
+    STEP_DESCRIPTION,
     DISQUALIFIED_BROWSER_PROCS,
     BLACK_LISTED_SHELL_PROCS,
     DEFAULT_TARGET_WINDOW,
@@ -110,23 +104,24 @@ from keyboard_automation import (
     select_target_window,
     ensure_window_on_screen,
     GrillMeAutomator,
+    Step3KeyboardAutomator,
     execute_multi_question,
     parse_arguments,
     print_banner,
     main,
 )
 
+logger = logging.getLogger("Step3KeyboardAutomation.GrillMeCompat")
+
 
 class _GrillMeCompatModule(sys.modules[__name__].__class__):
     """
     Transparent proxy module enabling backward-compatible dynamic monkey-patching
-    across both legacy script attributes and underlying modular sub-packages.
+    across legacy script attributes, step3 module, and underlying sub-packages.
     """
     def __setattr__(self, name, value):
         super().__setattr__(name, value)
-        for mod in (keyboard_automation, _c, _wapi, _inj, _wm, _aut, _cli):
-            if hasattr(mod, name):
-                setattr(mod, name, value)
+        setattr(_step3, name, value)
 
 
 sys.modules[__name__].__class__ = _GrillMeCompatModule

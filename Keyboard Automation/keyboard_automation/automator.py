@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Grill Me Automation Orchestrator Subsystem
-==========================================
+Step 3: Keyboard Automation Orchestrator Subsystem
+==================================================
+Pipeline Step: STEP 3 (Option Selection & Confirmation)
+Suite: AutoSelect-Commander
 Coordinates countdown, target window preparation, keystroke sequence dispatch,
-browser safety aborts, and step execution.
+browser safety aborts, and dynamic multi-question step execution.
 """
 
 import sys
@@ -15,6 +17,9 @@ from pathlib import Path
 from typing import Optional, Union, List, Tuple
 
 from .constants import (
+    STEP_ID,
+    STEP_NUMBER,
+    STEP_NAME,
     DEFAULT_TARGET_WINDOW,
     IS_WINDOWS,
     VK_CONTROL,
@@ -42,7 +47,7 @@ from .window_manager import (
     ensure_window_on_screen,
 )
 
-logger = logging.getLogger("GrillMeAutomation.Automator")
+logger = logging.getLogger("Step3KeyboardAutomation.Automator")
 
 
 class GrillMeAutomator:
@@ -534,4 +539,9 @@ def execute_multi_question(
         **kwargs
     )
     return automator.execute()
+
+
+# Step 3 Canonical Alias
+Step3KeyboardAutomator = GrillMeAutomator
+
 

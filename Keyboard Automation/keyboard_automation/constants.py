@@ -1,13 +1,21 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Constants and Configuration for Keyboard Automation Suite
-=========================================================
+Constants and Configuration for Step 3: Keyboard Automation Suite
+=================================================================
+Pipeline Step: STEP 3 (Option Selection & Confirmation)
+Suite: AutoSelect-Commander
 Defines Virtual-Key codes, Win32 window positioning and sizing flags,
 disqualified browser processes, shell blacklists, and default settings.
 """
 
 import sys
+
+# Step Identification & Pipeline Metadata
+STEP_ID = "step3"
+STEP_NUMBER = 3
+STEP_NAME = "Step 3: Keyboard Automation"
+STEP_DESCRIPTION = "Step 3: Keyboard Automation - Interactive Option Selection & Submission"
 
 # Platform detection
 IS_WINDOWS = sys.platform == "win32"
