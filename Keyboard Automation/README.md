@@ -126,3 +126,14 @@ python grill_me_automation.py --repeat 2 --interval 3.0
 2. **Active Window Inspection:** Continuously reads the foreground window handle during countdown so you know exactly which application will receive keystrokes.
 3. **Dry Run Mode:** Passing `--dry-run` logs the full timeline without dispatching actual OS keystroke events.
 4. **Graceful Error Recovery:** Uses try/except blocks and falls back to Win32 `keybd_event` if `SendInput` returns unexpected error codes.
+
+---
+
+## 📦 Verified Archive Snapshot
+
+A bit-for-bit certified snapshot of this automation suite is maintained at:
+- **Location:** [`archive/`](./archive/)
+- **Documentation & Hashes:** [`archive/README.md`](./archive/README.md)
+- **Snapshot Version:** `v1.0.0-verified`
+- **Integrity:** SHA-256 validated for all core runners and scripts.
+
