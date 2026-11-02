@@ -112,7 +112,25 @@ python grill_me_automation.py --repeat 2 --interval 3.0
 
 ---
 
-## 📦 Zero-Dependency Architecture
+## 📦 Zero-Dependency Modular Architecture
+
+The automation suite follows clean Python package design (Clean Architecture & Single Responsibility Principle):
+
+```
+Keyboard Automation/
+├── grill_me_automation.py       # Backward-compatible CLI entry point & proxy (<80 lines)
+├── run_grill_me.bat             # 1-Click Windows Batch launcher
+├── run_grill_me.ps1             # Native PowerShell runner with parameter binding
+├── keyboard_automation/         # Modular Python Package
+│   ├── __init__.py              # Public API re-exports
+│   ├── constants.py             # VK codes, Win32 flags, process blacklists
+│   ├── win32_api.py             # Low-level ctypes bindings, desktop input attachment
+│   ├── input_injector.py        # SendInput key event / combo dispatcher & PyAutoGUI interop
+│   ├── window_manager.py        # Window detection, Antigravity scoring & focus lock bypass
+│   ├── automator.py             # GrillMeAutomator sequence orchestrator
+│   └── cli.py                   # Argument parser and CLI execution banner
+└── archive/                     # Historical frozen v1.0.0-verified snapshot
+```
 
 - **Default Engine:** Windows `ctypes.windll.user32` + `kernel32` (SendInput, EnumWindows, ShowWindow, AttachThreadInput).
 - **Requirements:** 100% standard library Python 3.8+ on Windows. **No `pip install` required!**

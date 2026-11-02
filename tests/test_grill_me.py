@@ -305,6 +305,79 @@ class TestGrillMeAutomation(unittest.TestCase):
         finally:
             grill_me.get_process_info_for_hwnd = original_proc_info
 
+    # ------------------------------------------------------------------------
+    # Direct Modular Sub-Package Tests (Industry-Standard Architecture)
+    # ------------------------------------------------------------------------
+    def test_modular_package_direct_import(self):
+        """Test importing the modular package keyboard_automation directly."""
+        pkg_path = Path(__file__).resolve().parent.parent / "Keyboard Automation"
+        if str(pkg_path) not in sys.path:
+            sys.path.insert(0, str(pkg_path))
+
+        import keyboard_automation as ka
+        self.assertTrue(hasattr(ka, "GrillMeAutomator"))
+        self.assertTrue(hasattr(ka, "select_target_window"))
+        self.assertTrue(hasattr(ka, "get_window_info"))
+        self.assertTrue(hasattr(ka, "send_key_combo"))
+        self.assertTrue(hasattr(ka, "DISQUALIFIED_BROWSER_PROCS"))
+        self.assertIn("chrome.exe", ka.DISQUALIFIED_BROWSER_PROCS)
+
+    def test_modular_constants_integrity(self):
+        """Test constants module definitions and completeness."""
+        from keyboard_automation import constants as c
+        self.assertEqual(c.VK_SHIFT, 0x10)
+        self.assertEqual(c.VK_CONTROL, 0x11)
+        self.assertEqual(c.VK_RETURN, 0x0D)
+        self.assertEqual(c.VK_TAB, 0x09)
+        self.assertEqual(c.VK_L, 0x4C)
+        self.assertIn("msedge.exe", c.DISQUALIFIED_BROWSER_PROCS)
+        self.assertIn("powershell.exe", c.BLACK_LISTED_SHELL_PROCS)
+
+    def test_modular_input_injector(self):
+        """Test input_injector option key resolution directly."""
+        from keyboard_automation import input_injector as inj
+        self.assertEqual(inj.get_option_vk("1"), 0x31)
+        self.assertEqual(inj.get_option_vk("5"), 0x35)
+        self.assertEqual(inj.get_option_vk("Z"), ord("Z"))
+
+    def test_modular_window_manager_invalid_hwnd(self):
+        """Test window_manager get_window_info with invalid handle."""
+        from keyboard_automation import window_manager as wm
+        info = wm.get_window_info(0)
+        self.assertIsInstance(info, dict)
+        self.assertFalse(info["exists"])
+        self.assertEqual(info["hwnd"], 0)
+
+    def test_modular_automator_instantiation(self):
+        """Test direct instantiation of GrillMeAutomator from automator module."""
+        from keyboard_automation.automator import GrillMeAutomator
+        automator = GrillMeAutomator(
+            step_delay=0.1,
+            hold_delay=0.02,
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+        self.assertTrue(automator.dry_run)
+        self.assertFalse(automator.auto_focus)
+        self.assertEqual(automator.step_delay, 0.1)
+
+    def test_modular_cli_argument_parser(self):
+        """Test CLI argument parser from cli module."""
+        from keyboard_automation.cli import parse_arguments
+        # Test with dummy args
+        test_args = ["-t", "Antigravity", "-o", "2", "--dry-run", "--no-countdown"]
+        original_argv = sys.argv
+        try:
+            sys.argv = ["grill_me_automation.py"] + test_args
+            parsed = parse_arguments()
+            self.assertEqual(parsed.target_window, "Antigravity")
+            self.assertEqual(parsed.option, "2")
+            self.assertTrue(parsed.dry_run)
+            self.assertTrue(parsed.no_countdown)
+        finally:
+            sys.argv = original_argv
+
 
 if __name__ == "__main__":
     unittest.main()

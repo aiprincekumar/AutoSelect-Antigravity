@@ -4,6 +4,30 @@
 
 ---
 
+### [2026-11-02 06:45:00 IST] - Release 1.8.3 (Modular Package Decomposition for Keyboard Automation)
+- **Commit:** `refactor(automation): decompose monolithic automation script into industry-standard modular package`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Single Responsibility Decomposition:**
+    - Decomposed monolithic `Keyboard Automation/grill_me_automation.py` (1,218 lines) into dedicated Python package `Keyboard Automation/keyboard_automation/`:
+      - `constants.py`: VK key codes, ShowWindow flags, browser disqualification sets.
+      - `win32_api.py`: Win32 ctypes structures, function prototypes, input desktop attachment.
+      - `input_injector.py`: SendInput / keybd_event simulation, combos, single keys, PyAutoGUI fallback.
+      - `window_manager.py`: Window discovery, Antigravity 2.0 scoring (+1000 score), edge-to-edge full-screen maximization, and Windows 10/11 focus lock bypass.
+      - `automator.py`: Sequence execution orchestrator (`GrillMeAutomator`) with countdown and dry-run modes.
+      - `cli.py`: Argument parser, CLI banner, repeat loop orchestration, and exit code handling.
+      - `__init__.py`: Public API definitions and exports.
+  - **100% Backward Compatibility Entry Point:**
+    - Refactored `grill_me_automation.py` to a 122-line lightweight orchestrator and proxy (`_GrillMeCompatModule`), preserving all existing batch files (`run_grill_me.bat`), PowerShell scripts (`run_grill_me.ps1`), and dynamic test imports.
+  - **Preserved Archive Snapshot:**
+    - Verified `Keyboard Automation/archive/` remains untouched as an immutable historical record.
+  - **Comprehensive Quality Assurance:**
+    - Extended unit tests in `tests/test_grill_me.py` to cover modular components directly (99/99 tests passing).
+    - Executed live dry run on Windows desktop and validated `run_grill_me.ps1 -DryRun -NoCountdown` (Exit Code 0).
+    - Passed gitleaks audit with 0 findings.
+
+---
+
 ### [2026-11-02 05:30:00 IST] - Release 1.8.2 (Verified Keyboard Automation Archive Snapshot)
 - **Commit:** `chore(backup): archive verified keyboard automation suite inside Keyboard Automation/archive`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)

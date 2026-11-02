@@ -227,8 +227,13 @@ C:\Users\Atul Verma\Desktop\AutoSelect-Commander\
 │   └── templates/           # Multi-theme visual templates for OpenCV fallback
 ├── scripts/
 │   └── gui_automation/      # Modular step-by-step mouse automation pipeline & calibrator
+├── Keyboard Automation/     # Modular keyboard injection suite (keyboard_automation/)
+│   ├── keyboard_automation/ # Modular Python package (constants, win32_api, input_injector, window_manager, automator, cli)
+│   ├── grill_me_automation.py # Backward-compatible CLI entry point
+│   ├── run_grill_me.bat     # Windows batch launcher
+│   └── run_grill_me.ps1     # PowerShell launcher
 └── tests/
-    └── test_commander.py    # Automated test suite (43/43 tests passing)
+    └── test_commander.py    # Automated test suite (99/99 tests passing)
 ```
 
 ---
