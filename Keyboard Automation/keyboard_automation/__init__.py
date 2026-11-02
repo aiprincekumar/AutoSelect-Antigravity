@@ -87,6 +87,7 @@ from .window_manager import (
     select_target_window,
     ensure_window_on_screen,
 )
+from .cdp_helper import AntigravityCDPClient
 from .automator import GrillMeAutomator, Step3KeyboardAutomator, execute_multi_question
 from .cli import parse_arguments, print_banner, main
 
@@ -153,6 +154,7 @@ __all__ = [
     "find_windows_by_title",
     "select_target_window",
     "ensure_window_on_screen",
+    "AntigravityCDPClient",
     "GrillMeAutomator",
     "Step3KeyboardAutomator",
     "execute_multi_question",

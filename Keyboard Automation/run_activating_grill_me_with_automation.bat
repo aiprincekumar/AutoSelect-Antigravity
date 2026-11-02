@@ -15,6 +15,7 @@ setlocal enabledelayedexpansion
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
 set "STEP1_SCRIPT=%SCRIPT_DIR%step1_find_and_focus.py"
 set "STEP2_SCRIPT=%SCRIPT_DIR%step2_gui_chat_select.py"
 set "STEP3_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
@@ -72,7 +73,7 @@ echo.
 echo [*] [STEP 1 / 3] Scanning Brain Transcripts, Saving State and Focusing Window...
 echo.
 
-"%PYTHON_EXE%" "%STEP1_SCRIPT%" %*
+"%PYTHON_EXE%" "%STEP1_SCRIPT%" --state-file "%STATE_FILE%" %*
 set "STEP1_EXIT=%ERRORLEVEL%"
 
 if not "%STEP1_EXIT%"=="0" goto :STEP1_FAILED
@@ -87,7 +88,7 @@ echo.
 echo [*] [STEP 2 / 3] Locating Conversation Element in Antigravity GUI and Selecting...
 echo.
 
-"%PYTHON_EXE%" "%STEP2_SCRIPT%" %*
+"%PYTHON_EXE%" "%STEP2_SCRIPT%" --state-file "%STATE_FILE%" %*
 set "STEP2_EXIT=%ERRORLEVEL%"
 
 if not "%STEP2_EXIT%"=="0" goto :STEP2_FAILED
@@ -102,7 +103,7 @@ echo.
 echo [*] [STEP 3 / 3] Executing Keyboard Automation (Ctrl+L -^> Shift+Tab -^> Option -^> Enter)...
 echo.
 
-"%PYTHON_EXE%" "%STEP3_SCRIPT%" %*
+"%PYTHON_EXE%" "%STEP3_SCRIPT%" --state-file "%STATE_FILE%" --no-countdown %*
 set "STEP3_EXIT=%ERRORLEVEL%"
 
 if not "%STEP3_EXIT%"=="0" goto :STEP3_FAILED

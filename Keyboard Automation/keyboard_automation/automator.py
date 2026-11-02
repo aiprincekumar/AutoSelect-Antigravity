@@ -6,7 +6,7 @@ Step 3: Keyboard Automation Orchestrator Subsystem
 Pipeline Step: STEP 3 (Option Selection & Confirmation)
 Suite: AutoSelect-Commander
 Coordinates countdown, target window preparation, keystroke sequence dispatch,
-browser safety aborts, and dynamic multi-question step execution.
+browser safety aborts, CDP DOM precision interaction, and dynamic multi-question step execution.
 """
 
 import sys
@@ -46,6 +46,7 @@ from .window_manager import (
     get_window_info,
     ensure_window_on_screen,
 )
+from .cdp_helper import AntigravityCDPClient
 
 logger = logging.getLogger("Step3KeyboardAutomation.Automator")
 
@@ -59,10 +60,12 @@ class GrillMeAutomator:
     4. Robust foreground focus bypass (Alt key pulse, thread attach, Z-order bump)
     5. Settle delay (default 500ms) for UI rendering
     6. Execute sequence:
-       - Ctrl + L    -> Focus chat input
-       - Shift + Tab -> Shift focus to option select buttons
-       - Option key  -> Select option (default '1')
-       - Enter       -> Submit confirmation
+       - Tier 1: Real-time CDP DOM precision option selection and Continue/Submit clicks.
+       - Tier 2: Pure native SendInput/ctypes keystroke injection fallback:
+                 * Ctrl + L    -> Focus chat input
+                 * Shift + Tab -> Shift focus to option select buttons
+                 * Option key  -> Select option (e.g. '1')
+                 * Enter       -> Continue (Q1..QN-1) or Submit confirmation (QN)
     """
 
     DEFAULT_TARGET = DEFAULT_TARGET_WINDOW
@@ -97,6 +100,7 @@ class GrillMeAutomator:
         self.target_hwnd: Optional[int] = None
         self.target_title: Optional[str] = None
         self.state_file = state_file
+        self.conversation_id: Optional[str] = None
 
         # Resolve engine
         if engine == "pyautogui":
@@ -132,8 +136,8 @@ class GrillMeAutomator:
         Probes common locations without recursive scans.
         """
         candidates = [
-            Path.cwd() / "target_chat.json",
             Path(__file__).resolve().parent.parent / "target_chat.json",
+            Path.cwd() / "target_chat.json",
             Path.cwd() / "Identify Chat" / "target_chat.json",
             Path.cwd() / ".." / "Identify Chat" / "target_chat.json",
             Path(__file__).resolve().parent.parent / "Identify Chat" / "target_chat.json",
@@ -208,6 +212,9 @@ class GrillMeAutomator:
         detected_options: List[str] = []
 
         if state_data:
+            # Capture conversation_id if present
+            self.conversation_id = state_data.get("conversation_id")
+
             # Check all candidate indicators
             candidate_counts = []
             qs = state_data.get("questions")
@@ -368,19 +375,90 @@ class GrillMeAutomator:
             action_func()
         time.sleep(self.step_delay)
 
+    def _execute_via_cdp(self, total_questions: int, opts: List[str]) -> bool:
+        """
+        Tier 1 CDP Execution: Uses Antigravity Chrome DevTools Protocol WebSocket
+        for 100% precision DOM option selection and Continue/Submit progression.
+        """
+        cdp = AntigravityCDPClient()
+        if not cdp.is_available():
+            return False
+
+        if not cdp.connect():
+            logger.debug("CDP port open but WebSocket handshake failed.")
+            return False
+
+        try:
+            logger.info("CDP Protocol connected! Engaging Tier 1 DOM Precision Automation...")
+
+            # 1. Ensure conversation is active if CID is known
+            if self.conversation_id:
+                cdp.ensure_chat_active(self.conversation_id)
+
+            # 2. Window focus & maximize
+            if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
+                self.prepare_target_window()
+
+            # 3. Dynamic Question Progression Loop
+            for q_idx in range(1, total_questions + 1):
+                opt_str = opts[q_idx - 1]
+                try:
+                    opt_num = int(opt_str)
+                except ValueError:
+                    opt_num = 1
+                is_last = (q_idx == total_questions)
+
+                logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt_num}...")
+                if self.dry_run:
+                    logger.info(f"  [DRY RUN] Would select option {opt_num} and submit.")
+                    continue
+
+                # Select Option
+                selected = cdp.select_option(opt_num)
+                if not selected:
+                    logger.warning(f"CDP could not find label for option {opt_num}, falling back to keystrokes...")
+                    return False
+
+                time.sleep(max(0.2, self.hold_delay))
+
+                # Continue / Submit Gate
+                if not self.skip_enter:
+                    if is_last:
+                        logger.info(f"[Question {total_questions}/{total_questions}] Final Question: Submitting batch response ([Submit ↵])...")
+                    else:
+                        logger.info(f"[Question {q_idx}/{total_questions}] Advancing to Question {q_idx + 1} ([Continue ↵])...")
+
+                    submitted = cdp.click_continue_or_submit()
+                    if not submitted:
+                        # Fallback to Enter keystroke if button click didn't trigger
+                        logger.debug("Continue button click returned false, sending native VK_RETURN...")
+                        send_single_key(VK_RETURN, hold_delay=self.hold_delay)
+
+                    # Transition delay allowing UI wizard animation to next question
+                    transition_delay = max(0.4, self.step_delay)
+                    time.sleep(transition_delay)
+                else:
+                    logger.info(f"[Question {q_idx}/{total_questions}] Skipping confirmation per --skip-enter flag.")
+
+            logger.info(f"[SUCCESS] CDP Tier 1 completed all {total_questions} question(s) successfully!")
+            return True
+
+        except Exception as e:
+            logger.warning(f"CDP execution error ({e}), will fallback to native keystrokes: {e}")
+            return False
+        finally:
+            cdp.close()
+
     def execute_multi_question(self, total_questions: Optional[int] = None, options: Optional[List[str]] = None) -> bool:
         """
         Executes deterministic multi-question keyboard automation loop for any N questions (1..N).
-        Ensures Enter is strictly pressed ONLY on the final question (N).
-        For intermediate questions (1..N-1), Enter is completely suppressed.
-
-        Dynamic Sequence for question i in 1..N:
-          - Step 1: Focus chat input (Ctrl + L)
-          - Step 2: Reverse tab to option buttons (Shift + Tab)
-          - Step 3: Select option key (e.g. '1')
-          - Step 4: Conditional Enter Gate:
-                    * Intermediate questions (i < N): Suppress Enter, settle UI (0.35s-0.5s pause)
-                    * Final question (i == N): Press Enter to submit batch!
+        Operates with dual-tier resilience:
+          - Tier 1: Chrome DevTools Protocol (CDP) DOM precision option select & Continue/Submit.
+          - Tier 2: Pure Native Windows ctypes SendInput / keybd_event sequence fallback:
+                    * Step 1: Focus chat input (Ctrl + L)
+                    * Step 2: Reverse tab to option buttons (Shift + Tab)
+                    * Step 3: Select option key (e.g. '1')
+                    * Step 4: Enter Gate (Continue to next question on Q1..QN-1, Submit on QN).
         """
         if total_questions is None:
             total_questions = self.total_questions
@@ -392,6 +470,16 @@ class GrillMeAutomator:
         opts = opts[:total_questions]
 
         logger.info(f"Initiating dynamic keyboard automation loop: {total_questions} question(s) | Options: {opts}")
+
+        # Attempt Tier 1: CDP Precision Execution (Zero UI lag, direct DOM interaction)
+        if not self.dry_run:
+            try:
+                if self._execute_via_cdp(total_questions, opts):
+                    return True
+            except Exception as cdp_err:
+                logger.debug(f"CDP Tier 1 bypassed: {cdp_err}")
+
+        logger.info("Executing via Tier 2 Native Keystroke Injection...")
 
         # Ensure target window is prepared and focused if not done already
         if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
@@ -435,11 +523,10 @@ class GrillMeAutomator:
                 opt = opts[q_idx - 1]
                 is_last = (q_idx == total_questions)
 
-                # Clear standardized progress logging required by protocol
                 if is_last:
                     logger.info(f"[Question {total_questions}/{total_questions}] Final Question: Selecting option {opt} and submitting with Enter!")
                 else:
-                    logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt}... (Enter suppressed)")
+                    logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt} and continuing with Enter...")
 
                 # Step 1: Focus chat input (Ctrl + L)
                 if not self.skip_ctrl_l:
@@ -487,29 +574,33 @@ class GrillMeAutomator:
                         lambda: pyautogui.press(str(opt))
                     )
 
-                # Step 4: Conditional Enter Gate
-                if is_last:
-                    if not self.skip_enter:
-                        if self.engine == "ctypes":
-                            self._execute_step(
-                                f"Q{q_idx}.4",
-                                f"Press [Enter] (Submit ALL {total_questions} answers on final question)",
-                                lambda: send_single_key(VK_RETURN, hold_delay=self.hold_delay)
-                            )
-                        elif self.engine == "pyautogui":
-                            self._execute_step(
-                                f"Q{q_idx}.4",
-                                f"Press [Enter] (Submit ALL {total_questions} answers on final question)",
-                                lambda: pyautogui.press("enter")
-                            )
-                    else:
-                        logger.info(f"Step Q{q_idx}.4: Skipping Enter on final question (user flag --skip-enter)")
+                # Step 4: Enter Gate (Advances on Q1..QN-1, Submits on QN)
+                if not self.skip_enter:
+                    enter_desc = (
+                        f"Press [Enter] (Submit ALL {total_questions} answers on final question)"
+                        if is_last else
+                        f"Press [Enter] (Continue to Question {q_idx + 1})"
+                    )
+                    if self.engine == "ctypes":
+                        self._execute_step(
+                            f"Q{q_idx}.4",
+                            enter_desc,
+                            lambda: send_single_key(VK_RETURN, hold_delay=self.hold_delay)
+                        )
+                    elif self.engine == "pyautogui":
+                        self._execute_step(
+                            f"Q{q_idx}.4",
+                            enter_desc,
+                            lambda: pyautogui.press("enter")
+                        )
+
+                    # UI transition settle pause between questions
+                    if not is_last:
+                        transition_delay = max(0.35, self.step_delay)
+                        logger.debug(f"UI transition settle pause ({transition_delay:.2f}s) before next question...")
+                        time.sleep(transition_delay)
                 else:
-                    logger.info(f"Step Q{q_idx}.4: [SUPPRESS ENTER] Intermediate question {q_idx}/{total_questions} option selected. Enter suppressed.")
-                    # UI transition settle pause (0.35s - 0.5s) between question iterations so Windows/Electron registers Ctrl+L cleanly
-                    transition_delay = max(0.35, self.step_delay)
-                    logger.debug(f"UI transition settle pause ({transition_delay:.2f}s) before next question...")
-                    time.sleep(transition_delay)
+                    logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
 
             logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {total_questions} question(s)!")
             return True
@@ -544,5 +635,3 @@ def execute_multi_question(
 
 # Step 3 Canonical Alias
 Step3KeyboardAutomator = GrillMeAutomator
-
-

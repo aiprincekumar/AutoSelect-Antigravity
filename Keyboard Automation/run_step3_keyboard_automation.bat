@@ -18,6 +18,8 @@ title Step 3: Keyboard Automation Launcher - AutoSelect-Commander
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
+cd /d "%SCRIPT_DIR%"
+set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
 set "STEP3_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
 
 :: 1. Bulletproof Python Executable Resolution
@@ -64,7 +66,7 @@ echo   Target Script : %STEP3_SCRIPT%
 echo ============================================================================
 echo.
 
-"%PYTHON_EXE%" "%STEP3_SCRIPT%" %*
+"%PYTHON_EXE%" "%STEP3_SCRIPT%" --state-file "%STATE_FILE%" %*
 set "STEP3_EXIT=%ERRORLEVEL%"
 
 echo.

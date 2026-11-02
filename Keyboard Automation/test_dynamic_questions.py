@@ -8,8 +8,8 @@ Validates that GrillMeAutomator dynamically adapts to any number of questions N
   - Step 1: Ctrl + L
   - Step 2: Shift + Tab
   - Step 3: Select Option Key
-  - Step 4: Enter Gate (Strictly SUPPRESSED on intermediate questions 1..N-1,
-                        and strictly FIRED ONLY on the final question N).
+  - Step 4: Enter Gate (Advances wizard on intermediate questions 1..N-1,
+                        and submits confirmation on final question N).
 """
 
 import unittest
@@ -92,7 +92,7 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
         self.assertIn("Enter", executed_steps[-1][1])
 
     def test_two_questions_n2(self):
-        """Verify N=2: Suppresses Enter on Q1, presses Enter on Q2."""
+        """Verify N=2: Presses Enter on Q1 (Continue), presses Enter on Q2 (Submit)."""
         automator = GrillMeAutomator(
             questions=2,
             options_list=["1", "2"],
@@ -113,14 +113,15 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             self.assertTrue(ok)
 
         step_names = [s[0] for s in executed_steps]
-        # Q1 has 3 steps (NO Q1.4 Enter), Q2 has 4 steps (WITH Q2.4 Enter)
-        self.assertEqual(step_names, ["Q1.1", "Q1.2", "Q1.3", "Q2.1", "Q2.2", "Q2.3", "Q2.4"])
+        # Q1 has 4 steps (WITH Q1.4 Enter Continue), Q2 has 4 steps (WITH Q2.4 Enter Submit)
+        self.assertEqual(step_names, ["Q1.1", "Q1.2", "Q1.3", "Q1.4", "Q2.1", "Q2.2", "Q2.3", "Q2.4"])
         self.assertIn("Select Option 1", executed_steps[2][1])
-        self.assertIn("Select Option 2", executed_steps[5][1])
-        self.assertIn("Enter", executed_steps[6][1])
+        self.assertIn("Continue to Question 2", executed_steps[3][1])
+        self.assertIn("Select Option 2", executed_steps[6][1])
+        self.assertIn("Submit ALL 2 answers", executed_steps[7][1])
 
     def test_three_questions_n3(self):
-        """Verify N=3: Suppresses Enter on Q1 and Q2, presses Enter ONLY on Q3."""
+        """Verify N=3: Presses Enter on Q1 (Continue), Q2 (Continue), Q3 (Submit)."""
         automator = GrillMeAutomator(
             questions=3,
             options_list="1,1,1",
@@ -140,20 +141,21 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             self.assertTrue(ok)
 
         step_names = [s[0] for s in executed_steps]
-        # Q1: 3 steps, Q2: 3 steps, Q3: 4 steps -> total 10 steps
-        self.assertEqual(len(step_names), 10)
+        # Q1: 4 steps, Q2: 4 steps, Q3: 4 steps -> total 12 steps
+        self.assertEqual(len(step_names), 12)
         self.assertEqual(step_names, [
-            "Q1.1", "Q1.2", "Q1.3",
-            "Q2.1", "Q2.2", "Q2.3",
+            "Q1.1", "Q1.2", "Q1.3", "Q1.4",
+            "Q2.1", "Q2.2", "Q2.3", "Q2.4",
             "Q3.1", "Q3.2", "Q3.3", "Q3.4"
         ])
-        # Only the very last step is Enter
         enter_steps = [s for s in executed_steps if "Enter" in s[1]]
-        self.assertEqual(len(enter_steps), 1)
-        self.assertEqual(enter_steps[0][0], "Q3.4")
+        self.assertEqual(len(enter_steps), 3)
+        self.assertIn("Continue to Question 2", enter_steps[0][1])
+        self.assertIn("Continue to Question 3", enter_steps[1][1])
+        self.assertIn("Submit ALL 3 answers", enter_steps[2][1])
 
     def test_four_questions_n4(self):
-        """Verify N=4: Suppresses Enter on Q1..Q3, presses Enter ONLY on Q4."""
+        """Verify N=4: Presses Enter on Q1..Q3 (Continue), and Enter on Q4 (Submit)."""
         automator = GrillMeAutomator(
             questions=4,
             dry_run=True,
@@ -173,13 +175,13 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             self.assertTrue(ok)
 
         step_names = [s[0] for s in executed_steps]
-        # Q1..Q3: 3 steps each (9) + Q4: 4 steps = 13 steps
-        self.assertEqual(len(step_names), 13)
+        # 4 questions * 4 steps = 16 steps
+        self.assertEqual(len(step_names), 16)
         self.assertEqual(step_names[-1], "Q4.4")
-        self.assertIn("Enter", executed_steps[-1][1])
+        self.assertIn("Submit ALL 4 answers", executed_steps[-1][1])
 
     def test_five_questions_n5(self):
-        """Verify N=5: Suppresses Enter on Q1..Q4, presses Enter ONLY on Q5."""
+        """Verify N=5: Presses Enter on Q1..Q4 (Continue), and Enter on Q5 (Submit)."""
         automator = GrillMeAutomator(
             questions=5,
             options_list=["1", "2", "3", "1", "2"],
@@ -200,14 +202,13 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             self.assertTrue(ok)
 
         step_names = [s[0] for s in executed_steps]
-        # Q1..Q4: 3 steps each (12) + Q5: 4 steps = 16 steps
-        self.assertEqual(len(step_names), 16)
+        # 5 questions * 4 steps = 20 steps
+        self.assertEqual(len(step_names), 20)
         self.assertEqual(step_names[-1], "Q5.4")
-        self.assertIn("Enter", executed_steps[-1][1])
+        self.assertIn("Submit ALL 5 answers", executed_steps[-1][1])
 
     def test_dynamic_scaling_options_padding(self):
         """Verify options_list dynamically scales to ['1'] * N when not provided or partial."""
-        # Partial options provided: '2,3' for 5 questions
         automator = GrillMeAutomator(
             questions=5,
             options_list="2,3",
@@ -220,7 +221,7 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
         self.assertEqual(automator.options_list, ["2", "3", "1", "1", "1"])
 
     def test_skip_enter_flag(self):
-        """Verify skip_enter suppresses Enter even on the final question."""
+        """Verify skip_enter suppresses Enter across all questions."""
         automator = GrillMeAutomator(
             questions=3,
             skip_enter=True,
@@ -237,7 +238,6 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             ok = automator.execute()
             self.assertTrue(ok)
 
-        # No step should be Enter
         enter_steps = [s for s in executed_steps if "Enter" in s[1]]
         self.assertEqual(len(enter_steps), 0)
         self.assertEqual(len(executed_steps), 9)  # 3 questions * 3 steps each

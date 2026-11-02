@@ -31,7 +31,7 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 │  - Window safety verification & foreground lock bypass                   │
 │  - Auto-reads target_chat.json for dynamic question count N             │
 │  - Option navigation: Ctrl+L -> Shift+Tab -> Option Key                  │
-│  - The Golden Enter Gate: Suppressed on Q1..QN-1, fired ONLY on QN       │
+│  - Dynamic Wizard Progression: Enter confirms selection & advances on Q1..QN-1, submits on QN │
 │                                                                          │
 └──────────────────────────────────────────────────────────────────────────┘
 ```

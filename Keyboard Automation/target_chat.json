@@ -4,8 +4,8 @@
     "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
     "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...",
     "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multiple question at once",
-    "selected_at": "2026-11-02T23:02:16.359787+00:00",
-    "status": "SUCCESS_SELECTED",
+    "selected_at": "2026-11-02T23:27:06.226814+00:00",
+    "status": "READY_FOR_GUI_SELECTION",
     "questions_count": 3,
     "total_questions_count": 3,
     "is_multi_question": true,
@@ -78,15 +78,12 @@
       }
     ],
     "window_hwnd": 197310,
-    "window_title": "Compact Minimalist UI Red...",
+    "window_title": "Fixing Npm Init Directory...",
     "window_focused": true,
-    "dry_run": true,
-    "gui_chat_selected": true,
-    "gui_selection_method": "dry_run",
-    "gui_selected_at": "2026-11-02T23:02:17.877581+00:00"
+    "dry_run": true
   },
   "meta": {
-    "timestamp": "2026-11-02T23:02:17.877581+00:00",
-    "generator": "step2_gui_chat_select.py (Dept 06 Architecture)"
+    "timestamp": "2026-11-02T23:27:06.226814+00:00",
+    "generator": "step1_find_and_focus.py (Dept 06 Architecture)"
   }
 }
