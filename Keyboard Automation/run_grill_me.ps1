@@ -75,7 +75,10 @@ param(
     [switch]$DryRun,
     [ValidateSet("auto", "ctypes", "pyautogui")]
     [string]$Engine = "auto",
-    [int]$Repeat = 1
+    [int]$Repeat = 1,
+    [string]$Questions = "auto",
+    [string]$OptionsList = $null,
+    [string]$StateFile = $null
 )
 
 $ErrorActionPreference = "Stop"
@@ -124,7 +127,10 @@ if ($SkipEnter) { $argList += "--skip-enter" }
 if ($NoAutoFocus) { $argList += "--no-auto-focus" }
 if ($NoAutoMaximize) { $argList += "--no-auto-maximize" }
 if ($NoCountdown) { $argList += "--no-countdown" }
-if ($DryRun) { $argList += "--dry-run" }
+if ($DryRun) { $argList += "--dry-run" }
+if ($Questions) { $argList += "-q", "$Questions" }
+if ($OptionsList) { $argList += "-ol", "$OptionsList" }
+if ($StateFile) { $argList += "--state-file", "$StateFile" }
 
 Write-Host "[*] Launching: $pythonCmd $($argList -join ' ')" -ForegroundColor DarkGray
 Write-Host ""

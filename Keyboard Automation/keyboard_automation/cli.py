@@ -87,6 +87,24 @@ def parse_arguments():
         help="The option number or character to choose (default: 1)."
     )
     parser.add_argument(
+        "-q", "--questions",
+        type=str,
+        default="auto",
+        help="Number of questions in multi-question card (e.g. 1, 2, 3 or 'auto' to auto-detect from target_chat.json). Default: 'auto'."
+    )
+    parser.add_argument(
+        "-ol", "--options-list",
+        type=str,
+        default=None,
+        help="Comma-separated list of options to select per question (e.g. '1,1' or '1,2,1'). Default: option from -o repeated for all questions."
+    )
+    parser.add_argument(
+        "--state-file",
+        type=str,
+        default=None,
+        help="Path to target_chat.json state file for auto-detection of questions and selections."
+    )
+    parser.add_argument(
         "--skip-ctrl-l",
         action="store_true",
         help="Skip sending Ctrl + L (if chat input is already focused)."
@@ -133,23 +151,33 @@ def parse_arguments():
     return args
 
 
-def print_banner(args):
+def print_banner(args, automator=None):
     """Outputs structured execution banner to terminal."""
     print("\n" + "=" * 65)
     print("      [*] AutoSelect-Commander: Grill Me Keyboard Automation")
     print("=" * 65)
     print(f" Target Window: '{args.target_window}' (Focus: {args.auto_focus}, Maximize: {args.auto_maximize})")
-    print(f" Engine      : {args.engine.upper()} (Zero-dependency ctypes: {IS_WINDOWS})")
-    print(f" Sequence    : {'Ctrl+L -> ' if not args.skip_ctrl_l else ''}Shift+Tab -> Option '{args.option}' -> {'Enter' if not args.skip_enter else '[No Enter]'}")
-    print(f" Step Delay  : {int(args.step_delay * 1000)}ms | Settle Delay: {int(args.settle_delay * 1000)}ms")
-    print(f" Mode        : {'DRY RUN (Simulated)' if args.dry_run else 'ACTIVE INJECTION'}")
+    print(f" Engine       : {args.engine.upper()} (Zero-dependency ctypes: {IS_WINDOWS})")
+    
+    q_str = f"{automator.total_questions} ({'Auto-detected' if args.questions == 'auto' else 'Explicit'})" if automator else args.questions
+    opt_seq = f"{automator.options_list}" if automator else (args.options_list or f"['{args.option}']")
+    print(f" Questions    : {q_str} | Options Sequence: {opt_seq}")
+    if args.state_file:
+        print(f" State File   : '{args.state_file}'")
+
+    if automator and automator.total_questions > 1:
+        print(f" Sequence     : Multi-Question Loop (Q1..Q{automator.total_questions}: [Ctrl+L -> Shift+Tab -> Opt] -> Enter ONLY on Q{automator.total_questions})")
+    else:
+        print(f" Sequence     : {'Ctrl+L -> ' if not args.skip_ctrl_l else ''}Shift+Tab -> Option '{args.option}' -> {'Enter' if not args.skip_enter else '[No Enter]'}")
+    
+    print(f" Step Delay   : {int(args.step_delay * 1000)}ms | Settle Delay: {int(args.settle_delay * 1000)}ms")
+    print(f" Mode         : {'DRY RUN (Simulated)' if args.dry_run else 'ACTIVE INJECTION'}")
     print("=" * 65 + "\n")
 
 
 def main():
     """Main CLI execution entrypoint."""
     args = parse_arguments()
-    print_banner(args)
 
     automator = GrillMeAutomator(
         engine=args.engine,
@@ -163,7 +191,12 @@ def main():
         auto_focus=args.auto_focus,
         auto_maximize=args.auto_maximize,
         settle_delay=args.settle_delay,
+        questions=args.questions,
+        options_list=args.options_list,
+        state_file=args.state_file,
     )
+
+    print_banner(args, automator=automator)
 
     if not args.no_countdown and args.countdown > 0:
         automator.run_countdown(seconds=args.countdown)

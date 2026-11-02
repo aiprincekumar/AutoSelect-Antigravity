@@ -110,6 +110,7 @@ from keyboard_automation import (
     select_target_window,
     ensure_window_on_screen,
     GrillMeAutomator,
+    execute_multi_question,
     parse_arguments,
     print_banner,
     main,

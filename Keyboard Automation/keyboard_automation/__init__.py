@@ -78,7 +78,7 @@ from .window_manager import (
     select_target_window,
     ensure_window_on_screen,
 )
-from .automator import GrillMeAutomator
+from .automator import GrillMeAutomator, execute_multi_question
 from .cli import parse_arguments, print_banner, main
 
 __all__ = [
@@ -141,6 +141,7 @@ __all__ = [
     "select_target_window",
     "ensure_window_on_screen",
     "GrillMeAutomator",
+    "execute_multi_question",
     "parse_arguments",
     "print_banner",
     "main",
