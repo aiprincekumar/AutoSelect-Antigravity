@@ -112,7 +112,8 @@ exit /b %STEP2_EXIT%
 
 :END_PROMPT
 echo.
-if not "%1"=="--no-pause" (
+echo %* | findstr /i "no-pause" >nul
+if errorlevel 1 (
     echo Press any key to close this runner window...
     pause >nul
 )

@@ -56,7 +56,7 @@ exit /b 1
 
 :PYTHON_FOUND
 echo ============================================================================
-echo   🚀 [STEP 2 / 2] CHAT SEARCH & GUI SELECTION (STANDALONE RUNNER)
+echo   🚀 [STEP 2 / 2] CHAT SEARCH ^& GUI SELECTION (STANDALONE RUNNER)
 echo   (स्टेप 2: एंटी-ग्रैविटी GUI में चैट खोजना, माउस ग्लाइड व सक्रिय करना)
 echo ============================================================================
 echo   Python Engine : %PY_CMD%
@@ -80,7 +80,8 @@ echo ===========================================================================
 echo   ✅ [STEP 2 SUCCESS] Target conversation selected and chat pane focused!
 echo ============================================================================
 echo.
-if not "%1"=="--no-pause" (
+echo %* | findstr /i "no-pause" >nul
+if errorlevel 1 (
     echo Press any key to close this runner window...
     pause >nul
 )

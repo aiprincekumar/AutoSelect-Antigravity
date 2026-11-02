@@ -107,6 +107,20 @@ if IS_WINDOWS:
         pass
 
 
+def ensure_input_desktop():
+    """Ensure thread is attached to the interactive input desktop."""
+    if not IS_WINDOWS:
+        return None
+    try:
+        hdesk = user32.OpenInputDesktop(0, False, 0x0100)  # DESKTOP_SWITCHDESKTOP
+        if hdesk:
+            user32.SetThreadDesktop(hdesk)
+            return hdesk
+    except Exception:
+        pass
+    return None
+
+
 # ============================================================================
 # Minimal RFC 6455 WebSocket Client (Zero External Dependencies)
 # ============================================================================
@@ -460,6 +474,7 @@ class AntigravityGUISelector:
     def _ensure_window_focus(cls, hwnd: int):
         if not hwnd or not IS_WINDOWS:
             return
+        ensure_input_desktop()
         try:
             # Rule: "विंडोज अगर बड़ा है तो बड़ा रहने दो और छोटा है तो बड़ा करो।"
             # If already maximized (IsZoomed == True), keep it maximized (SW_SHOW).

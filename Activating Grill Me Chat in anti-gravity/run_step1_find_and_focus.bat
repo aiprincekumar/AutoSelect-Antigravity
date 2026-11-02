@@ -56,7 +56,7 @@ exit /b 1
 
 :PYTHON_FOUND
 echo ============================================================================
-echo   🚀 [STEP 1 / 2] SCAN, STATE STORE & WINDOW FOCUS (STANDALONE RUNNER)
+echo   🚀 [STEP 1 / 2] SCAN, STATE STORE ^& WINDOW FOCUS (STANDALONE RUNNER)
 echo   (स्टेप 1: ट्रांसक्रिप्ट स्कैनिंग, स्टेट सेविंग और विंडो मैक्सिमाइज़/फोकस)
 echo ============================================================================
 echo   Python Engine : %PY_CMD%
@@ -77,11 +77,12 @@ if not "%STEP1_EXIT%"=="0" (
 
 echo.
 echo ============================================================================
-echo   ✅ [STEP 1 SUCCESS] Transcripts scanned & Antigravity window focused!
+echo   ✅ [STEP 1 SUCCESS] Transcripts scanned ^& Antigravity window focused!
 echo      State saved to: %STATE_FILE%
 echo ============================================================================
 echo.
-if not "%1"=="--no-pause" (
+echo %* | findstr /i "no-pause" >nul
+if errorlevel 1 (
     echo Press any key to close this runner window...
     pause >nul
 )

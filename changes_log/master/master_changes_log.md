@@ -1,6 +1,19 @@
-# Master Changes Log: AutoSelect-Commander
+﻿# Master Changes Log: AutoSelect-Commander
 
 > **SSOT Audit Trail:** Complete chronological record of all architectural, feature, and configuration changes.
+
+---
+
+### [2026-11-02 07:50:00 IST] - Release 1.8.5 (Multi-Question Quiz Automation Specification Prompt)
+- **Commit:** `docs(prompt): create single-page specification prompt for multi-question quiz automation`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Single-Page Architectural Specification Prompt:**
+    - Authored `Keyboard Automation/prompts/multi_question_automation_prompt.md` in UTF-8 with BOM format.
+    - Defined 3-tier detection strategies: CLI overrides (`--questions N`, `--options-list`), Windows UI Automation (UIA) radio group inspection, and screen capture/OCR badge matching.
+    - Detailed deterministic keystroke loop: `Ctrl + L` -> Settle -> `Shift + Tab` -> Settle -> `1` -> Settle -> Conditional Enter (`Enter` pressed only on final question $q == N$, suppressed on $q < N$).
+    - Analyzed Electron DOM focus cycling and drafted zero-regression integration plan for `keyboard_automation/automator.py` (`execute_multi_question`), `cli.py`, and `grill_me_automation.py`.
+    - Maintained absolute isolation of `Keyboard Automation/archive/`.
 
 ---
 
