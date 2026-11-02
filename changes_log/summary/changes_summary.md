@@ -11,6 +11,7 @@
 
 | Change ID | Timestamp | Category | Component | Description | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `CHG-017` | 2026-11-02 09:10:00 IST | `feat` | Activating Grill Me Chat | Add total question count detection & display in Step 1 & activating grill me | **VERIFIED** |
 | `CHG-016` | 2026-11-02 08:50:00 IST | `feat` | Question Detection & Quiz Automation | Add Question Detection and Quiz Automation subfolders with chained execution | **VERIFIED** |
 | `CHG-015` | 2026-11-02 07:50:00 IST | `docs` | Keyboard Automation | Single-page specification prompt for multi-question quiz mode automation | **VERIFIED** |
 | `CHG-014` | 2026-11-02 07:25:00 IST | `chore` | Keyboard Automation | Verify modular snapshot v1.1.0 in archive, validate bit-for-bit SHA-256 match and standalone execution | **VERIFIED** |
