@@ -202,29 +202,47 @@ class GrillMeAutomator:
         detected_options: List[str] = []
 
         if state_data:
-            # Check question count fields
-            q_count = state_data.get("total_questions_count") or state_data.get("questions_count")
-            if q_count is not None:
-                try:
-                    detected_q = max(1, int(q_count))
-                except (ValueError, TypeError):
-                    detected_q = 1
-            elif state_data.get("is_multi_question"):
-                qs = state_data.get("questions")
-                sels = state_data.get("selections")
-                if isinstance(qs, list) and qs:
-                    detected_q = len(qs)
-                elif isinstance(sels, list) and sels:
-                    detected_q = len(sels)
-                else:
-                    detected_q = 2
+            # Check all candidate indicators
+            candidate_counts = []
+            qs = state_data.get("questions")
+            if isinstance(qs, list) and len(qs) > 0:
+                candidate_counts.append(len(qs))
 
-            # Check if selections array contains selected options
-            selections = state_data.get("selections")
-            if isinstance(selections, list) and len(selections) >= detected_q:
-                for item in selections[:detected_q]:
-                    if isinstance(item, dict) and "selected_option_index" in item:
-                        detected_options.append(str(item["selected_option_index"]))
+            sels = state_data.get("selections")
+            if isinstance(sels, list) and len(sels) > 0:
+                candidate_counts.append(len(sels))
+
+            for k in ("total_questions_count", "questions_count"):
+                val = state_data.get(k)
+                if val is not None:
+                    try:
+                        val_int = int(val)
+                        if val_int > 0:
+                            candidate_counts.append(val_int)
+                    except (ValueError, TypeError):
+                        pass
+
+            if isinstance(qs, list) and len(qs) > 0:
+                # If questions list is present, len(questions) is the ground-truth definition
+                detected_q = len(qs)
+            elif candidate_counts:
+                detected_q = max(candidate_counts)
+            else:
+                detected_q = 1
+
+            # Extract option choices from selections or questions
+            if isinstance(sels, list) and sels:
+                for item in sels:
+                    if isinstance(item, dict):
+                        idx = item.get("selected_option_index") or item.get("recommended_option_index")
+                        if idx is not None:
+                            detected_options.append(str(idx))
+            elif isinstance(qs, list) and qs:
+                for item in qs:
+                    if isinstance(item, dict):
+                        idx = item.get("recommended_option_index") or item.get("selected_option_index")
+                        if idx is not None:
+                            detected_options.append(str(idx))
 
         # Final determination of total_questions
         final_questions = explicit_questions if explicit_questions is not None else detected_q
@@ -232,11 +250,12 @@ class GrillMeAutomator:
         # Final determination of options_list
         if parsed_options is not None:
             final_options = list(parsed_options)
-        elif detected_options and len(detected_options) == final_questions:
-            final_options = detected_options
+        elif detected_options:
+            final_options = list(detected_options)
         else:
             final_options = [str(self.option)] * final_questions
 
+        # Dynamically scale / pad to exactly final_questions elements
         while len(final_options) < final_questions:
             final_options.append(str(self.option))
         final_options = final_options[:final_questions]
@@ -343,24 +362,30 @@ class GrillMeAutomator:
             action_func()
         time.sleep(self.step_delay)
 
-    def execute_multi_question(self, total_questions: int, options: Optional[List[str]] = None) -> bool:
+    def execute_multi_question(self, total_questions: Optional[int] = None, options: Optional[List[str]] = None) -> bool:
         """
-        Executes deterministic multi-question keyboard automation loop.
-        Ensures Enter is strictly pressed ONLY on the final question.
+        Executes deterministic multi-question keyboard automation loop for any N questions (1..N).
+        Ensures Enter is strictly pressed ONLY on the final question (N).
+        For intermediate questions (1..N-1), Enter is completely suppressed.
 
-        Sequence for question 1..N:
-          Step A: Focus chat input (Ctrl + L)
-          Step B: Reverse tab to option buttons (Shift + Tab)
-          Step C: Select option key (e.g. '1')
-          Step D: Conditional Enter Gate:
-                  - Questions 1..N-1: Suppress Enter (advance loop)
-                  - Question N (final): Press Enter (submit batch)
+        Dynamic Sequence for question i in 1..N:
+          - Step 1: Focus chat input (Ctrl + L)
+          - Step 2: Reverse tab to option buttons (Shift + Tab)
+          - Step 3: Select option key (e.g. '1')
+          - Step 4: Conditional Enter Gate:
+                    * Intermediate questions (i < N): Suppress Enter, settle UI (0.35s-0.5s pause)
+                    * Final question (i == N): Press Enter to submit batch!
         """
-        opts = list(options) if options else [str(self.option)] * total_questions
+        if total_questions is None:
+            total_questions = self.total_questions
+        total_questions = max(1, total_questions)
+
+        opts = list(options) if options else list(self.options_list)
         while len(opts) < total_questions:
             opts.append(str(self.option))
+        opts = opts[:total_questions]
 
-        logger.info(f"Initiating multi-question automation loop: {total_questions} questions | Options: {opts}")
+        logger.info(f"Initiating dynamic keyboard automation loop: {total_questions} question(s) | Options: {opts}")
 
         # Ensure target window is prepared and focused if not done already
         if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
@@ -403,9 +428,14 @@ class GrillMeAutomator:
             for q_idx in range(1, total_questions + 1):
                 opt = opts[q_idx - 1]
                 is_last = (q_idx == total_questions)
-                logger.info(f"--- Processing Question {q_idx}/{total_questions} [Select Option: '{opt}'] ---")
 
-                # Step A: Focus chat input (Ctrl + L)
+                # Clear standardized progress logging required by protocol
+                if is_last:
+                    logger.info(f"[Question {total_questions}/{total_questions}] Final Question: Selecting option {opt} and submitting with Enter!")
+                else:
+                    logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt}... (Enter suppressed)")
+
+                # Step 1: Focus chat input (Ctrl + L)
                 if not self.skip_ctrl_l:
                     if self.engine == "ctypes":
                         self._execute_step(
@@ -422,7 +452,7 @@ class GrillMeAutomator:
                 else:
                     logger.info(f"Step Q{q_idx}.1: Skipping Ctrl + L (as requested)")
 
-                # Step B: Reverse tab to option buttons (Shift + Tab)
+                # Step 2: Reverse tab to option buttons (Shift + Tab)
                 if self.engine == "ctypes":
                     self._execute_step(
                         f"Q{q_idx}.2",
@@ -436,7 +466,7 @@ class GrillMeAutomator:
                         lambda: pyautogui.hotkey("shift", "tab")
                     )
 
-                # Step C: Select option key (e.g. '1')
+                # Step 3: Select option key (e.g. '1')
                 vk_opt = get_option_vk(opt)
                 if self.engine == "ctypes":
                     self._execute_step(
@@ -451,28 +481,31 @@ class GrillMeAutomator:
                         lambda: pyautogui.press(str(opt))
                     )
 
-                # Step D: Conditional Enter Gate
+                # Step 4: Conditional Enter Gate
                 if is_last:
                     if not self.skip_enter:
                         if self.engine == "ctypes":
                             self._execute_step(
                                 f"Q{q_idx}.4",
-                                "Press [Enter] (Submit ALL answers on final question)",
+                                f"Press [Enter] (Submit ALL {total_questions} answers on final question)",
                                 lambda: send_single_key(VK_RETURN, hold_delay=self.hold_delay)
                             )
                         elif self.engine == "pyautogui":
                             self._execute_step(
                                 f"Q{q_idx}.4",
-                                "Press [Enter] (Submit ALL answers on final question)",
+                                f"Press [Enter] (Submit ALL {total_questions} answers on final question)",
                                 lambda: pyautogui.press("enter")
                             )
                     else:
                         logger.info(f"Step Q{q_idx}.4: Skipping Enter on final question (user flag --skip-enter)")
                 else:
-                    logger.info(f"Step Q{q_idx}.4: [SUPPRESS ENTER] Intermediate question {q_idx}/{total_questions} completed. Advancing...")
-                    time.sleep(self.step_delay)
+                    logger.info(f"Step Q{q_idx}.4: [SUPPRESS ENTER] Intermediate question {q_idx}/{total_questions} option selected. Enter suppressed.")
+                    # UI transition settle pause (0.35s - 0.5s) between question iterations so Windows/Electron registers Ctrl+L cleanly
+                    transition_delay = max(0.35, self.step_delay)
+                    logger.debug(f"UI transition settle pause ({transition_delay:.2f}s) before next question...")
+                    time.sleep(transition_delay)
 
-            logger.info("[SUCCESS] Multi-question sequence finished successfully!")
+            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {total_questions} question(s)!")
             return True
 
         except Exception as e:
@@ -480,128 +513,15 @@ class GrillMeAutomator:
             return False
 
     def execute(self) -> bool:
-        """Executes the full automated key sequence."""
-        # Ensure target window is prepared and focused if not done already
-        if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
-            if not self.target_hwnd:
-                self.prepare_target_window()
-            elif self.auto_focus and not self.dry_run:
-                curr_fg = user32.GetForegroundWindow()
-                if curr_fg != self.target_hwnd:
-                    logger.info("Ensuring target window is brought to foreground before keystrokes...")
-                    ensure_window_on_screen(
-                        self.target_hwnd,
-                        auto_maximize=self.auto_maximize,
-                        auto_focus=True,
-                        settle_delay=0.1
-                    )
-
-        active_window = get_active_window_title()
-        logger.info(f"Target Foreground Window: '{active_window}'")
-
-        # Double-check: ensure foreground window is NEVER a web browser
-        if IS_WINDOWS and not self.dry_run:
-            fg_hwnd = user32.GetForegroundWindow()
-            _, fg_pname, _ = get_process_info_for_hwnd(fg_hwnd)
-            user_wants_browser = any(
-                any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
-                for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
-            )
-            if fg_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
-                logger.error(
-                    f"[ABORT] Foreground window belongs to browser '{fg_pname}' (HWND: {hex(fg_hwnd) if fg_hwnd else 'None'})! "
-                    f"Aborting key simulation to protect user browser tabs and prevent accidental search!"
-                )
-                return False
-
-        if self.engine == "none":
-            logger.error("No valid automation engine available on this platform.")
-            return False
-
-        # Branch to multi-question workflow if total_questions > 1
-        if self.total_questions > 1:
-            return self.execute_multi_question(self.total_questions, self.options_list)
-
-        try:
-            step = 1
-
-            # Step 1: Ctrl + L (Focus Chat Box)
-            if not self.skip_ctrl_l:
-                if self.engine == "ctypes":
-                    self._execute_step(
-                        step,
-                        "Press [Ctrl + L] (Focus chat input)",
-                        lambda: send_key_combo([VK_CONTROL, VK_L], hold_delay=self.hold_delay)
-                    )
-                elif self.engine == "pyautogui":
-                    self._execute_step(
-                        step,
-                        "Press [Ctrl + L] (Focus chat input)",
-                        lambda: pyautogui.hotkey("ctrl", "l")
-                    )
-                step += 1
-            else:
-                logger.info("Skipping Step: Ctrl + L (as requested)")
-
-            # Step 2: Shift + Tab (Shift focus to option buttons)
-            if self.engine == "ctypes":
-                self._execute_step(
-                    step,
-                    "Press [Shift + Tab] (Move backward to options)",
-                    lambda: send_key_combo([VK_SHIFT, VK_TAB], hold_delay=self.hold_delay)
-                )
-            elif self.engine == "pyautogui":
-                self._execute_step(
-                    step,
-                    "Press [Shift + Tab] (Move backward to options)",
-                    lambda: pyautogui.hotkey("shift", "tab")
-                )
-            step += 1
-
-            # Step 3: Option Key (Select Option 1 by default)
-            vk_opt = get_option_vk(self.option)
-            if self.engine == "ctypes":
-                self._execute_step(
-                    step,
-                    f"Press [{self.option}] (Select Option {self.option})",
-                    lambda: send_single_key(vk_opt, hold_delay=self.hold_delay)
-                )
-            elif self.engine == "pyautogui":
-                self._execute_step(
-                    step,
-                    f"Press [{self.option}] (Select Option {self.option})",
-                    lambda: pyautogui.press(str(self.option))
-                )
-            step += 1
-
-            # Step 4: Enter (Submit Confirmation)
-            if not self.skip_enter:
-                if self.engine == "ctypes":
-                    self._execute_step(
-                        step,
-                        "Press [Enter] (Submit confirmation)",
-                        lambda: send_single_key(VK_RETURN, hold_delay=self.hold_delay)
-                    )
-                elif self.engine == "pyautogui":
-                    self._execute_step(
-                        step,
-                        "Press [Enter] (Submit confirmation)",
-                        lambda: pyautogui.press("enter")
-                    )
-                step += 1
-            else:
-                logger.info("Skipping Step: Enter (as requested)")
-
-            logger.info("[SUCCESS] All automation steps completed successfully!")
-            return True
-
-        except Exception as e:
-            logger.error(f"[ERROR] Automation failed with error: {e}", exc_info=True)
-            return False
+        """
+        Executes the dynamic Grill Me keyboard automation sequence.
+        Dynamically dispatches for any number of questions N (1, 2, 3, 4, 5, ... N).
+        """
+        return self.execute_multi_question(self.total_questions, self.options_list)
 
 
 def execute_multi_question(
-    total_questions: int = 2,
+    total_questions: int = 1,
     options: Optional[List[str]] = None,
     **kwargs
 ) -> bool:

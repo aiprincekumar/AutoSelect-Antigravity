@@ -166,7 +166,9 @@ def print_banner(args, automator=None):
         print(f" State File   : '{args.state_file}'")
 
     if automator and automator.total_questions > 1:
-        print(f" Sequence     : Multi-Question Loop (Q1..Q{automator.total_questions}: [Ctrl+L -> Shift+Tab -> Opt] -> Enter ONLY on Q{automator.total_questions})")
+        print(f" Sequence     : Dynamic Loop (Q1..Q{automator.total_questions}: [Ctrl+L -> Shift+Tab -> Opt] -> Enter ONLY on Q{automator.total_questions})")
+    elif automator and automator.total_questions == 1:
+        print(f" Sequence     : Single Question: {'[Ctrl+L -> ' if not args.skip_ctrl_l else '['}Shift+Tab -> Option '{automator.options_list[0]}'] -> {'Enter' if not args.skip_enter else '[No Enter]'}")
     else:
         print(f" Sequence     : {'Ctrl+L -> ' if not args.skip_ctrl_l else ''}Shift+Tab -> Option '{args.option}' -> {'Enter' if not args.skip_enter else '[No Enter]'}")
     
