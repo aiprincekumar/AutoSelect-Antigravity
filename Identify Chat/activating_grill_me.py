@@ -804,19 +804,18 @@ class AntigravityGuiSelector:
 
     @classmethod
     def load_calibrated_coordinates(cls) -> Tuple[int, int]:
-        """Try loading calibrated coordinates from gui_automation config.json if available."""
+        """Try loading calibrated coordinates from local config.json if available."""
         try:
-            # Check Mouse Automation/scripts/gui_automation/config.json or scripts/gui_automation/config.json
-            repo_root = Path(__file__).resolve().parent.parent
-            cfg_path = repo_root / "Mouse Automation" / "scripts" / "gui_automation" / "config.json"
-            if not cfg_path.is_file():
-                cfg_path = repo_root / "scripts" / "gui_automation" / "config.json"
+            # Check local config.json in the same directory
+            cfg_path = Path(__file__).resolve().parent / "config.json"
             if cfg_path.is_file():
                 with open(cfg_path, "r", encoding="utf-8") as f:
                     cfg = json.load(f)
+                    # Check steps.step1_chat or coordinates.chat_click_x
                     step1 = cfg.get("steps", {}).get("step1_chat", {})
-                    x = step1.get("x", cls.DEFAULT_CLICK_X)
-                    y = step1.get("y", cls.DEFAULT_CLICK_Y)
+                    coords = cfg.get("coordinates", {})
+                    x = step1.get("x", coords.get("chat_click_x", cls.DEFAULT_CLICK_X))
+                    y = step1.get("y", coords.get("chat_click_y", cls.DEFAULT_CLICK_Y))
                     return int(x), int(y)
         except Exception:
             pass

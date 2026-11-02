@@ -1,15 +1,41 @@
 # 🎯 Grill Me Keyboard Automation Suite
 
-> **Module:** `Keyboard Automation`  
-> **Parent Workspace:** [`AutoSelect-Commander`](..)  
+> **Subfolder:** `Keyboard Automation` (100% Autonomous, Standalone & Decoupled)  
 > **Target Environment:** Windows 10/11, Antigravity Chat UI, IDEs, and Web Terminals  
-> **Architecture:** Zero-Dependency Native Windows ctypes (`SendInput` / `keybd_event` / `user32` Windowing) + Intelligent Auto-Targeting, Restoration, Full-Screen Maximization & Focus Subsystem.
+> **Architecture:** Zero-Dependency Native Windows ctypes (`SendInput` / `keybd_event` / `user32` Windowing) + Intelligent Auto-Targeting, Restoration, Full-Screen Maximization & Focus Subsystem.  
+> **Author & Identity:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
 
 ---
 
-## 📖 Overview
+## 📖 Overview & Independence
 
-The **Grill Me Keyboard Automation** suite provides an automated keystroke injection and window-management mechanism designed to respond to interactive multi-choice prompts (such as `/grill-me` or interactive task questions) in Antigravity or any chat-based interface.
+The **Grill Me Keyboard Automation** suite is a completely autonomous, standalone tool. It has **zero dependencies on any other subfolder or external modules** and can be moved, copied, or deployed anywhere on Windows independently.
+
+It provides an automated keystroke injection and window-management mechanism designed to respond to interactive multi-choice prompts (such as `/grill-me` or interactive task questions) in Antigravity or any chat-based interface.
+
+### 🚀 Quick Start (100% Standalone)
+
+#### Prerequisites
+- Windows 10 or 11
+- Python 3.8+ (Zero third-party packages required for standard ctypes engine)
+
+#### Running the Suite
+
+##### Method 1: 1-Click Windows Batch Runner (Recommended)
+Double-click `run_grill_me.bat` or run:
+```cmd
+run_grill_me.bat
+```
+
+##### Method 2: PowerShell Runner
+```powershell
+.\run_grill_me.ps1 -Countdown 3 -Option 1
+```
+
+##### Method 3: Direct Python CLI
+```bash
+python grill_me_automation.py -c 3 -o 1
+```
 
 ### 🌟 Intelligent Auto-Targeting & Maximization Subsystem (Default: Enabled)
 By default, regardless of current desktop state, the suite automatically inspects and prepares the target application window:

@@ -22,16 +22,6 @@ set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
 :: 1. Detect Python Executable (.venv prioritized)
 set "PY_CMD="
 
-if exist "%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe" (
-    set "PY_CMD=%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe"
-    goto :PYTHON_FOUND
-)
-
-if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
-    set "PY_CMD=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-    goto :PYTHON_FOUND
-)
-
 if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PY_CMD=%SCRIPT_DIR%.venv\Scripts\python.exe"
     goto :PYTHON_FOUND

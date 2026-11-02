@@ -1,8 +1,8 @@
-# Grill Me Keyboard Automation Dependencies
-# -------------------------------------------------------------
-# NOTE: Zero external packages are required!
-# The automation engine runs natively via Windows ctypes (SendInput / keybd_event)
-# out-of-the-box on standard Python 3.8+ on Windows.
+# Keyboard Automation (AutoSelect-Commander) - Dependencies
+# ========================================================
+# Architecture: Zero required external dependencies
+# The automation engine runs natively via Windows ctypes (SendInput / keybd_event / Win32 API)
+# on standard Python 3.8+ on Windows with no third-party packages required.
 #
-# If you prefer to use PyAutoGUI as an alternate engine:
+# Optional fallback engine:
 pyautogui>=0.9.54

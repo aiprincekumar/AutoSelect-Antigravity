@@ -1,0 +1,54 @@
+{
+  "screen": {
+    "expected_width": 1920,
+    "expected_height": 1080,
+    "note": "Native Full HD 1920x1080 calibrated coordinates for Antigravity GUI chat activation."
+  },
+  "settings": {
+    "failsafe_enabled": false,
+    "pause_between_pyautogui_actions": 0.1,
+    "default_move_duration": 0.8,
+    "default_hover_delay": 0.6,
+    "easing_function": "easeOutQuad"
+  },
+  "coordinates": {
+    "chat_click_x": 580,
+    "chat_click_y": 815,
+    "option_radio_x": 541,
+    "option_radio_y": 664,
+    "submit_button_x": 1827,
+    "submit_button_y": 849
+  },
+  "steps": {
+    "step1_chat": {
+      "name": "Step 1: Open & Focus Chat Area",
+      "name_hi": "स्टेप 1: चैट एरिया / (?) बैज पर क्लिक व फोकस करना",
+      "x": 580,
+      "y": 815,
+      "move_duration": 0.8,
+      "hover_delay": 0.5,
+      "clicks": 1,
+      "button": "left"
+    },
+    "step2_recommended": {
+      "name": "Step 2: Select (Recommended) Option",
+      "name_hi": "स्टेप 2: (Recommended) ऑप्शन / रेडियो बटन चुनना",
+      "x": 541,
+      "y": 664,
+      "move_duration": 0.8,
+      "hover_delay": 0.7,
+      "clicks": 1,
+      "button": "left"
+    },
+    "step3_submit": {
+      "name": "Step 3: Click Submit / Confirm Button",
+      "name_hi": "स्टेप 3: सबमिट / कन्फर्म बटन पर क्लिक करना",
+      "x": 1827,
+      "y": 849,
+      "move_duration": 0.8,
+      "hover_delay": 0.7,
+      "clicks": 1,
+      "button": "left"
+    }
+  }
+}

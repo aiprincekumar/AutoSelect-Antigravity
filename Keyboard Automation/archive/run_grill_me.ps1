@@ -88,16 +88,12 @@ Write-Host ""
 
 # Locate Python
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
-$mouseVenvPython = Join-Path (Split-Path -Parent (Split-Path -Parent $scriptDir)) "Mouse Automation\.venv\Scripts\python.exe"
-$venvPython = Join-Path (Split-Path -Parent $scriptDir) ".venv\Scripts\python.exe"
+$localVenvPython = Join-Path $scriptDir ".venv\Scripts\python.exe"
 
 $pythonCmd = $null
-if (Test-Path $mouseVenvPython) {
-    $pythonCmd = $mouseVenvPython
-    Write-Host "[*] Found project virtualenv: $pythonCmd" -ForegroundColor Green
-} elseif (Test-Path $venvPython) {
-    $pythonCmd = $venvPython
-    Write-Host "[*] Found project virtualenv: $pythonCmd" -ForegroundColor Green
+if (Test-Path $localVenvPython) {
+    $pythonCmd = $localVenvPython
+    Write-Host "[*] Found local virtualenv: $pythonCmd" -ForegroundColor Green
 } elseif (Get-Command python -ErrorAction SilentlyContinue) {
     $pythonCmd = (Get-Command python).Source
     Write-Host "[*] Found system Python: $pythonCmd" -ForegroundColor Green

@@ -1,9 +1,10 @@
-# Activating Grill Me Chat in Antigravity - Requirements
-# =========================================================
-# Architecture: Zero required external dependencies
-# Uses 100% Python Standard Library (Python 3.10+):
-#   - os, sys, json, time, datetime, pathlib, dataclasses, argparse, logging, ctypes
-
-# Optional packages for enhanced ergonomics (not mandatory):
-# colorama>=0.4.6       # Colored ANSI console output on older Windows cmd
-# pyautogui>=0.9.54      # Optional GUI/keyboard automation fallback
+# Identify Chat (AutoSelect-Commander) - Dependencies
+# ===================================================
+# Architecture: 100% Zero External Dependencies
+# The core scripts (step1_find_and_focus.py, step2_gui_chat_select.py, activating_grill_me.py)
+# run natively using standard library modules (os, sys, json, time, pathlib, socket, struct, base64, urllib, ctypes).
+# No external package installation is required to run standalone.
+#
+# Optional enhancement packages (uncomment if desired):
+# colorama>=0.4.6       # ANSI terminal coloring on legacy Windows cmd
+# pyautogui>=0.9.54      # Alternate synthetic input fallback
