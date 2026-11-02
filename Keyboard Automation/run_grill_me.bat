@@ -10,7 +10,10 @@ echo.
 
 :: Detect Python interpreter
 set "PYTHON_CMD="
-if exist "%~dp0..\.venv\Scripts\python.exe" (
+if exist "%~dp0..\Mouse Automation\.venv\Scripts\python.exe" (
+    set "PYTHON_CMD=%~dp0..\Mouse Automation\.venv\Scripts\python.exe"
+    echo [*] Using project virtualenv: !PYTHON_CMD!
+) else if exist "%~dp0..\.venv\Scripts\python.exe" (
     set "PYTHON_CMD=%~dp0..\.venv\Scripts\python.exe"
     echo [*] Using project virtualenv: !PYTHON_CMD!
 ) else (

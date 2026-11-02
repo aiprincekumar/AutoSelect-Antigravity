@@ -806,9 +806,11 @@ class AntigravityGuiSelector:
     def load_calibrated_coordinates(cls) -> Tuple[int, int]:
         """Try loading calibrated coordinates from gui_automation config.json if available."""
         try:
-            # Check ../scripts/gui_automation/config.json
+            # Check Mouse Automation/scripts/gui_automation/config.json or scripts/gui_automation/config.json
             repo_root = Path(__file__).resolve().parent.parent
-            cfg_path = repo_root / "scripts" / "gui_automation" / "config.json"
+            cfg_path = repo_root / "Mouse Automation" / "scripts" / "gui_automation" / "config.json"
+            if not cfg_path.is_file():
+                cfg_path = repo_root / "scripts" / "gui_automation" / "config.json"
             if cfg_path.is_file():
                 with open(cfg_path, "r", encoding="utf-8") as f:
                     cfg = json.load(f)

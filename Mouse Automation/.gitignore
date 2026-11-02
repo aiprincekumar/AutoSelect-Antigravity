@@ -1,0 +1,28 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Python byte-code & caches
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+
+# Runtime Logs
+logs/
+*.log
+@AutomationLog.txt
+
+# Temp & Ephemeral
+vibe_coding_temp/
+temp_prompt/
+*last_selection_state.json
+
+# System and IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

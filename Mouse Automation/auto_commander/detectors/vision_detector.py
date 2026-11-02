@@ -26,6 +26,11 @@ class VisionDetector(BaseDetector):
     """Uses OpenCV multi-scale multi-template matching to detect '(Recommended)' on screen."""
 
     def __init__(self, templates_dir: str = "assets/templates", target_keywords: Tuple[str, ...] = ()):
+        if not os.path.isdir(templates_dir):
+            module_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            fallback = os.path.join(module_dir, templates_dir)
+            if os.path.isdir(fallback):
+                templates_dir = fallback
         self.templates_dir = templates_dir
         self.templates: List[Tuple[str, Any]] = []
         self._ensure_and_load_templates()

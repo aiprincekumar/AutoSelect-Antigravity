@@ -57,6 +57,12 @@ class Config:
     @classmethod
     def load(cls, config_path: str = "config.json") -> "Config":
         """Load configuration from JSON file or return defaults."""
+        if not os.path.exists(config_path):
+            # Check relative to module package directory
+            module_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+            fallback = os.path.join(module_dir, config_path)
+            if os.path.exists(fallback):
+                config_path = fallback
         if os.path.exists(config_path):
             try:
                 with open(config_path, "r", encoding="utf-8") as f:

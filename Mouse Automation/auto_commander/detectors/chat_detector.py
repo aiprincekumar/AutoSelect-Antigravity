@@ -39,6 +39,11 @@ class ChatTabDetector(BaseDetector):
         config: Config,
         template_path: str = "assets/badge_question_template.png",
     ):
+        if not os.path.exists(template_path):
+            module_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            fallback = os.path.join(module_dir, template_path)
+            if os.path.exists(fallback):
+                template_path = fallback
         self.config = config
         self.template_path = template_path
         self.templates: List[Tuple[str, "np.ndarray"]] = []
