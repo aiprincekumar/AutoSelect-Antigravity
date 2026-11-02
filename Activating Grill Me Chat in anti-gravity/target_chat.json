@@ -4,7 +4,7 @@
     "conversation_id": "0d5e735e-85e3-4a0d-bffd-5e3e4fcf72da",
     "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है।",
     "last_user_prompt": "Continue",
-    "selected_at": "2026-11-02T02:27:39.019737+00:00",
+    "selected_at": "2026-11-02T02:37:52.550338+00:00",
     "status": "SUCCESS_SELECTED",
     "questions_count": 2,
     "questions": [
@@ -55,15 +55,15 @@
       }
     ],
     "window_hwnd": 3474542,
-    "window_title": "Windows Taskbar HUD Custo...",
+    "window_title": "Grid Mode Demo Setup - Ou...",
     "window_focused": true,
     "dry_run": false,
     "gui_chat_selected": true,
     "gui_selection_method": "cdp_dom_click",
-    "gui_selected_at": "2026-11-02T02:28:34.697409+00:00"
+    "gui_selected_at": "2026-11-02T02:37:56.535309+00:00"
   },
   "meta": {
-    "timestamp": "2026-11-02T02:28:34.697409+00:00",
+    "timestamp": "2026-11-02T02:37:56.535309+00:00",
     "generator": "step2_gui_chat_select.py (Dept 06 Architecture)"
   }
 }
