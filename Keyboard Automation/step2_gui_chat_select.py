@@ -350,19 +350,12 @@ class AntigravityGUISelector:
                     result["element_coordinates"] = (elem_x, elem_y)
                     logger.info("Found conversation link in DOM: Viewport (%d, %d)", elem_x, elem_y)
 
-                    # Calculate absolute screen coordinates from window rect
-                    screen_x, screen_y = cls._viewport_to_screen(hwnd, elem_x, elem_y)
-                    result["screen_coordinates"] = (screen_x, screen_y)
-
-                    # Smooth visual glide to target conversation row
-                    cls._smooth_mouse_move(screen_x, screen_y, duration=0.6)
-                    time.sleep(0.15)
-
-                    # Dispatch authentic DOM pointer & mouse events
+                    # Dispatch authentic DOM click and pointer events directly via CDP
                     dispatch_js = f"""
                     (() => {{
                         const el = document.querySelector('a[href*="{target_cid}"]');
                         if (!el) return false;
+                        el.click();
                         const opts = {{ bubbles: true, cancelable: true, view: window, buttons: 1 }};
                         el.dispatchEvent(new PointerEvent('pointerdown', opts));
                         el.dispatchEvent(new MouseEvent('mousedown', opts));
@@ -373,8 +366,6 @@ class AntigravityGUISelector:
                     }})()
                     """
                     cdp.eval_js(dispatch_js)
-                    # Also click hardware OS mouse
-                    cls._hardware_mouse_click(screen_x, screen_y, hwnd=hwnd)
                     time.sleep(0.4)
 
                     result["success"] = True
@@ -402,20 +393,12 @@ class AntigravityGUISelector:
             finally:
                 cdp.close()
 
-        # 3. Fallback: Calibrated Sidebar Coordinate Click (Tier 3)
+        # 3. Fallback: Direct Chat Pane Activation (Tier 3)
+        # Note: Never fire blind hardware mouse clicks into the sidebar area, which can open project files in the editor!
         if not result["success"]:
-            logger.warning("CDP precision selection unavailable, falling back to calibrated coordinate click...")
-            coords = cls._get_calibrated_sidebar_coords(hwnd)
-            screen_x, screen_y = coords
-            result["screen_coordinates"] = (screen_x, screen_y)
-
-            cls._smooth_mouse_move(screen_x, screen_y, duration=0.8)
-            time.sleep(0.2)
-            cls._hardware_mouse_click(screen_x, screen_y, hwnd=hwnd)
-            time.sleep(0.4)
-
+            logger.info("CDP precision selection unavailable, using direct window focus + Ctrl+L chat activation...")
             result["success"] = True
-            result["method"] = "calibrated_coordinate_click"
+            result["method"] = "window_focus_shortcut"
 
         # 4. Keyboard Shortcut: Ctrl + L (Focus Chat Pane & Input Prompt)
         time.sleep(0.3)
