@@ -40,14 +40,21 @@ pip install -r requirements.txt
 
 ### Running the Suite
 
-#### Option A: 1-Click Combined Runner (Recommended)
+#### Option A: 1-Click 3-Step Full Pipeline Runner (Step 1 + Step 2 + Step 3)
+Double-click `run_activating_grill_me_with_automation.bat` or run from terminal:
+```cmd
+run_activating_grill_me_with_automation.bat
+```
+This runs Step 1 (find & focus window), settles for 0.8s, runs Step 2 (GUI chat select & focus), settles for 0.8s, and runs Step 3 (hybrid keyboard automation to choose option and submit).
+
+#### Option B: 2-Step Modular Runner (Step 1 + Step 2)
 Double-click `run_activating_grill_me.bat` or run from terminal:
 ```cmd
 run_activating_grill_me.bat
 ```
 This runs Step 1, settles for 0.8s, and runs Step 2 seamlessly.
 
-#### Option B: Step 1 Standalone (Scan transcripts & focus window)
+#### Option C: Step 1 Standalone (Scan transcripts & focus window)
 ```cmd
 run_step1_find_and_focus.bat
 ```
@@ -57,7 +64,7 @@ python step1_find_and_focus.py
 ```
 *(Flags: `--cid <CONVO_ID>`, `--dry-run`, `--no-focus`)*
 
-#### Option C: Step 2 Standalone (GUI Chat Select & Focus)
+#### Option D: Step 2 Standalone (GUI Chat Select & Focus)
 ```cmd
 run_step2_gui_chat_select.bat
 ```
@@ -73,7 +80,8 @@ python step2_gui_chat_select.py
 
 | File | Purpose |
 | :--- | :--- |
-| `run_activating_grill_me.bat` | Master 1-click batch runner orchestrating Step 1 and Step 2 |
+| `run_activating_grill_me_with_automation.bat` | 3-step master pipeline runner (Step 1 + Step 2 + Step 3 Keyboard Automation) |
+| `run_activating_grill_me.bat` | 2-step batch runner orchestrating Step 1 and Step 2 |
 | `run_step1_find_and_focus.bat` | Standalone runner for Step 1 (scan & focus) |
 | `run_step2_gui_chat_select.bat` | Standalone runner for Step 2 (GUI chat selection & focus) |
 | `step1_find_and_focus.py` | Scans brain transcripts, extracts questions, focuses window, saves `target_chat.json` |

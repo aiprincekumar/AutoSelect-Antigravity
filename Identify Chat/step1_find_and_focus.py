@@ -708,7 +708,7 @@ def main() -> int:
     parser.add_argument("--state-file", type=str, default="target_chat.json", help="State file name")
     parser.add_argument("--no-pause", action="store_true", help="Non-interactive execution flag")
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     return run_step1(
         brain_dir=args.brain_dir,
         target_cid=args.cid,

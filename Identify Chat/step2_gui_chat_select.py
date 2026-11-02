@@ -657,7 +657,7 @@ def main() -> int:
     parser.add_argument("--auto-submit", action="store_true", help="Automatically submit option after selecting")
     parser.add_argument("--no-pause", action="store_true", help="Non-interactive execution flag")
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     return run_step2(
         state_file=args.state_file,
         explicit_cid=args.cid,

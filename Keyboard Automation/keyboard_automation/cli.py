@@ -124,7 +124,13 @@ def parse_arguments():
         action="store_true",
         help="Execute immediately without countdown."
     )
-    return parser.parse_args()
+    parser.add_argument(
+        "--no-pause",
+        action="store_true",
+        help="Non-interactive execution flag (skip prompt at end)."
+    )
+    args, _ = parser.parse_known_args()
+    return args
 
 
 def print_banner(args):
