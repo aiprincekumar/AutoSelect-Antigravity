@@ -93,7 +93,7 @@ echo ===========================================================================
 echo   🎉 [PIPELINE SUCCESS] GRILL ME CHAT IS FULLY ACTIVATED IN ANTIGRAVITY!
 echo ============================================================================
 echo   1. Pending Question Identified and State Saved to target_chat.json.
-echo   2. Antigravity Window Restored and Brought to Foreground.
+echo   2. Antigravity Window Safely Maximized/Preserved (No Restore-Down) and Focused.
 echo   3. Target Chat Selected via DevTools / DOM Precision Click.
 echo   4. Chat Input Pane Focused (Ctrl + L) and Ready for Response.
 echo ============================================================================

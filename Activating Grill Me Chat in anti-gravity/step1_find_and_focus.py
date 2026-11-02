@@ -85,6 +85,17 @@ if IS_WINDOWS:
 
     ASFW_ANY = -1
 
+    # Win32 function signatures
+    try:
+        user32.IsZoomed.argtypes = [wintypes.HWND]
+        user32.IsZoomed.restype = wintypes.BOOL
+        user32.IsIconic.argtypes = [wintypes.HWND]
+        user32.IsIconic.restype = wintypes.BOOL
+        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.ShowWindow.restype = wintypes.BOOL
+    except Exception:
+        pass
+
     class WINDOWPLACEMENT(ctypes.Structure):
         _fields_ = [
             ("length", wintypes.UINT),
@@ -487,13 +498,18 @@ class AntigravityFocusManager:
         except Exception:
             pass
 
-        # If minimized, restore it
-        if user32.IsIconic(hwnd):
-            logger.info("Window is minimized. Restoring window state (SW_RESTORE)...")
-            user32.ShowWindow(hwnd, SW_RESTORE)
-            time.sleep(0.15)
-        else:
+        # Window size & restore management
+        # Rule: "विंडोज अगर बड़ा है तो बड़ा रहने दो और छोटा है तो बड़ा करो।"
+        # If already maximized (IsZoomed == True), keep it maximized (SW_SHOW).
+        # If not maximized (small windowed or minimized), maximize it (SW_MAXIMIZE).
+        # NEVER call SW_RESTORE (9) on a maximized window!
+        if user32.IsZoomed(hwnd):
+            logger.info("Antigravity window (HWND: %d) is already maximized. Keeping it maximized (SW_SHOW)...", hwnd)
             user32.ShowWindow(hwnd, SW_SHOW)
+        else:
+            logger.info("Antigravity window (HWND: %d) is not maximized (small or minimized). Maximizing window (SW_MAXIMIZE)...", hwnd)
+            user32.ShowWindow(hwnd, SW_MAXIMIZE)
+            time.sleep(0.15)
 
         # Thread attachment bypass
         cur_fg = user32.GetForegroundWindow()

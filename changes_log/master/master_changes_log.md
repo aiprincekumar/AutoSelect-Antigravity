@@ -4,6 +4,24 @@
 
 ---
 
+### [2026-11-02 07:25:00 IST] - Release 1.8.4 (Archive Modular Snapshot v1.1.0 Verification & Standalone Integrity Certification)
+- **Commit:** `chore(archive): verify modular snapshot v1.1.0 in archive, validate bit-for-bit SHA-256 match and standalone execution`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Modular Package Verification inside Archive:**
+    - Inspected manual copy of `keyboard_automation/` package and `grill_me_automation.py` entrypoint in `Keyboard Automation/archive/`.
+    - Validated all 11 archived files against production files, confirming 100% bit-for-bit identical SHA-256 matches.
+  - **Standalone & Independent Execution Certified:**
+    - Executed dry-run tests directly from within `Keyboard Automation/archive/` (`python grill_me_automation.py --dry-run --no-countdown`) with clean import resolution and zero external dependency errors.
+  - **Archive Snapshot Documentation Harmonization:**
+    - Re-generated `Keyboard Automation/archive/README.md` to document snapshot version `v1.1.0-modular-verified`, full file inventory table, verified checksums, and complete restore instructions.
+    - Cleaned up transient `__pycache__` directory and verified UTF-8 BOM encoding.
+  - **Testing & Security Certification:**
+    - Full unittest suite passed (99/99 tests green).
+    - Zero security leaks verified via `gitleaks detect --redact`.
+
+---
+
 ### [2026-11-02 06:45:00 IST] - Release 1.8.3 (Modular Package Decomposition for Keyboard Automation)
 - **Commit:** `refactor(automation): decompose monolithic automation script into industry-standard modular package`
 - **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)

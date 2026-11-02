@@ -1,8 +1,8 @@
-# Changes Summary: AutoSelect-Commander
+﻿# Changes Summary: AutoSelect-Commander
 
 > **Project:** AutoSelect-Commander (Visual Mouse Automation & Auto-Selector for Antigravity)  
 > **Repository:** `C:\Users\Atul Verma\Desktop\AutoSelect-Commander\`  
-> **Last Updated:** 2026-11-02 06:45:00 IST  
+> **Last Updated:** 2026-11-02 07:25:00 IST  
 > **Author:** Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
 ---
@@ -11,6 +11,7 @@
 
 | Change ID | Timestamp | Category | Component | Description | Status |
 | :--- | :--- | :--- | :--- | :--- | :--- |
+| `CHG-014` | 2026-11-02 07:25:00 IST | `chore` | Keyboard Automation | Verify modular snapshot v1.1.0 in archive, validate bit-for-bit SHA-256 match and standalone execution | **VERIFIED** |
 | `CHG-013` | 2026-11-02 06:45:00 IST | `refactor` | Keyboard Automation | Decompose monolithic keyboard automation script into industry-standard modular package (`keyboard_automation/`) | **VERIFIED** |
 | `CHG-012` | 2026-11-02 05:30:00 IST | `chore` | Keyboard Automation | Archive complete verified keyboard automation suite inside dedicated `Keyboard Automation/archive/` snapshot | **VERIFIED** |
 | `CHG-011` | 2026-11-02 04:40:00 IST | `fix` | Keyboard Automation | Strictly exclude chrome/browsers and enforce exact Antigravity process targeting | **VERIFIED** |

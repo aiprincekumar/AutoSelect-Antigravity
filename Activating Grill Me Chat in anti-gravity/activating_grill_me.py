@@ -689,21 +689,20 @@ class AntigravityFocusManager:
             except Exception:
                 pass
 
-            # Step 1: Un-minimize if minimized
-            is_min = bool(user32.IsIconic(hwnd))
-            if is_min:
-                logger.info("Restoring minimized Antigravity window (SW_RESTORE)...")
-                user32.ShowWindow(hwnd, SW_RESTORE)
-                user32.ShowWindowAsync(hwnd, SW_RESTORE)
-                try:
-                    user32.OpenIcon(hwnd)
-                except Exception:
-                    pass
-                time.sleep(0.08)
-
-            # Step 2: Show window
-            user32.ShowWindow(hwnd, SW_SHOW)
-            user32.ShowWindowAsync(hwnd, SW_SHOW)
+            # Step 1: Window size & restore management
+            # Rule: "विंडोज अगर बड़ा है तो बड़ा रहने दो और छोटा है तो बड़ा करो।"
+            # If already maximized (IsZoomed == True), keep it maximized (SW_SHOW).
+            # If not maximized (small windowed or minimized), maximize it (SW_MAXIMIZE).
+            # NEVER call SW_RESTORE (9) on a maximized window!
+            if user32.IsZoomed(hwnd):
+                logger.info("Antigravity window (HWND: %d) is already maximized. Keeping it maximized (SW_SHOW)...", hwnd)
+                user32.ShowWindow(hwnd, SW_SHOW)
+                user32.ShowWindowAsync(hwnd, SW_SHOW)
+            else:
+                logger.info("Antigravity window (HWND: %d) is not maximized (small or minimized). Maximizing window (SW_MAXIMIZE)...", hwnd)
+                user32.ShowWindow(hwnd, SW_MAXIMIZE)
+                user32.ShowWindowAsync(hwnd, SW_MAXIMIZE)
+                time.sleep(0.1)
 
             # Step 3: Virtual Alt key tap to break foreground lock
             try:

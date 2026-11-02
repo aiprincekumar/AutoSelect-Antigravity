@@ -86,6 +86,26 @@ if IS_WINDOWS:
     MOUSEEVENTF_LEFTDOWN = 0x0002
     MOUSEEVENTF_LEFTUP = 0x0004
 
+    # ShowWindow commands
+    SW_HIDE = 0
+    SW_SHOWNORMAL = 1
+    SW_SHOWMINIMIZED = 2
+    SW_MAXIMIZE = 3
+    SW_SHOW = 5
+    SW_MINIMIZE = 6
+    SW_RESTORE = 9
+
+    # Set up Win32 function signatures
+    try:
+        user32.IsZoomed.argtypes = [wintypes.HWND]
+        user32.IsZoomed.restype = wintypes.BOOL
+        user32.IsIconic.argtypes = [wintypes.HWND]
+        user32.IsIconic.restype = wintypes.BOOL
+        user32.ShowWindow.argtypes = [wintypes.HWND, ctypes.c_int]
+        user32.ShowWindow.restype = wintypes.BOOL
+    except Exception:
+        pass
+
 
 # ============================================================================
 # Minimal RFC 6455 WebSocket Client (Zero External Dependencies)
@@ -340,7 +360,7 @@ class AntigravityGUISelector:
                     """
                     cdp.eval_js(dispatch_js)
                     # Also click hardware OS mouse
-                    cls._hardware_mouse_click(screen_x, screen_y)
+                    cls._hardware_mouse_click(screen_x, screen_y, hwnd=hwnd)
                     time.sleep(0.4)
 
                     result["success"] = True
@@ -377,7 +397,7 @@ class AntigravityGUISelector:
 
             cls._smooth_mouse_move(screen_x, screen_y, duration=0.8)
             time.sleep(0.2)
-            cls._hardware_mouse_click(screen_x, screen_y)
+            cls._hardware_mouse_click(screen_x, screen_y, hwnd=hwnd)
             time.sleep(0.4)
 
             result["success"] = True
@@ -438,11 +458,25 @@ class AntigravityGUISelector:
 
     @classmethod
     def _ensure_window_focus(cls, hwnd: int):
+        if not hwnd or not IS_WINDOWS:
+            return
         try:
-            user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+            # Rule: "विंडोज अगर बड़ा है तो बड़ा रहने दो और छोटा है तो बड़ा करो।"
+            # If already maximized (IsZoomed == True), keep it maximized (SW_SHOW).
+            # If not maximized (small windowed or minimized), maximize it (SW_MAXIMIZE).
+            # NEVER call SW_RESTORE (9) on a maximized window, which shrinks it down!
+            if user32.IsZoomed(hwnd):
+                logger.info("Antigravity window (HWND: %d) is already maximized. Keeping it maximized (SW_SHOW)...", hwnd)
+                user32.ShowWindow(hwnd, SW_SHOW)
+            else:
+                logger.info("Antigravity window (HWND: %d) is not maximized (small or minimized). Maximizing window (SW_MAXIMIZE)...", hwnd)
+                user32.ShowWindow(hwnd, SW_MAXIMIZE)
+
+            time.sleep(0.08)
+            user32.BringWindowToTop(hwnd)
             user32.SetForegroundWindow(hwnd)
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug("Window focus exception: %s", e)
 
     @classmethod
     def _smooth_mouse_move(cls, x: int, y: int, duration: float = 0.6):
@@ -455,8 +489,16 @@ class AntigravityGUISelector:
             logger.debug("Mouse move exception: %s", e)
 
     @classmethod
-    def _hardware_mouse_click(cls, x: int, y: int):
+    def _hardware_mouse_click(cls, x: int, y: int, hwnd: int = 0):
         try:
+            # Defensive guard: prevent any click in top-right window control button zone (minimize, restore, close)
+            if hwnd and IS_WINDOWS:
+                rect = wintypes.RECT()
+                if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                    if x >= (rect.right - 180) and y <= (rect.top + 50):
+                        logger.warning("Safety Guard: Prevented click in window caption control area (x=%d, y=%d)!", x, y)
+                        return
+
             if PYAUTOGUI_AVAILABLE and pyautogui is not None:
                 pyautogui.click(x=x, y=y)
             elif IS_WINDOWS:
