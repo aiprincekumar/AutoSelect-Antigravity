@@ -815,17 +815,31 @@ class AntigravityGuiSelector:
         auto_submit: bool = False
     ) -> bool:
         """
-        Executes the GUI chat selection sequence:
-        1. Bring Antigravity window to focus.
-        2. Mouse hover & click on the conversation row.
-        3. Send Ctrl + L keyboard shortcut to focus the chat input.
-        4. If requested, select option (Shift+Tab -> Option number -> Enter).
+        Executes the GUI chat selection sequence via modular two-script engine:
+        1. Delegates to Step 2 (step2_gui_chat_select.py) for CDP DOM precision selection.
+        2. Falls back to calibrated sidebar click and Ctrl + L pane focus.
         """
         logger.info("Executing GUI Chat Selection for CID: %s...", target_cid)
 
         if dry_run:
             logger.info("  [DRY-RUN] Would click chat row and send Ctrl + L to focus chat pane.")
             return True
+
+        # Delegate to Step 2 engine if available
+        try:
+            from step2_gui_chat_select import AntigravityGUISelector
+            sel_res = AntigravityGUISelector.select_chat(
+                target_cid=target_cid,
+                topic=topic,
+                hwnd=hwnd,
+                dry_run=dry_run,
+                select_option_number=select_option_number,
+                auto_submit=auto_submit
+            )
+            if sel_res.get("success"):
+                return True
+        except Exception as e:
+            logger.debug("Step 2 selector delegation fallback: %s", e)
 
         if not IS_WINDOWS:
             logger.warning("GUI Chat selection is only supported on Windows.")
