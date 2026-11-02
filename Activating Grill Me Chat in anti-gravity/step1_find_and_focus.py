@@ -158,6 +158,15 @@ class PendingGrillMeChat:
     transcript_path: str = ""
     is_last_step: bool = True
     total_steps: int = 0
+    total_questions_count: int = 0
+    is_multi_question: bool = False
+
+    def __post_init__(self):
+        if not self.total_questions_count and self.questions:
+            self.total_questions_count = len(self.questions)
+        elif not self.total_questions_count:
+            self.total_questions_count = len(self.questions)
+        self.is_multi_question = self.total_questions_count > 1
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -589,7 +598,8 @@ def run_step1(
     for idx, c in enumerate(chats, start=1):
         print(f"  {idx}. CID: {c.conversation_id}")
         print(f"     Topic: {c.topic_summary}")
-        print(f"     Questions: {len(c.questions)}")
+        count_label = "Multiple Questions" if c.is_multi_question else "Single Question"
+        print(f"     📊 Total Questions Count: {c.total_questions_count} ({count_label})")
         for q in c.questions:
             print(f"       - Q: {q.question[:65]}...")
             print(f"         Recommended: {q.recommended_option_text}")
@@ -605,10 +615,15 @@ def run_step1(
     else:
         target_chat = chats[0]
 
+    total_questions_count = len(target_chat.questions)
+    is_multi_question = total_questions_count > 1
+    count_label = "Multiple Questions" if is_multi_question else "Single Question"
+
     print("\n" + "-" * 76)
     print(f"🎯 Selected Target Chat: {target_chat.conversation_id}")
     print(f"   Topic: {target_chat.topic_summary}")
     print(f"   Last User Prompt: {target_chat.last_user_prompt[:80]}")
+    print(f"   📊 Total Questions Count: {total_questions_count} ({count_label})")
     print("-" * 76)
 
     # 2. Find and Focus Window
@@ -649,7 +664,9 @@ def run_step1(
             "last_user_prompt": target_chat.last_user_prompt,
             "selected_at": timestamp_now,
             "status": "READY_FOR_GUI_SELECTION",
-            "questions_count": len(target_chat.questions),
+            "questions_count": total_questions_count,
+            "total_questions_count": total_questions_count,
+            "is_multi_question": is_multi_question,
             "questions": [q.to_dict() for q in target_chat.questions],
             "selections": selections,
             "window_hwnd": hwnd,

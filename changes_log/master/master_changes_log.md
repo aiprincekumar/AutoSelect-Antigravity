@@ -1,6 +1,29 @@
-﻿# Master Changes Log: AutoSelect-Commander
+# Master Changes Log: AutoSelect-Commander
 
 > **SSOT Audit Trail:** Complete chronological record of all architectural, feature, and configuration changes.
+
+---
+
+### [2026-11-02 08:50:00 IST] - Release 1.9.0 (Question Detection & Quiz Keyboard Automation Subfolders with Chained Execution)
+- **Commit:** `feat(quiz): add Question Detection and Quiz Automation subfolders with chained execution`
+- **Author:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)
+- **Key Enhancements:**
+  - **Subfolder 1: Question Detection (`Question Detection/`):**
+    - Purpose: Count the NUMBER OF QUESTIONS (not options) in Antigravity 2.0 interactive prompts / quiz dialogs.
+    - `detect_questions.py`: Implemented multi-mode detector supporting deterministic `--simulate N`, live window `--detect`, text pattern regex matching (explicit total "1 of N", sequential headers "Question 1, Question 2", numbered prompts), and UIAutomation inspection. Exports structured `question_count.json`.
+    - `run_detection.bat`: 1-Click interactive launcher with automated venv detection and argument pass-through.
+    - `README.md`: Bilingual documentation clarifying Question Count vs. Option Count, JSON contract, and CLI usage.
+  - **Subfolder 2: Quiz Keyboard Automation (`Quiz Automation/`):**
+    - Purpose: Execute multi-question shortcut loop based on the detected question count.
+    - `quiz_automation.py`: Standalone ctypes SendInput automation engine implementing the Golden Enter Gate: intermediate questions ($1 \dots N-1$) suppress Enter, while final question ($N$) executes Enter to submit batch responses. Auto-loads `question_count.json` across candidate search paths. Supports `--dry-run`, `--skip-enter`, configurable delays, and robust Antigravity window restoration, maximization, and Alt-pulse focus bypass.
+    - `run_quiz.bat`: 1-Click launcher with menu options for auto-run, single mode, multi-question modes, and dry-run simulation.
+    - `run_detection_and_quiz.bat`: End-to-end chained 1-click launcher linking Stage 1 (Detection) and Stage 2 (Automation).
+    - `README.md`: Bilingual documentation detailing loop architecture, Antigravity 2.0 focus and Alt-pulse bypass, and CLI parameters.
+  - **Automated Unit Testing & Quality Gates:**
+    - Added `tests/test_question_detection.py` (12 tests) and `tests/test_quiz_automation.py` (12 tests).
+    - Full test suite expanded to 123 automated unit tests (100% green pass rate in 24.9s).
+    - Verified zero secret leaks via `gitleaks detect --redact`.
+    - Preserved `Keyboard Automation/archive/` 100% untouched.
 
 ---
 

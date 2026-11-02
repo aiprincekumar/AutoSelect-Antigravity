@@ -121,6 +121,8 @@ class TestActivatingGrillMe(unittest.TestCase):
         self.assertEqual(chat.step_index, 1)
         self.assertEqual(chat.topic_summary, "Run Grill Me Interview")
         self.assertEqual(len(chat.questions), 1)
+        self.assertEqual(chat.total_questions_count, 1)
+        self.assertFalse(chat.is_multi_question)
         self.assertEqual(chat.questions[0].recommended_option_index, 1)
 
     def test_ignore_already_answered_ask_question(self):
@@ -287,6 +289,8 @@ class TestActivatingGrillMe(unittest.TestCase):
         self.assertIn("meta", data)
         self.assertEqual(data["data"]["conversation_id"], cid)
         self.assertEqual(data["data"]["status"], "READY_FOR_CONFIRMATION")
+        self.assertEqual(data["data"]["total_questions_count"], 1)
+        self.assertFalse(data["data"]["is_multi_question"])
 
     def test_live_brain_detector_resolution(self):
         """Test that default brain directory resolves to existing directory on developer machine."""
@@ -341,6 +345,110 @@ class TestActivatingGrillMe(unittest.TestCase):
         self.assertTrue(d["window_focused"])
         self.assertTrue(d["gui_chat_selected"])
         self.assertFalse(d["dry_run"])
+
+
+    def test_multi_questions_count_and_detection(self):
+        """Test detecting multiple questions and checking total_questions_count & is_multi_question."""
+        cid = "conv-multi-q-999"
+        steps = [
+            {
+                "step_index": 0,
+                "type": "USER_INPUT",
+                "content": "Multi question test"
+            },
+            {
+                "step_index": 1,
+                "type": "PLANNER_RESPONSE",
+                "status": "DONE",
+                "created_at": "2026-11-01T22:30:00Z",
+                "tool_calls": [
+                    {
+                        "name": "ask_question",
+                        "args": {
+                            "questions": [
+                                {
+                                    "question": "Question 1?",
+                                    "options": ["(Recommended) Choice A", "Choice B"]
+                                },
+                                {
+                                    "question": "Question 2?",
+                                    "options": ["Choice X", "(Recommended) Choice Y"]
+                                }
+                            ]
+                        }
+                    }
+                ]
+            }
+        ]
+        self._create_mock_conversation(cid, steps)
+
+        detector = agm.GrillMeDetector(brain_dir=str(self.brain_path))
+        pending_list = detector.scan_transcripts()
+        self.assertEqual(len(pending_list), 1)
+
+        chat = pending_list[0]
+        self.assertEqual(chat.total_questions_count, 2)
+        self.assertTrue(chat.is_multi_question)
+        self.assertEqual(chat.to_dict()["total_questions_count"], 2)
+        self.assertTrue(chat.to_dict()["is_multi_question"])
+
+        card_str = agm.format_chat_card(chat)
+        self.assertIn("📊 Total Questions Count: 2 (Multiple Questions)", card_str)
+
+        selector = agm.GrillMeSelector(detector=detector)
+        result = selector.prepare_selection(chat, dry_run=True)
+        self.assertEqual(result.total_questions_count, 2)
+        self.assertTrue(result.is_multi_question)
+        self.assertEqual(result.to_dict()["total_questions_count"], 2)
+        self.assertTrue(result.to_dict()["is_multi_question"])
+
+        sel_card_str = agm.format_selection_card(result, chat)
+        self.assertIn("📊 Total Questions Count: 2 (Multiple Questions)", sel_card_str)
+
+    def test_step1_find_and_focus_state_and_models(self):
+        """Test step1_find_and_focus data structures and question counting logic."""
+        step1_path = (
+            Path(__file__).resolve().parent.parent
+            / "Activating Grill Me Chat in anti-gravity"
+            / "step1_find_and_focus.py"
+        )
+        step1_spec = importlib.util.spec_from_file_location("step1_find_and_focus", step1_path)
+        step1_mod = importlib.util.module_from_spec(step1_spec)
+        sys.modules["step1_find_and_focus"] = step1_mod
+        step1_spec.loader.exec_module(step1_mod)
+
+        # Single question test
+        chat_single = step1_mod.PendingGrillMeChat(
+            conversation_id="conv-step1-single",
+            step_index=1,
+            created_at="2026-11-01T23:00:00Z",
+            topic_summary="Single topic",
+            last_user_prompt="Single prompt",
+            questions=[
+                step1_mod.QuestionPayload(1, "Single Q?", ["Opt 1", "Opt 2"])
+            ]
+        )
+        self.assertEqual(chat_single.total_questions_count, 1)
+        self.assertFalse(chat_single.is_multi_question)
+        self.assertEqual(chat_single.to_dict()["total_questions_count"], 1)
+        self.assertFalse(chat_single.to_dict()["is_multi_question"])
+
+        # Multiple questions test
+        chat_multi = step1_mod.PendingGrillMeChat(
+            conversation_id="conv-step1-multi",
+            step_index=1,
+            created_at="2026-11-01T23:00:00Z",
+            topic_summary="Multi topic",
+            last_user_prompt="Multi prompt",
+            questions=[
+                step1_mod.QuestionPayload(1, "First Q?", ["A", "B"]),
+                step1_mod.QuestionPayload(2, "Second Q?", ["C", "D"])
+            ]
+        )
+        self.assertEqual(chat_multi.total_questions_count, 2)
+        self.assertTrue(chat_multi.is_multi_question)
+        self.assertEqual(chat_multi.to_dict()["total_questions_count"], 2)
+        self.assertTrue(chat_multi.to_dict()["is_multi_question"])
 
 
 if __name__ == "__main__":

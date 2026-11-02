@@ -1,0 +1,24 @@
+{
+  "status": "success",
+  "question_count": 2,
+  "mode": "simulated",
+  "target_window": "Simulated",
+  "detected_at": "2026-11-02T03:32:35.778714+00:00",
+  "confidence": 1.0,
+  "details": {
+    "method": "simulation",
+    "reason": "CLI Simulation Override",
+    "questions": [
+      {
+        "index": 1,
+        "title": "Question 1",
+        "simulated": true
+      },
+      {
+        "index": 2,
+        "title": "Question 2",
+        "simulated": true
+      }
+    ]
+  }
+}

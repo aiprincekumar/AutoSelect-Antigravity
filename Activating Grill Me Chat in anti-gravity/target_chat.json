@@ -2,38 +2,9 @@
   "success": true,
   "data": {
     "conversation_id": "0d5e735e-85e3-4a0d-bffd-5e3e4fcf72da",
-    "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है।",
-    "last_user_prompt": "Continue",
-    "selected_at": "2026-11-02T02:37:52.550338+00:00",
-    "status": "SUCCESS_SELECTED",
+    "selected_at": "2026-11-02T18:40:09.060292+00:00",
+    "status": "READY_FOR_CONFIRMATION",
     "questions_count": 2,
-    "questions": [
-      {
-        "question_index": 1,
-        "question": "आप किस तरह का स्क्रिप्ट टेस्ट रन करना चाहते हैं?",
-        "options": [
-          "(Recommended) कस्टम स्क्रिप्ट / कमांड टेस्ट करना (स्क्रिप्ट पाथ या कोड पेस्ट करेंगे)",
-          "सैंडबॉक्स / एनवायरनमेंट हेल्थ-चेक स्क्रिप्ट चलाकर देखना",
-          "Git / रिपो ऑटोमेशन और कमिट फ्लो का टेस्ट रन",
-          "डेमो ड्राई-रन (सिर्फ आउटपुट और पैरामीटर्स का सिमुलेशन)"
-        ],
-        "is_multi_select": false,
-        "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) कस्टम स्क्रिप्ट / कमांड टेस्ट करना (स्क्रिप्ट पाथ या कोड पेस्ट करेंगे)"
-      },
-      {
-        "question_index": 2,
-        "question": "एग्जीक्यूशन मोड (Execution Mode) क्या रखना है?",
-        "options": [
-          "(Recommended) Interactive Step-by-Step (हर स्टेप पर कन्फर्मेशन और लॉग्स के साथ)",
-          "Direct Execution (तुरंत पूरा एग्जीक्यूट करके रिजल्ट देखना)",
-          "Safe Dry-Run (बिना किसी फाइल या सिस्टम बदलाव के केवल सिमुलेशन)"
-        ],
-        "is_multi_select": false,
-        "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) Interactive Step-by-Step (हर स्टेप पर कन्फर्मेशन और लॉग्स के साथ)"
-      }
-    ],
     "selections": [
       {
         "question_index": 1,
@@ -54,16 +25,14 @@
         "is_recommended": true
       }
     ],
-    "window_hwnd": 3474542,
-    "window_title": "Grid Mode Demo Setup - Ou...",
     "window_focused": true,
-    "dry_run": false,
     "gui_chat_selected": true,
-    "gui_selection_method": "cdp_dom_click",
-    "gui_selected_at": "2026-11-02T02:37:56.535309+00:00"
+    "dry_run": true,
+    "total_questions_count": 2,
+    "is_multi_question": true
   },
   "meta": {
-    "timestamp": "2026-11-02T02:37:56.535309+00:00",
-    "generator": "step2_gui_chat_select.py (Dept 06 Architecture)"
+    "timestamp": "2026-11-02T18:40:09.080103+00:00",
+    "generator": "activating_grill_me.py (Method 1)"
   }
 }

@@ -273,6 +273,15 @@ class PendingGrillMeChat:
     transcript_path: str = ""
     is_last_step: bool = True
     total_steps: int = 0
+    total_questions_count: int = 0
+    is_multi_question: bool = False
+
+    def __post_init__(self):
+        if not self.total_questions_count and self.questions:
+            self.total_questions_count = len(self.questions)
+        elif not self.total_questions_count:
+            self.total_questions_count = len(self.questions)
+        self.is_multi_question = self.total_questions_count > 1
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -289,6 +298,14 @@ class SelectionResult:
     window_focused: bool = False
     gui_chat_selected: bool = False
     dry_run: bool = False
+    total_questions_count: int = 0
+    is_multi_question: bool = False
+
+    def __post_init__(self):
+        if not self.total_questions_count:
+            self.total_questions_count = self.questions_count
+        if not self.is_multi_question:
+            self.is_multi_question = self.total_questions_count > 1
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -1014,11 +1031,15 @@ class GrillMeSelector:
             })
 
         now_iso = datetime.now(timezone.utc).isoformat()
+        total_questions_count = len(chat.questions)
+        is_multi_question = total_questions_count > 1
         return SelectionResult(
             conversation_id=chat.conversation_id,
             selected_at=now_iso,
             status="READY_FOR_CONFIRMATION",
-            questions_count=len(chat.questions),
+            questions_count=total_questions_count,
+            total_questions_count=total_questions_count,
+            is_multi_question=is_multi_question,
             selections=selections,
             dry_run=dry_run
         )
@@ -1046,6 +1067,15 @@ class GrillMeSelector:
         with open(out_path, "w", encoding="utf-8") as f:
             json.dump(envelope, f, indent=2, ensure_ascii=False)
 
+        # Also sync target_chat.json for step2 compatibility if default path
+        if not output_file:
+            target_chat_path = Path(__file__).parent / "target_chat.json"
+            try:
+                with open(target_chat_path, "w", encoding="utf-8") as f:
+                    json.dump(envelope, f, indent=2, ensure_ascii=False)
+            except Exception:
+                pass
+
         return out_path
 
 
@@ -1056,6 +1086,7 @@ class GrillMeSelector:
 def format_chat_card(chat: PendingGrillMeChat, index: int = 1) -> str:
     """Format an individual pending chat into a clean terminal card."""
     border = "=" * 76
+    count_label = "Multiple Questions" if chat.is_multi_question else "Single Question"
     lines = [
         border,
         f"  [CHAT #{index}] ACTIVE GRILL ME WAITING FOR RESPONSE",
@@ -1065,8 +1096,9 @@ def format_chat_card(chat: PendingGrillMeChat, index: int = 1) -> str:
         f"  Step Index      : {chat.step_index} / {chat.total_steps}",
         f"  Initial Prompt  : {chat.topic_summary}",
         f"  Last User Input : {chat.last_user_prompt}",
+        f"  📊 Total Questions Count: {chat.total_questions_count} ({count_label})",
         "-" * 76,
-        f"  Pending Questions ({len(chat.questions)}):"
+        f"  Pending Questions ({chat.total_questions_count}):"
     ]
     for q in chat.questions:
         multi_badge = " [Multi-Select]" if q.is_multi_select else " [Single-Choice]"
@@ -1082,6 +1114,7 @@ def format_chat_card(chat: PendingGrillMeChat, index: int = 1) -> str:
 def format_selection_card(result: SelectionResult, chat: PendingGrillMeChat) -> str:
     """Format the prepared selection result into a confirmation card."""
     border = "*" * 76
+    count_label = "Multiple Questions" if result.is_multi_question else "Single Question"
     lines = [
         border,
         "  [1-CLICK EXECUTION RESULT] GRILL ME ACTIVATION COMPLETED",
@@ -1089,6 +1122,7 @@ def format_selection_card(result: SelectionResult, chat: PendingGrillMeChat) -> 
         f"  Target Chat     : {result.conversation_id}",
         f"  Status          : {result.status}",
         f"  Selected At     : {result.selected_at}",
+        f"  📊 Total Questions Count: {result.total_questions_count} ({count_label})",
         f"  Window Focused  : {'YES (Brought to Foreground)' if result.window_focused else 'NO'}",
         f"  GUI Chat Click  : {'YES (Selected & Focused)' if result.gui_chat_selected else 'NO'}",
         f"  Dry Run Mode    : {'YES (Simulation Only)' if result.dry_run else 'NO (Live)'}",
@@ -1301,12 +1335,14 @@ Advanced Options:
         return 0
 
     # Human-readable Presentation
+    count_label = "Multiple Questions" if target_chat.is_multi_question else "Single Question"
     print("\n" + "=" * 76)
     print("   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (1-Click Execution)")
     print("=" * 76)
     print(f"  Target Conversation: {target_chat.conversation_id}")
     print(f"  Timestamp          : {target_chat.created_at}")
     print(f"  Topic / Goal       : {target_chat.topic_summary}")
+    print(f"  📊 Total Questions Count: {target_chat.total_questions_count} ({count_label})")
     print("=" * 76 + "\n")
 
     print(format_chat_card(target_chat, index=1))
