@@ -69,6 +69,7 @@ To allow external AI agents, harnesses, or developers to construct, maintain, or
 
 | Specification Document | Step | Purpose & Core Subsystems | Primary Standalone Runner |
 | :--- | :--- | :--- | :--- |
+| [`step_0_antigravity_detector_prompt.md`](./step_0_antigravity_detector_prompt.md) | **Step 0** | Headless Background Daemon & Polling, Antigravity Process/Window Detection, Browser Disqualification Filter, Automatic Step 1 Trigger & Zero-Zombie Hygiene (Rule 26). | `step_0_antigravity_detector\run_step0_prod.bat` / `run_step0_test.bat` |
 | [`step_1_chat_identifier_prompt.md`](./step_1_chat_identifier_prompt.md) | **Step 1** | Transcript Reverse Scanning, JSON Truncation Protection (`transcript_full.jsonl`), Win32 Foreground Lock Bypass, Maximization Preservation, Dept 06 State IPC, and **Exit Code 10 Protocol**. | `step_1_chat_identifier\run_step1.bat` |
 | [`step_2_chat_and_focus_prompt.md`](./step_2_chat_and_focus_prompt.md) | **Step 2** | Antigravity GUI Navigation, Chrome DevTools Protocol (CDP RFC 6455) WebSocket, Bezier Curve Mouse Glide, Precision Click, `Ctrl + L` Chat Pane Focus, and Coordinate Fallbacks. | `step_2_chat_and_focus\run_step2.bat` |
 | [`step_3_select_the_recommendation_prompt.md`](./step_3_select_the_recommendation_prompt.md) | **Step 3** | Pure Native Win32 `SendInput` Hardware Keystroke Injection, Console Window Blacklist, Dynamic Multi-Question Progression Loop (Q1..QN), and **The Golden Enter Gate**. | `step_3_select_the_recommendation\run_step3.bat` |

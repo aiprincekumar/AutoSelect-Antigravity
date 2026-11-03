@@ -15,10 +15,10 @@
     "window_hwnd": 0,
     "window_title": "",
     "window_focused": false,
-    "dry_run": true
+    "dry_run": false
   },
   "meta": {
-    "timestamp": "2026-11-03T05:15:12.482636+00:00",
+    "timestamp": "2026-11-03T05:35:38.738245+00:00",
     "generator": "step1_find_and_focus.py (Dept 06 Architecture)"
   }
 }

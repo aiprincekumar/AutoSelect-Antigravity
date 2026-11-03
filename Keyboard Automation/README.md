@@ -54,6 +54,18 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 
 ---
 
+### 🛡️ Step 0: AntiGravity Detector (`step_0_antigravity_detector/`)
+| File | Role & Description | Type |
+| :--- | :--- | :--- |
+| **`antigravity_detector_core.py`** | Modular detector engine: process inspection, window enumeration, browser filter & Step 1 launcher. | **CORE ENGINE** |
+| **`step0_antigravity_detector_prod.py`** | Production runner: 5-minute polling interval, fully headless background daemon with auto-trigger. | **PROD SCRIPT** |
+| **`step0_antigravity_detector_test.py`** | Testing runner: 10-second polling interval with live console telemetry and `--once` single-shot support. | **TEST SCRIPT** |
+| **`run_step0_prod.bat`** | 1-click standalone production launcher for Step 0 (5-min polling). | **STEP RUNNER** |
+| **`run_step0_test.bat`** | 1-click standalone testing launcher for Step 0 with rich telemetry. | **STEP RUNNER** |
+| **`test_step0_detector.py`** | Automated unit test suite verifying data structures, intervals, and detection logic. | **UNIT TEST** |
+
+---
+
 ### 🔍 Step 1: Chat Identifier (`step_1_chat_identifier/`)
 | File | Role & Description | Type |
 | :--- | :--- | :--- |
@@ -86,6 +98,20 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 - Python 3.8+ (Automatically configures dedicated self-healing virtual environment in `Keyboard Automation\.venv` via `setup_env.bat`)
 
 ### Execution Options
+
+#### 🛡️ 0. Run Step 0 Standalone (AntiGravity Detector)
+- **Production Runner (5-Minute Interval, Silent Background):**
+  ```cmd
+  step_0_antigravity_detector\run_step0_prod.bat
+  ```
+- **Testing Runner (10-Second Interval with Live Console Telemetry):**
+  ```cmd
+  step_0_antigravity_detector\run_step0_test.bat
+  ```
+- **Single-Shot Verification Check (No Polling):**
+  ```cmd
+  .\.venv\Scripts\python.exe step_0_antigravity_detector\step0_antigravity_detector_test.py --once --no-launch
+  ```
 
 #### 🌟 1. Run Complete 3-Step Pipeline (Step 1 -> Step 2 -> Step 3)
 Double-click [`run_all_steps.bat`](./run_all_steps.bat) or run:
