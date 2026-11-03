@@ -571,6 +571,15 @@ def run_step2(
         except Exception:
             pass
 
+    # Check if Step 1 cancelled the workflow due to no pending chats
+    if not explicit_cid and (state_data.get("status") == "NO_PENDING_CHATS" or state_data.get("cancelled_remaining_steps") is True):
+        print("\n" + "=" * 76)
+        print("ℹ️  [INFO] STEP 2 CANCELLED: No pending Grill Me chats from Step 1.")
+        print("   (स्टेप 1 में कोई पेंडिंग चैट नहीं मिली, स्टेप 2 ऑटोमैटिक कैंसिल)")
+        print("   Remaining steps cancelled. Closing cleanly.")
+        print("=" * 76 + "\n")
+        return 0
+
     if not target_cid:
         logger.error("No target conversation ID found! Please run step1_find_and_focus.py first or pass --cid.")
         return 1

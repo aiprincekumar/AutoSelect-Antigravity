@@ -210,6 +210,12 @@ class GrillMeAutomator:
         detected_options: List[str] = []
 
         if state_data:
+            # Check if Step 1 cancelled the workflow due to no pending chats
+            if state_data.get("status") == "NO_PENDING_CHATS" or state_data.get("cancelled_remaining_steps") is True:
+                if explicit_questions is None:
+                    logger.info("State file indicates NO_PENDING_CHATS. Resolving total questions to 0 (Step 3 cancelled).")
+                    return 0, []
+
             # Capture conversation_id if present
             self.conversation_id = state_data.get("conversation_id")
 
@@ -455,7 +461,9 @@ class GrillMeAutomator:
         """
         if total_questions is None:
             total_questions = self.total_questions
-        total_questions = max(1, total_questions)
+        if total_questions <= 0:
+            logger.info("Total questions is 0 (status: NO_PENDING_CHATS). Step 3 cancelled.")
+            return True
 
         opts = list(options) if options else list(self.options_list)
         while len(opts) < total_questions:

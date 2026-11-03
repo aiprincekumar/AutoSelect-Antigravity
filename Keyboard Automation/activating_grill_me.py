@@ -1268,20 +1268,50 @@ Advanced Options:
 
     # If no pending chats exist:
     if not pending_chats:
+        # Invalidate / update state file so downstream steps know there is no pending chat
+        timestamp_now = datetime.now(timezone.utc).isoformat()
+        no_chat_envelope = {
+            "success": False,
+            "data": {
+                "conversation_id": None,
+                "status": "NO_PENDING_CHATS",
+                "message": "No chat with pending Grill Me / ask_question found across transcripts.",
+                "cancelled_remaining_steps": True,
+                "total_questions_count": 0,
+                "questions": [],
+                "selections": []
+            },
+            "meta": {
+                "timestamp": timestamp_now,
+                "generator": "activating_grill_me.py (Dept 06 Architecture)"
+            }
+        }
+        state_file_path = Path(__file__).resolve().parent / "target_chat.json"
+        legacy_file_path = Path(__file__).resolve().parent / "last_selection_state.json"
+        try:
+            with open(state_file_path, "w", encoding="utf-8") as f:
+                json.dump(no_chat_envelope, f, indent=2, ensure_ascii=False)
+            with open(legacy_file_path, "w", encoding="utf-8") as f:
+                json.dump(no_chat_envelope, f, indent=2, ensure_ascii=False)
+        except Exception:
+            pass
+
         if args.json:
             envelope = {
-                "success": True,
+                "success": False,
                 "data": {
                     "total_pending": 0,
+                    "status": "NO_PENDING_CHATS",
+                    "cancelled_remaining_steps": True,
                     "message": "No active Grill Me / ask_question prompt waiting for response."
                 },
                 "meta": {
-                    "timestamp": datetime.now(timezone.utc).isoformat(),
+                    "timestamp": timestamp_now,
                     "brain_dir": str(detector.brain_dir)
                 }
             }
             print(json.dumps(envelope, indent=2, ensure_ascii=False))
-            return 0
+            return 10
 
         print("\n" + "=" * 76)
         print("   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (1-Click Automation)")
@@ -1290,8 +1320,10 @@ Advanced Options:
         print("  Status          : NO PENDING GRILL ME CHATS FOUND")
         print("=" * 76)
         print("  [INFO] All Antigravity sessions are currently completed, idle, or running.")
-        print("         No unanswered ask_question prompts are currently blocked.\n")
-        return 0
+        print("         No unanswered ask_question prompts are currently blocked.")
+        print("  🛑 Automatically cancelling all remaining steps.")
+        print("  🚪 Script is exiting cleanly and fully closing.\n")
+        return 10
 
     # 2. Pick target conversation (Streamlined 1-Click: auto-pick newest if not explicitly given)
     target_chat: Optional[PendingGrillMeChat] = None

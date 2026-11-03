@@ -76,6 +76,16 @@ echo.
 "%PYTHON_EXE%" "%STEP1_SCRIPT%" --state-file "%STATE_FILE%" %*
 set "STEP1_EXIT=%ERRORLEVEL%"
 
+if "%STEP1_EXIT%"=="10" (
+    echo.
+    echo ============================================================================
+    echo   [INFO] NO PENDING GRILL ME / ASK_QUESTION CHATS FOUND
+    echo   [*] All remaining steps [Step 2 and Step 3] cancelled automatically.
+    echo   [*] Automation script closing now.
+    echo ============================================================================
+    goto :CLEAN_CLOSE
+)
+
 if not "%STEP1_EXIT%"=="0" goto :STEP1_FAILED
 
 echo.
@@ -135,5 +145,8 @@ exit /b %STEP2_EXIT%
 echo.
 echo [ERROR] Step 3 encountered an issue during Keyboard Automation (Exit Code: %STEP3_EXIT%).
 exit /b %STEP3_EXIT%
+
+:CLEAN_CLOSE
+exit /b 0
 
 :END_PROMPT

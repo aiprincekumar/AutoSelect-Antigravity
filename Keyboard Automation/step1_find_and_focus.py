@@ -52,6 +52,13 @@ logging.basicConfig(
 logger = logging.getLogger("Step1-FindAndFocus")
 
 # ============================================================================
+# Step 1 Exit Codes & Pipeline Cancellation Constants
+# ============================================================================
+EXIT_CODE_SUCCESS = 0
+EXIT_CODE_ERROR = 1
+EXIT_CODE_NO_PENDING_CHATS = 10  # Signal to orchestrator/runners to cancel all subsequent steps cleanly
+
+# ============================================================================
 # Win32 Subsystem for Window Identification & Foreground Focus Lock Bypass
 # ============================================================================
 IS_WINDOWS = sys.platform == "win32"
@@ -617,9 +624,52 @@ def run_step1(
     chats = detector.scan_transcripts()
 
     if not chats:
-        print("\n[INFO] No pending Grill Me / ask_question chats found across transcripts.")
-        print("       All conversations appear to be currently answered or idle.")
-        return 0
+        logger.info("No pending Grill Me / ask_question chats found across transcripts.")
+        print("\n" + "=" * 76)
+        print("ℹ️  [INFO] NO PENDING GRILL ME / ASK_QUESTION CHATS FOUND")
+        print("   (कोई भी पेंडिंग आस्क क्वेश्चन / ग्रिल चैट नहीं मिली)")
+        print("   All conversations appear to be currently answered, running, or idle.")
+        print("   🛑 Automatically cancelling all remaining steps (Step 2, Step 3).")
+        print("   🚪 Script is exiting cleanly and fully closing.")
+        print("=" * 76 + "\n")
+
+        # Invalidate / update state file so downstream steps know there is no pending chat
+        timestamp_now = datetime.now(timezone.utc).isoformat()
+        no_chat_envelope = {
+            "success": False,
+            "data": {
+                "conversation_id": None,
+                "topic_summary": "",
+                "last_user_prompt": "",
+                "status": "NO_PENDING_CHATS",
+                "message": "No chat with pending Grill Me / ask_question found across transcripts.",
+                "cancelled_remaining_steps": True,
+                "questions_count": 0,
+                "total_questions_count": 0,
+                "is_multi_question": False,
+                "questions": [],
+                "selections": [],
+                "window_hwnd": 0,
+                "window_title": "",
+                "window_focused": False,
+                "dry_run": dry_run
+            },
+            "meta": {
+                "timestamp": timestamp_now,
+                "generator": "step1_find_and_focus.py (Dept 06 Architecture)"
+            }
+        }
+        try:
+            with open(target_state_path, "w", encoding="utf-8") as f:
+                json.dump(no_chat_envelope, f, indent=2, ensure_ascii=False)
+            logger.info("Updated state file with NO_PENDING_CHATS status: %s", target_state_path)
+
+            with open(legacy_state_path, "w", encoding="utf-8") as f:
+                json.dump(no_chat_envelope, f, indent=2, ensure_ascii=False)
+        except Exception as e:
+            logger.debug("Failed to write no_pending_chats state file: %s", e)
+
+        return EXIT_CODE_NO_PENDING_CHATS
 
     print(f"\n[SUCCESS] Found {len(chats)} conversation(s) with pending Grill Me question(s):")
     for idx, c in enumerate(chats, start=1):
@@ -637,7 +687,7 @@ def run_step1(
         matched = [c for c in chats if c.conversation_id.lower() == target_cid.lower()]
         if not matched:
             logger.error("Specified CID '%s' not found among pending chats!", target_cid)
-            return 1
+            return EXIT_CODE_ERROR
         target_chat = matched[0]
     else:
         target_chat = chats[0]
@@ -717,13 +767,13 @@ def run_step1(
             json.dump(state_envelope, f, indent=2, ensure_ascii=False)
     except Exception as e:
         logger.error("Failed to write state file: %s", e)
-        return 1
+        return EXIT_CODE_ERROR
 
     print("\n" + "=" * 76)
     print("✅ [STEP 1 COMPLETE] Pending chat identified, window focused, and state stored.")
     print("👉 Next: Run Step 2 (step2_gui_chat_select.py) to select the chat in the GUI.")
     print("=" * 76)
-    return 0
+    return EXIT_CODE_SUCCESS
 
 
 def main() -> int:

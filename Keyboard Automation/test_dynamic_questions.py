@@ -63,7 +63,7 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             auto_maximize=False,
             step_delay=0.01,
         )
-        self.assertGreaterEqual(default_automator.total_questions, 1)
+        self.assertGreaterEqual(default_automator.total_questions, 0)
 
     def test_single_question_n1(self):
         """Verify N=1: Executes sequence and presses Enter on Question 1."""
@@ -433,6 +433,129 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
         self.assertEqual(len(executed_steps), 40)
         self.assertEqual(executed_steps[-1][0], "Q10.4")
         self.assertIn("Submit ALL 10 answers", executed_steps[-1][1])
+
+    def test_step1_no_pending_chats_cancels_and_exits_10(self):
+        """Verify Step 1 returns exit code 10 and writes NO_PENDING_CHATS state when no chats are pending."""
+        from step1_find_and_focus import run_step1, EXIT_CODE_NO_PENDING_CHATS
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_brain = Path(temp_dir) / "empty_brain"
+            temp_brain.mkdir(parents=True, exist_ok=True)
+            state_file = Path(temp_dir) / "test_target_chat.json"
+
+            exit_code = run_step1(
+                brain_dir=str(temp_brain),
+                dry_run=True,
+                no_focus=True,
+                state_file=str(state_file)
+            )
+
+            self.assertEqual(exit_code, EXIT_CODE_NO_PENDING_CHATS)
+            self.assertEqual(exit_code, 10)
+            self.assertTrue(state_file.is_file())
+
+            with open(state_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.assertFalse(data.get("success"))
+            self.assertEqual(data.get("data", {}).get("status"), "NO_PENDING_CHATS")
+            self.assertTrue(data.get("data", {}).get("cancelled_remaining_steps"))
+            self.assertIsNone(data.get("data", {}).get("conversation_id"))
+
+    def test_step1_with_pending_chat_returns_0_and_ready_status(self):
+        """Verify Step 1 returns exit code 0 and READY_FOR_GUI_SELECTION when a pending chat exists."""
+        from step1_find_and_focus import run_step1, EXIT_CODE_SUCCESS
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_brain = Path(temp_dir) / "brain"
+            convo_dir = temp_brain / "mock-pending-convo"
+            logs_dir = convo_dir / ".system_generated" / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+            transcript_path = logs_dir / "transcript.jsonl"
+            state_file = Path(temp_dir) / "test_target_chat.json"
+
+            entry = {
+                "step_index": 1,
+                "type": "PLANNER_RESPONSE",
+                "status": "DONE",
+                "tool_calls": [{
+                    "name": "ask_question",
+                    "args": {
+                        "questions": [{
+                            "question": "क्या आप आगे बढ़ना चाहते हैं?",
+                            "options": ["(Recommended) हाँ", "नहीं"]
+                        }]
+                    }
+                }]
+            }
+            with open(transcript_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(entry) + "\n")
+
+            exit_code = run_step1(
+                brain_dir=str(temp_brain),
+                dry_run=True,
+                no_focus=True,
+                state_file=str(state_file)
+            )
+
+            self.assertEqual(exit_code, EXIT_CODE_SUCCESS)
+            self.assertEqual(exit_code, 0)
+            self.assertTrue(state_file.is_file())
+
+            with open(state_file, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            self.assertTrue(data.get("success"))
+            self.assertEqual(data.get("data", {}).get("status"), "READY_FOR_GUI_SELECTION")
+            self.assertEqual(data.get("data", {}).get("conversation_id"), "mock-pending-convo")
+            self.assertEqual(data.get("data", {}).get("total_questions_count"), 1)
+
+    def test_step2_cancels_cleanly_when_no_pending_chats(self):
+        """Verify Step 2 cleanly exits with code 0 when state indicates NO_PENDING_CHATS."""
+        from step2_gui_chat_select import run_step2
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = Path(temp_dir) / "test_target_chat.json"
+            with open(state_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "success": False,
+                    "data": {
+                        "status": "NO_PENDING_CHATS",
+                        "cancelled_remaining_steps": True,
+                        "conversation_id": None
+                    }
+                }, f)
+
+            exit_code = run_step2(
+                state_file=str(state_file),
+                dry_run=True
+            )
+            self.assertEqual(exit_code, 0)
+
+    def test_step3_cancels_cleanly_when_no_pending_chats(self):
+        """Verify Step 3 recognizes NO_PENDING_CHATS, resolves questions to 0, and cancels without keystrokes."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            state_file = Path(temp_dir) / "test_target_chat.json"
+            with open(state_file, "w", encoding="utf-8") as f:
+                json.dump({
+                    "success": False,
+                    "data": {
+                        "status": "NO_PENDING_CHATS",
+                        "cancelled_remaining_steps": True,
+                        "total_questions_count": 0,
+                        "questions": []
+                    }
+                }, f)
+
+            automator = GrillMeAutomator(
+                questions="auto",
+                state_file=str(state_file),
+                dry_run=True,
+                auto_focus=False,
+                auto_maximize=False,
+                step_delay=0.01,
+            )
+            self.assertEqual(automator.total_questions, 0)
+            self.assertEqual(automator.options_list, [])
+            self.assertTrue(automator.execute())
 
 
 if __name__ == "__main__":

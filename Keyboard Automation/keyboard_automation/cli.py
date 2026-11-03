@@ -203,6 +203,14 @@ def main():
 
     print_banner(args, automator=automator)
 
+    if automator.total_questions == 0:
+        print("\n" + "=" * 65)
+        print("  ℹ️ [INFO] STEP 3 CANCELLED: No pending questions (status: NO_PENDING_CHATS).")
+        print("  (स्टेप 3 ऑटोमैटिक कैंसिल: कोई पेंडिंग सवाल नहीं है)")
+        print("  Execution closing cleanly.")
+        print("=" * 65 + "\n")
+        return 0
+
     if not args.no_countdown and args.countdown > 0:
         automator.run_countdown(seconds=args.countdown)
 

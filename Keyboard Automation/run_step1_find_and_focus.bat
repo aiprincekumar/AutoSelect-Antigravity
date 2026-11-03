@@ -67,6 +67,16 @@ echo.
 "%PYTHON_EXE%" "%STEP1_SCRIPT%" %*
 set "STEP1_EXIT=%ERRORLEVEL%"
 
+if "%STEP1_EXIT%"=="10" (
+    echo.
+    echo ============================================================================
+    echo   [INFO] NO PENDING GRILL ME / ASK_QUESTION CHATS FOUND
+    echo   [*] All remaining steps cancelled automatically.
+    echo   [*] Step 1 finished and closed cleanly.
+    echo ============================================================================
+    exit /b 0
+)
+
 if not "%STEP1_EXIT%"=="0" (
     echo.
     echo [ERROR] Step 1 failed with exit code: %STEP1_EXIT%
