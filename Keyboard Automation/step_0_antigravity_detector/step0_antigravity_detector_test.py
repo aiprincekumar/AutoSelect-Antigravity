@@ -18,7 +18,8 @@ Clean Dashboard Specifications:
      - Inactive chats count (total - active)
      - Pending Grill-Me (ask_question) count requiring user interaction
   2. Zero technical clutter:
-     - No raw PIDs, HWNDs, window classes, or internal method traces in standard display
+     - No raw PIDs, HWNDs, window classes, or internal method traces
+     - No progress text, no extra status strings, strictly only the dashboard box
   3. Single-Shot Mode:
      - Pass --once for immediate detection, metrics computation, and clean dashboard
   4. Dept 06 JSON Envelope Compatibility:
@@ -266,23 +267,12 @@ def display_dashboard(
     step1_result: Optional[Tuple[bool, int, str]] = None,
     action_note: Optional[str] = None
 ):
-    """Render the clean dashboard box and optional minimal Step 1 notification."""
+    """Render strictly the clean dashboard box with zero extra noise."""
     if chat_stats is None:
         chat_stats = get_antigravity_chat_stats(is_antigravity_running=result.is_detected)
 
     box = format_dashboard_box(result.is_detected, chat_stats)
     print(box)
-
-    if step1_result is not None:
-        ok, code, msg = step1_result
-        res_str = "सफल / SUCCESS ✅" if ok else "असफल / FAILED ❌"
-        print(f"  🚀 [स्टेप 1 स्थिति / STEP 1 STATUS] : {res_str} (Exit Code: {code})")
-        if not ok and msg:
-            print(f"     विवरण / Details: {msg}\n")
-        else:
-            print()
-    elif action_note and ("skipped" not in action_note.lower()):
-        print(f"  ℹ️ [सूचना / INFO] : {action_note}\n")
 
 
 def display_telemetry_banner(
@@ -291,7 +281,7 @@ def display_telemetry_banner(
     action_note: Optional[str] = None,
     chat_stats: Optional[Dict[str, Any]] = None
 ):
-    """Backwards-compatible wrapper routing to the clean dashboard."""
+    """Backwards-compatible wrapper routing strictly to the clean dashboard."""
     display_dashboard(result, chat_stats=chat_stats, step1_result=step1_result, action_note=action_note)
 
 
@@ -319,7 +309,7 @@ def parse_args():
         "--wait",
         action="store_true",
         default=True,
-        help="Wait for Step 1 completion and display exit status in console (default: True in test runner)"
+        help="Wait for Step 1 completion (default: True in test runner)"
     )
     parser.add_argument(
         "--no-wait",
@@ -390,12 +380,6 @@ def wait_for_user(msg: Optional[str] = None):
     """Wait for user confirmation before exiting, keeping the terminal open."""
     if not (sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty()):
         return
-    print("=" * 60)
-    if msg:
-        print(f"  {msg}")
-    print("  [विंडो खुली रखी गई है / Window is kept open for inspection]")
-    print("  बाहर निकलने के लिए Enter दबाएं (Press Enter to exit)...")
-    print("=" * 60)
     try:
         input()
     except (EOFError, KeyboardInterrupt):
@@ -403,10 +387,8 @@ def wait_for_user(msg: Optional[str] = None):
 
 
 def on_check_telemetry(check_num: int, result: DetectionResult):
-    """Callback providing real-time telemetry updates during polling."""
-    now = datetime.now().strftime("%H:%M:%S")
-    if not result.is_detected:
-        print(f"  [{now}] Check #{check_num:03d} | Status: [SCANNING] | Antigravity: Closed/Not Detected (जांच जारी...)")
+    """Callback for polling iterations (silent in clean dashboard mode)."""
+    pass
 
 
 def main():
@@ -415,7 +397,7 @@ def main():
 
     detector = AntiGravityDetector(
         poll_interval=args.interval,
-        headless=args.json,
+        headless=True,
         verbose=False,
     )
 
@@ -428,7 +410,6 @@ def main():
         )
 
         step1_info = None
-        action_note = None
 
         if result.is_detected and not args.no_launch:
             ok, code, msg = detector.launch_step1(wait=args.wait)
@@ -438,8 +419,6 @@ def main():
                 "exit_code": code,
                 "message": msg
             }
-        elif not result.is_detected:
-            action_note = "एंटी-ग्रेविटी अभी नहीं चल रहा है (Antigravity is not currently running)"
 
         if args.json:
             envelope = result.to_json_envelope()
@@ -450,8 +429,6 @@ def main():
             display_dashboard(
                 result,
                 chat_stats=chat_stats,
-                step1_result=step1_info,
-                action_note=action_note
             )
 
         exit_code = 0
@@ -483,7 +460,6 @@ def main():
     )
 
     step1_info = None
-    action_note = None
 
     if result and result.is_detected:
         if result.details and "step1_result" in result.details:
@@ -499,8 +475,6 @@ def main():
             display_dashboard(
                 result,
                 chat_stats=chat_stats,
-                step1_result=step1_info,
-                action_note=action_note
             )
 
         exit_code = 0
@@ -512,18 +486,16 @@ def main():
 
         sys.exit(exit_code)
     else:
+        dummy_res = DetectionResult(is_detected=False)
         if args.json:
-            dummy_res = DetectionResult(is_detected=False)
             envelope = dummy_res.to_json_envelope()
             envelope["data"]["chat_stats"] = chat_stats
             envelope["data"]["details"]["chat_stats"] = chat_stats
             print(json.dumps(envelope, indent=2))
         else:
-            dummy_res = DetectionResult(is_detected=False)
             display_dashboard(
                 dummy_res,
                 chat_stats=chat_stats,
-                action_note="पोलिंग बिना डिटेक्शन के समाप्त हुई (Polling stopped without detecting Google Antigravity)."
             )
 
         if pause_enabled:

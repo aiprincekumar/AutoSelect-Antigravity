@@ -165,6 +165,9 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
         self.assertIn("एंटी-ग्रेविटी स्थिति (Status)", proc.stdout)
         self.assertIn("एक्टिव चैट्स (Active Chats)", proc.stdout)
         self.assertIn("ग्रिल-मी पेंडिंग (Pending Question)", proc.stdout)
+        # Ensure extraneous prints are absent
+        self.assertNotIn("[*]", proc.stdout)
+        self.assertNotIn("STEP 0: ANTIGRAVITY DETECTOR", proc.stdout)
 
     def test_cli_json_envelope(self):
         py_exe = _root_dir / ".venv" / "Scripts" / "python.exe"
@@ -233,7 +236,9 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
             errors="replace"
         )
         self.assertEqual(proc.returncode, 0)
-        self.assertIn("[SUCCESS]", proc.stdout)
+        self.assertIn("ANTIGRAVITY STATUS & CHAT DASHBOARD", proc.stdout)
+        self.assertNotIn("STEP 0: ANTIGRAVITY DETECTOR", proc.stdout)
+        self.assertNotIn("[SUCCESS]", proc.stdout)
 
 
 if __name__ == "__main__":

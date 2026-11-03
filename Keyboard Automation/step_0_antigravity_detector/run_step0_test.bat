@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 title Step 0: AntiGravity Detector Testing - AutoSelect-Commander
 
 REM ============================================================================
-REM Step 0: AntiGravity Detector - Testing Runner (10-Second Telemetry)
+REM Step 0: AntiGravity Detector - Testing Runner (Clean Dashboard)
 REM Script: step0_antigravity_detector_test.py
 REM Directory: step_0_antigravity_detector (Step 0 of 3)
 REM Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
@@ -49,15 +49,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo ============================================================================
-echo   STEP 0: ANTIGRAVITY DETECTOR - TESTING RUNNER (10-SEC INTERVAL)
-echo ============================================================================
-echo   Python Engine : %PYTHON_EXE%
-echo   Target Script : %STEP0_SCRIPT%
-echo   Polling Rate  : Every 10 seconds
-echo   Target Step 1 : step_1_chat_identifier\step1_find_and_focus.py
-echo ============================================================================
-echo.
+cls
 
 set "BATCH_PAUSE_HANDLED=1"
 
@@ -65,29 +57,15 @@ set "BATCH_PAUSE_HANDLED=1"
 set "STEP0_EXIT=%ERRORLEVEL%"
 
 if not "%STEP0_EXIT%"=="0" (
-    echo.
-    echo ============================================================================
-    echo   [ERROR] Step 0 Test Runner exited with error code: !STEP0_EXIT!
-    echo   Please inspect the error messages and stack traces displayed above.
-    echo   Window is kept open for diagnosis.
-    echo ============================================================================
-    echo.
     if "!NO_PAUSE_ARG!"=="0" (
-        echo Press any key to close this window...
+        echo.
         pause >nul
     )
     exit /b !STEP0_EXIT!
 )
 
-echo.
-echo ============================================================================
-echo   [SUCCESS] Step 0 Testing Session Completed Successfully!
-echo   AntiGravity detection and telemetry execution finished cleanly.
-echo   This window remains open so you can inspect the full report above.
-echo ============================================================================
-echo.
 if "!NO_PAUSE_ARG!"=="0" (
-    echo Press any key to close this window...
+    echo.
     pause >nul
 )
 exit /b 0
