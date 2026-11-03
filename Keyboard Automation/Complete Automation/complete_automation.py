@@ -54,7 +54,7 @@ if hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
-# Import decoupled Step 0 core detector
+# Import decoupled Step 0 core detector & canonical status dashboard
 from step_0_antigravity_detector.antigravity_detector_core import (
     AntiGravityDetector,
     DetectionResult,
@@ -64,11 +64,18 @@ from step_0_antigravity_detector.antigravity_detector_core import (
     DEFAULT_TEST_POLL_INTERVAL,
     DEFAULT_ACTIVE_HOURS,
 )
-from step_0_antigravity_detector.step0_antigravity_detector_test import (
-    display_dashboard,
-    format_dashboard_box,
-    clear_screen,
-)
+try:
+    from step_0_antigravity_detector.step0_antigravity_detector import (
+        display_dashboard,
+        format_dashboard_box,
+        clear_screen,
+    )
+except ImportError:
+    from step_0_antigravity_detector.step0_antigravity_detector_test import (
+        display_dashboard,
+        format_dashboard_box,
+        clear_screen,
+    )
 
 # Standard Exit Codes
 EXIT_CODE_SUCCESS = 0

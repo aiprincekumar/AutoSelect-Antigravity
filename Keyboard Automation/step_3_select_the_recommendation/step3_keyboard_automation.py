@@ -52,16 +52,16 @@ if str(_root_dir) not in sys.path:
 if str(_pkg_dir) not in sys.path:
     sys.path.insert(0, str(_pkg_dir))
 
-import keyboard_automation
-import keyboard_automation.constants as _c
-import keyboard_automation.win32_api as _wapi
-import keyboard_automation.input_injector as _inj
-import keyboard_automation.window_manager as _wm
-import keyboard_automation.automator as _aut
-import keyboard_automation.cli as _cli
+import core_engine
+import core_engine.constants as _c
+import core_engine.win32_api as _wapi
+import core_engine.input_injector as _inj
+import core_engine.window_manager as _wm
+import core_engine.automator as _aut
+import core_engine.cli as _cli
 
 # Re-export all modular components
-from keyboard_automation import (
+from core_engine import (
     STEP_ID,
     STEP_NUMBER,
     STEP_NAME,
@@ -140,7 +140,7 @@ class _Step3CompatModule(sys.modules[__name__].__class__):
     """
     def __setattr__(self, name, value):
         super().__setattr__(name, value)
-        for mod in (keyboard_automation, _c, _wapi, _inj, _wm, _aut, _cli):
+        for mod in (core_engine, _c, _wapi, _inj, _wm, _aut, _cli):
             if hasattr(mod, name):
                 setattr(mod, name, value)
 

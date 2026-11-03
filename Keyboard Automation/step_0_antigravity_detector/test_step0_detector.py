@@ -32,11 +32,12 @@ from antigravity_detector_core import (
     get_antigravity_chat_stats,
     resolve_brain_dir,
 )
-from step0_antigravity_detector_test import (
+from step0_antigravity_detector import (
     format_dashboard_box,
     clear_screen,
     should_pause,
 )
+import step0_antigravity_detector_test as step0_test_alias
 
 
 class TestDetectionResult(unittest.TestCase):
@@ -274,6 +275,14 @@ class TestDashboardFormatting(unittest.TestCase):
             no_pause = True
             pause = None
         self.assertFalse(should_pause(DummyNoPause()))
+
+    def test_backward_compat_test_alias(self):
+        """Verify that step0_antigravity_detector_test cleanly re-exports all canonical symbols."""
+        self.assertTrue(callable(step0_test_alias.format_dashboard_box))
+        self.assertTrue(callable(step0_test_alias.clear_screen))
+        self.assertTrue(callable(step0_test_alias.should_pause))
+        self.assertTrue(callable(step0_test_alias.display_dashboard))
+        self.assertTrue(callable(step0_test_alias.main))
 
 
 if __name__ == "__main__":
