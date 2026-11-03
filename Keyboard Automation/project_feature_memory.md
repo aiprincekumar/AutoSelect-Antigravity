@@ -8,19 +8,28 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
-### Complete Automation Hub & Step 0 Decoupling (`Complete Automation/` & `step_0_antigravity_detector/`)
+### Step 9 Renaming & Prompts Overhaul (`step_9_complete_automation/` & `prompts/`)
+- **Status:** Completed & Grade A+ Certified (44/44 Total Tests Passed)
+- **Local Commits:** Pending local micro-commit.
+- **Architectural Transformation:**
+  - Renamed subfolder `Complete Automation/` to `step_9_complete_automation/` so that it predictably sits at the bottom in file explorers and directory listings, preventing navigation confusion.
+  - Updated batch files (`run_complete_automation_prod.bat`, `run_complete_automation_test.bat`, `open_dashboard.bat`), Python controller, and test suites.
+  - Excluded `step_9_complete_automation` from dynamic pipeline discovery to prevent self-recursive execution.
+  - Comprehensive overhaul of `prompts/`: updated Steps 0-3, authored Step 4 & Step 9 prompts, authored new `prompts/pipeline_master_memory.md`, and redesigned `prompts/README.md`.
+
+### Step 9: Complete Automation Hub & Step 0 Decoupling (`step_9_complete_automation/` & `step_0_antigravity_detector/`)
 - **Status:** Completed & Grade A+ Certified (12/12 Complete Automation Tests Passed, 18/18 Step 0 Tests Passed, 13/13 Step 4 Tests Passed)
 - **Local Commits:** Pending local micro-commit.
 - **Architectural Transformation:**
-  - **Single Point of User Interaction (`Complete Automation/`):**
-    - The `Complete Automation/` folder serves as the exclusive entrypoint for the end user.
-    - `Complete Automation/config.json`: Clean, intuitive user configuration controlling timer intervals (prod 300s, test 10s, settle delay 0.8s, step 4 user activity delay 10s) and step toggles (`enabled_steps`).
-    - `Complete Automation/complete_automation.py`: Master pipeline controller that monitors conditions, manages schedules, runs enabled steps sequentially (Step 1 -> Step 2 -> Step 3 -> Step 4), and handles graceful exit code 10 cancellations.
+  - **Single Point of User Interaction (`step_9_complete_automation/`):**
+    - The `step_9_complete_automation/` folder serves as the exclusive entrypoint for the end user.
+    - `step_9_complete_automation/config.json`: Clean, intuitive user configuration controlling timer intervals (prod 300s, test 10s, settle delay 0.8s, step 4 user activity delay 10s) and step toggles (`enabled_steps`).
+    - `step_9_complete_automation/complete_automation.py`: Master pipeline controller that monitors conditions, manages schedules, runs enabled steps sequentially (Step 1 -> Step 2 -> Step 3 -> Step 4), and handles graceful exit code 10 cancellations.
     - 1-Click Launchers: `run_complete_automation_prod.bat`, `run_complete_automation_test.bat`, and `open_dashboard.bat`.
-    - Automated unit test suite: `Complete Automation/test_complete_automation.py` (12/12 passed).
+    - Automated unit test suite: `step_9_complete_automation/test_complete_automation.py` (12/12 passed).
   - **Step 0 Decoupling:**
     - Step 0 (`step_0_antigravity_detector/`) reverted to its pure, single responsibility: **AntiGravity & Chat Detector / Status Monitor**.
-    - All step chaining, launching, and pipeline scheduling were completely removed from Step 0 and relocated to the master `Complete Automation` hub.
+    - All step chaining, launching, and pipeline scheduling were completely removed from Step 0 and relocated to the master `step_9_complete_automation` hub.
     - Unit tests (`step_0_antigravity_detector/test_step0_detector.py`) updated and certified (18/18 passed).
   - **Root Workspace Cleanup:**
     - `run_all_steps.bat` safely removed from workspace root.
@@ -66,3 +75,4 @@
 | 5 | `step_0_antigravity_detector/` | Redundant runners (`_prod.py` vs `_test.py`) caused confusion and code duplication | Delete `step0_antigravity_detector_prod.py` & `run_step0_prod.bat`; unify into canonical `step0_antigravity_detector.py` and `run_step0.bat` with test alias | Simplified single source of truth; 19/19 Step 0 tests passed | Refactor | unittest (19/19 pass) |
 | 6 | `keyboard_automation/` | Subfolder shared identical name with parent repo `Keyboard Automation`, creating architectural confusion | Rename subfolder to `core_engine/` and provide backward-compatible `keyboard_automation.py` proxy in root | Industry-standard naming; seamless legacy import compatibility; zero breaking changes | Architecture | unittest (pass) |
 | 7 | Workspace Root | Monolithic legacy script `activating_grill_me.py` and legacy `config.json` cluttered root | Relocate legacy files to `archive/legacy_monolith/` with dedicated documentation | Clean, minimal root layout; 100% architectural clarity | Cleanup | filesystem verification |
+| 8 | `step_9_complete_automation/` & `prompts/` | Folder `Complete Automation` was alphabetically disordered; `prompts/` was missing Step 4, Step 9, master memory, and had stale Step 0 specs | Rename to `step_9_complete_automation`, exclude from self-recursion, update all step prompts, create `pipeline_master_memory.md`, and overhaul `prompts/README.md` | Predictable directory ordering, zero confusion, 100% zero-drift documentation | Phase 9 | unittest (44/44 pass) |

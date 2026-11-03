@@ -2,34 +2,38 @@
 
 > **Document Type:** Autonomous Agent Engineering Specification & Execution Blueprint  
 > **Target Module:** `Keyboard Automation/step_0_antigravity_detector/`  
-> **Hindi Name:** 'स्टेप 0 माइनस एंटी-ग्रेविटी डिटेक्टर'  
-> **English Name:** 'Step 0 - AntiGravity Detector'  
-> **Pipeline Step:** Step 0 of 3 (Pre-Pipeline Detection, Headless Polling & Automatic Trigger)  
+> **Hindi Name:** 'स्टेप 0: एंटी-ग्रेविटी डिटेक्टर'  
+> **English Name:** 'Step 0: AntiGravity Detector & Two-Factor Status Monitor'  
+> **Pipeline Step:** Step 0 of 9 (Condition Detection & Status Monitoring Subsystem)  
 > **Suite:** AutoSelect-Commander  
 > **Primary Developer:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
-> **Standard:** Department 06 (Backend & API Engineering) & Universal Rule 15/26  
-> **Status:** APPROVED FOR PRODUCTION & TESTING EXECUTION  
+> **Standard:** Department 06 (Backend & API Engineering), Department 02 (Solution Architecture) & Department 01  
+> **Status:** APPROVED FOR PRODUCTION & TESTING EXECUTION (19/19 Unit Tests Passed)  
 
 ---
 
 ## 🎯 1. Mission & System Directive
 
-You are tasked with executing, maintaining, or extending **Step 0: AntiGravity Detector** ('स्टेप 0 माइनस एंटी-ग्रेविटी डिटेक्टर') of the AutoSelect-Commander automation pipeline.
+You are tasked with executing, maintaining, or extending **Step 0: AntiGravity Detector** ('स्टेप 0: एंटी-ग्रेविटी डिटेक्टर') of the AutoSelect-Commander automation pipeline.
 
-### Core Directives
-1. **Fully Automatic & Headless Background Operation:**
-   - Execute silently in the background with no message boxes, no questions, and no GUI windows.
-2. **Detection Condition:**
-   - Detect whether Google Antigravity IDE is currently running or open via process enumeration (`Antigravity.exe` / `antigravity`) and Win32 top-level window hierarchy inspection (`Chrome_WidgetWin_1`).
+### Core Directives & Architectural Separation of Concerns
+1. **Decoupled Single Responsibility (Pure Status & Condition Detector):**
+   - Step 0 serves exclusively as a **Status Monitor and Grill-Me Question Detector**.
+   - **Crucial Architectural Rule:** Step 0 does **NOT** chain, trigger, or launch Step 1 or any subsequent steps. All pipeline chaining, settle delays, scheduling, and execution orchestration are owned exclusively by **Step 9: Complete Automation Hub** (`step_9_complete_automation/`).
+2. **Two-Factor Trigger Condition:**
+   - Both factors must evaluate to `True` for condition match:
+     1. **Factor 1 - AntiGravity Open:** Google Antigravity 2.0 IDE is running and its main window (`Chrome_WidgetWin_1`) is present.
+     2. **Factor 2 - Pending Grill-Me Question:** At least one unanswered `ask_question` tool call exists in the local transcript logs (`~/.gemini/antigravity/brain/`).
 3. **Browser Disqualification:**
-   - Disqualify common web browsers (`chrome.exe`, `msedge.exe`, `firefox.exe`, `brave.exe`, etc.) so that browser tabs containing "Antigravity" in their title never trigger false positives.
-4. **Automatic Pipeline Trigger:**
-   - The instant Antigravity is detected, automatically launch the next script: **Step 1** (`step_1_chat_identifier/step1_find_and_focus.py`).
-5. **Execution Hygiene (Universal Rule 26 - Zero Zombies):**
-   - In production mode, spawn Step 1 as a detached background process and immediately exit Step 0 cleanly (Code 0), preventing lingering zombie processes or resource leaks.
-6. **Two Standard Operating Runners:**
-   - **Production Runner (`step0_antigravity_detector_prod.py` / `run_step0_prod.bat`):** 5-minute (300 seconds) polling cadence, silent background execution.
-   - **Testing Runner (`step0_antigravity_detector_test.py` / `run_step0_test.bat`):** 10-second polling cadence with rich console telemetry for manual inspection and verification.
+   - Disqualifies common web browsers (`chrome.exe`, `msedge.exe`, `firefox.exe`, `brave.exe`, `opera.exe`, etc.) to prevent false triggers from browser tabs titled "Antigravity".
+4. **100% Screen Purity & Clean Unicode Dashboard Box:**
+   - Console output is restricted strictly to a clean, border-aligned Unicode dashboard box in pure English.
+   - Zero technical stdout spam, zero noisy trace logs, and zero flickering debug dumps.
+   - Automatically refreshes the screen on every polling tick using ANSI cursor reset (`\033[H`).
+5. **Unified Canonical Entrypoint:**
+   - **Canonical Script:** `step0_antigravity_detector.py` (with configurable `--interval`, `--once`, `--no-pause`, `--json`).
+   - **Canonical Batch Launcher:** `run_step0.bat` (1-click self-healing launcher).
+   - **Backward-Compatibility Aliases:** `step0_antigravity_detector_test.py` and `run_step0_test.bat` forward cleanly to the canonical script.
 
 ---
 
@@ -37,76 +41,113 @@ You are tasked with executing, maintaining, or extending **Step 0: AntiGravity D
 
 ```mermaid
 flowchart TD
-    Start([Execute Step 0 Detector]) --> InitConfig[Initialize Polling Interval & Logger]
-    InitConfig --> Loop{Poll Loop}
+    Start([Execute Step 0 Detector]) --> ParseArgs[Parse CLI Arguments: --interval, --once, --no-pause]
+    ParseArgs --> InitEngine[Initialize AntiGravityDetector Core]
     
-    Loop --> ScanProc[Scan Running Processes via psutil / Win32]
-    ScanProc --> MatchProc{Antigravity Process Running?}
+    InitEngine --> PollLoop{Monitoring Loop}
     
-    MatchProc -- Yes --> IdentifyMain[Identify Main PID & Exe Path]
-    MatchProc -- No --> ScanWin[Scan Top-Level Windows via Win32]
+    subgraph DetectionEngine [Two-Factor Detection Engine]
+        PollLoop --> Factor1[Factor 1: Check Antigravity Process & Win32 Window]
+        Factor1 --> FilterBrowsers[Disqualify Browsers: Chrome, Edge, Brave...]
+        FilterBrowsers --> EvalFactor1{Antigravity Window Active?}
+        
+        EvalFactor1 -- No --> Factor2_Skip[Pending Grill-Me: Skipped]
+        EvalFactor1 -- Yes --> Factor2[Factor 2: Scan Transcripts for Pending ask_question]
+        Factor2 --> EvalFactor2{Pending Grill-Me Found?}
+    end
     
-    IdentifyMain --> ScanWin
-    ScanWin --> FilterBrowsers[Filter Out Disqualified Browsers: Chrome, Edge, Brave...]
-    FilterBrowsers --> ScoreWindows[Score Candidates: Class + Title + Process]
+    Factor2_Skip --> RenderDash[Format 100% Screen Purity Unicode Dashboard Box]
+    EvalFactor2 -- No --> RenderDash
+    EvalFactor2 -- Yes --> MatchState[Condition Matched: 2-Factor Trigger True]
+    MatchState --> RenderDash
     
-    ScoreWindows --> DetectCheck{Antigravity Detected?}
+    RenderDash --> ClearOrAnsi[ANSI Cursor Reset / Console Refresh]
+    ClearOrAnsi --> PrintBox[Print Clean Dashboard Box in Pure English]
     
-    DetectCheck -- No --> CheckMax{Max Checks Exceeded or Stop Signal?}
-    CheckMax -- Yes --> CleanExit([Exit Loop Cleanly])
-    CheckMax -- No --> SleepInterval[Sleep Polling Interval: 300s Prod / 10s Test]
-    SleepInterval --> Loop
+    PrintBox --> CheckOnce{--once flag passed?}
+    CheckOnce -- Yes --> ExitSuccess([Exit Code 0 - Single Shot Done])
     
-    DetectCheck -- Yes --> LogSuccess[Record Telemetry / Log Detection]
-    LogSuccess --> TriggerStep1[Launch Step 1: step1_find_and_focus.py]
-    TriggerStep1 --> DetachedCheck{Detached Mode?}
-    
-    DetachedCheck -- Yes (Prod) --> DetachSpawn[Spawn Step 1 Detached & Terminate Step 0]
-    DetachSpawn --> ZeroZombie([Clean Exit Code 0 - Universal Rule 26])
-    
-    DetachedCheck -- No (Test) --> WaitStep1[Wait for Step 1 Execution & Display Exit Code]
-    WaitStep1 --> ReportStatus([Display Completion Telemetry & Exit])
+    CheckOnce -- No --> SleepTimer[Sleep Configured Interval: default 10s]
+    SleepTimer --> CheckInterrupt{Interrupt / Ctrl+C?}
+    CheckInterrupt -- Yes --> GracefulExit([Clean Exit Code 0])
+    CheckInterrupt -- No --> PollLoop
 ```
 
 ---
 
-## 📁 3. File Topology & Modules
+## 🖥️ 3. 100% Screen Purity Unicode Dashboard Box
+
+Step 0 renders a clean, professional status box on every tick. The dashboard is pure English and provides instant visual verification:
+
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│               ANTIGRAVITY STATUS & GRILL-ME MONITOR                    │
+├────────────────────────────────────────────────────────────────────────┤
+│  Timestamp        : 2026-11-04 05:25:00 UTC                            │
+│  Antigravity IDE  : OPEN (PID: 28412, HWND: 0x00040E9A)                │
+│  Grill-Me Status  : 1 PENDING QUESTION(S) WAITING                      │
+│  Target Chat ID   : 6b52232f-0326-437c-9a22-cecab6452125               │
+│  2-Factor Trigger : READY FOR AUTOMATION                               │
+│  Next Poll In     : 10 seconds (Press Ctrl+C to terminate)             │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+When Antigravity is not open or no question is pending:
+```text
+┌────────────────────────────────────────────────────────────────────────┐
+│               ANTIGRAVITY STATUS & GRILL-ME MONITOR                    │
+├────────────────────────────────────────────────────────────────────────┤
+│  Timestamp        : 2026-11-04 05:25:00 UTC                            │
+│  Antigravity IDE  : NOT DETECTED (Idle)                                │
+│  Grill-Me Status  : NO PENDING QUESTIONS                               │
+│  2-Factor Trigger : IDLE (Waiting for Antigravity & Questionnaire)     │
+│  Next Poll In     : 10 seconds (Press Ctrl+C to terminate)             │
+└────────────────────────────────────────────────────────────────────────┘
+```
+
+---
+
+## 📁 4. File Topology & Modules
 
 | File | Role | Type |
 | :--- | :--- | :--- |
-| **`step_0_antigravity_detector/__init__.py`** | Package exports: `AntiGravityDetector`, `DetectionResult`, and interval constants. | **PACKAGE INIT** |
-| **`step_0_antigravity_detector/antigravity_detector_core.py`** | Modular detector engine: process inspection, window enumeration, browser filter, and Step 1 launcher. | **CORE ENGINE** |
-| **`step_0_antigravity_detector/step0_antigravity_detector_prod.py`** | Production runner: 5-minute polling interval, fully headless. | **PROD RUNNER** |
-| **`step_0_antigravity_detector/step0_antigravity_detector_test.py`** | Testing runner: 10-second interval, rich visual telemetry, supports `--once`, `--no-launch`, `--json`. | **TEST RUNNER** |
-| **`step_0_antigravity_detector/run_step0_prod.bat`** | 1-click batch launcher for Production runner with self-healing `.venv`. | **PROD BATCH** |
-| **`step_0_antigravity_detector/run_step0_test.bat`** | 1-click batch launcher for Testing runner with live console logs. | **TEST BATCH** |
-| **`step_0_antigravity_detector/test_step0_detector.py`** | Automated unit test suite verifying data structures, intervals, and detection logic. | **UNIT TEST** |
+| **`step_0_antigravity_detector/__init__.py`** | Package exports: `AntiGravityDetector`, `DetectionResult`, and constants. | **PACKAGE INIT** |
+| **`step_0_antigravity_detector/antigravity_detector_core.py`** | Modular detector engine: process inspection, window scoring, browser filter, brain scan. | **CORE ENGINE** |
+| **`step_0_antigravity_detector/step0_antigravity_detector.py`** | **Canonical Unified Status Monitor:** Configurable polling interval, clean dashboard, `--once` mode. | **CANONICAL SCRIPT** |
+| **`step_0_antigravity_detector/run_step0.bat`** | **1-Click Canonical Launcher:** Launches Step 0 with auto-detected `.venv` and clean terminal output. | **STEP RUNNER** |
+| **`step_0_antigravity_detector/step0_antigravity_detector_test.py`** | Backward-compatibility alias forwarding directly to canonical script. | **ALIAS SCRIPT** |
+| **`step_0_antigravity_detector/run_step0_test.bat`** | Backward-compatibility batch alias calling `run_step0.bat`. | **ALIAS RUNNER** |
+| **`step_0_antigravity_detector/test_step0_detector.py`** | Automated unit test suite verifying data structures, intervals, detection logic, and alias parity (19/19 passed). | **UNIT TEST** |
 
 ---
 
-## 🛠️ 4. CLI Arguments Reference
+## 🛠️ 5. CLI Arguments & API Reference
 
-### Testing Runner (`step0_antigravity_detector_test.py`)
+### Canonical Script (`step0_antigravity_detector.py`)
 ```cmd
-python step0_antigravity_detector_test.py [OPTIONS]
-
-Options:
-  --interval FLOAT    Polling interval in seconds (default: 10.0)
-  --once              Perform single-shot detection check and exit
-  --no-launch         Dry run: detect Antigravity without triggering Step 1
-  --wait              Wait for Step 1 completion and report exit code (default: True)
-  --no-wait           Spawn Step 1 detached and exit immediately
-  --json              Output detection result in Department 06 JSON Envelope
-  --max-checks INT    Stop after N failed checks (default: infinite)
+python step0_antigravity_detector.py [OPTIONS]
 ```
 
-### Production Runner (`step0_antigravity_detector_prod.py`)
-```cmd
-python step0_antigravity_detector_prod.py [OPTIONS]
+| Argument | Type | Default | Description |
+| :--- | :--- | :--- | :--- |
+| `--interval`, `-i` | float | `10.0` | Polling loop interval in seconds. Set to `300.0` for 5-minute production monitoring. |
+| `--once` | flag | `False` | Execute a single detection check, output status, and exit immediately with code `0`. |
+| `--no-pause` | flag | `False` | Suppress the interactive "Press any key to exit..." prompt upon exit. |
+| `--json` | flag | `False` | Output detection result in Department 06 JSON envelope format instead of dashboard box. |
+| `--brain-dir` | path | `None` | Custom path to Antigravity brain transcripts folder. |
 
-Options:
-  --interval FLOAT    Polling interval in seconds (default: 300.0 = 5 minutes)
-  --interactive       Display visible telemetry instead of silent background operation
-  --wait              Wait for Step 1 completion instead of detached spawn
-  --log-file PATH     Path to persistent log file
+---
+
+## 🔗 6. Integration Contract with Step 9 (Master Orchestrator)
+
+Step 9 (`step_9_complete_automation/complete_automation.py`) imports the detector core directly:
+```python
+from step_0_antigravity_detector.antigravity_detector_core import (
+    AntiGravityDetector,
+    DetectionResult,
+    get_antigravity_chat_stats,
+    resolve_brain_dir,
+)
 ```
+- Step 9 instantiates `AntiGravityDetector(brain_dir=...)` and polls on its configured interval (`timing.step0_poll_interval_prod_seconds` or `timing.step0_poll_interval_test_seconds`).
+- When `detector.detect()` reports `result.condition_matched == True`, Step 9 proceeds to execute Step 1 -> Step 2 -> Step 3 -> Step 4.

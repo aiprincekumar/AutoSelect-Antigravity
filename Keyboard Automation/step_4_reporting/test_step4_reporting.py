@@ -37,9 +37,12 @@ from step4_reporting import (
     watch_for_user_input,
 )
 import importlib.util
+_ca_path = _root_dir / "step_9_complete_automation" / "complete_automation.py"
+if not _ca_path.is_file():
+    _ca_path = _root_dir / "Complete Automation" / "complete_automation.py"
 _ca_spec = importlib.util.spec_from_file_location(
     "complete_automation",
-    str(_root_dir / "Complete Automation" / "complete_automation.py")
+    str(_ca_path)
 )
 _ca_mod = importlib.util.module_from_spec(_ca_spec)
 sys.modules["complete_automation"] = _ca_mod

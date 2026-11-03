@@ -1,5 +1,5 @@
 {
-  "_comment": "Complete Automation Configuration - AutoSelect-Commander Master Configuration",
+  "_comment": "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
   "mode": "production",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,

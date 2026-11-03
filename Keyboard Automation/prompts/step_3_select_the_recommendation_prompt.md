@@ -2,7 +2,7 @@
 
 > **Document Type:** Autonomous Agent Engineering Specification & Execution Blueprint  
 > **Target Module:** `Keyboard Automation/step_3_select_the_recommendation/`  
-> **Pipeline Step:** Step 3 of 3 (Hardware Keystroke Injection, Multi-Question Scaling & Enter Gate)  
+> **Pipeline Step:** Step 3 of 9 (Hardware Keystroke Injection, Multi-Question Scaling & Enter Gate)  
 > **Suite:** AutoSelect-Commander  
 > **Primary Developer:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
 > **Standard:** Department 01 (Product Requirements) & Department 06 (Backend & API Engineering)  
@@ -19,7 +19,8 @@ The agent running this step must:
 1. Ingest question count $N$, target window handle, and selected option choices from `target_chat.json`.
 2. Check if Step 1 signalled `NO_PENDING_CHATS` or `cancelled_remaining_steps: true`. If so, exit cleanly with code `0`.
 3. Disqualify shell consoles (`cmd.exe`, `powershell.exe`, `WindowsTerminal.exe`, `conhost.exe`) and web browsers (`chrome.exe`, `msedge.exe`) to prevent accidental keystroke theft.
-4. Execute pure native Win32 `SendInput` hardware keystroke sequences:
+4. Utilize `core_engine/` (Core Win32 Automation & Input Injection Engine) for robust `SendInput` hardware scan code injection and active window management.
+5. Execute pure native Win32 `SendInput` hardware keystroke sequences:
    - For intermediate questions $Q_1, Q_2, \dots, Q_{N-1}$:
      - `Ctrl + L` (focus input box)
      - `Shift + Tab` (navigate backward to option button group)
@@ -307,3 +308,13 @@ run_step3.bat
   - For $Q_1, Q_2, Q_3$: It executes `Ctrl + L` $\to$ `Shift + Tab` $\to$ `1`, and strictly skips Enter.
   - For $Q_4$: It executes `Ctrl + L` $\to$ `Shift + Tab` $\to$ `1` $\to$ `Enter`.
   - The batch submission is complete and the script terminates with exit code `0`.
+
+---
+
+## 🔗 9. Integration Contract with Step 9 (Master Orchestrator)
+
+Step 3 is orchestrated sequentially by **Step 9: Complete Automation Hub** (`step_9_complete_automation/complete_automation.py`):
+1. **Config Toggle:** Step 9 inspects `config.json` (`enabled_steps.step3_keyboard_automation`). If disabled, Step 9 skips Step 3 cleanly.
+2. **Pre-Step Settle:** Step 9 pauses for 0.8s after Step 2 finishes before invoking Step 3.
+3. **Execution & Failure Isolation:** Step 9 invokes Step 3 and evaluates the return code. If Step 3 succeeds (code 0), Step 9 settles for 0.8s before executing Step 4. If Step 3 fails, Step 9 halts and logs the failure to prevent corrupted reporting.
+4. **Underlying Engine:** Step 3 imports directly from `core_engine` (Core Win32 Automation & Input Injection Engine), ensuring zero dependencies on legacy external tools.

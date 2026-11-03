@@ -11,9 +11,9 @@ The system is organized into a modular Clean Architecture pipeline adhering to *
 
 ```
 ┌──────────────────────────────────────────────────────────────────────────┐
-│                     COMPLETE AUTOMATION (MASTER HUB)                     │
-│         `Complete Automation/run_complete_automation_prod.bat`          │
-│         `Complete Automation/run_complete_automation_test.bat`          │
+│              STEP 9: COMPLETE AUTOMATION (MASTER HUB)                    │
+│      `step_9_complete_automation/run_complete_automation_prod.bat`       │
+│      `step_9_complete_automation/run_complete_automation_test.bat`       │
 └────────────────────────────────────┬─────────────────────────────────────┘
                                      │
            ┌─────────────────────────┼─────────────────────────┐
@@ -42,7 +42,7 @@ The system is organized into a modular Clean Architecture pipeline adhering to *
 ### 🏢 Root Infrastructure (Clean & Minimal)
 | File / Folder | Role & Description | Type |
 | :--- | :--- | :--- |
-| **`Complete Automation/`** | **Master User Interaction Hub:** Unified configuration (`config.json`), master controller (`complete_automation.py`), 1-click batch runners, and dashboard launcher. | **MASTER HUB** |
+| **`step_9_complete_automation/`** | **Master User Interaction Hub:** Unified configuration (`config.json`), master controller (`complete_automation.py`), 1-click batch runners, and dashboard launcher (renamed to step 9 to always remain at the end). | **MASTER HUB (STEP 9)** |
 | **`core_engine/`** | **Core Automation Engine:** Win32 API bindings, SendInput injector, window discovery & scoring, automator sequence, and CDP client (renamed from `keyboard_automation`). | **CORE ENGINE** |
 | **`keyboard_automation.py`** | **Backward Compatibility Proxy:** Transparent module delegating all calls and submodules to `core_engine/`. | **COMPATIBILITY PROXY** |
 | **`target_chat.json`** | Shared runtime state file holding extracted question metadata, option choices, and active conversation ID. | **COMMON STATE** |
@@ -108,19 +108,19 @@ The system is organized into a modular Clean Architecture pipeline adhering to *
 
 ### Execution Options
 
-#### 🌟 1. Master Pipeline (Complete Automation)
+#### 🌟 1. Master Pipeline (Step 9: Complete Automation)
 Run the entire pipeline end-to-end with unified configuration and error handling:
 - **Production Mode (5-min polling cadence):**
   ```cmd
-  "Complete Automation\run_complete_automation_prod.bat"
+  "step_9_complete_automation\run_complete_automation_prod.bat"
   ```
 - **Testing Mode (10-sec polling cadence):**
   ```cmd
-  "Complete Automation\run_complete_automation_test.bat"
+  "step_9_complete_automation\run_complete_automation_test.bat"
   ```
 - **Open HTML Report Dashboard:**
   ```cmd
-  "Complete Automation\open_dashboard.bat"
+  "step_9_complete_automation\open_dashboard.bat"
   ```
 
 #### 🛡️ 2. Run Step 0 Standalone (AntiGravity Detector)
@@ -143,7 +143,7 @@ Run the entire pipeline end-to-end with unified configuration and error handling
 
 ## 🛡️ Verification & Test Suite Passing
 - All test suites passing 100%:
-  - `Complete Automation/test_complete_automation.py` (12/12 passing)
+  - `step_9_complete_automation/test_complete_automation.py` (12/12 passing)
   - `step_0_antigravity_detector/test_step0_detector.py` (19/19 passing)
   - `step_4_reporting/test_step4_reporting.py` (13/13 passing)
 - Run all tests with one command:

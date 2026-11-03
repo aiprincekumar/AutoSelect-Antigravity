@@ -2,7 +2,7 @@
 
 > **Document Type:** Autonomous Agent Engineering Specification & Execution Blueprint  
 > **Target Module:** `Keyboard Automation/step_1_chat_identifier/`  
-> **Pipeline Step:** Step 1 of 3 (Transcript Scanning, State Persistence & Focus Subsystem)  
+> **Pipeline Step:** Step 1 of 9 (Transcript Scanning, State Persistence & Focus Subsystem)  
 > **Suite:** AutoSelect-Commander  
 > **Primary Developer:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
 > **Standard:** Department 01 (Product Requirements) & Department 06 (Backend & API Engineering)  
@@ -304,3 +304,17 @@ run_step1.bat
 - **Given:** All conversations in the brain directory have had their questions answered.
 - **When:** `step1_find_and_focus.py` runs.
 - **Then:** It writes `status: "NO_PENDING_CHATS"` and `cancelled_remaining_steps: true` into `target_chat.json`, logs the cancellation banner, and immediately terminates with Exit Code `10`.
+
+---
+
+## 🔗 9. Integration Contract with Step 9 (Master Orchestrator)
+
+Step 1 is orchestrated sequentially by **Step 9: Complete Automation Hub** (`step_9_complete_automation/complete_automation.py`):
+1. **Invocation:** Step 9 executes `step1_find_and_focus.py` via `subprocess.run([sys.executable, str(step1_path), ...])`.
+2. **Exit Code 10 Handling:** If Step 1 exits with code `10`:
+   - Step 9 logs: `[INFO] Step 1 reported no pending chats (Exit Code 10). Remaining steps cancelled cleanly.`
+   - Step 9 skips Steps 2, 3, and 4 immediately.
+   - The master cycle completes with code `0`, preserving clean pipeline state and preventing zombie runs.
+3. **Exit Code 0 Handling:** If Step 1 exits with code `0`:
+   - Step 9 applies a configurable settle delay (`timing.settle_delay_between_steps_seconds`, default 0.8s).
+   - Step 9 proceeds directly to Step 2 (`step_2_chat_and_focus/step2_gui_chat_select.py`).

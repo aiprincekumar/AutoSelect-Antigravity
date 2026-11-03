@@ -1,16 +1,16 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-कम्प्लीट ऑटोमेशन मास्टर कंट्रोलर / Complete Automation Master Controller
+कम्प्लीट ऑटोमेशन मास्टर कंट्रोलर / Step 9: Complete Automation Master Controller
 ========================================================================
-Subsystem: Complete Automation (Master User Interaction & Step Orchestrator)
-Directory: Complete Automation/
+Subsystem: Step 9: Complete Automation (Master User Interaction & Step Orchestrator)
+Directory: step_9_complete_automation/
 Part of: AutoSelect-Commander Automation Suite
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 06 (Backend & API Engineering) & Department 02 (Solution Architecture)
 
 Single Point of User Interaction:
-  - This folder ("Complete Automation") and this script ("complete_automation.py")
+  - This folder ("step_9_complete_automation") and this script ("complete_automation.py")
     along with "config.json" and the 1-click batch files serve as the EXCLUSIVE
     interface for the user. The user never needs to touch individual step folders.
   - Controls timing schedules (when to activate which script and after how long).
@@ -217,15 +217,17 @@ def discover_pipeline_steps(
         description="Automated execution reporting, audit trail logging, and visual dashboard."
     ))
 
-    # 5. Dynamic Future Steps (step_{N}_* where N >= 5)
+    # 5. Dynamic Future Steps (step_{N}_* where 5 <= N < 9; Step 9 is this master orchestrator)
     try:
         for sub_dir in sorted(r_dir.glob("step_*_*")):
             if not sub_dir.is_dir():
                 continue
+            if sub_dir.resolve() == _this_dir.resolve():
+                continue
             parts = sub_dir.name.split("_")
             if len(parts) >= 2 and parts[1].isdigit():
                 idx = int(parts[1])
-                if idx >= 5:
+                if 5 <= idx < 9:
                     cand_scripts = [
                         p for p in sub_dir.glob("*.py")
                         if not p.name.startswith(("test_", "__", "setup"))

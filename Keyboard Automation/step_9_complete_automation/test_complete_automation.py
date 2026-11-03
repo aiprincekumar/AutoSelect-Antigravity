@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Unit Tests for Complete Automation Master Controller & Step Orchestrator
+Unit Tests for Step 9: Complete Automation Master Controller & Step Orchestrator
 ========================================================================
-Test Suite: Complete Automation/test_complete_automation.py
+Test Suite: step_9_complete_automation/test_complete_automation.py
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 08 (QA & Testing) / Dept 06 (Backend & API Engineering)
 """

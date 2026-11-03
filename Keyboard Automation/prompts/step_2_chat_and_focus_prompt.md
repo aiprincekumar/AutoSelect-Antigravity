@@ -2,7 +2,7 @@
 
 > **Document Type:** Autonomous Agent Engineering Specification & Execution Blueprint  
 > **Target Module:** `Keyboard Automation/step_2_chat_and_focus/`  
-> **Pipeline Step:** Step 2 of 3 (CDP DOM Chat Selection, Smooth Cursor Glide & Input Pane Focus)  
+> **Pipeline Step:** Step 2 of 9 (CDP DOM Chat Selection, Smooth Cursor Glide & Input Pane Focus)  
 > **Suite:** AutoSelect-Commander  
 > **Primary Developer:** Atul Verma (`aiprincekumar` / `aiprincekumar010100@gmail.com`)  
 > **Standard:** Department 01 (Product Requirements) & Department 06 (Backend & API Engineering)  
@@ -279,3 +279,12 @@ run_step2.bat
 - **Given:** CDP port is closed or blocked.
 - **When:** `step2_gui_chat_select.py` runs.
 - **Then:** It falls back gracefully to calibrated coordinates in `config.json`, clicks the conversation item, dispatches `Ctrl + L`, and exits with code `0`.
+
+---
+
+## 🔗 9. Integration Contract with Step 9 (Master Orchestrator)
+
+Step 2 is orchestrated sequentially by **Step 9: Complete Automation Hub** (`step_9_complete_automation/complete_automation.py`):
+1. **Config Toggle:** Step 9 inspects `config.json` (`enabled_steps.step2_gui_chat_select`). If disabled, Step 9 skips Step 2 cleanly without breaking the pipeline.
+2. **Pre-Step Settle:** Step 9 applies a 0.8s settle delay after Step 1 finishes before invoking Step 2.
+3. **Execution & Failure Isolation:** Step 9 invokes Step 2 and evaluates the return code. If Step 2 succeeds (code 0), Step 9 settles for 0.8s before executing Step 3. If Step 2 fails with code 1, Step 9 halts and logs the failure to prevent mistargeted keystroke injection.
