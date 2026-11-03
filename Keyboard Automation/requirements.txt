@@ -1,9 +1,11 @@
-# STEP 3: KEYBOARD AUTOMATION (AutoSelect-Commander) - Dependencies
-# =================================================================
-# Pipeline Step: Step 3 of 3 (Option Selection & Confirmation)
-# Architecture: Zero required external dependencies
-# The automation engine runs natively via Windows ctypes (SendInput / keybd_event / Win32 API)
-# on standard Python 3.8+ on Windows with no third-party packages required.
+# ============================================================================
+# Keyboard Automation (AutoSelect-Commander) - Dependencies
+# ============================================================================
+# Pipeline Steps:
+#   - Step 1: Scan Transcripts & Focus Window (Win32 API / ctypes)
+#   - Step 2: GUI Chat Select (CDP / DOM & Smooth Bezier Glide via PyAutoGUI)
+#   - Step 3: Hybrid Keyboard Automation & Option Selection (Win32 ctypes / PyAutoGUI)
 #
-# Optional fallback engine:
+# Dedicated packages:
 pyautogui>=0.9.54
+psutil>=5.9.0

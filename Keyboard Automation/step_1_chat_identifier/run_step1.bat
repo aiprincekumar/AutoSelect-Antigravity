@@ -12,6 +12,7 @@ title Step 1: Chat Identifier Launcher - AutoSelect-Commander
 ::   Scans Antigravity brain transcripts for pending Grill-Me (ask_question) chats,
 ::   extracts questions & choices, persists state to target_chat.json in root, and
 ::   safely focuses/maximizes the Antigravity IDE window without restoring down.
+:: Environment: Dedicated, self-healing Keyboard Automation\.venv
 :: ============================================================================
 
 chcp 65001 >nul
@@ -21,40 +22,31 @@ cd /d "%SCRIPT_DIR%"
 set "STEP1_SCRIPT=%SCRIPT_DIR%step1_find_and_focus.py"
 set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
 
-:: 1. Bulletproof Python Executable Resolution
-set "PYTHON_EXE="
-
-if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\..\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\..\.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe"
-) else if exist "%USERPROFILE%\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%USERPROFILE%\.venv\Scripts\python.exe"
-) else if exist "%USERPROFILE%\.local\bin\python.exe" (
-    set "PYTHON_EXE=%USERPROFILE%\.local\bin\python.exe"
-) else (
-    for /f "delims=" %%I in ('where python.exe 2^>nul') do (
-        if not defined PYTHON_EXE set "PYTHON_EXE=%%I"
-    )
-    if not defined PYTHON_EXE (
-        for /f "delims=" %%I in ('where py.exe 2^>nul') do (
-            if not defined PYTHON_EXE set "PYTHON_EXE=%%I"
-        )
+:: 1. Dedicated Self-Healing Virtual Environment (.venv) Resolution
+if not exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
+    echo [SETUP] Dedicated virtual environment not found in Keyboard Automation.
+    echo [SETUP] Initializing self-healing .venv environment now...
+    call "%SCRIPT_DIR%..\setup_env.bat"
+    if errorlevel 1 (
+        echo [ERROR] Failed to initialize Keyboard Automation virtual environment.
+        pause
+        exit /b 1
     )
 )
 
-if not defined PYTHON_EXE set "PYTHON_EXE=python"
+set "PYTHON_EXE=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
+
+if not exist "%PYTHON_EXE%" (
+    echo [ERROR] Python executable not found at: "%PYTHON_EXE%"
+    pause
+    exit /b 1
+)
 
 :: 2. Verify Python interpreter is functional
 "%PYTHON_EXE%" -c "import sys; sys.exit(0 if sys.version_info >= (3, 8) else 1)" >nul 2>nul
 if errorlevel 1 (
-    echo [ERROR] Python 3.8+ executable not found or not working!
+    echo [ERROR] Python 3.8+ executable in .venv not working!
     echo Attempted: "%PYTHON_EXE%"
-    echo Please install Python 3.10+ or configure a virtual environment.
     pause
     exit /b 1
 )

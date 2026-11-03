@@ -44,7 +44,9 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 | File / Folder | Role & Description | Type |
 | :--- | :--- | :--- |
 | **`target_chat.json`** | Shared state file holding extracted question metadata, option choices, and active conversation ID. | **COMMON STATE** |
-| **`run_all_steps.bat`** | **Single 1-Click Full Pipeline Master Runner:** Executes Step 1 -> Step 2 -> Step 3 end-to-end. | **MASTER RUNNER** |
+| **`run_all_steps.bat`** | **Single 1-Click Full Pipeline Master Runner:** Auto-initializes `.venv` and executes Step 1 -> Step 2 -> Step 3 end-to-end. | **MASTER RUNNER** |
+| **`setup_env.bat`** | **Dedicated Self-Healing Environment Setup:** Automatically creates `Keyboard Automation\.venv` and installs dependencies. | **SETUP RUNNER** |
+| **`requirements.txt`** | Dedicated Python dependencies (`pyautogui`, `psutil`) for Keyboard Automation. | **DEPENDENCIES** |
 | **`activating_grill_me.py`** | Master transcript parser & GUI activator engine. | **ORCHESTRATOR** |
 | **`config.json`** | Configuration file for coordinate fallbacks and automation timing. | **CONFIG** |
 | **`keyboard_automation/`** | Modular internal engine (Win32 API, Input Injector, Window Manager, Automator, CLI). | **SHARED ENGINE** |
@@ -81,7 +83,7 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 
 ### Prerequisites
 - Windows 10 or 11
-- Python 3.8+ (Zero external dependencies strictly required; standard library ctypes / json / urllib used natively)
+- Python 3.8+ (Automatically configures dedicated self-healing virtual environment in `Keyboard Automation\.venv` via `setup_env.bat`)
 
 ### Execution Options
 
