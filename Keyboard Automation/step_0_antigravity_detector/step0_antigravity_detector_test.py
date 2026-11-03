@@ -3,9 +3,9 @@
 """
 Step 0 - AntiGravity Detector (Testing Runner - 10s Timer & Simple Clean Dashboard)
 ================================================================================
-Pipeline Step: STEP 0 (AntiGravity Detector & Step 1 Auto-Trigger)
+Pipeline Step: STEP 0 (AntiGravity Detector & Dynamic Pipeline Auto-Trigger)
 Part of: AutoSelect-Commander Automation Pipeline
-Workspace: Keyboard Automation (Step 0 of 3)
+Workspace: Keyboard Automation (Step 0: Detector & Dynamic Pipeline Runner)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
 
@@ -29,7 +29,7 @@ Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
        - Tests again!
      - As soon as a Grill-Me chat is pending:
        - Condition matches!
-       - Launches Step 1 (step_1_chat_identifier/step1_find_and_focus.py) with suppressed stdout
+       - Launches full automation pipeline (Steps 1 -> 2 -> 3) with suppressed stdout
        - Exits cleanly (Universal Rule 26).
   4. Dept 06 JSON Envelope Compatibility:
      - Pass --json to retain complete structured JSON response envelope with chat_stats.
@@ -174,19 +174,19 @@ def parse_args():
     parser.add_argument(
         "--no-launch",
         action="store_true",
-        help="Dry run: detect without triggering Step 1"
+        help="Dry run: detect without triggering automation pipeline"
     )
     parser.add_argument(
         "--wait",
         action="store_true",
         default=True,
-        help="Wait for Step 1 completion (default: True in test runner)"
+        help="Wait for pipeline completion (default: True in test runner)"
     )
     parser.add_argument(
         "--no-wait",
         action="store_false",
         dest="wait",
-        help="Do not wait for Step 1 completion (spawn detached and exit)"
+        help="Do not wait for pipeline completion (spawn detached and exit)"
     )
     parser.add_argument(
         "--max-checks",
@@ -279,15 +279,16 @@ def main():
     if args.once:
         result = detector.detect()
 
-        step1_info = None
+        pipeline_info = None
         if result.trigger_matched and not args.no_launch:
-            ok, code, msg = detector.launch_step1(wait=args.wait, capture_output=True)
-            step1_info = (ok, code, msg)
-            result.details["step1_result"] = {
+            ok, code, msg = detector.launch_pipeline(wait=args.wait, capture_output=True)
+            pipeline_info = (ok, code, msg)
+            result.details["pipeline_result"] = {
                 "success": ok,
                 "exit_code": code,
                 "message": msg
             }
+            result.details["step1_result"] = result.details["pipeline_result"]
 
         if args.json:
             envelope = result.to_json_envelope()
@@ -302,8 +303,8 @@ def main():
         exit_code = 0
         if not result.is_detected:
             exit_code = 1
-        elif step1_info and not step1_info[0]:
-            exit_code = step1_info[1]
+        elif pipeline_info and not pipeline_info[0]:
+            exit_code = pipeline_info[1]
 
         if pause_enabled:
             wait_for_user()
@@ -326,23 +327,24 @@ def main():
 
             # Two-Factor Trigger: Antigravity open AND pending Grill-Me chat detected!
             if result.trigger_matched:
-                step1_info = None
+                pipeline_info = None
                 if not args.no_launch:
-                    ok, code, msg = detector.launch_step1(wait=args.wait, capture_output=True)
-                    step1_info = (ok, code, msg)
-                    result.details["step1_result"] = {
+                    ok, code, msg = detector.launch_pipeline(wait=args.wait, capture_output=True)
+                    pipeline_info = (ok, code, msg)
+                    result.details["pipeline_result"] = {
                         "success": ok,
                         "exit_code": code,
                         "message": msg
                     }
+                    result.details["step1_result"] = result.details["pipeline_result"]
 
                 if args.json:
                     envelope = result.to_json_envelope()
                     print(json.dumps(envelope, indent=2))
 
                 exit_code = 0
-                if step1_info and not step1_info[0]:
-                    exit_code = step1_info[1]
+                if pipeline_info and not pipeline_info[0]:
+                    exit_code = pipeline_info[1]
 
                 if pause_enabled:
                     wait_for_user()

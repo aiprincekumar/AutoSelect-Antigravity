@@ -3,9 +3,9 @@
 """
 स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर / Step 0 - AntiGravity Detector Core Engine
 ========================================================================
-Modular Core Subsystem: AntiGravityDetector & DetectionResult
+Modular Core Subsystem: AntiGravityDetector, DetectionResult & PipelineStep
 Part of: AutoSelect-Commander Automation Pipeline
-Workspace: Keyboard Automation (Step 0 of 3)
+Workspace: Keyboard Automation (Step 0: Detector & Dynamic Pipeline Runner)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
 
@@ -17,9 +17,16 @@ Mission:
   3. Two-Factor Trigger Condition:
      - Factor 1: Is Google Anti-Gravity running/open?
      - Factor 2: Is there a pending Grill-Me chat requiring user input (ask_question tool call)?
-     - When BOTH are met: Automatically launches Step 1 (step_1_chat_identifier/step1_find_and_focus.py).
-  4. Execution Hygiene (Universal Rule 26): Clean exit after launching Step 1 with detached
-     process management to eliminate zombie processes and background hangs.
+     - When BOTH are met: Automatically launches the multi-step automation pipeline.
+  4. Dynamic Multi-Step Pipeline Engine:
+     - Step 1: `step_1_chat_identifier/step1_find_and_focus.py` (Identify & Focus)
+     - Step 2: `step_2_chat_and_focus/step2_gui_chat_select.py` (CDP/DOM GUI Selection)
+     - Step 3: `step_3_select_the_recommendation/step3_keyboard_automation.py` (Option Selection)
+     - Step 4 (Future Reporting): `step_4_reporting/step4_reporting.py` (Gracefully bypassed if absent)
+     - Dynamic discovery: Automatically registers and executes present steps sequentially.
+       If Step 1 reports exit code 10 (no pending chats), remaining steps are cleanly cancelled.
+  5. Execution Hygiene (Universal Rule 26): Detached headless background process management
+     to eliminate zombie processes and background hangs upon completion.
 """
 
 from __future__ import annotations
@@ -30,6 +37,7 @@ import json
 import time
 import signal
 import logging
+import argparse
 import subprocess
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
@@ -48,10 +56,12 @@ if hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
-# Default Polling Intervals
+# Default Polling Intervals & Pipeline Constants
 DEFAULT_PRODUCTION_POLL_INTERVAL: float = 300.0  # 5 minutes (300 seconds)
 DEFAULT_TEST_POLL_INTERVAL: float = 10.0         # 10 seconds (timer mode)
 DEFAULT_ACTIVE_HOURS: float = 12.0               # 12 hours active window
+DEFAULT_STEP_SETTLE_DELAY: float = 0.8          # 800ms between steps for GUI settle
+EXIT_CODE_NO_PENDING_CHATS: int = 10            # Step 1 exit code indicating no chats need answering
 
 # Disqualified Web Browser processes to prevent false-positive window matches
 DISQUALIFIED_BROWSER_PROCS = {
@@ -259,6 +269,35 @@ def get_antigravity_chat_stats(
 
 
 @dataclass
+class PipelineStep:
+    """
+    Representation of an automated pipeline step within AutoSelect-Commander.
+    """
+    step_index: int
+    name: str
+    script_path: Path
+    is_optional: bool = False
+    description: str = ""
+
+    def exists(self) -> bool:
+        """Check whether the step script physically exists on disk."""
+        try:
+            return self.script_path.is_file()
+        except Exception:
+            return False
+
+    def to_dict(self) -> Dict[str, Any]:
+        return {
+            "step_index": self.step_index,
+            "name": self.name,
+            "script_path": str(self.script_path),
+            "is_optional": self.is_optional,
+            "exists": self.exists(),
+            "description": self.description,
+        }
+
+
+@dataclass
 class DetectionResult:
     """
     Department 06 Compatible Detection Result Data Structure.
@@ -318,10 +357,160 @@ class DetectionResult:
         }
 
 
+def discover_pipeline_steps(
+    root_dir: Optional[Union[str, Path]] = None,
+    include_future: bool = True,
+    custom_scripts: Optional[Dict[int, Union[str, Path]]] = None
+) -> List[PipelineStep]:
+    """
+    Discover all configured and dynamically available pipeline steps in the workspace.
+
+    Standard Pipeline Architecture:
+      - Step 1: step_1_chat_identifier/step1_find_and_focus.py (Required)
+      - Step 2: step_2_chat_and_focus/step2_gui_chat_select.py (Required)
+      - Step 3: step_3_select_the_recommendation/step3_keyboard_automation.py (Required)
+      - Step 4: step_4_reporting/step4_reporting.py (Future Reporting - Optional)
+
+    Dynamic Discovery:
+      - Scans for any additional step_{N}_* directories (N >= 5) on disk.
+      - If Step 4 is absent from disk, it is marked optional (is_optional=True, exists()=False)
+        and will be gracefully bypassed without failing the pipeline.
+      - Once Step 4 is created on disk, it is automatically executed!
+
+    :param root_dir: Base workspace root directory.
+    :param include_future: If True, includes defined optional steps (like Step 4) even if not yet on disk.
+    :param custom_scripts: Optional mapping of step index to custom script paths.
+    :return: List of PipelineStep instances sorted by step_index.
+    """
+    if root_dir is None:
+        _this = Path(__file__).resolve().parent
+        r_dir = _this.parent if _this.name.startswith("step_") else _this
+    else:
+        r_dir = Path(root_dir).resolve()
+
+    custom = custom_scripts or {}
+    steps: List[PipelineStep] = []
+
+    # 1. Step 1: Chat Identifier & Window Focus (Required)
+    p1 = custom.get(1)
+    if p1:
+        s1_path = Path(p1).resolve()
+    else:
+        c1 = [
+            r_dir / "step_1_chat_identifier" / "step1_find_and_focus.py",
+            r_dir / "step1_find_and_focus.py",
+        ]
+        s1_path = next((c for c in c1 if c.is_file()), c1[0])
+    steps.append(PipelineStep(
+        step_index=1,
+        name="Step 1: Chat Identifier & Focus",
+        script_path=s1_path,
+        is_optional=False,
+        description="Scans transcripts, identifies target chat, saves state, and focuses Antigravity window."
+    ))
+
+    # 2. Step 2: GUI Chat Select & Pane Focus (Required)
+    p2 = custom.get(2)
+    if p2:
+        s2_path = Path(p2).resolve()
+    else:
+        c2 = [
+            r_dir / "step_2_chat_and_focus" / "step2_gui_chat_select.py",
+            r_dir / "step2_gui_chat_select.py",
+        ]
+        s2_path = next((c for c in c2 if c.is_file()), c2[0])
+    steps.append(PipelineStep(
+        step_index=2,
+        name="Step 2: GUI Chat Select & Focus",
+        script_path=s2_path,
+        is_optional=False,
+        description="Locates target chat in GUI sidebar via CDP/DOM, clicks, and focuses chat pane."
+    ))
+
+    # 3. Step 3: Keyboard Automation & Recommendation Selection (Required)
+    p3 = custom.get(3)
+    if p3:
+        s3_path = Path(p3).resolve()
+    else:
+        c3 = [
+            r_dir / "step_3_select_the_recommendation" / "step3_keyboard_automation.py",
+            r_dir / "step3_keyboard_automation.py",
+        ]
+        s3_path = next((c for c in c3 if c.is_file()), c3[0])
+    steps.append(PipelineStep(
+        step_index=3,
+        name="Step 3: Keyboard Automation",
+        script_path=s3_path,
+        is_optional=False,
+        description="Injects keystrokes to select recommendation option and confirms response."
+    ))
+
+    # 4. Step 4: Reporting & Telemetry (Future Reporting - Optional)
+    p4 = custom.get(4)
+    if p4:
+        s4_path = Path(p4).resolve()
+    else:
+        c4 = [
+            r_dir / "step_4_reporting" / "step4_reporting.py",
+            r_dir / "step_4_reporting" / "step4_report.py",
+            r_dir / "step4_reporting.py",
+        ]
+        # Dynamically check for any .py script in step_4_* folder
+        try:
+            for d in r_dir.glob("step_4_*"):
+                if d.is_dir():
+                    for pyf in d.glob("*.py"):
+                        if not pyf.name.startswith(("test_", "__", "setup")):
+                            c4.insert(0, pyf)
+        except Exception:
+            pass
+        s4_path = next((c for c in c4 if c.is_file()), c4[0])
+    steps.append(PipelineStep(
+        step_index=4,
+        name="Step 4: Reporting & Telemetry",
+        script_path=s4_path,
+        is_optional=True,
+        description="Automated execution reporting, audit trail logging, and telemetry dispatch."
+    ))
+
+    # 5. Dynamic Future Steps (step_{N}_* where N >= 5)
+    try:
+        for sub_dir in sorted(r_dir.glob("step_*_*")):
+            if not sub_dir.is_dir():
+                continue
+            parts = sub_dir.name.split("_")
+            if len(parts) >= 2 and parts[1].isdigit():
+                idx = int(parts[1])
+                if idx >= 5:
+                    cand_scripts = [
+                        p for p in sub_dir.glob("*.py")
+                        if not p.name.startswith(("test_", "__", "setup"))
+                    ]
+                    if cand_scripts:
+                        cand_scripts.sort(key=lambda x: (0 if f"step{idx}" in x.name.lower() else 1, len(x.name)))
+                        chosen = cand_scripts[0]
+                        steps.append(PipelineStep(
+                            step_index=idx,
+                            name=f"Step {idx}: {sub_dir.name}",
+                            script_path=chosen,
+                            is_optional=True,
+                            description=f"Dynamically discovered pipeline step in {sub_dir.name}."
+                        ))
+    except Exception:
+        pass
+
+    if not include_future:
+        steps = [s for s in steps if s.exists()]
+
+    steps.sort(key=lambda s: s.step_index)
+    return steps
+
+
 class AntiGravityDetector:
     """
     स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर / Step 0 - AntiGravity Detector
-    Modular, reusable engine for detecting Google Antigravity and triggering Step 1.
+    Modular, reusable engine for detecting Google Antigravity and orchestrating
+    the multi-step automation pipeline (Steps 1 -> 2 -> 3 -> 4).
     Supports Two-Factor Trigger: Antigravity Open AND Pending Grill-Me Chat.
     """
 
@@ -331,12 +520,16 @@ class AntiGravityDetector:
         headless: bool = False,
         verbose: bool = True,
         step1_script_path: Optional[str] = None,
+        step2_script_path: Optional[str] = None,
+        step3_script_path: Optional[str] = None,
+        step4_script_path: Optional[str] = None,
         state_file_path: Optional[str] = None,
         python_exe_path: Optional[str] = None,
         log_file_path: Optional[str] = None,
         brain_dir: Optional[Union[str, Path]] = None,
         active_hours: float = DEFAULT_ACTIVE_HOURS,
         require_grill_me: bool = True,
+        pipeline_steps: Optional[List[PipelineStep]] = None,
     ):
         """
         Initialize the AntiGravityDetector.
@@ -345,12 +538,16 @@ class AntiGravityDetector:
         :param headless: Run fully silent without printing logs to stdout.
         :param verbose: Enable detailed log output when not headless.
         :param step1_script_path: Explicit path to step1_find_and_focus.py (auto-detected if None).
+        :param step2_script_path: Explicit path to step2_gui_chat_select.py (auto-detected if None).
+        :param step3_script_path: Explicit path to step3_keyboard_automation.py (auto-detected if None).
+        :param step4_script_path: Explicit path to step4_reporting.py (auto-detected if None).
         :param state_file_path: Explicit path to target_chat.json (auto-detected if None).
         :param python_exe_path: Explicit path to python interpreter in .venv (auto-detected if None).
         :param log_file_path: Optional file path to persist structured detection logs.
         :param brain_dir: Custom path to Antigravity brain directory (auto-detected if None).
         :param active_hours: Hours window to consider conversation active (default: 12.0).
-        :param require_grill_me: If True, requires both Antigravity running AND pending Grill-Me chat to trigger Step 1.
+        :param require_grill_me: If True, requires both Antigravity running AND pending Grill-Me chat to trigger pipeline.
+        :param pipeline_steps: Optional explicit list of PipelineStep instances to override auto-discovery.
         """
         self.poll_interval = max(0.5, float(poll_interval))
         self.headless = headless
@@ -364,10 +561,21 @@ class AntiGravityDetector:
         self._this_dir = Path(__file__).resolve().parent
         self._root_dir = self._this_dir.parent if self._this_dir.name.startswith("step_") else self._this_dir
 
-        # Auto-resolve dependency paths
-        self.step1_script = self._resolve_step1_script(step1_script_path)
+        # Auto-resolve state file and python interpreter
         self.state_file = self._resolve_state_file(state_file_path)
         self.python_exe = self._resolve_python_exe(python_exe_path)
+
+        # Auto-resolve individual step scripts
+        self.step1_script = self._resolve_step_script(1, ["step_1_chat_identifier/step1_find_and_focus.py"], step1_script_path)
+        self.step2_script = self._resolve_step_script(2, ["step_2_chat_and_focus/step2_gui_chat_select.py"], step2_script_path)
+        self.step3_script = self._resolve_step_script(3, ["step_3_select_the_recommendation/step3_keyboard_automation.py"], step3_script_path)
+        self.step4_script = self._resolve_step_script(4, ["step_4_reporting/step4_reporting.py", "step_4_reporting/step4_report.py"], step4_script_path)
+
+        # Dynamic pipeline discovery
+        if pipeline_steps is not None:
+            self.pipeline_steps = pipeline_steps
+        else:
+            self.pipeline_steps = self.discover_steps(include_future=True)
 
         # Logger configuration
         self.logger = logging.getLogger("Step0-AntiGravityDetector")
@@ -399,24 +607,68 @@ class AntiGravityDetector:
                 if self.verbose:
                     print(f"[WARN] Failed to configure file logger: {e}", file=sys.stderr)
 
-    def _resolve_step1_script(self, explicit_path: Optional[str]) -> Path:
-        """Resolve path to Step 1 script (step1_find_and_focus.py)."""
+    def _resolve_step_script(
+        self,
+        step_num: int,
+        default_rel_candidates: List[str],
+        explicit_path: Optional[str] = None
+    ) -> Path:
+        """Resolve path to a specific step script."""
         if explicit_path:
             p = Path(explicit_path).resolve()
             if p.is_file():
                 return p
 
-        # Check standard relative candidate paths
-        candidates = [
-            self._root_dir / "step_1_chat_identifier" / "step1_find_and_focus.py",
-            self._this_dir.parent / "step_1_chat_identifier" / "step1_find_and_focus.py",
-            self._root_dir / "step1_find_and_focus.py",
-        ]
-        for c in candidates:
+        # Check default candidate paths
+        for rel in default_rel_candidates:
+            c = self._root_dir / rel
             if c.is_file():
                 return c.resolve()
+            c_parent = self._this_dir.parent / rel
+            if c_parent.is_file():
+                return c_parent.resolve()
 
-        return (self._root_dir / "step_1_chat_identifier" / "step1_find_and_focus.py").resolve()
+        # Glob search step_{N}_*
+        try:
+            for d in self._root_dir.glob(f"step_{step_num}_*"):
+                if d.is_dir():
+                    for pyf in d.glob("*.py"):
+                        if not pyf.name.startswith(("test_", "__", "setup")):
+                            return pyf.resolve()
+        except Exception:
+            pass
+
+        return (self._root_dir / default_rel_candidates[0]).resolve()
+
+    def _resolve_step1_script(self, explicit_path: Optional[str]) -> Path:
+        """Resolve path to Step 1 script (step1_find_and_focus.py) for backward compatibility."""
+        return self._resolve_step_script(1, ["step_1_chat_identifier/step1_find_and_focus.py"], explicit_path)
+
+    def _resolve_step2_script(self, explicit_path: Optional[str]) -> Path:
+        """Resolve path to Step 2 script (step2_gui_chat_select.py)."""
+        return self._resolve_step_script(2, ["step_2_chat_and_focus/step2_gui_chat_select.py"], explicit_path)
+
+    def _resolve_step3_script(self, explicit_path: Optional[str]) -> Path:
+        """Resolve path to Step 3 script (step3_keyboard_automation.py)."""
+        return self._resolve_step_script(3, ["step_3_select_the_recommendation/step3_keyboard_automation.py"], explicit_path)
+
+    def _resolve_step4_script(self, explicit_path: Optional[str]) -> Path:
+        """Resolve path to Step 4 script (step4_reporting.py)."""
+        return self._resolve_step_script(4, ["step_4_reporting/step4_reporting.py", "step_4_reporting/step4_report.py"], explicit_path)
+
+    def discover_steps(self, include_future: bool = True) -> List[PipelineStep]:
+        """Discover all configured and dynamically detected pipeline steps in the workspace."""
+        custom_map = {
+            1: self.step1_script,
+            2: self.step2_script,
+            3: self.step3_script,
+            4: self.step4_script,
+        }
+        return discover_pipeline_steps(
+            root_dir=self._root_dir,
+            include_future=include_future,
+            custom_scripts=custom_map,
+        )
 
     def _resolve_state_file(self, explicit_path: Optional[str]) -> Path:
         """Resolve path to target_chat.json in workspace root."""
@@ -686,64 +938,68 @@ class AntiGravityDetector:
         return res.is_detected
 
     # ========================================================================
-    # Automatic Step 1 Launch & Execution Hygiene (Universal Rule 26)
+    # Dynamic Multi-Step Pipeline Engine & Execution Hygiene (Universal Rule 26)
     # ========================================================================
 
-    def launch_step1(
+    def execute_pipeline(
         self,
-        wait: bool = False,
         extra_args: Optional[List[str]] = None,
-        capture_output: bool = True
-    ) -> Tuple[bool, int, str]:
+        capture_output: bool = True,
+        settle_delay: float = DEFAULT_STEP_SETTLE_DELAY,
+        steps: Optional[List[PipelineStep]] = None,
+    ) -> Tuple[bool, int, str, List[Dict[str, Any]]]:
         """
-        Trigger the next script: Step 1 (step_1_chat_identifier/step1_find_and_focus.py).
+        Synchronously execute the multi-step automation pipeline in sequence:
+          Step 1 -> [Exit 10: Clean Cancel] -> Settle (0.8s) ->
+          Step 2 -> Settle (0.8s) ->
+          Step 3 -> Settle (0.8s) ->
+          Step 4 (Reporting - if present on disk; gracefully bypassed if absent).
 
-        :param wait: If True, waits for Step 1 to complete and returns exit code.
-                     If False (default for headless prod), spawns as a detached process
-                     and returns immediately to allow clean exit with ZERO zombie processes.
-        :param extra_args: Additional command-line flags forwarded to Step 1.
-        :param capture_output: If True, captures/redirects Step 1 stdout and stderr
-                               so the console screen dashboard remains 100% clean.
-        :return: (success: bool, exit_code: int, message: str)
+        :param extra_args: Additional command-line flags forwarded to each step.
+        :param capture_output: If True, captures/redirects child stdout and stderr so
+                               the screen dashboard remains 100% clean.
+        :param settle_delay: Settle delay in seconds between steps (default: 0.8s).
+        :param steps: Optional override list of PipelineStep instances.
+        :return: (success: bool, exit_code: int, summary_message: str, step_reports: List[Dict])
         """
-        if not self.step1_script.is_file():
-            msg = f"Step 1 script not found at: {self.step1_script}"
-            self.logger.error(msg)
-            return False, 1, msg
+        pipeline = steps if steps is not None else self.discover_steps(include_future=True)
+        step_reports: List[Dict[str, Any]] = []
 
-        cmd = [
-            str(self.python_exe),
-            str(self.step1_script),
-            "--state-file",
-            str(self.state_file),
-        ]
-        if extra_args:
-            cmd.extend(extra_args)
+        self.logger.info("Starting multi-step automation pipeline (%d step(s) configured)...", len(pipeline))
+        executed_count = 0
 
-        self.logger.info("Triggering Step 1: %s", " ".join(cmd))
+        for step in pipeline:
+            # Check script existence on disk
+            if not step.exists():
+                if step.is_optional:
+                    self.logger.info(
+                        "Optional Step %d (%s) script not found at '%s'. Gracefully skipping.",
+                        step.step_index, step.name, step.script_path
+                    )
+                    continue
+                else:
+                    err = f"Required Step {step.step_index} ({step.name}) script not found at: {step.script_path}"
+                    self.logger.error(err)
+                    return False, 1, err, step_reports
 
-        try:
-            if not wait:
-                # Headless / Detached Launch: Runs independently, Step 0 can terminate cleanly
-                creation_flags = 0
-                if IS_WINDOWS:
-                    # DETACHED_PROCESS (0x00000008) + CREATE_NEW_PROCESS_GROUP (0x00000200)
-                    creation_flags = 0x00000008 | 0x00000200
+            # Settle delay before subsequent steps (calibrated for Windows GUI focus)
+            if executed_count > 0 and settle_delay > 0:
+                self.logger.debug("Settle delay (%.2fs) before Step %d...", settle_delay, step.step_index)
+                time.sleep(settle_delay)
 
-                proc = subprocess.Popen(
-                    cmd,
-                    cwd=str(self._root_dir),
-                    creationflags=creation_flags,
-                    stdout=subprocess.DEVNULL if capture_output else None,
-                    stderr=subprocess.DEVNULL if capture_output else None,
-                    close_fds=True,
-                    shell=False
-                )
-                msg = f"Step 1 launched asynchronously in background (PID: {proc.pid}). Step 0 exiting cleanly."
-                self.logger.info(msg)
-                return True, 0, msg
-            else:
-                # Synchronous Launch
+            # Build command with state file and forward extra arguments
+            cmd = [
+                str(self.python_exe),
+                str(step.script_path),
+                "--state-file",
+                str(self.state_file),
+            ]
+            if extra_args:
+                cmd.extend(extra_args)
+
+            self.logger.info("Executing Step %d (%s): %s", step.step_index, step.name, " ".join(cmd))
+
+            try:
                 proc = subprocess.run(
                     cmd,
                     cwd=str(self._root_dir),
@@ -752,15 +1008,130 @@ class AntiGravityDetector:
                     text=True,
                     encoding="utf-8",
                     errors="replace",
-                    shell=False
+                    shell=False,
                 )
-                msg = f"Step 1 finished with exit code {proc.returncode}."
+            except Exception as e:
+                err = f"Execution exception in Step {step.step_index} ({step.name}): {e}"
+                self.logger.error(err)
+                return False, 1, err, step_reports
+
+            executed_count += 1
+            step_report = {
+                "step_index": step.step_index,
+                "name": step.name,
+                "script": str(step.script_path),
+                "returncode": proc.returncode,
+                "success": proc.returncode in (0, EXIT_CODE_NO_PENDING_CHATS if step.step_index == 1 else 0),
+                "timestamp": datetime.now(timezone.utc).isoformat(),
+            }
+            step_reports.append(step_report)
+
+            # Step 1 Exit Code 10 Check: No Pending Chats -> Cleanly cancel remaining steps
+            if step.step_index == 1 and proc.returncode == EXIT_CODE_NO_PENDING_CHATS:
+                msg = "Step 1: No pending Grill-Me chats found (exit 10). Remaining pipeline steps cancelled cleanly."
                 self.logger.info(msg)
-                return (proc.returncode == 0 or proc.returncode == 10), proc.returncode, msg
+                return True, EXIT_CODE_NO_PENDING_CHATS, msg, step_reports
+
+            # Any step failure (non-zero) aborts the remaining pipeline
+            if proc.returncode != 0:
+                msg = f"Step {step.step_index} ({step.name}) failed with exit code {proc.returncode}. Aborting pipeline."
+                self.logger.error(msg)
+                return False, proc.returncode, msg, step_reports
+
+            self.logger.info("Step %d (%s) finished successfully (exit 0).", step.step_index, step.name)
+
+        summary = f"Pipeline completed successfully ({executed_count} step(s) executed)."
+        self.logger.info(summary)
+        return True, 0, summary, step_reports
+
+    def launch_pipeline(
+        self,
+        wait: bool = False,
+        extra_args: Optional[List[str]] = None,
+        capture_output: bool = True,
+        settle_delay: float = DEFAULT_STEP_SETTLE_DELAY,
+    ) -> Tuple[bool, int, str]:
+        """
+        Trigger the full automation pipeline (Steps 1, 2, 3, and dynamic future steps).
+
+        :param wait: If True, waits for pipeline to complete sequentially and returns exit code.
+                     If False (default for headless prod), spawns as a detached process
+                     and returns immediately to allow clean exit with ZERO zombie processes.
+        :param extra_args: Additional command-line flags forwarded to each step.
+        :param capture_output: If True, captures/redirects child stdout and stderr.
+        :param settle_delay: Settle delay in seconds between steps (default: 0.8s).
+        :return: (success: bool, exit_code: int, message: str)
+        """
+        # Validate that required pipeline steps exist on disk upfront
+        pipeline = self.discover_steps(include_future=True)
+        for s in pipeline:
+            if not s.is_optional and not s.exists():
+                err = f"Required Step {s.step_index} ({s.name}) script not found at: {s.script_path}"
+                self.logger.error(err)
+                return False, 1, err
+
+        if wait:
+            ok, code, msg, _ = self.execute_pipeline(
+                extra_args=extra_args,
+                capture_output=capture_output,
+                settle_delay=settle_delay,
+                steps=pipeline,
+            )
+            return ok, code, msg
+
+        # Asynchronous / Detached Headless Execution (Universal Rule 26)
+        creation_flags = 0
+        if IS_WINDOWS:
+            # DETACHED_PROCESS (0x00000008) + CREATE_NEW_PROCESS_GROUP (0x00000200)
+            creation_flags = 0x00000008 | 0x00000200
+
+        cmd = [
+            str(self.python_exe),
+            str(self._this_dir / "antigravity_detector_core.py"),
+            "--run-pipeline",
+            "--state-file", str(self.state_file),
+            "--settle-delay", str(settle_delay),
+        ]
+        if self.brain_dir:
+            cmd.extend(["--brain-dir", str(self.brain_dir)])
+        if extra_args:
+            cmd.extend(extra_args)
+
+        self.logger.info("Spawning detached pipeline runner: %s", " ".join(cmd))
+        try:
+            proc = subprocess.Popen(
+                cmd,
+                cwd=str(self._root_dir),
+                creationflags=creation_flags,
+                stdout=subprocess.DEVNULL if capture_output else None,
+                stderr=subprocess.DEVNULL if capture_output else None,
+                close_fds=True,
+                shell=False
+            )
+            msg = f"Automation pipeline launched asynchronously in background (PID: {proc.pid}). Step 0 exiting cleanly."
+            self.logger.info(msg)
+            return True, 0, msg
         except Exception as e:
-            err_msg = f"Failed to trigger Step 1: {e}"
-            self.logger.error(err_msg)
-            return False, 1, err_msg
+            err = f"Failed to spawn detached pipeline runner: {e}"
+            self.logger.error(err)
+            return False, 1, err
+
+    def launch_step1(
+        self,
+        wait: bool = False,
+        extra_args: Optional[List[str]] = None,
+        capture_output: bool = True
+    ) -> Tuple[bool, int, str]:
+        """
+        Backward-compatible alias routing directly to launch_pipeline.
+        Ensures that existing calls to launch_step1 automatically execute all
+        sequential pipeline steps (Step 1 -> Step 2 -> Step 3) seamlessly.
+        """
+        return self.launch_pipeline(
+            wait=wait,
+            extra_args=extra_args,
+            capture_output=capture_output
+        )
 
     # ========================================================================
     # Continuous Polling Loop (Two-Factor Trigger Engine)
@@ -776,9 +1147,12 @@ class AntiGravityDetector:
         max_checks: Optional[int] = None,
         auto_launch: bool = True,
         wait_for_step1: bool = False,
+        wait_for_pipeline: Optional[bool] = None,
         on_check_callback: Optional[Callable[[int, DetectionResult], None]] = None,
         extra_step1_args: Optional[List[str]] = None,
+        extra_pipeline_args: Optional[List[str]] = None,
         capture_step1_output: bool = True,
+        capture_pipeline_output: Optional[bool] = None,
     ) -> Optional[DetectionResult]:
         """
         Execute continuous polling loop until the 2-factor trigger condition is met:
@@ -786,14 +1160,20 @@ class AntiGravityDetector:
 
         :param poll_interval: Override polling interval (in seconds).
         :param max_checks: Maximum number of checks before returning None (None = infinite).
-        :param auto_launch: When trigger condition is met, automatically launch Step 1.
-        :param wait_for_step1: Wait for Step 1 completion before exiting loop.
+        :param auto_launch: When trigger condition is met, automatically launch pipeline.
+        :param wait_for_step1: Backward-compatible wait flag (defaults to wait_for_pipeline).
+        :param wait_for_pipeline: Wait for full pipeline completion before exiting loop.
         :param on_check_callback: Optional callback invoked after each check: callback(iteration, result).
-        :param extra_step1_args: Additional command line flags forwarded to Step 1.
-        :param capture_step1_output: Suppress Step 1 output from terminal.
+        :param extra_step1_args: Backward-compatible extra args list.
+        :param extra_pipeline_args: Additional command line flags forwarded to pipeline steps.
+        :param capture_step1_output: Backward-compatible output capture flag.
+        :param capture_pipeline_output: Suppress pipeline step output from terminal.
         :return: DetectionResult when triggered, or None if stopped/exceeded max_checks.
         """
         interval = float(poll_interval) if poll_interval is not None else self.poll_interval
+        should_wait = wait_for_pipeline if wait_for_pipeline is not None else wait_for_step1
+        pipeline_args = extra_pipeline_args if extra_pipeline_args is not None else extra_step1_args
+        suppress_output = capture_pipeline_output if capture_pipeline_output is not None else capture_step1_output
         check_count = 0
 
         # Attach graceful termination signals
@@ -810,10 +1190,10 @@ class AntiGravityDetector:
             print("  स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर / Step 0 - AntiGravity Detector")
             print("=" * 78)
             print(f"  Polling Interval : {interval:.1f}s ({interval / 60:.2f} min)")
-            print(f"  Target Step 1    : {self.step1_script}")
+            print(f"  Pipeline Steps   : {len(self.pipeline_steps)} steps configured")
             print(f"  Python Engine    : {self.python_exe}")
             print(f"  Require Grill-Me : {'YES (2-Factor Trigger)' if self.require_grill_me else 'NO (Trigger on Open)'}")
-            print(f"  Auto-Trigger     : {'ENABLED (Launch Step 1 on Detection)' if auto_launch else 'DISABLED (Dry Run)'}")
+            print(f"  Auto-Trigger     : {'ENABLED (Launch Pipeline on Detection)' if auto_launch else 'DISABLED (Dry Run)'}")
             print(f"  Mode             : {'Headless / Silent' if self.headless else 'Interactive Telemetry'}")
             print("=" * 78 + "\n")
 
@@ -844,17 +1224,18 @@ class AntiGravityDetector:
 
                 if auto_launch:
                     if not self.headless:
-                        print(f"[{now_str}] Launching Step 1 (step_1_chat_identifier/step1_find_and_focus.py)...")
-                    ok, code, msg = self.launch_step1(
-                        wait=wait_for_step1,
-                        extra_args=extra_step1_args,
-                        capture_output=capture_step1_output
+                        print(f"[{now_str}] Launching Complete Automation Pipeline (Steps 1 -> 2 -> 3)...")
+                    ok, code, msg = self.launch_pipeline(
+                        wait=should_wait,
+                        extra_args=pipeline_args,
+                        capture_output=suppress_output
                     )
-                    result.details["step1_result"] = {
+                    result.details["pipeline_result"] = {
                         "success": ok,
                         "exit_code": code,
                         "message": msg
                     }
+                    result.details["step1_result"] = result.details["pipeline_result"]
 
                 # Return detection result and terminate loop cleanly (Universal Rule 26)
                 return result
@@ -884,3 +1265,89 @@ class AntiGravityDetector:
                 sleep_remaining -= step
 
         return None
+
+
+# ============================================================================
+# Standalone CLI Entrypoint & Multi-Step Pipeline Runner
+# ============================================================================
+
+def main() -> int:
+    """CLI Entrypoint for Antigravity Detector & Detached Pipeline Runner."""
+    parser = argparse.ArgumentParser(
+        description="Step 0 - AntiGravity Detector Core & Dynamic Multi-Step Pipeline Engine"
+    )
+    parser.add_argument(
+        "--run-pipeline",
+        action="store_true",
+        help="Execute the complete multi-step automation pipeline sequentially (Steps 1 -> 2 -> 3 -> 4)"
+    )
+    parser.add_argument(
+        "--state-file",
+        type=str,
+        default=None,
+        help="Custom path to target_chat.json state file"
+    )
+    parser.add_argument(
+        "--brain-dir",
+        type=str,
+        default=None,
+        help="Custom path to Antigravity brain storage directory"
+    )
+    parser.add_argument(
+        "--settle-delay",
+        type=float,
+        default=DEFAULT_STEP_SETTLE_DELAY,
+        help="Settle delay between pipeline steps in seconds (default: 0.8s)"
+    )
+    parser.add_argument(
+        "--list-steps",
+        action="store_true",
+        help="List all configured and discovered pipeline steps and exit"
+    )
+    parser.add_argument(
+        "--detect-once",
+        action="store_true",
+        help="Run a single Antigravity detection check and print JSON result"
+    )
+
+    args, extra = parser.parse_known_args()
+
+    if args.list_steps:
+        detector = AntiGravityDetector()
+        steps = detector.discover_steps(include_future=True)
+        print("\n" + "=" * 76)
+        print("  AUTOCONNECT / GRILL-ME MULTI-STEP PIPELINE REGISTRY")
+        print("=" * 76)
+        for s in steps:
+            status = "PRESENT" if s.exists() else ("OPTIONAL (Future Step)" if s.is_optional else "MISSING")
+            print(f"  [{s.step_index}] {s.name:<32} : [{status}]")
+            print(f"      Path: {s.script_path}")
+            if s.description:
+                print(f"      Note: {s.description}")
+        print("=" * 76 + "\n")
+        return 0
+
+    if args.detect_once:
+        detector = AntiGravityDetector(headless=True, brain_dir=args.brain_dir)
+        res = detector.detect()
+        print(json.dumps(res.to_json_envelope(), indent=2))
+        return 0 if res.is_detected else 1
+
+    if args.run_pipeline:
+        detector = AntiGravityDetector(
+            headless=True,
+            state_file_path=args.state_file,
+            brain_dir=args.brain_dir,
+        )
+        ok, code, msg, _ = detector.execute_pipeline(
+            extra_args=extra,
+            capture_output=False,
+            settle_delay=args.settle_delay,
+        )
+        return code
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

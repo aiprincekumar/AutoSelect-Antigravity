@@ -4,9 +4,9 @@
 स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (प्रोडक्शन रनर - 5 मिनट इंटरवल एवं टू-फैक्टर ट्रिगर)
 Step 0 - AntiGravity Detector (Production Runner - 5-Minute Two-Factor Polling)
 ==============================================================================
-Pipeline Step: STEP 0 (AntiGravity Detector & Step 1 Auto-Trigger)
+Pipeline Step: STEP 0 (AntiGravity Detector & Dynamic Pipeline Auto-Trigger)
 Part of: AutoSelect-Commander Automation Pipeline
-Workspace: Keyboard Automation (Step 0 of 3)
+Workspace: Keyboard Automation (Step 0: Detector & Dynamic Pipeline Runner)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
 
@@ -18,10 +18,10 @@ Production Specifications:
   3. Two-Factor Trigger:
      - Factor 1: Is Google Anti-Gravity running/open?
      - Factor 2: Is there a pending Grill-Me chat requiring user input?
-     - Only when BOTH conditions match, automatically launches Step 1
-       (step_1_chat_identifier/step1_find_and_focus.py) as a detached background process.
+     - Only when BOTH conditions match, automatically launches the full automation
+       pipeline (Steps 1 -> 2 -> 3, and Step 4 when available) as a detached background process.
   4. Execution Hygiene (Universal Rule 26):
-     - Immediately and cleanly exits with code 0 after Step 1 is triggered.
+     - Immediately and cleanly exits with code 0 after the pipeline is triggered.
      - Zero lingering background processes or zombies.
 """
 
@@ -74,6 +74,21 @@ def parse_args():
         help="Custom path to Step 1 script (step1_find_and_focus.py)"
     )
     parser.add_argument(
+        "--step2-path",
+        default=None,
+        help="Custom path to Step 2 script (step2_gui_chat_select.py)"
+    )
+    parser.add_argument(
+        "--step3-path",
+        default=None,
+        help="Custom path to Step 3 script (step3_keyboard_automation.py)"
+    )
+    parser.add_argument(
+        "--step4-path",
+        default=None,
+        help="Custom path to Step 4 script (step4_reporting.py)"
+    )
+    parser.add_argument(
         "--state-file",
         default=None,
         help="Custom path to target_chat.json state file"
@@ -91,12 +106,12 @@ def parse_args():
     parser.add_argument(
         "--wait",
         action="store_true",
-        help="Wait for Step 1 completion instead of detached spawn-and-exit"
+        help="Wait for pipeline completion instead of detached spawn-and-exit"
     )
     parser.add_argument(
         "--any-antigravity",
         action="store_true",
-        help="Legacy mode: trigger Step 1 immediately on Antigravity open, without requiring pending Grill-Me chats"
+        help="Legacy mode: trigger pipeline immediately on Antigravity open, without requiring pending Grill-Me chats"
     )
     return parser.parse_args()
 
@@ -113,6 +128,9 @@ def main():
         headless=headless,
         verbose=not headless,
         step1_script_path=args.step1_path,
+        step2_script_path=args.step2_path,
+        step3_script_path=args.step3_path,
+        step4_script_path=args.step4_path,
         state_file_path=args.state_file,
         log_file_path=args.log_file,
         require_grill_me=require_grill_me,
@@ -121,11 +139,11 @@ def main():
     result = detector.run_loop(
         poll_interval=args.interval,
         auto_launch=True,
-        wait_for_step1=args.wait,
+        wait_for_pipeline=args.wait,
     )
 
     if result and result.trigger_matched:
-        # Detected and Step 1 launched! Clean exit with code 0.
+        # Detected and pipeline launched! Clean exit with code 0.
         sys.exit(0)
     else:
         # Loop interrupted or stopped cleanly

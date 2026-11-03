@@ -12,6 +12,7 @@ import sys
 import json
 import subprocess
 import unittest
+from unittest.mock import patch, MagicMock
 from pathlib import Path
 
 # Ensure package and root directories are resolvable
@@ -25,8 +26,12 @@ if str(_root_dir) not in sys.path:
 from antigravity_detector_core import (
     AntiGravityDetector,
     DetectionResult,
+    PipelineStep,
+    discover_pipeline_steps,
     DEFAULT_PRODUCTION_POLL_INTERVAL,
     DEFAULT_TEST_POLL_INTERVAL,
+    DEFAULT_STEP_SETTLE_DELAY,
+    EXIT_CODE_NO_PENDING_CHATS,
     DISQUALIFIED_BROWSER_PROCS,
     ANTIGRAVITY_PROCESS_NAMES,
     get_antigravity_chat_stats,
@@ -353,6 +358,178 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
         self.assertIn("ANTIGRAVITY STATUS & CHAT DASHBOARD", proc.stdout)
         self.assertNotIn("STEP 0: ANTIGRAVITY DETECTOR", proc.stdout)
         self.assertNotIn("[SUCCESS]", proc.stdout)
+
+
+class TestPipelineStep(unittest.TestCase):
+    def test_pipeline_step_model(self):
+        dummy_path = _this_dir / "step0_antigravity_detector_prod.py"
+        step = PipelineStep(
+            step_index=1,
+            name="Step 1 Test",
+            script_path=dummy_path,
+            is_optional=False,
+            description="Test step description"
+        )
+        self.assertEqual(step.step_index, 1)
+        self.assertEqual(step.name, "Step 1 Test")
+        self.assertTrue(step.exists())
+        self.assertFalse(step.is_optional)
+
+        d = step.to_dict()
+        self.assertEqual(d["step_index"], 1)
+        self.assertEqual(d["name"], "Step 1 Test")
+        self.assertTrue(d["exists"])
+        self.assertFalse(d["is_optional"])
+
+    def test_pipeline_step_absent(self):
+        non_existent = _this_dir / "non_existent_step_script.py"
+        step = PipelineStep(
+            step_index=4,
+            name="Step 4 Reporting",
+            script_path=non_existent,
+            is_optional=True
+        )
+        self.assertFalse(step.exists())
+        self.assertTrue(step.is_optional)
+
+
+class TestDynamicPipelineDiscovery(unittest.TestCase):
+    def test_discover_pipeline_steps_defaults(self):
+        steps = discover_pipeline_steps(root_dir=_root_dir, include_future=True)
+        indices = [s.step_index for s in steps]
+        self.assertIn(1, indices)
+        self.assertIn(2, indices)
+        self.assertIn(3, indices)
+        self.assertIn(4, indices)
+
+        # Steps 1, 2, 3 should physically exist on disk
+        step1 = next(s for s in steps if s.step_index == 1)
+        step2 = next(s for s in steps if s.step_index == 2)
+        step3 = next(s for s in steps if s.step_index == 3)
+        self.assertTrue(step1.exists())
+        self.assertTrue(step2.exists())
+        self.assertTrue(step3.exists())
+        self.assertFalse(step1.is_optional)
+        self.assertFalse(step2.is_optional)
+        self.assertFalse(step3.is_optional)
+
+        # Step 4 (Reporting) is marked optional
+        step4 = next(s for s in steps if s.step_index == 4)
+        self.assertTrue(step4.is_optional)
+
+    def test_discover_pipeline_steps_active_only(self):
+        steps_active = discover_pipeline_steps(root_dir=_root_dir, include_future=False)
+        indices = [s.step_index for s in steps_active]
+        self.assertIn(1, indices)
+        self.assertIn(2, indices)
+        self.assertIn(3, indices)
+        for s in steps_active:
+            self.assertTrue(s.exists())
+
+    def test_custom_script_override(self):
+        dummy = _this_dir / "step0_antigravity_detector_prod.py"
+        steps = discover_pipeline_steps(root_dir=_root_dir, custom_scripts={2: dummy})
+        step2 = next(s for s in steps if s.step_index == 2)
+        self.assertEqual(step2.script_path, dummy)
+
+
+class TestPipelineExecution(unittest.TestCase):
+    def setUp(self):
+        self.detector = AntiGravityDetector(headless=True, verbose=False)
+
+    @patch("subprocess.run")
+    def test_execute_pipeline_success_steps_1_to_3(self, mock_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+
+        ok, code, msg, reports = self.detector.execute_pipeline(capture_output=True, settle_delay=0.0)
+        self.assertTrue(ok)
+        self.assertEqual(code, 0)
+        self.assertIn("Pipeline completed successfully", msg)
+        self.assertEqual(len(reports), 3)
+        self.assertEqual([r["step_index"] for r in reports], [1, 2, 3])
+
+    @patch("subprocess.run")
+    def test_execute_pipeline_step1_exit_code_10_cancels_remaining(self, mock_run):
+        mock_proc = MagicMock()
+        mock_proc.returncode = EXIT_CODE_NO_PENDING_CHATS
+        mock_run.return_value = mock_proc
+
+        ok, code, msg, reports = self.detector.execute_pipeline(capture_output=True, settle_delay=0.0)
+        self.assertTrue(ok)
+        self.assertEqual(code, EXIT_CODE_NO_PENDING_CHATS)
+        self.assertIn("cancelled cleanly", msg)
+        self.assertEqual(len(reports), 1)
+        self.assertEqual(reports[0]["step_index"], 1)
+
+    @patch("subprocess.run")
+    def test_execute_pipeline_step2_failure_halts_pipeline(self, mock_run):
+        res1 = MagicMock(returncode=0)
+        res2 = MagicMock(returncode=1)
+        mock_run.side_effect = [res1, res2]
+
+        ok, code, msg, reports = self.detector.execute_pipeline(capture_output=True, settle_delay=0.0)
+        self.assertFalse(ok)
+        self.assertEqual(code, 1)
+        self.assertIn("Step 2", msg)
+        self.assertEqual(len(reports), 2)
+
+    @patch("subprocess.run")
+    def test_execute_pipeline_with_present_step4(self, mock_run):
+        mock_proc = MagicMock(returncode=0)
+        mock_run.return_value = mock_proc
+
+        dummy_script = _this_dir / "step0_antigravity_detector_prod.py"
+        custom_steps = [
+            PipelineStep(step_index=1, name="Step 1", script_path=dummy_script),
+            PipelineStep(step_index=2, name="Step 2", script_path=dummy_script),
+            PipelineStep(step_index=3, name="Step 3", script_path=dummy_script),
+            PipelineStep(step_index=4, name="Step 4 Reporting", script_path=dummy_script, is_optional=True),
+        ]
+        ok, code, msg, reports = self.detector.execute_pipeline(
+            capture_output=True,
+            settle_delay=0.0,
+            steps=custom_steps
+        )
+        self.assertTrue(ok)
+        self.assertEqual(code, 0)
+        self.assertEqual(len(reports), 4)
+        self.assertEqual([r["step_index"] for r in reports], [1, 2, 3, 4])
+
+
+class TestPipelineLaunchAndHygiene(unittest.TestCase):
+    def setUp(self):
+        self.detector = AntiGravityDetector(headless=True, verbose=False)
+
+    @patch.object(AntiGravityDetector, "execute_pipeline")
+    def test_launch_pipeline_wait_true(self, mock_exec):
+        mock_exec.return_value = (True, 0, "Pipeline completed", [])
+        ok, code, msg = self.detector.launch_pipeline(wait=True)
+        self.assertTrue(ok)
+        self.assertEqual(code, 0)
+        mock_exec.assert_called_once()
+
+    @patch("subprocess.Popen")
+    def test_launch_pipeline_wait_false_detached(self, mock_popen):
+        mock_proc = MagicMock()
+        mock_proc.pid = 43210
+        mock_popen.return_value = mock_proc
+
+        ok, code, msg = self.detector.launch_pipeline(wait=False)
+        self.assertTrue(ok)
+        self.assertEqual(code, 0)
+        self.assertIn("PID: 43210", msg)
+        self.assertIn("asynchronously in background", msg)
+        mock_popen.assert_called_once()
+
+    @patch.object(AntiGravityDetector, "launch_pipeline")
+    def test_launch_step1_backward_compatibility_alias(self, mock_launch):
+        mock_launch.return_value = (True, 0, "Pipeline executed via launch_step1")
+        ok, code, msg = self.detector.launch_step1(wait=True, extra_args=["--test-flag"])
+        self.assertTrue(ok)
+        self.assertEqual(code, 0)
+        mock_launch.assert_called_once_with(wait=True, extra_args=["--test-flag"], capture_output=True)
 
 
 if __name__ == "__main__":

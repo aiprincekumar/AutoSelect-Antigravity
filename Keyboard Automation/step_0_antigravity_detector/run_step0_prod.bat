@@ -56,7 +56,7 @@ echo ===========================================================================
 echo   Python Engine : %PYTHON_EXE%
 echo   Target Script : %STEP0_SCRIPT%
 echo   Polling Rate  : Every 5 minutes (300 seconds)
-echo   Target Step 1 : step_1_chat_identifier\step1_find_and_focus.py
+echo   Target Pipeline : Steps 1 -^> 2 -^> 3 (and future Step 4)
 echo ============================================================================
 echo.
 echo [*] Starting silent background detection loop...
@@ -70,5 +70,5 @@ if not "%STEP0_EXIT%"=="0" (
 )
 
 echo.
-echo [SUCCESS] Step 0 finished and Step 1 triggered successfully!
+echo [SUCCESS] Step 0 finished and automation pipeline triggered successfully!
 exit /b 0
