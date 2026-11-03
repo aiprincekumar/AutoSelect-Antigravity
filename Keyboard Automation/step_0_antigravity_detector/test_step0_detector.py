@@ -230,10 +230,11 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
         )
         self.assertEqual(proc.returncode, 0)
         self.assertIn("ANTIGRAVITY STATUS & CHAT DASHBOARD", proc.stdout)
-        self.assertIn("कुल चैट्स (Total Chats)", proc.stdout)
-        self.assertIn("एंटी-ग्रेविटी स्थिति (Status)", proc.stdout)
-        self.assertIn("एक्टिव चैट्स (Active Chats)", proc.stdout)
-        self.assertIn("ग्रिल-मी पेंडिंग (Pending Question)", proc.stdout)
+        self.assertIn("AntiGravity Status", proc.stdout)
+        self.assertIn("Total Chats", proc.stdout)
+        self.assertIn("Active Chats", proc.stdout)
+        self.assertIn("Inactive Chats", proc.stdout)
+        self.assertIn("Pending Question", proc.stdout)
         # Ensure extraneous prints are 100% absent (Zero Clutter)
         self.assertNotIn("[*]", proc.stdout)
         self.assertNotIn("STEP 0: ANTIGRAVITY DETECTOR", proc.stdout)
@@ -260,6 +261,9 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
         for line in lines:
             self.assertTrue(line.startswith("│") or line.startswith("┌") or line.startswith("├") or line.startswith("└"),
                             f"Extraneous line detected outside dashboard box: '{line}'")
+        first_len = len(lines[0])
+        for idx, line in enumerate(lines):
+            self.assertEqual(len(line), first_len, f"Line {idx} length {len(line)} does not match top border {first_len}: '{line}'")
 
     def test_cli_json_envelope(self):
         py_exe = _root_dir / ".venv" / "Scripts" / "python.exe"
@@ -303,9 +307,22 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
             "pending_grill_me_chats": 1
         })
         self.assertIn("ANTIGRAVITY STATUS & CHAT DASHBOARD", box_open)
-        self.assertIn("खुला है / OPEN", box_open)
+        self.assertIn("AntiGravity Status", box_open)
+        self.assertIn("OPEN (Running)", box_open)
+        self.assertIn("Total Chats", box_open)
         self.assertIn("90", box_open)
-        self.assertIn("हाँ / YES (1 चैट)", box_open)
+        self.assertIn("Active Chats", box_open)
+        self.assertIn("12", box_open)
+        self.assertIn("Inactive Chats", box_open)
+        self.assertIn("78", box_open)
+        self.assertIn("Pending Question", box_open)
+        self.assertIn("YES (1 Chats - Waiting Response)", box_open)
+
+        # Verify all lines of box_open have identical character length
+        open_lines = [l for l in box_open.splitlines() if l.strip()]
+        open_len = len(open_lines[0])
+        for idx, line in enumerate(open_lines):
+            self.assertEqual(len(line), open_len, f"box_open line {idx} length mismatch: '{line}'")
 
         box_closed = format_dashboard_box(False, {
             "total_chats": 90,
@@ -313,8 +330,15 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
             "inactive_chats": 90,
             "pending_grill_me_chats": 0
         })
-        self.assertIn("बंद है / CLOSED", box_closed)
-        self.assertIn("नहीं / NO (0 चैट)", box_closed)
+        self.assertIn("CLOSED (Not Running)", box_closed)
+        self.assertIn("NO (0 Chats)", box_closed)
+
+        # Verify all lines of box_closed have identical character length (standard 58 chars)
+        closed_lines = [l for l in box_closed.splitlines() if l.strip()]
+        closed_len = len(closed_lines[0])
+        self.assertEqual(closed_len, 58, f"Standard box width should be 58 chars, got {closed_len}")
+        for idx, line in enumerate(closed_lines):
+            self.assertEqual(len(line), closed_len, f"box_closed line {idx} length mismatch: '{line}'")
 
     def test_batch_file_no_pause_execution(self):
         bat_file = _this_dir / "run_step0_test.bat"

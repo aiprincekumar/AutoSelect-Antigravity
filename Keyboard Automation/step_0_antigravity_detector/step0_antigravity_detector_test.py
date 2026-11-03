@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (टेस्टिंग रनर - 10-सेकंड टाइमर एवं सिंपल क्लीन डैशबोर्ड)
 Step 0 - AntiGravity Detector (Testing Runner - 10s Timer & Simple Clean Dashboard)
 ================================================================================
 Pipeline Step: STEP 0 (AntiGravity Detector & Step 1 Auto-Trigger)
@@ -25,7 +24,7 @@ Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
      - Factor 1: Is Anti-Gravity running/open?
      - Factor 2: Is there a pending Grill-Me chat (ask_question) waiting?
      - If Anti-Gravity is open but no Grill-Me is pending:
-       - Refreshes clean dashboard showing NO (0 चैट)
+       - Refreshes clean dashboard showing NO (0 Chats)
        - Sleeps for 10 seconds (configurable via --interval)
        - Tests again!
      - As soon as a Grill-Me chat is pending:
@@ -90,39 +89,42 @@ def format_dashboard_box(
     chat_stats: Dict[str, Any]
 ) -> str:
     """
-    Render the ultra-clean, elegant, numbers-focused dashboard box.
+    Render the ultra-clean, elegant, numbers-focused dashboard box in pure English.
     """
-    status_str = "खुला है / OPEN (चालू)" if is_detected else "बंद है / CLOSED (0 active processes)"
+    status_str = "OPEN (Running)" if is_detected else "CLOSED (Not Running)"
     total_str = str(chat_stats.get("total_chats", 0))
     active_str = str(chat_stats.get("active_chats", 0))
     inactive_str = str(chat_stats.get("inactive_chats", 0))
 
     pending = chat_stats.get("pending_grill_me_chats", 0)
     if pending > 0:
-        grill_me_str = f"हाँ / YES ({pending} चैट)"
+        grill_me_str = f"YES ({pending} Chats - Waiting Response)"
     else:
-        grill_me_str = "नहीं / NO (0 चैट)"
+        grill_me_str = "NO (0 Chats)"
 
-    base_val_len = 23
-    val_len = max(len(status_str) + 2, len(grill_me_str) + 2, base_val_len)
-    extra = val_len - base_val_len
-    dash_count = 56 + extra
+    # Monospace layout calculation
+    # Labels prefix: "  • " (4) + label padded to 22 chars = 26 chars total
+    # Example: "  • AntiGravity Status  : " (length 26)
+    # Standard inside width is 56 characters (base_val_width = 30)
+    base_val_width = 30
+    val_width = max(base_val_width, len(status_str), len(grill_me_str))
+    inner_width = 26 + val_width
 
-    top = "┌" + ("─" * dash_count) + "┐"
-    div = "├" + ("─" * dash_count) + "┤"
-    bot = "└" + ("─" * dash_count) + "┘"
+    top = "┌" + ("─" * inner_width) + "┐"
+    div = "├" + ("─" * inner_width) + "┤"
+    bot = "└" + ("─" * inner_width) + "┘"
 
     title = "🚀 ANTIGRAVITY STATUS & CHAT DASHBOARD"
-    needed_spaces = dash_count - len(title) - 1
+    needed_spaces = inner_width - len(title)
     left_sp = max(0, needed_spaces // 2)
     right_sp = max(0, needed_spaces - left_sp)
     header = "│" + (" " * left_sp) + title + (" " * right_sp) + "│"
 
-    r1 = f"│  • एंटी-ग्रेविटी स्थिति (Status)       : {status_str:<{val_len}}│"
-    r2 = f"│  • कुल चैट्स (Total Chats)             : {total_str:<{val_len}}│"
-    r3 = f"│  • एक्टिव चैट्स (Active Chats)         : {active_str:<{val_len}}│"
-    r4 = f"│  • इनएक्टिव चैट्स (Inactive Chats)     : {inactive_str:<{val_len}}│"
-    r5 = f"│  • ग्रिल-मी पेंडिंग (Pending Question) : {grill_me_str:<{val_len}}│"
+    r1 = f"│  • AntiGravity Status  : {status_str:<{val_width}}│"
+    r2 = f"│  • Total Chats         : {total_str:<{val_width}}│"
+    r3 = f"│  • Active Chats        : {active_str:<{val_width}}│"
+    r4 = f"│  • Inactive Chats      : {inactive_str:<{val_width}}│"
+    r5 = f"│  • Pending Question    : {grill_me_str:<{val_width}}│"
 
     return "\n".join(["", top, header, div, r1, r2, r3, r4, r5, bot, ""])
 
@@ -156,7 +158,7 @@ def display_telemetry_banner(
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (डैशबोर्ड टेस्ट रनर) / Step 0 - AntiGravity Detector (Dashboard Test Runner)"
+        description="Step 0 - AntiGravity Detector (Dashboard Test Runner)"
     )
     parser.add_argument(
         "--interval",
