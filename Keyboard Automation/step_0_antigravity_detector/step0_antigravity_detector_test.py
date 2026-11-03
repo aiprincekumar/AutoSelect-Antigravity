@@ -101,26 +101,110 @@ def parse_args():
         action="store_true",
         help="Output the detection result as a Dept 06 JSON response envelope"
     )
+    parser.add_argument(
+        "--pause",
+        action="store_true",
+        default=None,
+        help="Keep console window open and wait for user keypress on completion"
+    )
+    parser.add_argument(
+        "--no-pause",
+        action="store_true",
+        default=False,
+        help="Do not pause on completion (for automated scripts and unit tests)"
+    )
     return parser.parse_args()
 
 
-def display_telemetry_banner(result: DetectionResult):
-    """Render a clean, structured visual telemetry report for manual inspection."""
+def should_pause(args: argparse.Namespace) -> bool:
+    """
+    Determine whether to keep the console window open on completion.
+    Rules:
+      1. If --no-pause is passed -> False
+      2. If --pause is explicitly passed -> True
+      3. If running inside run_step0_test.bat (BATCH_PAUSE_HANDLED=1) -> False
+         (the batch runner will display the final banner and handle pause)
+      4. If running in an interactive terminal session (TTY) -> True
+      5. Otherwise (headless, non-interactive, pipe) -> False
+    """
+    if args.no_pause:
+        return False
+    if args.pause is True:
+        return True
+    if os.environ.get("BATCH_PAUSE_HANDLED") == "1":
+        return False
+    if sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty():
+        return True
+    return False
+
+
+def wait_for_user(msg: Optional[str] = None):
+    """Wait for user confirmation before exiting, keeping the terminal open."""
+    if not (sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty()):
+        return
     print("\n" + "=" * 78)
-    print("  🎯 [DETECTION REPORT] Google Antigravity State Identified!")
+    if msg:
+        print(f"  {msg}")
+    print("  [विंडो खुली रखी गई है / Window is kept open for inspection]")
+    print("  बाहर निकलने के लिए Enter दबाएं (Press Enter to exit)...")
     print("=" * 78)
-    print(f"  • Detection Status  : {'ACTIVE & RUNNING' if result.is_detected else 'NOT RUNNING'}")
-    print(f"  • Detection Method  : {result.detection_method.upper()}")
-    print(f"  • Total Processes   : {result.process_count} instances")
-    print(f"  • Main Process PID  : {result.main_pid if result.main_pid else 'N/A'}")
-    print(f"  • All PIDs          : {', '.join(str(p) for p in result.pids[:8])}{' ...' if len(result.pids) > 8 else ''}")
-    print(f"  • Binary Path       : {result.exe_path or 'N/A'}")
-    print(f"  • Window Found      : {'YES' if result.has_window else 'NO'}")
+    try:
+        input()
+    except (EOFError, KeyboardInterrupt):
+        pass
+
+
+def display_telemetry_banner(
+    result: DetectionResult,
+    step1_result: Optional[Tuple[bool, int, str]] = None,
+    action_note: Optional[str] = None
+):
+    """Render a clean, structured, bilingual visual telemetry report for manual inspection."""
+    status_str = "चालू और सक्रिय / ACTIVE & RUNNING ✅" if result.is_detected else "बंद / NOT RUNNING ❌"
+    window_str = "हाँ / YES (विंडो मौजूद है)" if result.has_window else "नहीं / NO (बैकग्राउंड प्रोसेस केवल)"
+
+    method_map = {
+        "process_and_window": "प्रोसेस और जीयूआई विंडो दोनों (Process & GUI Window)",
+        "process_only": "बैकग्राउंड प्रोसेस केवल (Process Table Only)",
+        "window_only": "जीयूआई विंडो केवल (Window Hierarchy Only)",
+        "none": "कोई नहीं (None)",
+    }
+    method_str = method_map.get(result.detection_method, result.detection_method.upper())
+
+    print("\n" + "=" * 78)
+    print("  🎯 [निरीक्षण रिपोर्ट / DETECTION REPORT] Google Antigravity State Identified!")
+    print("=" * 78)
+    print(f"  • स्थिति / Status       : {status_str}")
+    print(f"  • पहचान विधि / Method   : {method_str}")
+    print(f"  • कुल प्रोसेस / Count    : {result.process_count} instances")
+    print(f"  • मुख्य PID / Main PID  : {result.main_pid if result.main_pid else 'N/A'}")
+    if result.pids:
+        pid_list_str = ', '.join(str(p) for p in result.pids[:8])
+        if len(result.pids) > 8:
+            pid_list_str += f" ... (+{len(result.pids) - 8} more)"
+        print(f"  • सभी PIDs / All PIDs   : {pid_list_str}")
+    if result.exe_path:
+        print(f"  • फ़ाइल पाथ / Binary    : {result.exe_path}")
+    print(f"  • विंडो स्थिति / Window  : {window_str}")
     if result.has_window:
-        print(f"  • Window Handle     : HWND {result.window_hwnd}")
-        print(f"  • Window Title      : '{result.window_title}'")
-        print(f"  • Window Class      : {result.window_class}")
-    print(f"  • Timestamp (UTC)   : {result.timestamp}")
+        print(f"  • विंडो हैंडल / HWND   : {result.window_hwnd}")
+        print(f"  • विंडो शीर्षक / Title  : '{result.window_title}'")
+        if result.window_class:
+            print(f"  • विंडो क्लास / Class   : {result.window_class}")
+    print(f"  • समय / Timestamp (UTC) : {result.timestamp}")
+
+    # Step 1 Execution Details
+    if step1_result is not None:
+        ok, code, msg = step1_result
+        print("-" * 78)
+        print("  🚀 [स्टेप 1 ट्रिगर परिणाम / STEP 1 TRIGGER RESULT]")
+        print(f"  • निष्पादन स्थिति / Status : {'सफल / SUCCESS ✅' if ok else 'असफल / FAILED ❌'}")
+        print(f"  • एग्जिट कोड / Exit Code   : {code}")
+        print(f"  • विवरण / Details          : {msg}")
+    elif action_note:
+        print("-" * 78)
+        print(f"  ℹ️ [कार्रवाई / ACTION] : {action_note}")
+
     print("=" * 78 + "\n")
 
 
@@ -128,39 +212,59 @@ def on_check_telemetry(check_num: int, result: DetectionResult):
     """Callback providing real-time telemetry updates during polling."""
     now = datetime.now().strftime("%H:%M:%S")
     if not result.is_detected:
-        print(f"  [{now}] Check #{check_num:03d} | Status: [SCANNING] | Antigravity: Closed/Not Detected")
+        print(f"  [{now}] Check #{check_num:03d} | Status: [SCANNING] | Antigravity: Closed/Not Detected (जांच जारी...)")
 
 
 def main():
     args = parse_args()
+    pause_enabled = should_pause(args)
 
     detector = AntiGravityDetector(
         poll_interval=args.interval,
-        headless=False,
-        verbose=True,
+        headless=args.json,
+        verbose=not args.json,
     )
 
     if args.once:
         # Single-shot manual inspection
-        print(f"[*] Performing single-shot Antigravity detection check...")
+        if not args.json:
+            print("[*] Performing single-shot Antigravity detection check...")
+            print("    (सिंगल-शॉट एंटी-ग्रेविटी डिटेक्शन जांच की जा रही है...)")
         result = detector.detect()
+
+        step1_info = None
+        action_note = None
+
+        if result.is_detected and not args.no_launch:
+            if not args.json:
+                print("[*] Antigravity चालू है। Step 1 (find_and_focus) ट्रिगर किया जा रहा है...")
+            ok, code, msg = detector.launch_step1(wait=args.wait)
+            step1_info = (ok, code, msg)
+            result.details["step1_result"] = {
+                "success": ok,
+                "exit_code": code,
+                "message": msg
+            }
+        elif result.is_detected and args.no_launch:
+            action_note = "Antigravity detected. (--no-launch passed: Step 1 trigger skipped / स्टेप 1 ट्रिगर छोड़ दिया गया)"
+        else:
+            action_note = "Antigravity is not currently running (एंटी-ग्रेविटी अभी नहीं चल रहा है)"
 
         if args.json:
             print(json.dumps(result.to_json_envelope(), indent=2))
         else:
-            display_telemetry_banner(result)
+            display_telemetry_banner(result, step1_result=step1_info, action_note=action_note)
 
-        if result.is_detected and not args.no_launch:
-            print("[*] Antigravity is open. Triggering Step 1 now...")
-            ok, code, msg = detector.launch_step1(wait=args.wait)
-            print(f"[*] Step 1 Result: Success={ok}, ExitCode={code}, Message: {msg}")
-            sys.exit(0 if ok else code)
-        elif result.is_detected and args.no_launch:
-            print("[*] Antigravity detected. (--no-launch passed: skipping Step 1 trigger)")
-            sys.exit(0)
-        else:
-            print("[-] Antigravity is not currently running.")
-            sys.exit(1)
+        exit_code = 0
+        if not result.is_detected:
+            exit_code = 1
+        elif step1_info and not step1_info[0]:
+            exit_code = step1_info[1]
+
+        if pause_enabled:
+            wait_for_user()
+
+        sys.exit(exit_code)
 
     # Continuous 10-second polling runner
     auto_trigger = not args.no_launch
@@ -172,14 +276,42 @@ def main():
         on_check_callback=on_check_telemetry,
     )
 
+    step1_info = None
+    action_note = None
+
     if result and result.is_detected:
+        if result.details and "step1_result" in result.details:
+            s1 = result.details["step1_result"]
+            step1_info = (s1.get("success", False), s1.get("exit_code", 0), s1.get("message", ""))
+        elif args.no_launch:
+            action_note = "Antigravity detected. (--no-launch passed: Step 1 trigger skipped / स्टेप 1 छोड़ दिया गया)"
+
         if args.json:
             print(json.dumps(result.to_json_envelope(), indent=2))
         else:
-            display_telemetry_banner(result)
-        sys.exit(0)
+            display_telemetry_banner(result, step1_result=step1_info, action_note=action_note)
+
+        exit_code = 0
+        if step1_info and not step1_info[0]:
+            exit_code = step1_info[1]
+
+        if pause_enabled:
+            wait_for_user()
+
+        sys.exit(exit_code)
     else:
-        print("\n[INFO] Polling stopped without detection.")
+        if args.json:
+            dummy_res = DetectionResult(is_detected=False)
+            print(json.dumps(dummy_res.to_json_envelope(), indent=2))
+        else:
+            print("\n" + "=" * 78)
+            print("  ℹ️ [सूचना / INFO] पोलिंग बिना डिटेक्शन के समाप्त हुई।")
+            print("  Polling stopped without detecting Google Antigravity.")
+            print("=" * 78 + "\n")
+
+        if pause_enabled:
+            wait_for_user()
+
         sys.exit(0)
 
 

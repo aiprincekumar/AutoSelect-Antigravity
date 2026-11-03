@@ -630,7 +630,12 @@ class AntiGravityDetector:
                 if auto_launch:
                     if not self.headless:
                         print(f"[{now_str}] Launching Step 1 (step_1_chat_identifier/step1_find_and_focus.py)...")
-                    self.launch_step1(wait=wait_for_step1, extra_args=extra_step1_args)
+                    ok, code, msg = self.launch_step1(wait=wait_for_step1, extra_args=extra_step1_args)
+                    result.details["step1_result"] = {
+                        "success": ok,
+                        "exit_code": code,
+                        "message": msg
+                    }
 
                 # Return detection result and terminate loop cleanly (Universal Rule 26)
                 return result

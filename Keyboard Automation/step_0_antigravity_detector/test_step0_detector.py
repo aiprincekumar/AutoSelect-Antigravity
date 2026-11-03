@@ -9,6 +9,8 @@ Standard: Department 08 (QA & Testing) / Dept 06 (Backend & API Engineering)
 """
 
 import sys
+import json
+import subprocess
 import unittest
 from pathlib import Path
 
@@ -141,6 +143,55 @@ class TestAntiGravityDetector(unittest.TestCase):
         self.assertIsNotNone(res)
         self.assertEqual(len(checks_recorded), 1)
         self.assertEqual(checks_recorded[0][0], 1)
+
+
+class TestStep0TestRunnerCLI(unittest.TestCase):
+    def test_cli_once_no_launch_no_pause(self):
+        py_exe = _root_dir / ".venv" / "Scripts" / "python.exe"
+        if not py_exe.is_file():
+            py_exe = Path(sys.executable)
+        script = _this_dir / "step0_antigravity_detector_test.py"
+
+        proc = subprocess.run(
+            [str(py_exe), str(script), "--once", "--no-launch", "--no-pause"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace"
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("DETECTION REPORT", proc.stdout)
+        self.assertIn("Google Antigravity", proc.stdout)
+
+    def test_cli_json_envelope(self):
+        py_exe = _root_dir / ".venv" / "Scripts" / "python.exe"
+        if not py_exe.is_file():
+            py_exe = Path(sys.executable)
+        script = _this_dir / "step0_antigravity_detector_test.py"
+
+        proc = subprocess.run(
+            [str(py_exe), str(script), "--once", "--no-launch", "--no-pause", "--json"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace"
+        )
+        self.assertEqual(proc.returncode, 0)
+        data = json.loads(proc.stdout)
+        self.assertTrue(data.get("success"))
+        self.assertEqual(data.get("meta", {}).get("step"), "step_0_antigravity_detector")
+
+    def test_batch_file_no_pause_execution(self):
+        bat_file = _this_dir / "run_step0_test.bat"
+        proc = subprocess.run(
+            ["cmd.exe", "/c", str(bat_file), "--no-pause", "--once", "--no-launch"],
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace"
+        )
+        self.assertEqual(proc.returncode, 0)
+        self.assertIn("[SUCCESS]", proc.stdout)
 
 
 if __name__ == "__main__":
