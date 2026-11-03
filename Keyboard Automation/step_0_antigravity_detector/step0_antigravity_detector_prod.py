@@ -1,9 +1,9 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (प्रोडक्शन रनर - 5 मिनट इंटरवल)
-Step 0 - AntiGravity Detector (Production Runner - 5-Minute Polling)
-==================================================================
+स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (प्रोडक्शन रनर - 5 मिनट इंटरवल एवं टू-फैक्टर ट्रिगर)
+Step 0 - AntiGravity Detector (Production Runner - 5-Minute Two-Factor Polling)
+==============================================================================
 Pipeline Step: STEP 0 (AntiGravity Detector & Step 1 Auto-Trigger)
 Part of: AutoSelect-Commander Automation Pipeline
 Workspace: Keyboard Automation (Step 0 of 3)
@@ -15,9 +15,10 @@ Production Specifications:
      - No questions, no popups/GUI windows, silent background operation.
   2. Polling Interval:
      - Default 300 seconds (5 minutes).
-  3. Trigger:
-     - Detects if Google Antigravity is running/open.
-     - As soon as condition is met, automatically launches Step 1
+  3. Two-Factor Trigger:
+     - Factor 1: Is Google Anti-Gravity running/open?
+     - Factor 2: Is there a pending Grill-Me chat requiring user input?
+     - Only when BOTH conditions match, automatically launches Step 1
        (step_1_chat_identifier/step1_find_and_focus.py) as a detached background process.
   4. Execution Hygiene (Universal Rule 26):
      - Immediately and cleanly exits with code 0 after Step 1 is triggered.
@@ -92,6 +93,11 @@ def parse_args():
         action="store_true",
         help="Wait for Step 1 completion instead of detached spawn-and-exit"
     )
+    parser.add_argument(
+        "--any-antigravity",
+        action="store_true",
+        help="Legacy mode: trigger Step 1 immediately on Antigravity open, without requiring pending Grill-Me chats"
+    )
     return parser.parse_args()
 
 
@@ -100,6 +106,7 @@ def main():
 
     # Headless mode is default for production unless --interactive is explicitly passed
     headless = not args.interactive
+    require_grill_me = not args.any_antigravity
 
     detector = AntiGravityDetector(
         poll_interval=args.interval,
@@ -108,6 +115,7 @@ def main():
         step1_script_path=args.step1_path,
         state_file_path=args.state_file,
         log_file_path=args.log_file,
+        require_grill_me=require_grill_me,
     )
 
     result = detector.run_loop(
@@ -116,7 +124,7 @@ def main():
         wait_for_step1=args.wait,
     )
 
-    if result and result.is_detected:
+    if result and result.trigger_matched:
         # Detected and Step 1 launched! Clean exit with code 0.
         sys.exit(0)
     else:
