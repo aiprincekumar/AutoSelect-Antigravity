@@ -61,7 +61,7 @@ def parse_arguments():
     parser.add_argument(
         "--settle-delay",
         type=float,
-        default=0.5,
+        default=0.3,
         help="Delay in seconds after window focus/maximize to allow UI rendering to settle."
     )
     parser.add_argument(
@@ -73,8 +73,8 @@ def parse_arguments():
     parser.add_argument(
         "-d", "--step-delay",
         type=float,
-        default=0.35,
-        help="Delay in seconds between keystroke steps (e.g. 0.35 = 350ms)."
+        default=0.22,
+        help="Delay in seconds between keystroke steps (default: 0.22 = 220ms, calibrated for GUI settle)."
     )
     parser.add_argument(
         "--hold-delay",

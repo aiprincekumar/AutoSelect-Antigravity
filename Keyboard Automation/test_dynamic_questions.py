@@ -252,15 +252,49 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
     def test_transcript_full_priority_on_large_questions(self):
         """Verify detector prioritizes transcript_full.jsonl over truncated transcript.jsonl for N >= 4."""
         from step1_find_and_focus import GrillMeDetector
-        detector = GrillMeDetector()
-        # Test on live repository conversation that has 4 questions in full transcript
-        chats = detector.scan_transcripts()
-        if chats:
-            # Check newest chat (e0645f63) has 4 questions, not 0 or 2
-            top_chat = [c for c in chats if c.conversation_id == "e0645f63-cc82-41f8-8385-2538e9e8f6bf"]
-            if top_chat:
-                self.assertEqual(top_chat[0].total_questions_count, 4)
-                self.assertTrue(top_chat[0].is_multi_question)
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temp_brain = Path(temp_dir)
+            convo_dir = temp_brain / "mock-convo-large-q"
+            logs_dir = convo_dir / ".system_generated" / "logs"
+            logs_dir.mkdir(parents=True, exist_ok=True)
+
+            compact_path = logs_dir / "transcript.jsonl"
+            full_path = logs_dir / "transcript_full.jsonl"
+
+            # 4 distinct questions payload
+            four_questions = [
+                {"question": f"Question {i} text?", "options": ["(Recommended) Option A", "Option B"]}
+                for i in range(1, 5)
+            ]
+
+            # In compact transcript, simulate truncation (only 2 questions or truncated fields)
+            compact_entry = {
+                "step_index": 1,
+                "type": "PLANNER_RESPONSE",
+                "status": "DONE",
+                "truncated_fields": ["tool_calls"],
+                "tool_calls": [{"name": "ask_question", "args": {"questions": four_questions[:2]}}]
+            }
+            with open(compact_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(compact_entry) + "\n")
+
+            # In full transcript, write all 4 questions untruncated
+            full_entry = {
+                "step_index": 1,
+                "type": "PLANNER_RESPONSE",
+                "status": "DONE",
+                "tool_calls": [{"name": "ask_question", "args": {"questions": four_questions}}]
+            }
+            with open(full_path, "w", encoding="utf-8") as f:
+                f.write(json.dumps(full_entry) + "\n")
+
+            detector = GrillMeDetector(brain_dir=temp_brain)
+            chats = detector.scan_transcripts()
+            self.assertEqual(len(chats), 1)
+            self.assertEqual(chats[0].total_questions_count, 4)
+            self.assertTrue(chats[0].is_multi_question)
+            self.assertEqual(Path(chats[0].transcript_path).resolve(), full_path.resolve())
 
     def test_dynamic_scaling_options_padding(self):
         """Verify options_list dynamically scales to ['1'] * N when not provided or partial."""
@@ -346,6 +380,59 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
             step_delay=0.01,
         )
         self.assertTrue(s3_automator.execute())
+
+    def test_ensure_window_ready_called(self):
+        """Verify _ensure_window_ready() is invoked to bring window to foreground before keystrokes."""
+        automator = GrillMeAutomator(
+            questions=1,
+            option="1",
+            dry_run=True,
+            auto_focus=True,
+            auto_maximize=True,
+            step_delay=0.01,
+        )
+        with patch.object(automator, "_ensure_window_ready", return_value=True) as mock_ready:
+            automator.execute()
+            mock_ready.assert_called_once()
+
+    def test_pure_physical_keystrokes_without_cdp(self):
+        """Verify Step 3 does NOT call any CDP methods and runs pure physical keystrokes."""
+        import keyboard_automation.automator as aut_mod
+        # Verify CDP helper is not used in automator
+        self.assertFalse(hasattr(aut_mod, "AntigravityCDPClient"))
+        automator = GrillMeAutomator(
+            questions=2,
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            step_delay=0.01,
+        )
+        self.assertFalse(hasattr(automator, "_execute_via_cdp"))
+        self.assertTrue(automator.execute())
+
+    def test_dynamic_large_questions_n10(self):
+        """Verify arbitrary large question count N=10 runs exactly 40 keystroke steps."""
+        automator = GrillMeAutomator(
+            questions=10,
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            step_delay=0.01,
+        )
+        self.assertEqual(automator.total_questions, 10)
+        self.assertEqual(len(automator.options_list), 10)
+
+        executed_steps = []
+        def mock_step(step_num, desc, action):
+            executed_steps.append((str(step_num), desc))
+
+        with patch.object(automator, "_execute_step", side_effect=mock_step):
+            ok = automator.execute()
+            self.assertTrue(ok)
+
+        self.assertEqual(len(executed_steps), 40)
+        self.assertEqual(executed_steps[-1][0], "Q10.4")
+        self.assertIn("Submit ALL 10 answers", executed_steps[-1][1])
 
 
 if __name__ == "__main__":

@@ -6,7 +6,8 @@ Step 3: Keyboard Automation Orchestrator Subsystem
 Pipeline Step: STEP 3 (Option Selection & Confirmation)
 Suite: AutoSelect-Commander
 Coordinates countdown, target window preparation, keystroke sequence dispatch,
-browser safety aborts, CDP DOM precision interaction, and dynamic multi-question step execution.
+browser safety aborts, pure native Win32 SendInput physical keystroke execution,
+and dynamic multi-question step execution.
 """
 
 import sys
@@ -46,7 +47,6 @@ from .window_manager import (
     get_window_info,
     ensure_window_on_screen,
 )
-from .cdp_helper import AntigravityCDPClient
 
 logger = logging.getLogger("Step3KeyboardAutomation.Automator")
 
@@ -58,14 +58,12 @@ class GrillMeAutomator:
     2. Check minimized state -> Restore window (SW_RESTORE / OpenIcon)
     3. Check maximized state -> Maximize to full screen (SW_MAXIMIZE)
     4. Robust foreground focus bypass (Alt key pulse, thread attach, Z-order bump)
-    5. Settle delay (default 500ms) for UI rendering
-    6. Execute sequence:
-       - Tier 1: Real-time CDP DOM precision option selection and Continue/Submit clicks.
-       - Tier 2: Pure native SendInput/ctypes keystroke injection fallback:
-                 * Ctrl + L    -> Focus chat input
-                 * Shift + Tab -> Shift focus to option select buttons
-                 * Option key  -> Select option (e.g. '1')
-                 * Enter       -> Continue (Q1..QN-1) or Submit confirmation (QN)
+    5. Settle delay for UI rendering
+    6. Execute sequence via pure native Win32 SendInput physical keystrokes on the active GUI window:
+       * Step A: Ctrl + L    -> Focus chat input (settle pause 0.2s - 0.25s)
+       * Step B: Shift + Tab -> Shift focus to option select buttons (settle pause 0.2s - 0.25s)
+       * Step C: Option key  -> Select option (e.g. '1') (settle pause 0.2s - 0.25s)
+       * Step D: Enter Gate  -> Continue (Q1..QN-1, UI transition pause 0.4s - 0.5s) or Submit confirmation (QN)
     """
 
     DEFAULT_TARGET = DEFAULT_TARGET_WINDOW
@@ -73,7 +71,7 @@ class GrillMeAutomator:
     def __init__(
         self,
         engine: str = "auto",
-        step_delay: float = 0.35,
+        step_delay: float = 0.22,
         hold_delay: float = 0.05,
         option: str = "1",
         skip_ctrl_l: bool = False,
@@ -82,7 +80,7 @@ class GrillMeAutomator:
         target_window: str = DEFAULT_TARGET,
         auto_focus: bool = True,
         auto_maximize: bool = True,
-        settle_delay: float = 0.5,
+        settle_delay: float = 0.3,
         questions: Optional[Union[int, str]] = None,
         options_list: Optional[Union[List[Union[str, int]], str]] = None,
         state_file: Optional[str] = None,
@@ -375,127 +373,85 @@ class GrillMeAutomator:
             action_func()
         time.sleep(self.step_delay)
 
-    def _execute_via_cdp(self, total_questions: int, opts: List[str]) -> bool:
+    def _ensure_window_ready(self) -> bool:
         """
-        Tier 1 CDP Execution: Uses Antigravity Chrome DevTools Protocol WebSocket
-        for 100% precision DOM option selection and Continue/Submit progression.
-        Completely dynamic for ANY N (1, 2, 3, 4, 5, 6... N), with reactive polling,
-        disabled-state verification, and graceful multi-question wizard advancement.
+        Ensures Antigravity window is restored, maximized (SW_MAXIMIZE),
+        and brought cleanly to the foreground (SetForegroundWindow) with
+        active OS focus lock release so physical keystrokes land directly
+        on the real GUI window.
         """
-        cdp = AntigravityCDPClient()
-        if not cdp.is_available():
-            return False
-
-        if not cdp.connect():
-            logger.debug("CDP port open but WebSocket handshake failed.")
-            return False
-
-        try:
-            logger.info("CDP Protocol connected! Engaging Tier 1 DOM Precision Automation...")
-
-            # 1. Ensure conversation is active if CID is known
-            if self.conversation_id:
-                cdp.ensure_chat_active(self.conversation_id)
-
-            # 2. Window focus & maximize
-            if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
-                self.prepare_target_window()
-
-            # 3. Synchronize question count with live DOM state if card is on screen
-            live_status = cdp.get_questionnaire_status()
-            if live_status.get("has_card"):
-                live_total = live_status.get("total_questions", 1)
-                if live_total > total_questions:
-                    logger.info(f"Live DOM reports {live_total} total questions (state had {total_questions}). Dynamically adapting...")
-                    total_questions = live_total
-                    while len(opts) < total_questions:
-                        opts.append(str(self.option))
-
-            # 4. Dynamic Question Progression Loop (1..N)
-            for q_idx in range(1, total_questions + 1):
-                opt_str = opts[q_idx - 1]
-                try:
-                    opt_num = int(opt_str)
-                except ValueError:
-                    opt_num = 1
-                is_last = (q_idx == total_questions)
-
-                # Wait for question widget to be ready in DOM (up to 3.0s)
-                ready = cdp.wait_for_question(expected_question=q_idx, timeout=3.0)
-                if not ready:
-                    logger.warning(f"CDP: Question {q_idx}/{total_questions} not ready in DOM, attempting selection anyway...")
-
-                logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt_num}...")
-                if self.dry_run:
-                    logger.info(f"  [DRY RUN] Would select option {opt_num} and submit.")
-                    continue
-
-                # Select Option with dynamic retry
-                selected = False
-                for attempt in range(3):
-                    selected = cdp.select_option(opt_num)
-                    if selected:
-                        break
-                    time.sleep(0.15)
-
-                if not selected:
-                    logger.warning(f"CDP could not find label for option {opt_num}, falling back to keystrokes...")
-                    return False
-
-                # Settle delay for React state update
-                time.sleep(max(0.15, self.hold_delay))
-
-                # Continue / Submit Gate
-                if not self.skip_enter:
-                    if is_last:
-                        logger.info(f"[Question {total_questions}/{total_questions}] Final Question: Submitting batch response ([Submit ↵])...")
-                    else:
-                        logger.info(f"[Question {q_idx}/{total_questions}] Advancing to Question {q_idx + 1} ([Continue ↵])...")
-
-                    # Wait for button to become enabled after option selection
-                    cdp.wait_for_button_enabled(timeout=2.0)
-
-                    submitted = False
-                    for attempt in range(3):
-                        submitted = cdp.click_continue_or_submit()
-                        if submitted:
-                            break
-                        time.sleep(0.12)
-
-                    if not submitted:
-                        # Fallback to Enter keystroke if button click didn't trigger
-                        logger.debug("Continue button click returned false, sending native VK_RETURN...")
-                        send_single_key(VK_RETURN, hold_delay=self.hold_delay)
-
-                    # Dynamic wizard progression wait
-                    cdp.wait_for_advance_or_close(
-                        previous_question=q_idx,
-                        is_last=is_last,
-                        timeout=max(3.0, self.step_delay * 3)
-                    )
-                    time.sleep(max(0.2, self.step_delay))
-                else:
-                    logger.info(f"[Question {q_idx}/{total_questions}] Skipping confirmation per --skip-enter flag.")
-
-            logger.info(f"[SUCCESS] CDP Tier 1 completed all {total_questions} question(s) successfully!")
+        if not IS_WINDOWS:
+            logger.info("Window focus and activation is only available on Windows.")
             return True
 
-        except Exception as e:
-            logger.warning(f"CDP execution error ({e}), will fallback to native keystrokes: {e}")
+        if not self.auto_focus and not self.auto_maximize:
+            logger.info("Window auto-focus and auto-maximize are disabled by user configuration.")
+            return True
+
+        # Find target window if not yet identified
+        if not self.target_hwnd:
+            self.prepare_target_window()
+
+        if not self.target_hwnd:
+            # Fallback to current foreground window if match wasn't found
+            fg = user32.GetForegroundWindow()
+            if fg and user32.IsWindow(fg):
+                self.target_hwnd = fg
+                info = get_window_info(fg)
+                self.target_title = info.get("title", "")
+
+        if not self.target_hwnd or not user32.IsWindow(self.target_hwnd):
+            logger.warning("No target window HWND available to focus. Proceeding with active window.")
             return False
-        finally:
-            cdp.close()
+
+        # Guard against disqualified browser windows
+        info = get_window_info(self.target_hwnd)
+        pname_lower = info.get("process_name", "").lower()
+        user_wants_browser = any(
+            any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
+            for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
+        )
+        if pname_lower in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+            logger.error(
+                f"[REJECTED] Selected window belongs to disqualified browser '{pname_lower}'. "
+                f"Refusing to focus or send keystrokes to browser!"
+            )
+            self.target_hwnd = None
+            return False
+
+        if self.dry_run:
+            logger.info(f"  [DRY RUN] Would ensure window HWND={hex(self.target_hwnd)} is maximized and focused.")
+            return True
+
+        logger.info(
+            f"Ensuring Antigravity window (HWND={hex(self.target_hwnd)}, Title='{self.target_title}') "
+            f"is restored, maximized to full screen, and brought to foreground..."
+        )
+        return ensure_window_on_screen(
+            hwnd=self.target_hwnd,
+            auto_maximize=self.auto_maximize,
+            auto_focus=self.auto_focus,
+            settle_delay=self.settle_delay,
+        )
 
     def execute_multi_question(self, total_questions: Optional[int] = None, options: Optional[List[str]] = None) -> bool:
         """
         Executes deterministic multi-question keyboard automation loop for any N questions (1..N).
-        Operates with dual-tier resilience:
-          - Tier 1: Chrome DevTools Protocol (CDP) DOM precision option select & Continue/Submit.
-          - Tier 2: Pure Native Windows ctypes SendInput / keybd_event sequence fallback:
-                    * Step 1: Focus chat input (Ctrl + L)
-                    * Step 2: Reverse tab to option buttons (Shift + Tab)
-                    * Step 3: Select option key (e.g. '1')
-                    * Step 4: Enter Gate (Continue to next question on Q1..QN-1, Submit on QN).
+        Operates via pure native Windows ctypes SendInput physical keystrokes on the active GUI window:
+          - Focus & Activation: _ensure_window_ready() brings Antigravity to foreground & maximizes.
+          - For each question q_idx (1..N):
+            * Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
+              Settle pause (0.2s - 0.25s)
+            * Step B / Q{q_idx}.2: Reverse tab into option button group (Shift + Tab)
+              Settle pause (0.2s - 0.25s)
+            * Step C / Q{q_idx}.3: Send option key (e.g. '1', or per-question option)
+              Settle pause (0.2s - 0.25s)
+            * Step D / Q{q_idx}.4: Enter Gate:
+              - If q_idx < total_questions:
+                * Send Enter (Advances Continue to next question)
+                * UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI
+              - If q_idx == total_questions:
+                * Send Enter (Submits final batch answer)
         """
         if total_questions is None:
             total_questions = self.total_questions
@@ -507,31 +463,11 @@ class GrillMeAutomator:
         opts = opts[:total_questions]
 
         logger.info(f"Initiating dynamic keyboard automation loop: {total_questions} question(s) | Options: {opts}")
+        logger.info("Executing via Pure Native Physical Keystroke Injection (Win32 SendInput)...")
 
-        # Attempt Tier 1: CDP Precision Execution (Zero UI lag, direct DOM interaction)
-        if not self.dry_run:
-            try:
-                if self._execute_via_cdp(total_questions, opts):
-                    return True
-            except Exception as cdp_err:
-                logger.debug(f"CDP Tier 1 bypassed: {cdp_err}")
-
-        logger.info("Executing via Tier 2 Native Keystroke Injection...")
-
-        # Ensure target window is prepared and focused if not done already
+        # Ensure target window is restored, maximized, and in foreground before physical keystrokes
         if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
-            if not self.target_hwnd:
-                self.prepare_target_window()
-            elif self.auto_focus and not self.dry_run:
-                curr_fg = user32.GetForegroundWindow()
-                if curr_fg != self.target_hwnd:
-                    logger.info("Ensuring target window is brought to foreground before keystrokes...")
-                    ensure_window_on_screen(
-                        self.target_hwnd,
-                        auto_maximize=self.auto_maximize,
-                        auto_focus=True,
-                        settle_delay=0.1
-                    )
+            self._ensure_window_ready()
 
         active_window = get_active_window_title()
         logger.info(f"Target Foreground Window: '{active_window}'")
@@ -555,6 +491,10 @@ class GrillMeAutomator:
             logger.error("No valid automation engine available on this platform.")
             return False
 
+        # Define settle pause and UI transition pause
+        settle_pause = max(0.20, min(0.25, self.step_delay)) if not self.dry_run else 0.001
+        transition_pause = max(0.45, self.step_delay * 2) if not self.dry_run else 0.001
+
         try:
             for q_idx in range(1, total_questions + 1):
                 opt = opts[q_idx - 1]
@@ -565,7 +505,7 @@ class GrillMeAutomator:
                 else:
                     logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt} and continuing with Enter...")
 
-                # Step 1: Focus chat input (Ctrl + L)
+                # Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
                 if not self.skip_ctrl_l:
                     if self.engine == "ctypes":
                         self._execute_step(
@@ -579,10 +519,13 @@ class GrillMeAutomator:
                             "Press [Ctrl + L] (Focus chat box)",
                             lambda: pyautogui.hotkey("ctrl", "l")
                         )
+                    # Settle pause (0.2s - 0.25s)
+                    if not self.dry_run:
+                        time.sleep(settle_pause)
                 else:
                     logger.info(f"Step Q{q_idx}.1: Skipping Ctrl + L (as requested)")
 
-                # Step 2: Reverse tab to option buttons (Shift + Tab)
+                # Step B / Q{q_idx}.2: Reverse tab into option button group (Shift + Tab)
                 if self.engine == "ctypes":
                     self._execute_step(
                         f"Q{q_idx}.2",
@@ -595,8 +538,11 @@ class GrillMeAutomator:
                         "Press [Shift + Tab] (Move backward to question options)",
                         lambda: pyautogui.hotkey("shift", "tab")
                     )
+                # Settle pause (0.2s - 0.25s)
+                if not self.dry_run:
+                    time.sleep(settle_pause)
 
-                # Step 3: Select option key (e.g. '1')
+                # Step C / Q{q_idx}.3: Select option key (e.g. '1', or per-question option)
                 vk_opt = get_option_vk(opt)
                 if self.engine == "ctypes":
                     self._execute_step(
@@ -610,8 +556,11 @@ class GrillMeAutomator:
                         f"Press [{opt}] (Select Option {opt})",
                         lambda: pyautogui.press(str(opt))
                     )
+                # Settle pause (0.2s - 0.25s)
+                if not self.dry_run:
+                    time.sleep(settle_pause)
 
-                # Step 4: Enter Gate (Advances on Q1..QN-1, Submits on QN)
+                # Step D / Q{q_idx}.4: Enter Gate (Advances on Q1..QN-1, Submits on QN)
                 if not self.skip_enter:
                     enter_desc = (
                         f"Press [Enter] (Submit ALL {total_questions} answers on final question)"
@@ -631,15 +580,14 @@ class GrillMeAutomator:
                             lambda: pyautogui.press("enter")
                         )
 
-                    # UI transition settle pause between questions
-                    if not is_last:
-                        transition_delay = max(0.35, self.step_delay)
-                        logger.debug(f"UI transition settle pause ({transition_delay:.2f}s) before next question...")
-                        time.sleep(transition_delay)
+                    # UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI before next Ctrl+L
+                    if not is_last and not self.dry_run:
+                        logger.info(f"UI transition pause ({transition_pause:.2f}s) allowing Question {q_idx + 1} card to render on GUI...")
+                        time.sleep(transition_pause)
                 else:
                     logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
 
-            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {total_questions} question(s)!")
+            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {total_questions} question(s) via physical keystrokes!")
             return True
 
         except Exception as e:
