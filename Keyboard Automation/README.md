@@ -44,9 +44,7 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 | File / Folder | Role & Description | Type |
 | :--- | :--- | :--- |
 | **`target_chat.json`** | Shared state file holding extracted question metadata, option choices, and active conversation ID. | **COMMON STATE** |
-| **`run_all_steps.bat`** | **1-Click Full Pipeline Runner:** Executes Step 1 -> Step 2 -> Step 3 end-to-end. | **MASTER RUNNER** |
-| **`run_activating_grill_me_with_automation.bat`** | Canonical complete 3-step batch launcher coordinating all subfolders. | **MASTER RUNNER** |
-| **`run_activating_grill_me.bat`** | Two-step runner executing Step 1 + Step 2. | **MODULAR RUNNER** |
+| **`run_all_steps.bat`** | **Single 1-Click Full Pipeline Master Runner:** Executes Step 1 -> Step 2 -> Step 3 end-to-end. | **MASTER RUNNER** |
 | **`activating_grill_me.py`** | Master transcript parser & GUI activator engine. | **ORCHESTRATOR** |
 | **`config.json`** | Configuration file for coordinate fallbacks and automation timing. | **CONFIG** |
 | **`keyboard_automation/`** | Modular internal engine (Win32 API, Input Injector, Window Manager, Automator, CLI). | **SHARED ENGINE** |
@@ -58,8 +56,7 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 | File | Role & Description | Type |
 | :--- | :--- | :--- |
 | **`step1_find_and_focus.py`** | Scans transcripts, parses questions, maximizes window & writes root `target_chat.json`. | **PRIMARY SCRIPT** |
-| **`run_step1.bat`** | Quick 1-click shortcut runner for Step 1. | **SHORTCUT** |
-| **`run_step1_find_and_focus.bat`** | Standalone batch launcher for Step 1 with auto-detection. | **STEP RUNNER** |
+| **`run_step1.bat`** | Dedicated 1-click standalone runner for Step 1. | **STEP RUNNER** |
 
 ---
 
@@ -67,8 +64,7 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 | File | Role & Description | Type |
 | :--- | :--- | :--- |
 | **`step2_gui_chat_select.py`** | CDP/DOM chat selection, smooth glide & chat pane focus (`Ctrl + L`). | **PRIMARY SCRIPT** |
-| **`run_step2.bat`** | Quick 1-click shortcut runner for Step 2. | **SHORTCUT** |
-| **`run_step2_gui_chat_select.bat`** | Standalone batch launcher for Step 2 with auto-detection. | **STEP RUNNER** |
+| **`run_step2.bat`** | Dedicated 1-click standalone runner for Step 2. | **STEP RUNNER** |
 
 ---
 
@@ -76,12 +72,8 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 | File | Role & Description | Type |
 | :--- | :--- | :--- |
 | **`step3_keyboard_automation.py`** | Keystroke automation, dynamic multi-question scaling & Enter submission. | **PRIMARY SCRIPT** |
-| **`run_step3.bat`** | Quick 1-click shortcut runner for Step 3. | **SHORTCUT** |
-| **`run_step3_keyboard_automation.bat`** | Standalone batch launcher for Step 3. | **STEP RUNNER** |
-| **`run_step3_keyboard_automation.ps1`**| PowerShell runner for Step 3 with parameter binding. | **PS1 RUNNER** |
+| **`run_step3.bat`** | Dedicated 1-click standalone runner for Step 3. | **STEP RUNNER** |
 | **`grill_me_automation.py`** | Backward-compatibility alias delegating to `step3_keyboard_automation.py`. | **LEGACY ALIAS** |
-| **`run_grill_me.bat`** | Legacy alias launcher for Step 3. | **LEGACY ALIAS** |
-| **`run_grill_me.ps1`** | Legacy PowerShell launcher for Step 3. | **LEGACY ALIAS** |
 
 ---
 
@@ -98,7 +90,6 @@ Double-click [`run_all_steps.bat`](./run_all_steps.bat) or run:
 ```cmd
 run_all_steps.bat
 ```
-*(Or use `run_activating_grill_me_with_automation.bat`)*
 
 #### 🔍 2. Run Step 1 Standalone (Chat Identifier)
 ```cmd

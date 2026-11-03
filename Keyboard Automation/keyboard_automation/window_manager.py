@@ -243,7 +243,10 @@ if IS_WINDOWS:
             "cmd.exe", "powershell.exe", "pwsh.exe", "conhost.exe", "wt.exe",
             "python.exe", "pythonw.exe", "explorer.exe"
         }
-        blacklisted_titles = ["grill_me", "run_grill_me", "test_grill_me", "powershell", "cmd.exe"]
+        blacklisted_titles = [
+            "grill_me", "run_grill_me", "test_grill_me", "powershell", "cmd.exe",
+            "run_all_steps", "run_step1", "run_step2", "run_step3"
+        ]
         excludes = blacklisted_titles + (exclude_terms or [])
 
         # Distinguish between default search vs user-specified custom filter
