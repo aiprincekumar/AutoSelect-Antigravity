@@ -379,6 +379,8 @@ class GrillMeAutomator:
         """
         Tier 1 CDP Execution: Uses Antigravity Chrome DevTools Protocol WebSocket
         for 100% precision DOM option selection and Continue/Submit progression.
+        Completely dynamic for ANY N (1, 2, 3, 4, 5, 6... N), with reactive polling,
+        disabled-state verification, and graceful multi-question wizard advancement.
         """
         cdp = AntigravityCDPClient()
         if not cdp.is_available():
@@ -399,7 +401,17 @@ class GrillMeAutomator:
             if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
                 self.prepare_target_window()
 
-            # 3. Dynamic Question Progression Loop
+            # 3. Synchronize question count with live DOM state if card is on screen
+            live_status = cdp.get_questionnaire_status()
+            if live_status.get("has_card"):
+                live_total = live_status.get("total_questions", 1)
+                if live_total > total_questions:
+                    logger.info(f"Live DOM reports {live_total} total questions (state had {total_questions}). Dynamically adapting...")
+                    total_questions = live_total
+                    while len(opts) < total_questions:
+                        opts.append(str(self.option))
+
+            # 4. Dynamic Question Progression Loop (1..N)
             for q_idx in range(1, total_questions + 1):
                 opt_str = opts[q_idx - 1]
                 try:
@@ -408,18 +420,30 @@ class GrillMeAutomator:
                     opt_num = 1
                 is_last = (q_idx == total_questions)
 
+                # Wait for question widget to be ready in DOM (up to 3.0s)
+                ready = cdp.wait_for_question(expected_question=q_idx, timeout=3.0)
+                if not ready:
+                    logger.warning(f"CDP: Question {q_idx}/{total_questions} not ready in DOM, attempting selection anyway...")
+
                 logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt_num}...")
                 if self.dry_run:
                     logger.info(f"  [DRY RUN] Would select option {opt_num} and submit.")
                     continue
 
-                # Select Option
-                selected = cdp.select_option(opt_num)
+                # Select Option with dynamic retry
+                selected = False
+                for attempt in range(3):
+                    selected = cdp.select_option(opt_num)
+                    if selected:
+                        break
+                    time.sleep(0.15)
+
                 if not selected:
                     logger.warning(f"CDP could not find label for option {opt_num}, falling back to keystrokes...")
                     return False
 
-                time.sleep(max(0.2, self.hold_delay))
+                # Settle delay for React state update
+                time.sleep(max(0.15, self.hold_delay))
 
                 # Continue / Submit Gate
                 if not self.skip_enter:
@@ -428,15 +452,28 @@ class GrillMeAutomator:
                     else:
                         logger.info(f"[Question {q_idx}/{total_questions}] Advancing to Question {q_idx + 1} ([Continue ↵])...")
 
-                    submitted = cdp.click_continue_or_submit()
+                    # Wait for button to become enabled after option selection
+                    cdp.wait_for_button_enabled(timeout=2.0)
+
+                    submitted = False
+                    for attempt in range(3):
+                        submitted = cdp.click_continue_or_submit()
+                        if submitted:
+                            break
+                        time.sleep(0.12)
+
                     if not submitted:
                         # Fallback to Enter keystroke if button click didn't trigger
                         logger.debug("Continue button click returned false, sending native VK_RETURN...")
                         send_single_key(VK_RETURN, hold_delay=self.hold_delay)
 
-                    # Transition delay allowing UI wizard animation to next question
-                    transition_delay = max(0.4, self.step_delay)
-                    time.sleep(transition_delay)
+                    # Dynamic wizard progression wait
+                    cdp.wait_for_advance_or_close(
+                        previous_question=q_idx,
+                        is_last=is_last,
+                        timeout=max(3.0, self.step_delay * 3)
+                    )
+                    time.sleep(max(0.2, self.step_delay))
                 else:
                     logger.info(f"[Question {q_idx}/{total_questions}] Skipping confirmation per --skip-enter flag.")
 

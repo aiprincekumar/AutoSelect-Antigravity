@@ -162,11 +162,9 @@ class PendingGrillMeChat:
     is_multi_question: bool = False
 
     def __post_init__(self):
-        if not self.total_questions_count and self.questions:
+        if self.questions:
             self.total_questions_count = len(self.questions)
-        elif not self.total_questions_count:
-            self.total_questions_count = len(self.questions)
-        self.is_multi_question = self.total_questions_count > 1
+        self.is_multi_question = (self.total_questions_count > 1)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -223,7 +221,10 @@ class GrillMeDetector:
         for convo_dir in entries:
             cid = convo_dir.name
             logs_dir = convo_dir / ".system_generated" / "logs"
-            transcript_path = logs_dir / "transcript.jsonl"
+            # Prioritize transcript_full.jsonl to avoid tool_calls truncation on large questionnaires (N >= 4)
+            full_transcript = logs_dir / "transcript_full.jsonl"
+            compact_transcript = logs_dir / "transcript.jsonl"
+            transcript_path = full_transcript if full_transcript.is_file() else compact_transcript
             if not transcript_path.is_file():
                 continue
 
@@ -325,13 +326,34 @@ class GrillMeDetector:
 
     def _extract_question_payloads(self, args: Dict[str, Any]) -> List[QuestionPayload]:
         res: List[QuestionPayload] = []
-        raw_questions = args.get("questions", [])
+        raw_questions = args.get("questions")
 
+        # 1. Parse stringified JSON if needed (support strict=False for multiline Hindi/Unicode strings)
         if isinstance(raw_questions, str):
             try:
-                raw_questions = json.loads(raw_questions)
+                raw_questions = json.loads(raw_questions, strict=False)
             except Exception:
-                raw_questions = []
+                try:
+                    # Attempt unescaping if stringified with extra quotes or raw escapes
+                    cleaned = raw_questions.encode("utf-8").decode("unicode_escape", errors="ignore")
+                    raw_questions = json.loads(cleaned, strict=False)
+                except Exception:
+                    raw_questions = []
+
+        # 2. Support single-question direct args format: {"question": "...", "options": [...]}
+        if not raw_questions and ("question" in args or "options" in args):
+            single_q = args.get("question", "Question 1")
+            single_opts = args.get("options", [])
+            if isinstance(single_opts, str):
+                try:
+                    single_opts = json.loads(single_opts, strict=False)
+                except Exception:
+                    single_opts = [single_opts]
+            raw_questions = [{
+                "question": single_q,
+                "options": single_opts,
+                "is_multi_select": bool(args.get("is_multi_select", False))
+            }]
 
         if not isinstance(raw_questions, list):
             raw_questions = [raw_questions] if isinstance(raw_questions, dict) else []
@@ -339,8 +361,13 @@ class GrillMeDetector:
         for q_idx, q in enumerate(raw_questions, start=1):
             if not isinstance(q, dict):
                 continue
-            q_text = q.get("question", f"Question {q_idx}").strip()
+            q_text = str(q.get("question", f"Question {q_idx}")).strip()
             raw_options = q.get("options", [])
+            if isinstance(raw_options, str):
+                try:
+                    raw_options = json.loads(raw_options, strict=False)
+                except Exception:
+                    raw_options = [raw_options]
             options = [str(opt).strip() for opt in raw_options if str(opt).strip()]
             multi = bool(q.get("is_multi_select", False))
 

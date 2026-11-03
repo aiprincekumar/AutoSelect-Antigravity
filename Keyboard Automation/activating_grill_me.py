@@ -277,11 +277,9 @@ class PendingGrillMeChat:
     is_multi_question: bool = False
 
     def __post_init__(self):
-        if not self.total_questions_count and self.questions:
+        if self.questions:
             self.total_questions_count = len(self.questions)
-        elif not self.total_questions_count:
-            self.total_questions_count = len(self.questions)
-        self.is_multi_question = self.total_questions_count > 1
+        self.is_multi_question = (self.total_questions_count > 1)
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -374,12 +372,12 @@ class GrillMeDetector:
 
         for cdir in subdirs:
             cid = cdir.name
-            transcript_file = cdir / ".system_generated" / "logs" / "transcript.jsonl"
+            # Prioritize transcript_full.jsonl to prevent truncation on large questionnaires (N >= 4)
+            full_file = cdir / ".system_generated" / "logs" / "transcript_full.jsonl"
+            compact_file = cdir / ".system_generated" / "logs" / "transcript.jsonl"
+            transcript_file = full_file if full_file.is_file() else compact_file
             if not transcript_file.is_file():
-                # Check fallback transcript_full.jsonl
-                transcript_file = cdir / ".system_generated" / "logs" / "transcript_full.jsonl"
-                if not transcript_file.is_file():
-                    continue
+                continue
 
             pending = self._parse_conversation_transcript(cid, transcript_file)
             if pending:
@@ -474,14 +472,34 @@ class GrillMeDetector:
 
     def _extract_question_payloads(self, args: Dict[str, Any]) -> List[QuestionPayload]:
         """Extract structured QuestionPayload instances from raw tool arguments."""
-        questions_raw = args.get("questions", [])
+        questions_raw = args.get("questions")
 
+        # 1. Parse stringified JSON if needed (support strict=False for multiline Hindi/Unicode strings)
         if isinstance(questions_raw, str):
             try:
-                questions_raw = json.loads(questions_raw)
-            except Exception as e:
-                logger.debug("Failed to decode JSON string questions: %s", e)
-                questions_raw = []
+                questions_raw = json.loads(questions_raw, strict=False)
+            except Exception:
+                try:
+                    cleaned = questions_raw.encode("utf-8").decode("unicode_escape", errors="ignore")
+                    questions_raw = json.loads(cleaned, strict=False)
+                except Exception as e:
+                    logger.debug("Failed to decode JSON string questions: %s", e)
+                    questions_raw = []
+
+        # 2. Support single-question direct args format: {"question": "...", "options": [...]}
+        if not questions_raw and ("question" in args or "options" in args):
+            single_q = args.get("question", "Question 1")
+            single_opts = args.get("options", [])
+            if isinstance(single_opts, str):
+                try:
+                    single_opts = json.loads(single_opts, strict=False)
+                except Exception:
+                    single_opts = [single_opts]
+            questions_raw = [{
+                "question": single_q,
+                "options": single_opts,
+                "is_multi_select": bool(args.get("is_multi_select", False))
+            }]
 
         if not isinstance(questions_raw, list):
             questions_raw = [questions_raw] if isinstance(questions_raw, dict) else []
@@ -492,6 +510,11 @@ class GrillMeDetector:
                 continue
             q_text = str(item.get("question", f"Question {idx}")).strip()
             opts_raw = item.get("options", [])
+            if isinstance(opts_raw, str):
+                try:
+                    opts_raw = json.loads(opts_raw, strict=False)
+                except Exception:
+                    opts_raw = [opts_raw]
             options = [str(opt).strip() for opt in opts_raw if str(opt).strip()]
             is_multi = bool(item.get("is_multi_select", False))
 

@@ -3,87 +3,108 @@
   "data": {
     "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
     "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...",
-    "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multiple question at once",
-    "selected_at": "2026-11-02T23:27:06.226814+00:00",
+    "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 4 multiple question at once",
+    "selected_at": "2026-11-03T00:25:40.662657+00:00",
     "status": "READY_FOR_GUI_SELECTION",
-    "questions_count": 3,
-    "total_questions_count": 3,
+    "questions_count": 4,
+    "total_questions_count": 4,
     "is_multi_question": true,
     "questions": [
       {
         "question_index": 1,
-        "question": "प्रोजेक्ट के लिए आप कौन सा आर्किटेक्चर पैटर्न चुनना चाहते हैं?",
+        "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य उद्देश्य क्या है?",
         "options": [
-          "(Recommended) Microservices Architecture (Decoupled, scalable modules)",
-          "Monolithic Architecture (Single codebase, simplified deployment)",
-          "Serverless Architecture (Event-driven, cloud functions)"
+          "(Recommended) ऑटोमेटेड टेस्ट सुइट चलाना (यूनिट और इंटीग्रेशन टेस्ट्स)",
+          "डेटा पाइपलाइन या माइग्रेशन स्क्रिप्ट का सत्यापन",
+          "बिल्ड और पैकेजिंग वर्कफ़्लो की जांच",
+          "परफॉरमेंस और लोड बेंचमार्किंग"
         ],
         "is_multi_select": false,
         "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) Microservices Architecture (Decoupled, scalable modules)"
+        "recommended_option_text": "(Recommended) ऑटोमेटेड टेस्ट सुइट चलाना (यूनिट और इंटीग्रेशन टेस्ट्स)"
       },
       {
         "question_index": 2,
-        "question": "प्रोजेक्ट में कौन-कौन से मुख्य फीचर्स और मॉड्यूल शामिल करने हैं?",
+        "question": "[Grill-Me डेमो 2/4] टेस्ट फेल होने पर एरर हैंडलिंग की नीति क्या होनी चाहिए?",
         "options": [
-          "(Recommended) User Authentication & RBAC (Role-Based Access Control)",
-          "Payment Gateway Integration (Stripe / Razorpay)",
-          "Real-time Telemetry & Structured Logging (Dept 14)",
-          "Automated CI/CD Pipeline & Health Check Gates"
-        ],
-        "is_multi_select": true,
-        "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) User Authentication & RBAC (Role-Based Access Control)"
-      },
-      {
-        "question_index": 3,
-        "question": "डिप्लॉयमेंट और एग्जीक्यूशन एनवायरनमेंट क्या रहेगा?",
-        "options": [
-          "(Recommended) Docker Container + GitHub Actions CI/CD",
-          "Local Development Server (Vite / Node.js)",
-          "Cloud Staging (Vercel / AWS / GCP)"
+          "(Recommended) तुरंत रोकें और डायग्नोस्टिक लॉग दें (Fail-Fast)",
+          "शेष टेस्ट्स जारी रखें और अंत में कंबाइन्ड रिपोर्ट दें (Continue on Error)",
+          "फेल हुए टेस्ट्स को 1 बार ऑटोमैटिक री-ट्राई करें (Auto-Retry)"
         ],
         "is_multi_select": false,
         "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) Docker Container + GitHub Actions CI/CD"
+        "recommended_option_text": "(Recommended) तुरंत रोकें और डायग्नोस्टिक लॉग दें (Fail-Fast)"
+      },
+      {
+        "question_index": 3,
+        "question": "[Grill-Me डेमो 3/4] कंकरेंसी और पैरेललिज्म का स्तर क्या होना चाहिए?",
+        "options": [
+          "(Recommended) ऑटो-डिटेक्ट CPU कोर (संतुलित पैरेलल एग्जीक्यूशन)",
+          "सिंगल-थ्रेडेड (सीक्वेंशियल, डिबगिंग के लिए सुरक्षित)",
+          "हाई-कंकरेंसी (मैक्सिमम पैरेललिज्म, स्ट्रेस टेस्ट)"
+        ],
+        "is_multi_select": false,
+        "recommended_option_index": 1,
+        "recommended_option_text": "(Recommended) ऑटो-डिटेक्ट CPU कोर (संतुलित पैरेलल एग्जीक्यूशन)"
+      },
+      {
+        "question_index": 4,
+        "question": "[Grill-Me डेमो 4/4] टेम्परेरी फाइल्स और टेस्ट आर्टिफैक्ट्स का क्लीनअप व्यवहार कैसा रहे?",
+        "options": [
+          "(Recommended) टेस्ट के बाद सभी टेम्परेरी फाइल्स ऑटो-क्लीन करें (Clean State)",
+          "डिबगिंग के लिए टेम्परेरी आर्टिफैक्ट्स और लॉग्स सुरक्षित रखें (Retain Logs)",
+          "केवल फेल हुए केसेस का डेटा प्रिजर्व करें (Preserve Failures Only)"
+        ],
+        "is_multi_select": false,
+        "recommended_option_index": 1,
+        "recommended_option_text": "(Recommended) टेस्ट के बाद सभी टेम्परेरी फाइल्स ऑटो-क्लीन करें (Clean State)"
       }
     ],
     "selections": [
       {
         "question_index": 1,
-        "question": "प्रोजेक्ट के लिए आप कौन सा आर्किटेक्चर पैटर्न चुनना चाहते हैं?",
+        "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य उद्देश्य क्या है?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) Microservices Architecture (Decoupled, scalable modules)",
+        "selected_option_text": "(Recommended) ऑटोमेटेड टेस्ट सुइट चलाना (यूनिट और इंटीग्रेशन टेस्ट्स)",
+        "is_multi_select": false,
+        "total_options": 4,
+        "is_recommended": true
+      },
+      {
+        "question_index": 2,
+        "question": "[Grill-Me डेमो 2/4] टेस्ट फेल होने पर एरर हैंडलिंग की नीति क्या होनी चाहिए?",
+        "selected_option_index": 1,
+        "selected_option_text": "(Recommended) तुरंत रोकें और डायग्नोस्टिक लॉग दें (Fail-Fast)",
         "is_multi_select": false,
         "total_options": 3,
         "is_recommended": true
       },
       {
-        "question_index": 2,
-        "question": "प्रोजेक्ट में कौन-कौन से मुख्य फीचर्स और मॉड्यूल शामिल करने हैं?",
+        "question_index": 3,
+        "question": "[Grill-Me डेमो 3/4] कंकरेंसी और पैरेललिज्म का स्तर क्या होना चाहिए?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) User Authentication & RBAC (Role-Based Access Control)",
-        "is_multi_select": true,
-        "total_options": 4,
+        "selected_option_text": "(Recommended) ऑटो-डिटेक्ट CPU कोर (संतुलित पैरेलल एग्जीक्यूशन)",
+        "is_multi_select": false,
+        "total_options": 3,
         "is_recommended": true
       },
       {
-        "question_index": 3,
-        "question": "डिप्लॉयमेंट और एग्जीक्यूशन एनवायरनमेंट क्या रहेगा?",
+        "question_index": 4,
+        "question": "[Grill-Me डेमो 4/4] टेम्परेरी फाइल्स और टेस्ट आर्टिफैक्ट्स का क्लीनअप व्यवहार कैसा रहे?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) Docker Container + GitHub Actions CI/CD",
+        "selected_option_text": "(Recommended) टेस्ट के बाद सभी टेम्परेरी फाइल्स ऑटो-क्लीन करें (Clean State)",
         "is_multi_select": false,
         "total_options": 3,
         "is_recommended": true
       }
     ],
     "window_hwnd": 197310,
-    "window_title": "Fixing Npm Init Directory...",
+    "window_title": "Install Dbu6 From GitHub ...",
     "window_focused": true,
     "dry_run": true
   },
   "meta": {
-    "timestamp": "2026-11-02T23:27:06.226814+00:00",
+    "timestamp": "2026-11-03T00:25:40.662657+00:00",
     "generator": "step1_find_and_focus.py (Dept 06 Architecture)"
   }
 }

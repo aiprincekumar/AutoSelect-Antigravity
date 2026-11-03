@@ -213,13 +213,35 @@ class AntigravityCDPClient:
         return bool(ok)
 
     def get_questionnaire_status(self) -> Dict[str, Any]:
-        """Returns live inspection of the questionnaire widget currently on screen."""
+        """
+        Returns live inspection of the questionnaire widget currently on screen.
+        Handles both Single-Question (N=1) and Multi-Question (N=2, 3, 4, 5... N) seamlessly.
+        """
         js = """
         (() => {
-            const continueBtn = document.querySelector('[data-testid="interaction-continue-button"]');
+            const card = document.querySelector('[data-testid="interaction-takeover-card"]')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.closest('div.border')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.parentElement?.parentElement;
+
+            let continueBtn = document.querySelector('[data-testid="interaction-continue-button"]')
+                           || document.querySelector('[data-testid="interaction-submit-button"]');
+            if (!continueBtn) {
+                continueBtn = Array.from(document.querySelectorAll('button')).find(b => {
+                    const t = (b.innerText || '').trim();
+                    return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                });
+            }
+
             const skipBtn = document.querySelector('[data-testid="interaction-skip-button"]');
             const headerText = document.querySelector('[data-testid="ask-question-header-text"]');
-            const labels = Array.from(document.querySelectorAll('label[for*="ask-opt"]'));
+
+            let labels = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
+            if (labels.length === 0) {
+                labels = Array.from(document.querySelectorAll('label[for*="ask-opt"]'));
+            }
+            if (labels.length === 0) {
+                labels = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
+            }
 
             let currentQ = 1;
             let totalQ = 1;
@@ -227,36 +249,80 @@ class AntigravityCDPClient:
             if (match) {
                 currentQ = parseInt(match[1]);
                 totalQ = parseInt(match[2]);
+            } else if (labels.length > 0) {
+                currentQ = 1;
+                totalQ = 1;
             }
 
+            const hasCard = !!card || !!continueBtn || !!skipBtn || labels.length > 0;
+            const btnDisabled = continueBtn ? (continueBtn.disabled || continueBtn.classList.contains('pointer-events-none')) : null;
+            const btnText = continueBtn ? continueBtn.innerText.replace(/\\n/g, ' ').trim() : null;
+
+            const inputs = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
+            const hasChecked = inputs.some(i => i.checked);
+
             return {
-                has_card: !!continueBtn || !!skipBtn || labels.length > 0,
+                has_card: hasCard,
                 current_question: currentQ,
                 total_questions: totalQ,
                 question_text: headerText ? headerText.innerText.trim().slice(0, 100) : null,
                 options_count: labels.length,
-                continue_btn_text: continueBtn ? continueBtn.innerText.replace(/\\n/g, ' ') : null,
-                continue_btn_disabled: continueBtn ? (continueBtn.disabled || continueBtn.classList.contains('pointer-events-none')) : null
+                has_checked_option: hasChecked,
+                continue_btn_text: btnText,
+                continue_btn_disabled: btnDisabled
             };
         })()
         """
         res = self.eval_js(js)
-        return res if isinstance(res, dict) else {"has_card": False, "current_question": 1, "total_questions": 1}
+        return res if isinstance(res, dict) else {
+            "has_card": False,
+            "current_question": 1,
+            "total_questions": 1,
+            "has_checked_option": False,
+            "continue_btn_disabled": None
+        }
 
     def select_option(self, option_index: int = 1) -> bool:
-        """Selects the specified 1-based option index in the visible questionnaire."""
+        """
+        Selects the specified 1-based option index in the visible questionnaire.
+        Dispatches click, pointer events, and change event to update React state immediately.
+        """
         opt_idx = max(0, option_index - 1)
         js = f"""
         (() => {{
-            const labels = Array.from(document.querySelectorAll('label[for*="ask-opt"]'));
-            if (labels.length > {opt_idx}) {{
-                const target = labels[{opt_idx}];
+            let options = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
+            if (options.length === 0) {{
+                options = Array.from(document.querySelectorAll('label[for*="ask-opt"]'));
+            }}
+            if (options.length === 0) {{
+                options = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
+            }}
+
+            if (options.length > {opt_idx}) {{
+                const target = options[{opt_idx}];
                 target.scrollIntoView({{ block: 'nearest' }});
-                target.click();
-                const input = target.querySelector('input');
-                if (input && !input.checked) {{
-                    input.click();
+
+                // Find associated radio input
+                let input = null;
+                if (target.tagName === 'INPUT') {{
+                    input = target;
+                }} else {{
+                    input = target.querySelector('input') || document.getElementById(target.getAttribute('for'));
                 }}
+
+                if (input) {{
+                    input.checked = true;
+                    input.dispatchEvent(new Event('input', {{ bubbles: true }}));
+                    input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                }}
+
+                target.click();
+                const opts = {{ bubbles: true, cancelable: true, view: window, buttons: 1 }};
+                target.dispatchEvent(new PointerEvent('pointerdown', opts));
+                target.dispatchEvent(new MouseEvent('mousedown', opts));
+                target.dispatchEvent(new PointerEvent('pointerup', opts));
+                target.dispatchEvent(new MouseEvent('mouseup', opts));
+                target.dispatchEvent(new MouseEvent('click', opts));
                 return true;
             }}
             return false;
@@ -265,15 +331,76 @@ class AntigravityCDPClient:
         return bool(self.eval_js(js))
 
     def click_continue_or_submit(self) -> bool:
-        """Clicks the Continue / Submit confirmation button on the questionnaire."""
+        """
+        Clicks the Continue / Submit confirmation button on the questionnaire.
+        Synthesizes standard click + pointer events for React Radix/button handlers.
+        """
         js = """
         (() => {
-            const btn = document.querySelector('[data-testid="interaction-continue-button"]');
+            let btn = document.querySelector('[data-testid="interaction-continue-button"]')
+                   || document.querySelector('[data-testid="interaction-submit-button"]');
+            if (!btn) {
+                btn = Array.from(document.querySelectorAll('button')).find(b => {
+                    const t = (b.innerText || '').trim();
+                    return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                });
+            }
+
             if (btn && !btn.disabled && !btn.classList.contains('pointer-events-none')) {
+                btn.scrollIntoView({ block: 'nearest' });
                 btn.click();
+                const opts = { bubbles: true, cancelable: true, view: window, buttons: 1 };
+                btn.dispatchEvent(new PointerEvent('pointerdown', opts));
+                btn.dispatchEvent(new MouseEvent('mousedown', opts));
+                btn.dispatchEvent(new PointerEvent('pointerup', opts));
+                btn.dispatchEvent(new MouseEvent('mouseup', opts));
+                btn.dispatchEvent(new MouseEvent('click', opts));
                 return true;
             }
             return false;
         })()
         """
         return bool(self.eval_js(js))
+
+    def wait_for_question(self, expected_question: int = 1, timeout: float = 3.0) -> bool:
+        """Polls until the expected question number or card options are active in the DOM."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            st = self.get_questionnaire_status()
+            if st.get("has_card") and st.get("options_count", 0) > 0:
+                total_q = st.get("total_questions", 1)
+                curr_q = st.get("current_question", 1)
+                if total_q == 1 or curr_q == expected_question:
+                    return True
+            time.sleep(0.1)
+        return False
+
+    def wait_for_button_enabled(self, timeout: float = 2.5) -> bool:
+        """Polls until Continue/Submit button is found and no longer disabled."""
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            st = self.get_questionnaire_status()
+            disabled = st.get("continue_btn_disabled")
+            if disabled is False:
+                return True
+            time.sleep(0.08)
+        return False
+
+    def wait_for_advance_or_close(self, previous_question: int, is_last: bool, timeout: float = 3.5) -> bool:
+        """
+        Waits for UI wizard to transition after clicking Continue or Submit.
+        If is_last: waits for card to disappear.
+        If not is_last: waits for current_question to increment.
+        """
+        deadline = time.time() + timeout
+        while time.time() < deadline:
+            st = self.get_questionnaire_status()
+            if is_last:
+                if not st.get("has_card"):
+                    return True
+            else:
+                curr_q = st.get("current_question", 1)
+                if curr_q > previous_question:
+                    return True
+            time.sleep(0.1)
+        return True

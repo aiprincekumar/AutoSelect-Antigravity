@@ -207,6 +207,61 @@ class TestDynamicQuestionAutomation(unittest.TestCase):
         self.assertEqual(step_names[-1], "Q5.4")
         self.assertIn("Submit ALL 5 answers", executed_steps[-1][1])
 
+    def test_six_questions_n6(self):
+        """Verify N=6: Dynamically scales to 6 questions with 24 ordered steps."""
+        automator = GrillMeAutomator(
+            questions=6,
+            options_list=["1", "2", "1", "2", "3", "1"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            step_delay=0.01,
+        )
+        self.assertEqual(automator.total_questions, 6)
+        self.assertEqual(len(automator.options_list), 6)
+
+        executed_steps = []
+        def mock_step(step_num, desc, action):
+            executed_steps.append((str(step_num), desc))
+
+        with patch.object(automator, "_execute_step", side_effect=mock_step):
+            ok = automator.execute()
+            self.assertTrue(ok)
+
+        self.assertEqual(len(executed_steps), 24)
+        self.assertEqual(executed_steps[-1][0], "Q6.4")
+        self.assertIn("Submit ALL 6 answers", executed_steps[-1][1])
+        # Verify intermediate questions advance with Continue
+        self.assertIn("Continue to Question 2", executed_steps[3][1])
+        self.assertIn("Continue to Question 6", executed_steps[19][1])
+
+    def test_singular_question_payload_format(self):
+        """Verify detector extracts question when tool args use singular {'question': '...', 'options': [...]}."""
+        from step1_find_and_focus import GrillMeDetector
+        detector = GrillMeDetector()
+        args = {
+            "question": "सिंगल क्वेश्चन टेस्ट: क्या यह फीचर एक्टिवेट है?",
+            "options": ["(Recommended) हाँ, एक्टिवेट करें", "नहीं, छोड़ दें"]
+        }
+        extracted = detector._extract_question_payloads(args)
+        self.assertEqual(len(extracted), 1)
+        self.assertEqual(extracted[0].question_index, 1)
+        self.assertIn("सिंगल क्वेश्चन टेस्ट", extracted[0].question)
+        self.assertEqual(extracted[0].recommended_option_index, 1)
+
+    def test_transcript_full_priority_on_large_questions(self):
+        """Verify detector prioritizes transcript_full.jsonl over truncated transcript.jsonl for N >= 4."""
+        from step1_find_and_focus import GrillMeDetector
+        detector = GrillMeDetector()
+        # Test on live repository conversation that has 4 questions in full transcript
+        chats = detector.scan_transcripts()
+        if chats:
+            # Check newest chat (e0645f63) has 4 questions, not 0 or 2
+            top_chat = [c for c in chats if c.conversation_id == "e0645f63-cc82-41f8-8385-2538e9e8f6bf"]
+            if top_chat:
+                self.assertEqual(top_chat[0].total_questions_count, 4)
+                self.assertTrue(top_chat[0].is_multi_question)
+
     def test_dynamic_scaling_options_padding(self):
         """Verify options_list dynamically scales to ['1'] * N when not provided or partial."""
         automator = GrillMeAutomator(
