@@ -7,12 +7,11 @@ title Step 0: AntiGravity Detector Production - AutoSelect-Commander
 :: Step 0: AntiGravity Detector - Production Runner (5-Minute Polling)
 :: ============================================================================
 :: Script: step0_antigravity_detector_prod.py
-:: Directory: step_0_antigravity_detector (Step 0 of 3)
+:: Directory: step_0_antigravity_detector (Step 0)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
 ::   Headless background daemon checking every 5 minutes (300 seconds) if Google
-::   Antigravity is running/open. When detected, automatically triggers Step 1
-::   (step_1_chat_identifier/step1_find_and_focus.py) and exits cleanly.
+::   Antigravity is running/open and whether pending Grill-Me chats exist.
 :: Environment: Dedicated, self-healing Keyboard Automation\.venv
 :: ============================================================================
 
@@ -56,7 +55,7 @@ echo ===========================================================================
 echo   Python Engine : %PYTHON_EXE%
 echo   Target Script : %STEP0_SCRIPT%
 echo   Polling Rate  : Every 5 minutes (300 seconds)
-echo   Target Pipeline : Steps 1 -^> 2 -^> 3 (and future Step 4)
+echo   Role          : Headless Two-Factor Status Monitor (Step 0)
 echo ============================================================================
 echo.
 echo [*] Starting silent background detection loop...
@@ -70,5 +69,5 @@ if not "%STEP0_EXIT%"=="0" (
 )
 
 echo.
-echo [SUCCESS] Step 0 finished and automation pipeline triggered successfully!
+echo [SUCCESS] Step 0 finished (trigger condition verified)!
 exit /b 0

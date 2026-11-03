@@ -36,7 +36,15 @@ from step4_reporting import (
     get_last_input_tick,
     watch_for_user_input,
 )
-from step_0_antigravity_detector.antigravity_detector_core import discover_pipeline_steps
+import importlib.util
+_ca_spec = importlib.util.spec_from_file_location(
+    "complete_automation",
+    str(_root_dir / "Complete Automation" / "complete_automation.py")
+)
+_ca_mod = importlib.util.module_from_spec(_ca_spec)
+sys.modules["complete_automation"] = _ca_mod
+_ca_spec.loader.exec_module(_ca_mod)
+discover_pipeline_steps = _ca_mod.discover_pipeline_steps
 
 
 class TestStep4Reporting(unittest.TestCase):

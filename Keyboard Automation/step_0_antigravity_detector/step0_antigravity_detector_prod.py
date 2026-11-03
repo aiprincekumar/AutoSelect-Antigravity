@@ -1,28 +1,26 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (प्रोडक्शन रनर - 5 मिनट इंटरवल एवं टू-फैक्टर ट्रिगर)
-Step 0 - AntiGravity Detector (Production Runner - 5-Minute Two-Factor Polling)
+स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (प्रोडक्शन रनर - 5 मिनट इंटरवल एवं टू-फैक्टर मॉनिटर)
+Step 0 - AntiGravity Detector (Production Runner - 5-Minute Status Monitor)
 ==============================================================================
-Pipeline Step: STEP 0 (AntiGravity Detector & Dynamic Pipeline Auto-Trigger)
-Part of: AutoSelect-Commander Automation Pipeline
-Workspace: Keyboard Automation (Step 0: Detector & Dynamic Pipeline Runner)
+Pipeline Step: STEP 0 (AntiGravity Detector & Two-Factor Status Monitor)
+Part of: AutoSelect-Commander Automation Suite
+Workspace: Keyboard Automation (Step 0: Detector & Status Monitor)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
-Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
+Standard: Department 06 (Backend & API Engineering) & Department 02 (Solution Architecture)
 
 Production Specifications:
-  1. Fully automatic & headless background execution:
-     - No questions, no popups/GUI windows, silent background operation.
+  1. Headless Background Status Monitor:
+     - Checks process and window status silently in background.
   2. Polling Interval:
      - Default 300 seconds (5 minutes).
-  3. Two-Factor Trigger:
+  3. Two-Factor Trigger Verification:
      - Factor 1: Is Google Anti-Gravity running/open?
      - Factor 2: Is there a pending Grill-Me chat requiring user input?
-     - Only when BOTH conditions match, automatically launches the full automation
-       pipeline (Steps 1 -> 2 -> 3, and Step 4 when available) as a detached background process.
   4. Execution Hygiene (Universal Rule 26):
-     - Immediately and cleanly exits with code 0 after the pipeline is triggered.
-     - Zero lingering background processes or zombies.
+     - Pure single responsibility: Detector & Status Monitor.
+     - Chaining of steps 1, 2, 3, 4 is decoupled and orchestrated by Complete Automation.
 """
 
 from __future__ import annotations
@@ -69,31 +67,6 @@ def parse_args():
         help="Polling interval in seconds between detection checks (default: 300.0s = 5 minutes)"
     )
     parser.add_argument(
-        "--step1-path",
-        default=None,
-        help="Custom path to Step 1 script (step1_find_and_focus.py)"
-    )
-    parser.add_argument(
-        "--step2-path",
-        default=None,
-        help="Custom path to Step 2 script (step2_gui_chat_select.py)"
-    )
-    parser.add_argument(
-        "--step3-path",
-        default=None,
-        help="Custom path to Step 3 script (step3_keyboard_automation.py)"
-    )
-    parser.add_argument(
-        "--step4-path",
-        default=None,
-        help="Custom path to Step 4 script (step4_reporting.py)"
-    )
-    parser.add_argument(
-        "--state-file",
-        default=None,
-        help="Custom path to target_chat.json state file"
-    )
-    parser.add_argument(
         "--log-file",
         default=str(_this_dir / "step0_production.log"),
         help="Path to production log file (default: step_0_antigravity_detector/step0_production.log)"
@@ -104,14 +77,9 @@ def parse_args():
         help="Run in visible interactive mode instead of silent headless mode"
     )
     parser.add_argument(
-        "--wait",
-        action="store_true",
-        help="Wait for pipeline completion instead of detached spawn-and-exit"
-    )
-    parser.add_argument(
         "--any-antigravity",
         action="store_true",
-        help="Legacy mode: trigger pipeline immediately on Antigravity open, without requiring pending Grill-Me chats"
+        help="Legacy mode: match trigger immediately on Antigravity open, without requiring pending Grill-Me chats"
     )
     return parser.parse_args()
 
@@ -127,23 +95,16 @@ def main():
         poll_interval=args.interval,
         headless=headless,
         verbose=not headless,
-        step1_script_path=args.step1_path,
-        step2_script_path=args.step2_path,
-        step3_script_path=args.step3_path,
-        step4_script_path=args.step4_path,
-        state_file_path=args.state_file,
         log_file_path=args.log_file,
         require_grill_me=require_grill_me,
     )
 
     result = detector.run_loop(
         poll_interval=args.interval,
-        auto_launch=True,
-        wait_for_pipeline=args.wait,
     )
 
     if result and result.trigger_matched:
-        # Detected and pipeline launched! Clean exit with code 0.
+        # Detected and trigger condition matched cleanly!
         sys.exit(0)
     else:
         # Loop interrupted or stopped cleanly
