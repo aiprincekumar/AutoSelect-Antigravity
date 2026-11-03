@@ -58,6 +58,21 @@ class TestDetectionResult(unittest.TestCase):
         self.assertEqual(envelope["data"]["detection_method"], "process_and_window")
         self.assertEqual(envelope["meta"]["step"], "step_0_antigravity_detector")
 
+    def test_detection_methods(self):
+        # Process only
+        r_proc = DetectionResult(is_detected=True, is_process_running=True, has_window=False)
+        self.assertEqual(r_proc.detection_method, "process_only")
+
+        # Window only
+        r_win = DetectionResult(is_detected=True, is_process_running=False, has_window=True)
+        self.assertEqual(r_win.detection_method, "window_only")
+
+        # Dict serialization
+        d = r_win.to_dict()
+        self.assertIsInstance(d, dict)
+        self.assertTrue(d["is_detected"])
+        self.assertTrue(d["has_window"])
+
 
 class TestAntiGravityDetector(unittest.TestCase):
     def setUp(self):
@@ -88,6 +103,44 @@ class TestAntiGravityDetector(unittest.TestCase):
         self.assertTrue(result.process_count > 0)
         self.assertTrue(len(result.pids) > 0)
         self.assertIn(result.detection_method, ["process_only", "process_and_window"])
+
+    def test_is_antigravity_open(self):
+        is_open = self.detector.is_antigravity_open()
+        self.assertIsInstance(is_open, bool)
+        self.assertTrue(is_open)
+
+    def test_stop_signal(self):
+        self.assertFalse(self.detector._stop_requested)
+        self.detector.stop()
+        self.assertTrue(self.detector._stop_requested)
+
+    def test_launch_step1_missing_script(self):
+        # Point to a nonexistent script
+        orig_script = self.detector.step1_script
+        try:
+            self.detector.step1_script = Path("nonexistent_step1.py")
+            ok, code, msg = self.detector.launch_step1()
+            self.assertFalse(ok)
+            self.assertEqual(code, 1)
+            self.assertIn("not found", msg)
+        finally:
+            self.detector.step1_script = orig_script
+
+    def test_run_loop_max_checks_no_auto_launch(self):
+        checks_recorded = []
+
+        def cb(num, res):
+            checks_recorded.append((num, res.is_detected))
+
+        res = self.detector.run_loop(
+            poll_interval=0.01,
+            max_checks=1,
+            auto_launch=False,
+            on_check_callback=cb
+        )
+        self.assertIsNotNone(res)
+        self.assertEqual(len(checks_recorded), 1)
+        self.assertEqual(checks_recorded[0][0], 1)
 
 
 if __name__ == "__main__":
