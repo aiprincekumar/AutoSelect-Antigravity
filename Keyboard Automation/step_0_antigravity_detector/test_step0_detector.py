@@ -443,12 +443,13 @@ class TestPipelineExecution(unittest.TestCase):
         mock_proc.returncode = 0
         mock_run.return_value = mock_proc
 
+        present_steps = [s for s in self.detector.discover_steps(include_future=True) if s.exists()]
         ok, code, msg, reports = self.detector.execute_pipeline(capture_output=True, settle_delay=0.0)
         self.assertTrue(ok)
         self.assertEqual(code, 0)
         self.assertIn("Pipeline completed successfully", msg)
-        self.assertEqual(len(reports), 3)
-        self.assertEqual([r["step_index"] for r in reports], [1, 2, 3])
+        self.assertEqual(len(reports), len(present_steps))
+        self.assertEqual([r["step_index"] for r in reports], [s.step_index for s in present_steps])
 
     @patch("subprocess.run")
     def test_execute_pipeline_step1_exit_code_10_cancels_remaining(self, mock_run):

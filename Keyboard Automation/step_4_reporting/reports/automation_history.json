@@ -1,0 +1,17 @@
+{
+  "success": true,
+  "data": {
+    "total_pipeline_runs": 0,
+    "total_questions_answered": 0,
+    "total_runtime_seconds": 0.0,
+    "total_unique_chats": 0,
+    "last_updated": "2026-11-03T20:55:02.447826+00:00",
+    "chats": {}
+  },
+  "meta": {
+    "timestamp": "2026-11-03T20:55:02.447826+00:00",
+    "step": "step_4_reporting",
+    "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
+    "format_version": "1.0.0"
+  }
+}

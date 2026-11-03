@@ -1,9 +1,9 @@
 @echo off
 setlocal enabledelayedexpansion
-title AutoSelect-Commander - Complete 3-Step Automation Pipeline (All Steps)
+title AutoSelect-Commander - Complete 4-Step Automation Pipeline (All Steps)
 
 :: ============================================================================
-:: AutoSelect-Commander - Complete 3-Step Pipeline Runner (Root Master Launcher)
+:: AutoSelect-Commander - Complete 4-Step Pipeline Runner (Root Master Launcher)
 :: ============================================================================
 :: Target: Antigravity AI Coding Agent Sessions
 :: Directory: AutoSelect-Commander \ Keyboard Automation (Root Master Launcher)
@@ -11,6 +11,7 @@ title AutoSelect-Commander - Complete 3-Step Automation Pipeline (All Steps)
 ::   - Step 1 (step_1_chat_identifier\step1_find_and_focus.py): Scan Transcripts, Identify Chat, Focus Window, Save State
 ::   - Step 2 (step_2_chat_and_focus\step2_gui_chat_select.py): CDP/DOM Chat Search, Smooth Glide, GUI Selection & Focus
 ::   - Step 3 (step_3_select_the_recommendation\step3_keyboard_automation.py): Keyboard Automation, Option Selection & Confirmation
+::   - Step 4 (step_4_reporting\step4_reporting.py): Reporting & Visual Dashboard (Two-Way Automation/Manual)
 :: Virtual Environment: Dedicated, self-healing Keyboard Automation\.venv
 :: UTF-8 code page configuration for accurate emoji and Unicode output
 :: ============================================================================
@@ -22,6 +23,7 @@ cd /d "%SCRIPT_DIR%"
 set "STEP1_SCRIPT=%SCRIPT_DIR%step_1_chat_identifier\step1_find_and_focus.py"
 set "STEP2_SCRIPT=%SCRIPT_DIR%step_2_chat_and_focus\step2_gui_chat_select.py"
 set "STEP3_SCRIPT=%SCRIPT_DIR%step_3_select_the_recommendation\step3_keyboard_automation.py"
+set "STEP4_SCRIPT=%SCRIPT_DIR%step_4_reporting\step4_reporting.py"
 set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
 
 :: 1. Dedicated Self-Healing Virtual Environment (.venv) Resolution
@@ -54,13 +56,14 @@ if errorlevel 1 (
 )
 
 echo ============================================================================
-echo   AUTOCONNECT / GRILL-ME 3-STEP PIPELINE RUNNER (ALL STEPS)
-echo   (1-Click Master Runner: Step 1 -^> Step 2 -^> Step 3)
+echo   AUTOCONNECT / GRILL-ME 4-STEP PIPELINE RUNNER (ALL STEPS)
+echo   (1-Click Master Runner: Step 1 -^> Step 2 -^> Step 3 -^> Step 4)
 echo ============================================================================
 echo   Python Engine : %PYTHON_EXE%
 echo   Step 1 Script : %STEP1_SCRIPT%
 echo   Step 2 Script : %STEP2_SCRIPT%
 echo   Step 3 Script : %STEP3_SCRIPT%
+echo   Step 4 Script : %STEP4_SCRIPT%
 echo   State File    : %STATE_FILE%
 echo ============================================================================
 echo.
@@ -115,13 +118,37 @@ set "STEP3_EXIT=%ERRORLEVEL%"
 if not "%STEP3_EXIT%"=="0" goto :STEP3_FAILED
 
 echo.
+echo [*] Step 3 completed successfully!
+echo [*] Settle delay (0.8s) before Reporting & Telemetry...
+ping 127.0.0.1 -n 2 >nul 2>nul
+
+:: 6. Execute Step 4: Reporting & Visual Dashboard
+echo.
+echo [*] [STEP 4 / 4] Recording Execution History & Scheduling Visual Dashboard...
+echo.
+
+if exist "%STEP4_SCRIPT%" (
+    "%PYTHON_EXE%" "%STEP4_SCRIPT%" --state-file "%STATE_FILE%" %*
+    set "STEP4_EXIT=!ERRORLEVEL!"
+    if not "!STEP4_EXIT!"=="0" (
+        echo [WARN] Step 4 reporting encountered warning (Exit Code: !STEP4_EXIT!).
+    ) else (
+        echo [*] Step 4 completed successfully. History stored in reports\automation_history.json.
+    )
+) else (
+    echo [*] Step 4 script not found, skipping reporting.
+)
+
+echo.
 echo ============================================================================
-echo    [PIPELINE SUCCESS] 3-STEP GRILL ME WORKFLOW FULLY COMPLETED!
+echo    [PIPELINE SUCCESS] 4-STEP GRILL ME WORKFLOW FULLY COMPLETED!
 echo ============================================================================
 echo   1. Pending Question Identified and State Saved to target_chat.json.
 echo   2. Antigravity Window Safely Maximized/Preserved and Focused.
 echo   3. Target Chat Selected via DevTools / DOM Precision Click.
 echo   4. Chat Input Pane Focused and Option Selected via Keyboard Automation.
+echo   5. Telemetry & Questions Recorded in reports\automation_history.json.
+echo   6. Visual Dashboard primed to appear 10s after physical user movement.
 echo ============================================================================
 goto :CLEAN_CLOSE
 
