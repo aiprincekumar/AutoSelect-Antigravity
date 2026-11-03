@@ -160,8 +160,11 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
             errors="replace"
         )
         self.assertEqual(proc.returncode, 0)
-        self.assertIn("DETECTION REPORT", proc.stdout)
-        self.assertIn("Google Antigravity", proc.stdout)
+        self.assertIn("ANTIGRAVITY STATUS & CHAT DASHBOARD", proc.stdout)
+        self.assertIn("कुल चैट्स (Total Chats)", proc.stdout)
+        self.assertIn("एंटी-ग्रेविटी स्थिति (Status)", proc.stdout)
+        self.assertIn("एक्टिव चैट्स (Active Chats)", proc.stdout)
+        self.assertIn("ग्रिल-मी पेंडिंग (Pending Question)", proc.stdout)
 
     def test_cli_json_envelope(self):
         py_exe = _root_dir / ".venv" / "Scripts" / "python.exe"
@@ -180,6 +183,45 @@ class TestStep0TestRunnerCLI(unittest.TestCase):
         data = json.loads(proc.stdout)
         self.assertTrue(data.get("success"))
         self.assertEqual(data.get("meta", {}).get("step"), "step_0_antigravity_detector")
+        self.assertIn("chat_stats", data.get("data", {}))
+        stats = data["data"]["chat_stats"]
+        self.assertIn("total_chats", stats)
+        self.assertIn("active_chats", stats)
+        self.assertIn("inactive_chats", stats)
+        self.assertIn("pending_grill_me_chats", stats)
+        self.assertIn("has_pending_grill_me", stats)
+
+    def test_get_antigravity_chat_stats(self):
+        from step0_antigravity_detector_test import get_antigravity_chat_stats
+        stats = get_antigravity_chat_stats()
+        self.assertIsInstance(stats, dict)
+        self.assertGreaterEqual(stats["total_chats"], 1)
+        self.assertGreaterEqual(stats["active_chats"], 0)
+        self.assertEqual(stats["total_chats"], stats["active_chats"] + stats["inactive_chats"])
+        self.assertIn("pending_grill_me_chats", stats)
+        self.assertIsInstance(stats["has_pending_grill_me"], bool)
+
+    def test_format_dashboard_box(self):
+        from step0_antigravity_detector_test import format_dashboard_box
+        box_open = format_dashboard_box(True, {
+            "total_chats": 90,
+            "active_chats": 12,
+            "inactive_chats": 78,
+            "pending_grill_me_chats": 1
+        })
+        self.assertIn("ANTIGRAVITY STATUS & CHAT DASHBOARD", box_open)
+        self.assertIn("खुला है / OPEN", box_open)
+        self.assertIn("90", box_open)
+        self.assertIn("हाँ / YES (1 चैट)", box_open)
+
+        box_closed = format_dashboard_box(False, {
+            "total_chats": 90,
+            "active_chats": 0,
+            "inactive_chats": 90,
+            "pending_grill_me_chats": 0
+        })
+        self.assertIn("बंद है / CLOSED", box_closed)
+        self.assertIn("नहीं / NO (0 चैट)", box_closed)
 
     def test_batch_file_no_pause_execution(self):
         bat_file = _this_dir / "run_step0_test.bat"

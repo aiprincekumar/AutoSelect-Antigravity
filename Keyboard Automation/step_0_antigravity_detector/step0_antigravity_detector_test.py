@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (टेस्टिंग रनर - 10 सेकंड टेलीमेट्री)
-Step 0 - AntiGravity Detector (Testing Runner - 10-Second Telemetry)
+स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (टेस्टिंग रनर - सिंपल क्लीन डैशबोर्ड)
+Step 0 - AntiGravity Detector (Testing Runner - Simple Clean Dashboard)
 ==================================================================
 Pipeline Step: STEP 0 (AntiGravity Detector & Step 1 Auto-Trigger)
 Part of: AutoSelect-Commander Automation Pipeline
@@ -10,16 +10,19 @@ Workspace: Keyboard Automation (Step 0 of 3)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 06 (Backend & API Engineering) & Universal Rule 15/26
 
-Testing Specifications:
-  1. Manual Inspection Runner:
-     - Polling interval: 10 seconds.
-     - Rich console telemetry displaying check iteration, UTC timestamp,
-       PIDs, process count, window title, HWND, and next check countdown.
-  2. Immediate Verification:
-     - When Antigravity is open, displays comprehensive detection details and
-       launches Step 1 (or performs dry-run verification if --no-launch is passed).
+Clean Dashboard Specifications:
+  1. Ultra-clean, human-readable numbers-focused console dashboard:
+     - AntiGravity Open/Closed status
+     - Total chats count in brain storage
+     - Active chats count (current active session / recent activity)
+     - Inactive chats count (total - active)
+     - Pending Grill-Me (ask_question) count requiring user interaction
+  2. Zero technical clutter:
+     - No raw PIDs, HWNDs, window classes, or internal method traces in standard display
   3. Single-Shot Mode:
-     - Pass --once for an instant single check and immediate result display.
+     - Pass --once for immediate detection, metrics computation, and clean dashboard
+  4. Dept 06 JSON Envelope Compatibility:
+     - Pass --json to retain complete structured JSON response envelope with chat_stats
 """
 
 from __future__ import annotations
@@ -27,9 +30,11 @@ from __future__ import annotations
 import os
 import sys
 import json
+import time
 import argparse
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import List, Dict, Any, Optional, Tuple, Union
 
 # Ensure root directory and package are in sys.path
 _this_dir = Path(__file__).resolve().parent
@@ -57,10 +62,242 @@ from antigravity_detector_core import (
     DEFAULT_TEST_POLL_INTERVAL,
 )
 
+# Optional import of GrillMeDetector from step_1_chat_identifier
+try:
+    from step_1_chat_identifier.step1_find_and_focus import GrillMeDetector
+except ImportError:
+    GrillMeDetector = None
+
+DEFAULT_ACTIVE_HOURS = 12.0
+
+
+def resolve_brain_dir(explicit_path: Optional[Union[str, Path]] = None) -> Path:
+    """Resolve the Antigravity brain storage directory."""
+    if explicit_path:
+        p = Path(explicit_path).resolve()
+        if p.is_dir():
+            return p
+
+    env_brain = os.environ.get("ANTIGRAVITY_BRAIN_DIR")
+    if env_brain and Path(env_brain).is_dir():
+        return Path(env_brain).resolve()
+
+    candidates = [
+        Path(r"C:\Users\Atul Verma\.gemini\antigravity\brain"),
+        Path(os.path.expanduser(r"~\.gemini\antigravity\brain")),
+    ]
+    for c in candidates:
+        if c.is_dir():
+            return c.resolve()
+
+    return candidates[0]
+
+
+def _fallback_scan_grill_me(convo_dirs: List[Path]) -> List[str]:
+    """Fallback scanner for pending ask_question tool calls if GrillMeDetector is unavailable."""
+    pending: List[str] = []
+    for d in convo_dirs:
+        cid = d.name
+        logs_dir = d / ".system_generated" / "logs"
+        full_transcript = logs_dir / "transcript_full.jsonl"
+        compact_transcript = logs_dir / "transcript.jsonl"
+        transcript = full_transcript if full_transcript.is_file() else compact_transcript
+        if not transcript.is_file():
+            continue
+
+        lines: List[Dict[str, Any]] = []
+        try:
+            with open(transcript, "r", encoding="utf-8", errors="replace") as f:
+                for line in f:
+                    line = line.strip()
+                    if line:
+                        try:
+                            lines.append(json.loads(line))
+                        except Exception:
+                            continue
+        except Exception:
+            continue
+
+        if not lines:
+            continue
+
+        total_steps = len(lines)
+        for i in range(total_steps - 1, -1, -1):
+            step = lines[i]
+            tool_calls = step.get("tool_calls", [])
+            for tc in tool_calls:
+                name = tc.get("name") or tc.get("tool_name") or ""
+                if name == "ask_question":
+                    # Check if answered
+                    answered = False
+                    for j in range(i + 1, total_steps):
+                        sub = lines[j]
+                        stype = sub.get("type", "")
+                        if stype in ("USER_INPUT", "GENERIC"):
+                            answered = True
+                            break
+                        if stype == "PLANNER_RESPONSE" and sub.get("status") == "DONE":
+                            if not any((c.get("name") == "ask_question" or c.get("tool_name") == "ask_question") for c in sub.get("tool_calls", [])):
+                                answered = True
+                                break
+                    if not answered:
+                        pending.append(cid)
+                    break
+            if pending and pending[-1] == cid:
+                break
+    return pending
+
+
+def get_antigravity_chat_stats(
+    brain_dir: Optional[Union[str, Path]] = None,
+    active_hours: float = DEFAULT_ACTIVE_HOURS,
+    is_antigravity_running: bool = True
+) -> Dict[str, Any]:
+    """
+    Calculate exact chat telemetry metrics from Antigravity brain storage:
+      - total_chats: Total valid conversation directories
+      - active_chats: Conversations with recent activity (within active_hours)
+      - inactive_chats: total_chats - active_chats
+      - pending_grill_me_chats: Conversations where ask_question is waiting for user
+      - has_pending_grill_me: Boolean (True if pending_grill_me_chats > 0)
+    """
+    p = resolve_brain_dir(brain_dir)
+    if not p.is_dir():
+        return {
+            "total_chats": 0,
+            "active_chats": 0,
+            "inactive_chats": 0,
+            "pending_grill_me_chats": 0,
+            "has_pending_grill_me": False,
+            "brain_path": str(p),
+            "pending_chat_ids": [],
+        }
+
+    now = time.time()
+    valid_convos: List[Path] = []
+    active_count = 0
+
+    try:
+        entries = [e for e in p.iterdir() if e.is_dir() and not e.name.startswith(".") and e.name != "tempmediaStorage"]
+    except Exception:
+        entries = []
+
+    for d in entries:
+        t1 = d / ".system_generated" / "logs" / "transcript.jsonl"
+        t2 = d / ".system_generated" / "logs" / "transcript_full.jsonl"
+        if t1.is_file() or t2.is_file() or (d / ".system_generated").is_dir():
+            valid_convos.append(d)
+            mtimes = [f.stat().st_mtime for f in [t1, t2, d] if f.exists()]
+            if mtimes and (now - max(mtimes)) <= (active_hours * 3600.0):
+                active_count += 1
+
+    total_count = len(valid_convos)
+    inactive_count = max(0, total_count - active_count)
+
+    pending_ids: List[str] = []
+    try:
+        if GrillMeDetector is not None:
+            detector = GrillMeDetector(str(p))
+            pending_chats = detector.scan_transcripts()
+            pending_ids = [c.conversation_id for c in pending_chats]
+        else:
+            pending_ids = _fallback_scan_grill_me(valid_convos)
+    except Exception:
+        pending_ids = []
+
+    pending_count = len(pending_ids)
+
+    return {
+        "total_chats": total_count,
+        "active_chats": active_count,
+        "inactive_chats": inactive_count,
+        "pending_grill_me_chats": pending_count,
+        "has_pending_grill_me": (pending_count > 0),
+        "brain_path": str(p.resolve()),
+        "pending_chat_ids": pending_ids,
+    }
+
+
+def format_dashboard_box(
+    is_detected: bool,
+    chat_stats: Dict[str, Any]
+) -> str:
+    """
+    Render the ultra-clean, elegant, numbers-focused dashboard box.
+    """
+    status_str = "खुला है / OPEN (चालू)" if is_detected else "बंद है / CLOSED (0 active processes)"
+    total_str = str(chat_stats.get("total_chats", 0))
+    active_str = str(chat_stats.get("active_chats", 0))
+    inactive_str = str(chat_stats.get("inactive_chats", 0))
+
+    pending = chat_stats.get("pending_grill_me_chats", 0)
+    if pending > 0:
+        grill_me_str = f"हाँ / YES ({pending} चैट)"
+    else:
+        grill_me_str = "नहीं / NO (0 चैट)"
+
+    base_val_len = 23
+    val_len = max(len(status_str) + 2, len(grill_me_str) + 2, base_val_len)
+    extra = val_len - base_val_len
+    dash_count = 56 + extra
+
+    top = "┌" + ("─" * dash_count) + "┐"
+    div = "├" + ("─" * dash_count) + "┤"
+    bot = "└" + ("─" * dash_count) + "┘"
+
+    title = "🚀 ANTIGRAVITY STATUS & CHAT DASHBOARD"
+    needed_spaces = dash_count - len(title) - 1
+    left_sp = max(0, needed_spaces // 2)
+    right_sp = max(0, needed_spaces - left_sp)
+    header = "│" + (" " * left_sp) + title + (" " * right_sp) + "│"
+
+    r1 = f"│  • एंटी-ग्रेविटी स्थिति (Status)       : {status_str:<{val_len}}│"
+    r2 = f"│  • कुल चैट्स (Total Chats)             : {total_str:<{val_len}}│"
+    r3 = f"│  • एक्टिव चैट्स (Active Chats)         : {active_str:<{val_len}}│"
+    r4 = f"│  • इनएक्टिव चैट्स (Inactive Chats)     : {inactive_str:<{val_len}}│"
+    r5 = f"│  • ग्रिल-मी पेंडिंग (Pending Question) : {grill_me_str:<{val_len}}│"
+
+    return "\n".join(["", top, header, div, r1, r2, r3, r4, r5, bot, ""])
+
+
+def display_dashboard(
+    result: DetectionResult,
+    chat_stats: Optional[Dict[str, Any]] = None,
+    step1_result: Optional[Tuple[bool, int, str]] = None,
+    action_note: Optional[str] = None
+):
+    """Render the clean dashboard box and optional minimal Step 1 notification."""
+    if chat_stats is None:
+        chat_stats = get_antigravity_chat_stats(is_antigravity_running=result.is_detected)
+
+    box = format_dashboard_box(result.is_detected, chat_stats)
+    print(box)
+
+    if step1_result is not None:
+        ok, code, msg = step1_result
+        res_str = "सफल / SUCCESS ✅" if ok else "असफल / FAILED ❌"
+        print(f"  🚀 [स्टेप 1 स्थिति / STEP 1 STATUS] : {res_str} (Exit Code: {code})")
+        if not ok and msg:
+            print(f"     विवरण / Details: {msg}\n")
+        else:
+            print()
+    elif action_note and ("skipped" not in action_note.lower()):
+        print(f"  ℹ️ [सूचना / INFO] : {action_note}\n")
+
+
+def display_telemetry_banner(
+    result: DetectionResult,
+    step1_result: Optional[Tuple[bool, int, str]] = None,
+    action_note: Optional[str] = None,
+    chat_stats: Optional[Dict[str, Any]] = None
+):
+    """Backwards-compatible wrapper routing to the clean dashboard."""
+    display_dashboard(result, chat_stats=chat_stats, step1_result=step1_result, action_note=action_note)
+
 
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (टेस्टिंग - 10 सेकंड) / Step 0 - AntiGravity Detector (Testing - 10 Sec)"
+        description="स्टेप 0 - एंटी-ग्रेविटी डिटेक्टर (डैशबोर्ड टेस्ट रनर) / Step 0 - AntiGravity Detector (Dashboard Test Runner)"
     )
     parser.add_argument(
         "--interval",
@@ -97,6 +334,18 @@ def parse_args():
         help="Stop after N checks if Antigravity is not detected (default: infinite)"
     )
     parser.add_argument(
+        "--active-hours",
+        type=float,
+        default=DEFAULT_ACTIVE_HOURS,
+        help="Hours threshold to classify a conversation as active session (default: 12.0 hours)"
+    )
+    parser.add_argument(
+        "--brain-dir",
+        type=str,
+        default=None,
+        help="Custom path to Antigravity brain directory (default: auto-detected)"
+    )
+    parser.add_argument(
         "--json",
         action="store_true",
         help="Output the detection result as a Dept 06 JSON response envelope"
@@ -123,7 +372,6 @@ def should_pause(args: argparse.Namespace) -> bool:
       1. If --no-pause is passed -> False
       2. If --pause is explicitly passed -> True
       3. If running inside run_step0_test.bat (BATCH_PAUSE_HANDLED=1) -> False
-         (the batch runner will display the final banner and handle pause)
       4. If running in an interactive terminal session (TTY) -> True
       5. Otherwise (headless, non-interactive, pipe) -> False
     """
@@ -142,70 +390,16 @@ def wait_for_user(msg: Optional[str] = None):
     """Wait for user confirmation before exiting, keeping the terminal open."""
     if not (sys.stdin and hasattr(sys.stdin, "isatty") and sys.stdin.isatty()):
         return
-    print("\n" + "=" * 78)
+    print("=" * 60)
     if msg:
         print(f"  {msg}")
     print("  [विंडो खुली रखी गई है / Window is kept open for inspection]")
     print("  बाहर निकलने के लिए Enter दबाएं (Press Enter to exit)...")
-    print("=" * 78)
+    print("=" * 60)
     try:
         input()
     except (EOFError, KeyboardInterrupt):
         pass
-
-
-def display_telemetry_banner(
-    result: DetectionResult,
-    step1_result: Optional[Tuple[bool, int, str]] = None,
-    action_note: Optional[str] = None
-):
-    """Render a clean, structured, bilingual visual telemetry report for manual inspection."""
-    status_str = "चालू और सक्रिय / ACTIVE & RUNNING ✅" if result.is_detected else "बंद / NOT RUNNING ❌"
-    window_str = "हाँ / YES (विंडो मौजूद है)" if result.has_window else "नहीं / NO (बैकग्राउंड प्रोसेस केवल)"
-
-    method_map = {
-        "process_and_window": "प्रोसेस और जीयूआई विंडो दोनों (Process & GUI Window)",
-        "process_only": "बैकग्राउंड प्रोसेस केवल (Process Table Only)",
-        "window_only": "जीयूआई विंडो केवल (Window Hierarchy Only)",
-        "none": "कोई नहीं (None)",
-    }
-    method_str = method_map.get(result.detection_method, result.detection_method.upper())
-
-    print("\n" + "=" * 78)
-    print("  🎯 [निरीक्षण रिपोर्ट / DETECTION REPORT] Google Antigravity State Identified!")
-    print("=" * 78)
-    print(f"  • स्थिति / Status       : {status_str}")
-    print(f"  • पहचान विधि / Method   : {method_str}")
-    print(f"  • कुल प्रोसेस / Count    : {result.process_count} instances")
-    print(f"  • मुख्य PID / Main PID  : {result.main_pid if result.main_pid else 'N/A'}")
-    if result.pids:
-        pid_list_str = ', '.join(str(p) for p in result.pids[:8])
-        if len(result.pids) > 8:
-            pid_list_str += f" ... (+{len(result.pids) - 8} more)"
-        print(f"  • सभी PIDs / All PIDs   : {pid_list_str}")
-    if result.exe_path:
-        print(f"  • फ़ाइल पाथ / Binary    : {result.exe_path}")
-    print(f"  • विंडो स्थिति / Window  : {window_str}")
-    if result.has_window:
-        print(f"  • विंडो हैंडल / HWND   : {result.window_hwnd}")
-        print(f"  • विंडो शीर्षक / Title  : '{result.window_title}'")
-        if result.window_class:
-            print(f"  • विंडो क्लास / Class   : {result.window_class}")
-    print(f"  • समय / Timestamp (UTC) : {result.timestamp}")
-
-    # Step 1 Execution Details
-    if step1_result is not None:
-        ok, code, msg = step1_result
-        print("-" * 78)
-        print("  🚀 [स्टेप 1 ट्रिगर परिणाम / STEP 1 TRIGGER RESULT]")
-        print(f"  • निष्पादन स्थिति / Status : {'सफल / SUCCESS ✅' if ok else 'असफल / FAILED ❌'}")
-        print(f"  • एग्जिट कोड / Exit Code   : {code}")
-        print(f"  • विवरण / Details          : {msg}")
-    elif action_note:
-        print("-" * 78)
-        print(f"  ℹ️ [कार्रवाई / ACTION] : {action_note}")
-
-    print("=" * 78 + "\n")
 
 
 def on_check_telemetry(check_num: int, result: DetectionResult):
@@ -222,22 +416,21 @@ def main():
     detector = AntiGravityDetector(
         poll_interval=args.interval,
         headless=args.json,
-        verbose=not args.json,
+        verbose=False,
     )
 
     if args.once:
-        # Single-shot manual inspection
-        if not args.json:
-            print("[*] Performing single-shot Antigravity detection check...")
-            print("    (सिंगल-शॉट एंटी-ग्रेविटी डिटेक्शन जांच की जा रही है...)")
         result = detector.detect()
+        chat_stats = get_antigravity_chat_stats(
+            brain_dir=args.brain_dir,
+            active_hours=args.active_hours,
+            is_antigravity_running=result.is_detected
+        )
 
         step1_info = None
         action_note = None
 
         if result.is_detected and not args.no_launch:
-            if not args.json:
-                print("[*] Antigravity चालू है। Step 1 (find_and_focus) ट्रिगर किया जा रहा है...")
             ok, code, msg = detector.launch_step1(wait=args.wait)
             step1_info = (ok, code, msg)
             result.details["step1_result"] = {
@@ -245,15 +438,21 @@ def main():
                 "exit_code": code,
                 "message": msg
             }
-        elif result.is_detected and args.no_launch:
-            action_note = "Antigravity detected. (--no-launch passed: Step 1 trigger skipped / स्टेप 1 ट्रिगर छोड़ दिया गया)"
-        else:
-            action_note = "Antigravity is not currently running (एंटी-ग्रेविटी अभी नहीं चल रहा है)"
+        elif not result.is_detected:
+            action_note = "एंटी-ग्रेविटी अभी नहीं चल रहा है (Antigravity is not currently running)"
 
         if args.json:
-            print(json.dumps(result.to_json_envelope(), indent=2))
+            envelope = result.to_json_envelope()
+            envelope["data"]["chat_stats"] = chat_stats
+            envelope["data"]["details"]["chat_stats"] = chat_stats
+            print(json.dumps(envelope, indent=2))
         else:
-            display_telemetry_banner(result, step1_result=step1_info, action_note=action_note)
+            display_dashboard(
+                result,
+                chat_stats=chat_stats,
+                step1_result=step1_info,
+                action_note=action_note
+            )
 
         exit_code = 0
         if not result.is_detected:
@@ -266,7 +465,7 @@ def main():
 
         sys.exit(exit_code)
 
-    # Continuous 10-second polling runner
+    # Continuous polling runner
     auto_trigger = not args.no_launch
     result = detector.run_loop(
         poll_interval=args.interval,
@@ -276,6 +475,13 @@ def main():
         on_check_callback=on_check_telemetry,
     )
 
+    is_running = bool(result and result.is_detected)
+    chat_stats = get_antigravity_chat_stats(
+        brain_dir=args.brain_dir,
+        active_hours=args.active_hours,
+        is_antigravity_running=is_running
+    )
+
     step1_info = None
     action_note = None
 
@@ -283,13 +489,19 @@ def main():
         if result.details and "step1_result" in result.details:
             s1 = result.details["step1_result"]
             step1_info = (s1.get("success", False), s1.get("exit_code", 0), s1.get("message", ""))
-        elif args.no_launch:
-            action_note = "Antigravity detected. (--no-launch passed: Step 1 trigger skipped / स्टेप 1 छोड़ दिया गया)"
 
         if args.json:
-            print(json.dumps(result.to_json_envelope(), indent=2))
+            envelope = result.to_json_envelope()
+            envelope["data"]["chat_stats"] = chat_stats
+            envelope["data"]["details"]["chat_stats"] = chat_stats
+            print(json.dumps(envelope, indent=2))
         else:
-            display_telemetry_banner(result, step1_result=step1_info, action_note=action_note)
+            display_dashboard(
+                result,
+                chat_stats=chat_stats,
+                step1_result=step1_info,
+                action_note=action_note
+            )
 
         exit_code = 0
         if step1_info and not step1_info[0]:
@@ -302,12 +514,17 @@ def main():
     else:
         if args.json:
             dummy_res = DetectionResult(is_detected=False)
-            print(json.dumps(dummy_res.to_json_envelope(), indent=2))
+            envelope = dummy_res.to_json_envelope()
+            envelope["data"]["chat_stats"] = chat_stats
+            envelope["data"]["details"]["chat_stats"] = chat_stats
+            print(json.dumps(envelope, indent=2))
         else:
-            print("\n" + "=" * 78)
-            print("  ℹ️ [सूचना / INFO] पोलिंग बिना डिटेक्शन के समाप्त हुई।")
-            print("  Polling stopped without detecting Google Antigravity.")
-            print("=" * 78 + "\n")
+            dummy_res = DetectionResult(is_detected=False)
+            display_dashboard(
+                dummy_res,
+                chat_stats=chat_stats,
+                action_note="पोलिंग बिना डिटेक्शन के समाप्त हुई (Polling stopped without detecting Google Antigravity)."
+            )
 
         if pause_enabled:
             wait_for_user()
