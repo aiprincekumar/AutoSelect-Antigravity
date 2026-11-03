@@ -1,23 +1,26 @@
 @echo off
 setlocal enabledelayedexpansion
+title Step 3: Keyboard Automation Launcher - AutoSelect-Commander
 
 :: ============================================================================
-:: Activating Grill Me Chat in Antigravity - Step 2 Standalone Runner
+:: AutoSelect-Commander - Step 3: Keyboard Automation Standalone Runner
 :: ============================================================================
-:: Script: step2_gui_chat_select.py
-:: Workspace: AutoSelect-Commander \ Keyboard Automation (Step 2 of 3)
+:: Script: step3_keyboard_automation.py
+:: Directory: step_3_select_the_recommendation (Step 3 of 3)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
-::   Reads target chat state saved by Step 1, ensures window is foregrounded
-::   without restoring down, locates the conversation in the Antigravity GUI
-::   via Chrome DevTools Protocol / DOM glide, clicks it, and focuses the chat pane.
+::   Executes Step 3 of the AutoSelect-Commander pipeline:
+::   Automatically restores/maximizes Antigravity IDE window, bypasses OS
+::   foreground lock, injects Ctrl+L -> Shift+Tab -> Option -> Enter with
+::   support for dynamic multi-question quiz cards and safety abort gates.
 :: ============================================================================
 
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
-set "STEP2_SCRIPT=%SCRIPT_DIR%step2_gui_chat_select.py"
-set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
+cd /d "%SCRIPT_DIR%"
+set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+set "STEP3_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
 
 :: 1. Bulletproof Python Executable Resolution
 set "PYTHON_EXE="
@@ -26,8 +29,10 @@ if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
 ) else if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%USERPROFILE%\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.local\bin\python.exe" (
@@ -56,23 +61,25 @@ if errorlevel 1 (
 )
 
 echo ============================================================================
-echo   STEP 2: GUI CHAT SELECTION ^& CHAT PANE ACTIVATION
+echo    [STEP 3 / 3] KEYBOARD AUTOMATION ^& OPTION SELECTION (STANDALONE RUNNER)
 echo ============================================================================
 echo   Python Engine : %PYTHON_EXE%
-echo   Target Script : %STEP2_SCRIPT%
+echo   Target Script : %STEP3_SCRIPT%
 echo   Target State  : %STATE_FILE%
 echo ============================================================================
 echo.
 
-"%PYTHON_EXE%" "%STEP2_SCRIPT%" %*
-set "STEP2_EXIT=%ERRORLEVEL%"
-
-if not "%STEP2_EXIT%"=="0" (
-    echo.
-    echo [ERROR] Step 2 failed with exit code: %STEP2_EXIT%
-    exit /b %STEP2_EXIT%
-)
+"%PYTHON_EXE%" "%STEP3_SCRIPT%" --state-file "%STATE_FILE%" %*
+set "STEP3_EXIT=%ERRORLEVEL%"
 
 echo.
-echo [SUCCESS] Step 2 finished successfully!
-exit /b 0
+echo ============================================================================
+if "%STEP3_EXIT%"=="0" (
+    echo    [STEP 3 SUCCESS] Keyboard Automation completed successfully! [Exit: 0]
+) else (
+    echo   [!] [STEP 3 FAILED] Keyboard Automation encountered exit code: %STEP3_EXIT%
+)
+echo ============================================================================
+echo.
+
+exit /b %STEP3_EXIT%

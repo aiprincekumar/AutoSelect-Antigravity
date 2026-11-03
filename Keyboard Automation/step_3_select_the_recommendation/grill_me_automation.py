@@ -33,8 +33,11 @@ if hasattr(sys.stderr, "reconfigure"):
     except Exception:
         pass
 
-# Ensure the package directory is resolvable whether invoked from root or Keyboard Automation
+# Ensure the package and root directories are resolvable whether invoked from root or step subfolder
 _pkg_dir = Path(__file__).resolve().parent
+_root_dir = _pkg_dir.parent if _pkg_dir.name.startswith(("step_", "step-")) else _pkg_dir
+if str(_root_dir) not in sys.path:
+    sys.path.insert(0, str(_root_dir))
 if str(_pkg_dir) not in sys.path:
     sys.path.insert(0, str(_pkg_dir))
 

@@ -40,30 +40,48 @@ All three steps of the AutoSelect-Commander chat activation pipeline are unified
 
 ## 📁 File Topology & Runners Directory
 
-| File | Identity & Role | Step | Type |
-| :--- | :--- | :--- | :--- |
-| **`run_all_steps.bat`** | **1-Click Full Pipeline Runner:** Executes Step 1 -> Step 2 -> Step 3 end-to-end. | **1 + 2 + 3** | **MASTER RUNNER** |
-| **`run_activating_grill_me_with_automation.bat`** | Canonical complete 3-step batch launcher. | **1 + 2 + 3** | **MASTER RUNNER** |
-| **`step1_find_and_focus.py`** | **Step 1:** Scans transcripts, parses questions, maximizes window & writes `target_chat.json`. | **Step 1** | **PRIMARY SCRIPT** |
-| **`run_step1.bat`** | Quick 1-click shortcut runner for Step 1. | **Step 1** | **SHORTCUT** |
-| **`run_step1_find_and_focus.bat`** | Full standalone batch launcher for Step 1. | **Step 1** | **STEP RUNNER** |
-| **`step2_gui_chat_select.py`** | **Step 2:** CDP/DOM chat selection, smooth glide & chat pane focus (`Ctrl + L`). | **Step 2** | **PRIMARY SCRIPT** |
-| **`run_step2.bat`** | Quick 1-click shortcut runner for Step 2. | **Step 2** | **SHORTCUT** |
-| **`run_step2_gui_chat_select.bat`** | Full standalone batch launcher for Step 2. | **Step 2** | **STEP RUNNER** |
-| **`run_activating_grill_me.bat`** | Two-step runner executing Step 1 + Step 2. | **Step 1 + 2** | **MODULAR RUNNER** |
-| **`step3_keyboard_automation.py`** | **Step 3:** Keystroke automation, dynamic multi-question scaling & Enter submission. | **Step 3** | **PRIMARY SCRIPT** |
-| **`run_step3.bat`** | Quick 1-click shortcut runner for Step 3. | **Step 3** | **SHORTCUT** |
-| **`run_step3_keyboard_automation.bat`** | Full standalone batch launcher for Step 3. | **Step 3** | **STEP RUNNER** |
-| **`run_step3_keyboard_automation.ps1`**| PowerShell runner for Step 3 with parameter binding. | **Step 3** | **PS1 RUNNER** |
-| **`activating_grill_me.py`** | Master transcript parser & GUI activator engine. | **Master** | **UTILITY ENGINE** |
-| **`grill_me_automation.py`** | Backward-compatibility alias delegating to `step3_keyboard_automation.py`. | **Step 3** | **LEGACY ALIAS** |
-| **`run_grill_me.bat`** | Legacy alias launcher for Step 3. | **Step 3** | **LEGACY ALIAS** |
-| **`run_grill_me.ps1`** | Legacy PowerShell launcher for Step 3. | **Step 3** | **LEGACY ALIAS** |
-| **`target_chat.json`** | State file holding extracted question metadata, option choices, and conversation ID. | **State** | **PERSISTENCE** |
-| **`config.json`** | Configuration file for coordinate fallbacks and automation timing. | **Config** | **CONFIG** |
-| **`test_dynamic_questions.py`** | Automated unit & simulation test suite verifying multi-question scaling. | **Tests** | **TEST SUITE** |
-| **`keyboard_automation/`** | Modular internal engine (Win32 API, Input Injector, Window Manager, Automator, CLI). | **Engine** | **PACKAGE** |
-| **`archive/`** | Frozen certified reference archive. | **Archive** | **SNAPSHOT** |
+### 🏢 Root / Common Infrastructure (Shared by All Steps)
+| File / Folder | Role & Description | Type |
+| :--- | :--- | :--- |
+| **`target_chat.json`** | Shared state file holding extracted question metadata, option choices, and active conversation ID. | **COMMON STATE** |
+| **`run_all_steps.bat`** | **1-Click Full Pipeline Runner:** Executes Step 1 -> Step 2 -> Step 3 end-to-end. | **MASTER RUNNER** |
+| **`run_activating_grill_me_with_automation.bat`** | Canonical complete 3-step batch launcher coordinating all subfolders. | **MASTER RUNNER** |
+| **`run_activating_grill_me.bat`** | Two-step runner executing Step 1 + Step 2. | **MODULAR RUNNER** |
+| **`activating_grill_me.py`** | Master transcript parser & GUI activator engine. | **ORCHESTRATOR** |
+| **`config.json`** | Configuration file for coordinate fallbacks and automation timing. | **CONFIG** |
+| **`keyboard_automation/`** | Modular internal engine (Win32 API, Input Injector, Window Manager, Automator, CLI). | **SHARED ENGINE** |
+| **`prompts/`** | Architectural prompts and specifications. | **DOCUMENTATION** |
+
+---
+
+### 🔍 Step 1: Chat Identifier (`step_1_chat_identifier/`)
+| File | Role & Description | Type |
+| :--- | :--- | :--- |
+| **`step1_find_and_focus.py`** | Scans transcripts, parses questions, maximizes window & writes root `target_chat.json`. | **PRIMARY SCRIPT** |
+| **`run_step1.bat`** | Quick 1-click shortcut runner for Step 1. | **SHORTCUT** |
+| **`run_step1_find_and_focus.bat`** | Standalone batch launcher for Step 1 with auto-detection. | **STEP RUNNER** |
+
+---
+
+### 🖱️ Step 2: Chat and Focus (`step_2_chat_and_focus/`)
+| File | Role & Description | Type |
+| :--- | :--- | :--- |
+| **`step2_gui_chat_select.py`** | CDP/DOM chat selection, smooth glide & chat pane focus (`Ctrl + L`). | **PRIMARY SCRIPT** |
+| **`run_step2.bat`** | Quick 1-click shortcut runner for Step 2. | **SHORTCUT** |
+| **`run_step2_gui_chat_select.bat`** | Standalone batch launcher for Step 2 with auto-detection. | **STEP RUNNER** |
+
+---
+
+### ⌨️ Step 3: Select the Recommendation (`step_3_select_the_recommendation/`)
+| File | Role & Description | Type |
+| :--- | :--- | :--- |
+| **`step3_keyboard_automation.py`** | Keystroke automation, dynamic multi-question scaling & Enter submission. | **PRIMARY SCRIPT** |
+| **`run_step3.bat`** | Quick 1-click shortcut runner for Step 3. | **SHORTCUT** |
+| **`run_step3_keyboard_automation.bat`** | Standalone batch launcher for Step 3. | **STEP RUNNER** |
+| **`run_step3_keyboard_automation.ps1`**| PowerShell runner for Step 3 with parameter binding. | **PS1 RUNNER** |
+| **`grill_me_automation.py`** | Backward-compatibility alias delegating to `step3_keyboard_automation.py`. | **LEGACY ALIAS** |
+| **`run_grill_me.bat`** | Legacy alias launcher for Step 3. | **LEGACY ALIAS** |
+| **`run_grill_me.ps1`** | Legacy PowerShell launcher for Step 3. | **LEGACY ALIAS** |
 
 ---
 
@@ -82,46 +100,41 @@ run_all_steps.bat
 ```
 *(Or use `run_activating_grill_me_with_automation.bat`)*
 
-#### 🔍 2. Run Step 1 Standalone (Scan Transcripts & Focus Window)
+#### 🔍 2. Run Step 1 Standalone (Chat Identifier)
 ```cmd
-run_step1.bat
+step_1_chat_identifier\run_step1.bat
 ```
 
-#### 🖱️ 3. Run Step 2 Standalone (CDP / DOM GUI Chat Select)
+#### 🖱️ 3. Run Step 2 Standalone (Chat and Focus)
 ```cmd
-run_step2.bat
+step_2_chat_and_focus\run_step2.bat
 ```
 
-#### ⌨️ 4. Run Step 3 Standalone (Keyboard Keystroke Automation)
+#### ⌨️ 4. Run Step 3 Standalone (Select the Recommendation)
 ```cmd
-run_step3.bat
+step_3_select_the_recommendation\run_step3.bat
 ```
-*(Or specify options: `python step3_keyboard_automation.py -c 3 -o 1`)*
-
-#### 🧪 5. Run Verification Test Suite
-```cmd
-python test_dynamic_questions.py
-```
+*(Or specify options: `python step_3_select_the_recommendation\step3_keyboard_automation.py -c 3 -o 1`)*
 
 ---
 
 ## 🌟 Step-by-Step Technical Details
 
-### Step 1: Scan Transcripts & Focus Window (`step1_find_and_focus.py`)
+### Step 1: Scan Transcripts & Focus Window (`step_1_chat_identifier/step1_find_and_focus.py`)
 - Scans local Antigravity brain transcripts for pending `ask_question` tool calls.
 - Extracts `conversation_id`, question text, choices, recommended options, and timestamp.
-- Saves state into local `target_chat.json` adhering to Department 06 API JSON envelopes.
+- Saves state into root `target_chat.json` adhering to Department 06 API JSON envelopes.
 - Safely un-minimizes (`SW_RESTORE`) and maximizes (`SW_MAXIMIZE`) the Antigravity window without restoring down.
 
-### Step 2: GUI Chat Selection (`step2_gui_chat_select.py`)
-- Reads `conversation_id` from local `target_chat.json`.
+### Step 2: GUI Chat Selection (`step_2_chat_and_focus/step2_gui_chat_select.py`)
+- Reads `conversation_id` from root `target_chat.json`.
 - Connects to Antigravity internal DevTools port via Chrome DevTools Protocol (CDP WebSocket).
 - Locates sidebar chat item element via real-time DOM querying.
 - Glides mouse with smooth Bezier curve and clicks to select the conversation.
 - Dispatches `Ctrl + L` to bring focus directly into the chat input pane.
 
-### Step 3: Keyboard Automation (`step3_keyboard_automation.py`)
-- Automatically probes and detects questions from `target_chat.json`.
+### Step 3: Keyboard Automation (`step_3_select_the_recommendation/step3_keyboard_automation.py`)
+- Automatically probes and detects questions from root `target_chat.json`.
 - Injects native Windows `SendInput` / `keybd_event` sequence:
   - Step 1: `Ctrl + L` (Chat box focus)
   - Step 2: `Shift + Tab` (Navigate back to option list)

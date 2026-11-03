@@ -7,18 +7,18 @@ setlocal enabledelayedexpansion
 :: Target: Antigravity AI Coding Agent Sessions
 :: Directory: AutoSelect-Commander \ Keyboard Automation (Unified 3-Step Pipeline)
 :: Architecture:
-::   - Step 1 (step1_find_and_focus.py): Scan Transcripts, Identify Chat, Focus Window, Save State
-::   - Step 2 (step2_gui_chat_select.py): CDP/DOM Chat Search, Smooth Glide, GUI Selection & Focus
-::   - Step 3 (step3_keyboard_automation.py): Keyboard Automation, Option Selection & Confirmation
+::   - Step 1 (step_1_chat_identifier\step1_find_and_focus.py): Scan Transcripts, Identify Chat, Focus Window, Save State
+::   - Step 2 (step_2_chat_and_focus\step2_gui_chat_select.py): CDP/DOM Chat Search, Smooth Glide, GUI Selection & Focus
+::   - Step 3 (step_3_select_the_recommendation\step3_keyboard_automation.py): Keyboard Automation, Option Selection & Confirmation
 :: UTF-8 code page configuration for accurate emoji and Unicode output
 
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
-set "STEP1_SCRIPT=%SCRIPT_DIR%step1_find_and_focus.py"
-set "STEP2_SCRIPT=%SCRIPT_DIR%step2_gui_chat_select.py"
-set "STEP3_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
+set "STEP1_SCRIPT=%SCRIPT_DIR%step_1_chat_identifier\step1_find_and_focus.py"
+set "STEP2_SCRIPT=%SCRIPT_DIR%step_2_chat_and_focus\step2_gui_chat_select.py"
+set "STEP3_SCRIPT=%SCRIPT_DIR%step_3_select_the_recommendation\step3_keyboard_automation.py"
 set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
 
 :: 1. Bulletproof Python Executable Resolution
@@ -59,7 +59,7 @@ if errorlevel 1 (
 
 echo ============================================================================
 echo   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (Three-Step Pipeline Runner)
-echo   (3- :    + GUI   +  )
+echo   (3-Step Pipeline: Chat Identifier + Chat ^& Focus + Select Recommendation)
 echo ============================================================================
 echo   Python Engine : %PYTHON_EXE%
 echo   Step 1 Script : %STEP1_SCRIPT%

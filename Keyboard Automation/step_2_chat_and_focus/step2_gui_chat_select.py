@@ -35,6 +35,12 @@ from pathlib import Path
 from datetime import datetime, timezone
 from typing import Dict, Any, Optional, Tuple, List
 
+# Ensure root directory is resolvable in sys.path
+_this_dir = Path(__file__).resolve().parent
+_root_dir = _this_dir.parent if _this_dir.name.startswith(("step_", "step-")) else _this_dir
+if str(_root_dir) not in sys.path:
+    sys.path.insert(0, str(_root_dir))
+
 # Reconfigure stdout/stderr for proper UTF-8 handling on Windows
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -523,6 +529,30 @@ class AntigravityGUISelector:
             logger.debug("Key combo error: %s", e)
 
 
+def resolve_state_file_path(state_file: str) -> Tuple[Path, Path]:
+    """
+    Intelligently resolves target_chat.json and last_selection_state.json paths.
+    Prioritizes explicit paths, CWD, root workspace directory, then script directory.
+    """
+    p = Path(state_file)
+    if p.is_absolute():
+        target = p
+    else:
+        script_dir = Path(__file__).resolve().parent
+        root_dir = script_dir.parent if script_dir.name.startswith(("step_", "step-")) else script_dir
+        if (Path.cwd() / p).is_file():
+            target = (Path.cwd() / p).resolve()
+        elif (root_dir / p).is_file():
+            target = (root_dir / p).resolve()
+        elif (script_dir / p).is_file():
+            target = (script_dir / p).resolve()
+        else:
+            target = (root_dir / p).resolve()
+
+    legacy = target.parent / "last_selection_state.json"
+    return target, legacy
+
+
 # ============================================================================
 # Main Execution for Step 2
 # ============================================================================
@@ -533,9 +563,7 @@ def run_step2(
     select_option: Optional[int] = None,
     auto_submit: bool = False
 ) -> int:
-    script_dir = Path(__file__).resolve().parent
-    target_state_path = script_dir / state_file
-    legacy_state_path = script_dir / "last_selection_state.json"
+    target_state_path, legacy_state_path = resolve_state_file_path(state_file)
 
     print("=" * 76)
     print("🚀 [STEP 2 / 2] CHAT SEARCH & GUI SELECTION IN ANTIGRAVITY")

@@ -94,7 +94,8 @@ Write-Host ""
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $localVenvPython = Join-Path $scriptDir ".venv\Scripts\python.exe"
 $parentVenvPython = Join-Path $scriptDir "..\.venv\Scripts\python.exe"
-$mouseVenvPython = Join-Path $scriptDir "..\Mouse Automation\.venv\Scripts\python.exe"
+$grandparentVenvPython = Join-Path $scriptDir "..\..\.venv\Scripts\python.exe"
+$mouseVenvPython = Join-Path $scriptDir "..\..\Mouse Automation\.venv\Scripts\python.exe"
 $userVenvPython = Join-Path $env:USERPROFILE ".venv\Scripts\python.exe"
 $userLocalPython = Join-Path $env:USERPROFILE ".local\bin\python.exe"
 
@@ -105,6 +106,9 @@ if (Test-Path $localVenvPython) {
 } elseif (Test-Path $parentVenvPython) {
     $pythonCmd = $parentVenvPython
     Write-Host "[*] Found parent virtualenv: $pythonCmd" -ForegroundColor Green
+} elseif (Test-Path $grandparentVenvPython) {
+    $pythonCmd = $grandparentVenvPython
+    Write-Host "[*] Found project virtualenv: $pythonCmd" -ForegroundColor Green
 } elseif (Test-Path $mouseVenvPython) {
     $pythonCmd = $mouseVenvPython
     Write-Host "[*] Found Mouse Automation virtualenv: $pythonCmd" -ForegroundColor Green

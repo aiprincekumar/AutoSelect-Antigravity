@@ -136,6 +136,9 @@ class GrillMeAutomator:
         candidates = [
             Path(__file__).resolve().parent.parent / "target_chat.json",
             Path.cwd() / "target_chat.json",
+            Path.cwd().parent / "target_chat.json",
+            Path(__file__).resolve().parent.parent / "step_1_chat_identifier" / "target_chat.json",
+            Path.cwd() / "step_1_chat_identifier" / "target_chat.json",
             Path.cwd() / "Identify Chat" / "target_chat.json",
             Path.cwd() / ".." / "Identify Chat" / "target_chat.json",
             Path(__file__).resolve().parent.parent / "Identify Chat" / "target_chat.json",
@@ -187,7 +190,18 @@ class GrillMeAutomator:
         # Attempt to inspect state file for auto-detection
         target_path: Optional[Path] = None
         if state_file:
-            p = Path(state_file).resolve()
+            p = Path(state_file)
+            if not p.is_absolute():
+                candidates = [
+                    Path.cwd() / p,
+                    Path.cwd().parent / p,
+                    Path(__file__).resolve().parent.parent / p,
+                ]
+                for c in candidates:
+                    if c.is_file():
+                        p = c
+                        break
+            p = p.resolve()
             if p.is_file():
                 target_path = p
             else:

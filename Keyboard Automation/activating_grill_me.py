@@ -867,7 +867,14 @@ class AntigravityGuiSelector:
 
         # Delegate to Step 2 engine if available
         try:
-            from step2_gui_chat_select import AntigravityGUISelector
+            try:
+                from step_2_chat_and_focus.step2_gui_chat_select import AntigravityGUISelector
+            except ImportError:
+                s2_dir = Path(__file__).resolve().parent / "step_2_chat_and_focus"
+                if str(s2_dir) not in sys.path:
+                    sys.path.insert(0, str(s2_dir))
+                from step2_gui_chat_select import AntigravityGUISelector
+
             sel_res = AntigravityGUISelector.select_chat(
                 target_cid=target_cid,
                 topic=topic,

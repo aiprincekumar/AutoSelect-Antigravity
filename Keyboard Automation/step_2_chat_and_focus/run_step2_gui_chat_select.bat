@@ -2,22 +2,23 @@
 setlocal enabledelayedexpansion
 
 :: ============================================================================
-:: Activating Grill Me Chat in Antigravity - Step 1 Standalone Runner
+:: Activating Grill Me Chat in Antigravity - Step 2 Standalone Runner
 :: ============================================================================
-:: Script: step1_find_and_focus.py
-:: Workspace: AutoSelect-Commander \ Keyboard Automation (Step 1 of 3)
+:: Script: step2_gui_chat_select.py
+:: Directory: step_2_chat_and_focus (Step 2 of 3)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
-::   Scans Antigravity brain transcripts for pending Grill-Me (ask_question) chats,
-::   extracts questions & choices, persists state to target_chat.json, and
-::   safely focuses/maximizes the Antigravity IDE window without restoring down.
+::   Reads target chat state saved by Step 1 from root target_chat.json,
+::   ensures window is foregrounded without restoring down, locates the conversation
+::   in the Antigravity GUI via Chrome DevTools Protocol / DOM glide, clicks it,
+::   and focuses the chat pane.
 :: ============================================================================
 
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
-set "STEP1_SCRIPT=%SCRIPT_DIR%step1_find_and_focus.py"
-set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
+set "STEP2_SCRIPT=%SCRIPT_DIR%step2_gui_chat_select.py"
+set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
 
 :: 1. Bulletproof Python Executable Resolution
 set "PYTHON_EXE="
@@ -26,8 +27,10 @@ if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
 ) else if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%USERPROFILE%\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.local\bin\python.exe" (
@@ -56,33 +59,23 @@ if errorlevel 1 (
 )
 
 echo ============================================================================
-echo   STEP 1: SCAN TRANSCRIPTS, PERSIST STATE ^& FOCUS WINDOW
+echo   STEP 2: GUI CHAT SELECTION ^& CHAT PANE ACTIVATION
 echo ============================================================================
 echo   Python Engine : %PYTHON_EXE%
-echo   Target Script : %STEP1_SCRIPT%
+echo   Target Script : %STEP2_SCRIPT%
 echo   Target State  : %STATE_FILE%
 echo ============================================================================
 echo.
 
-"%PYTHON_EXE%" "%STEP1_SCRIPT%" %*
-set "STEP1_EXIT=%ERRORLEVEL%"
+"%PYTHON_EXE%" "%STEP2_SCRIPT%" --state-file "%STATE_FILE%" %*
+set "STEP2_EXIT=%ERRORLEVEL%"
 
-if "%STEP1_EXIT%"=="10" (
+if not "%STEP2_EXIT%"=="0" (
     echo.
-    echo ============================================================================
-    echo   [INFO] NO PENDING GRILL ME / ASK_QUESTION CHATS FOUND
-    echo   [*] All remaining steps cancelled automatically.
-    echo   [*] Step 1 finished and closed cleanly.
-    echo ============================================================================
-    exit /b 0
-)
-
-if not "%STEP1_EXIT%"=="0" (
-    echo.
-    echo [ERROR] Step 1 failed with exit code: %STEP1_EXIT%
-    exit /b %STEP1_EXIT%
+    echo [ERROR] Step 2 failed with exit code: %STEP2_EXIT%
+    exit /b %STEP2_EXIT%
 )
 
 echo.
-echo [SUCCESS] Step 1 finished successfully!
+echo [SUCCESS] Step 2 finished successfully!
 exit /b 0

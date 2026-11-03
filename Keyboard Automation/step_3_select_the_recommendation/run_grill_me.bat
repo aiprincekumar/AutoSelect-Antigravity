@@ -9,6 +9,7 @@ echo =====================================================================
 echo.
 
 set "SCRIPT_DIR=%~dp0"
+set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
 
 :: 1. Bulletproof Python Executable Resolution
 set "PYTHON_EXE="
@@ -17,8 +18,10 @@ if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
 ) else if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%USERPROFILE%\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.local\bin\python.exe" (
@@ -69,7 +72,7 @@ echo.
 set "TARGET_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
 if not exist "%TARGET_SCRIPT%" set "TARGET_SCRIPT=%SCRIPT_DIR%grill_me_automation.py"
 
-"%PYTHON_EXE%" "%TARGET_SCRIPT%" %*
+"%PYTHON_EXE%" "%TARGET_SCRIPT%" --state-file "%STATE_FILE%" %*
 
 set EXITCODE=%errorlevel%
 echo.

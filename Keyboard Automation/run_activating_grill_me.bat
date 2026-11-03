@@ -7,15 +7,16 @@ setlocal enabledelayedexpansion
 :: Target: Antigravity AI Coding Agent Sessions
 :: Directory: AutoSelect-Commander \ Keyboard Automation (Steps 1 & 2)
 :: Architecture:
-::   - Step 1 (step1_find_and_focus.py): Scan Transcripts, Identify Chat, Focus Window, Save State
-::   - Step 2 (step2_gui_chat_select.py): CDP/DOM Chat Search, Smooth Glide, GUI Selection & Focus
+::   - Step 1 (step_1_chat_identifier\step1_find_and_focus.py): Scan Transcripts, Identify Chat, Focus Window, Save State
+::   - Step 2 (step_2_chat_and_focus\step2_gui_chat_select.py): CDP/DOM Chat Search, Smooth Glide, GUI Selection & Focus
 :: UTF-8 code page configuration for accurate emoji and Unicode output
 
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
-set "STEP1_SCRIPT=%SCRIPT_DIR%step1_find_and_focus.py"
-set "STEP2_SCRIPT=%SCRIPT_DIR%step2_gui_chat_select.py"
+cd /d "%SCRIPT_DIR%"
+set "STEP1_SCRIPT=%SCRIPT_DIR%step_1_chat_identifier\step1_find_and_focus.py"
+set "STEP2_SCRIPT=%SCRIPT_DIR%step_2_chat_and_focus\step2_gui_chat_select.py"
 set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
 
 :: 1. Bulletproof Python Executable Resolution
@@ -56,7 +57,7 @@ if errorlevel 1 (
 
 echo ============================================================================
 echo   ACTIVATING GRILL ME CHAT IN ANTIGRAVITY (Two-Step Modular Runner)
-echo   (2- :    + GUI  )
+echo   (2-Step Modular Runner: Chat Identifier + Chat ^& Focus)
 echo ============================================================================
 echo   Python Engine : %PYTHON_EXE%
 echo   Step 1 Script : %STEP1_SCRIPT%
@@ -69,7 +70,7 @@ echo.
 echo [*] [STEP 1 / 2] Scanning Brain Transcripts, Saving State and Focusing Window...
 echo.
 
-"%PYTHON_EXE%" "%STEP1_SCRIPT%" %*
+"%PYTHON_EXE%" "%STEP1_SCRIPT%" --state-file "%STATE_FILE%" %*
 set "STEP1_EXIT=%ERRORLEVEL%"
 
 if "%STEP1_EXIT%"=="10" (
@@ -94,7 +95,7 @@ echo.
 echo [*] [STEP 2 / 2] Locating Conversation Element in Antigravity GUI and Selecting...
 echo.
 
-"%PYTHON_EXE%" "%STEP2_SCRIPT%" %*
+"%PYTHON_EXE%" "%STEP2_SCRIPT%" --state-file "%STATE_FILE%" %*
 set "STEP2_EXIT=%ERRORLEVEL%"
 
 if not "%STEP2_EXIT%"=="0" goto :STEP2_FAILED
@@ -119,6 +120,7 @@ exit /b %STEP1_EXIT%
 :STEP2_FAILED
 echo.
 echo [ERROR] Step 2 encountered an issue during GUI chat selection (Exit Code: %STEP2_EXIT%).
+echo Pipeline halted before Keyboard Automation.
 exit /b %STEP2_EXIT%
 
 :CLEAN_CLOSE

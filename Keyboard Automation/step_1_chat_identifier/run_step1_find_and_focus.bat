@@ -1,26 +1,23 @@
 @echo off
 setlocal enabledelayedexpansion
-title Step 3: Keyboard Automation Launcher - AutoSelect-Commander
 
 :: ============================================================================
-:: AutoSelect-Commander - Step 3: Keyboard Automation Standalone Runner
+:: Activating Grill Me Chat in Antigravity - Step 1 Standalone Runner
 :: ============================================================================
-:: Script: step3_keyboard_automation.py
-:: Workspace: AutoSelect-Commander \ Keyboard Automation (Step 3 of 3)
+:: Script: step1_find_and_focus.py
+:: Directory: step_1_chat_identifier (Step 1 of 3)
 :: Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 :: Description:
-::   Executes Step 3 of the AutoSelect-Commander pipeline:
-::   Automatically restores/maximizes Antigravity IDE window, bypasses OS
-::   foreground lock, injects Ctrl+L -> Shift+Tab -> Option -> Enter with
-::   support for dynamic multi-question quiz cards and safety abort gates.
+::   Scans Antigravity brain transcripts for pending Grill-Me (ask_question) chats,
+::   extracts questions & choices, persists state to target_chat.json in root, and
+::   safely focuses/maximizes the Antigravity IDE window without restoring down.
 :: ============================================================================
 
 chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
-cd /d "%SCRIPT_DIR%"
-set "STATE_FILE=%SCRIPT_DIR%target_chat.json"
-set "STEP3_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
+set "STEP1_SCRIPT=%SCRIPT_DIR%step1_find_and_focus.py"
+set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
 
 :: 1. Bulletproof Python Executable Resolution
 set "PYTHON_EXE="
@@ -29,8 +26,10 @@ if exist "%SCRIPT_DIR%.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%.venv\Scripts\python.exe"
 ) else if exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%SCRIPT_DIR%..\.venv\Scripts\python.exe"
-) else if exist "%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe" (
-    set "PYTHON_EXE=%SCRIPT_DIR%..\Mouse Automation\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\.venv\Scripts\python.exe"
+) else if exist "%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe" (
+    set "PYTHON_EXE=%SCRIPT_DIR%..\..\Mouse Automation\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.venv\Scripts\python.exe" (
     set "PYTHON_EXE=%USERPROFILE%\.venv\Scripts\python.exe"
 ) else if exist "%USERPROFILE%\.local\bin\python.exe" (
@@ -59,24 +58,33 @@ if errorlevel 1 (
 )
 
 echo ============================================================================
-echo    [STEP 3 / 3] KEYBOARD AUTOMATION ^& OPTION SELECTION (STANDALONE RUNNER)
+echo   STEP 1: SCAN TRANSCRIPTS, PERSIST STATE ^& FOCUS WINDOW
 echo ============================================================================
 echo   Python Engine : %PYTHON_EXE%
-echo   Target Script : %STEP3_SCRIPT%
+echo   Target Script : %STEP1_SCRIPT%
+echo   Target State  : %STATE_FILE%
 echo ============================================================================
 echo.
 
-"%PYTHON_EXE%" "%STEP3_SCRIPT%" --state-file "%STATE_FILE%" %*
-set "STEP3_EXIT=%ERRORLEVEL%"
+"%PYTHON_EXE%" "%STEP1_SCRIPT%" --state-file "%STATE_FILE%" %*
+set "STEP1_EXIT=%ERRORLEVEL%"
 
-echo.
-echo ============================================================================
-if "%STEP3_EXIT%"=="0" (
-    echo    [STEP 3 SUCCESS] Keyboard Automation completed successfully! [Exit: 0]
-) else (
-    echo   [!] [STEP 3 FAILED] Keyboard Automation encountered exit code: %STEP3_EXIT%
+if "%STEP1_EXIT%"=="10" (
+    echo.
+    echo ============================================================================
+    echo   [INFO] NO PENDING GRILL ME / ASK_QUESTION CHATS FOUND
+    echo   [*] All remaining steps cancelled automatically.
+    echo   [*] Step 1 finished and closed cleanly.
+    echo ============================================================================
+    exit /b 0
 )
-echo ============================================================================
-echo.
 
-exit /b %STEP3_EXIT%
+if not "%STEP1_EXIT%"=="0" (
+    echo.
+    echo [ERROR] Step 1 failed with exit code: %STEP1_EXIT%
+    exit /b %STEP1_EXIT%
+)
+
+echo.
+echo [SUCCESS] Step 1 finished successfully!
+exit /b 0
