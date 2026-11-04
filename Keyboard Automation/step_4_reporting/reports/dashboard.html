@@ -23,6 +23,7 @@
       --accent-cyan: #06b6d4;
       --accent-purple: #a855f7;
       --accent-amber: #f59e0b;
+      --accent-rose: #ec4899;
       --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --radius-sm: 6px;
@@ -62,7 +63,7 @@
     }
 
     .container {
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 0 auto;
     }
 
@@ -163,108 +164,7 @@
       border-color: var(--accent-indigo);
     }
 
-    /* Metrics Grid */
-    .metrics-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }
-
-    .metric-card {
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      overflow: hidden;
-      transition: var(--transition);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-    }
-
-    .metric-card:hover {
-      transform: translateY(-2px);
-      border-color: var(--border-accent);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    }
-
-    .metric-card::before {
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-    }
-
-    .metric-card.card-runs::before { background: var(--accent-emerald); }
-    .metric-card.card-questions::before { background: var(--accent-indigo); }
-    .metric-card.card-runtime::before { background: var(--accent-cyan); }
-    .metric-card.card-chats::before { background: var(--accent-purple); }
-
-    .metric-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }
-
-    .metric-title {
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .metric-icon {
-      font-size: 1.25rem;
-    }
-
-    .metric-value {
-      font-size: 2.1rem;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 6px;
-    }
-
-    .metric-subtitle {
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }
-
-    /* Controls Bar */
-    .controls-bar {
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-      align-items: center;
-      flex-wrap: wrap;
-    }
-
-    .search-input {
-      flex: 1;
-      min-width: 260px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-primary);
-      padding: 10px 16px;
-      border-radius: var(--radius-md);
-      font-size: 0.9rem;
-      outline: none;
-      transition: var(--transition);
-    }
-
-    .search-input:focus {
-      border-color: var(--accent-indigo);
-      box-shadow: 0 0 0 2px var(--accent-indigo-glow);
-    }
-
-    /* Horizontal Tab Navigation (Department 04 Standard) */
+    /* Horizontal Tab Navigation (Department 04 Standard - 3 Intuitive Tabs) */
     .tab-nav {
       display: inline-flex;
       align-items: center;
@@ -282,7 +182,7 @@
       background: transparent;
       color: var(--text-secondary);
       border: 1px solid transparent;
-      padding: 10px 20px;
+      padding: 10px 22px;
       border-radius: var(--radius-md);
       font-size: 0.92rem;
       font-weight: 600;
@@ -310,12 +210,6 @@
       color: #ffffff;
       background: var(--accent-indigo);
       border-color: var(--accent-indigo);
-      box-shadow: 0 2px 12px var(--accent-indigo-glow);
-    }
-
-    [data-theme="light"] .tab-btn.active {
-      color: #ffffff;
-      background: var(--accent-indigo);
       box-shadow: 0 2px 12px var(--accent-indigo-glow);
     }
 
@@ -358,6 +252,216 @@
         opacity: 1;
         transform: translateY(0);
       }
+    }
+
+    /* 7 High-Level KPIs Single Horizontal Row Mandate */
+    .metrics-row-wrapper {
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 24px;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }
+
+    .metrics-row-wrapper::-webkit-scrollbar {
+      height: 6px;
+    }
+
+    .metrics-row-wrapper::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    .metrics-row-wrapper::-webkit-scrollbar-thumb {
+      background: var(--bg-surface-highlight);
+      border-radius: 9999px;
+    }
+
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      gap: 10px;
+      min-width: 980px;
+    }
+
+    .metric-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      border-color: var(--border-accent);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }
+
+    .metric-card::before {
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }
+
+    .metric-card.card-runs::before { background: var(--accent-emerald); }
+    .metric-card.card-questions::before { background: var(--accent-indigo); }
+    .metric-card.card-runtime::before { background: var(--accent-cyan); }
+    .metric-card.card-chats::before { background: var(--accent-purple); }
+    .metric-card.card-duration::before { background: var(--accent-amber); }
+    .metric-card.card-density::before { background: var(--accent-rose); }
+    .metric-card.card-accuracy::before { background: #10b981; }
+
+    .metric-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+
+    .metric-title {
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .metric-icon {
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }
+
+    .metric-value {
+      font-size: 1.45rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 4px;
+      white-space: nowrap;
+    }
+
+    .metric-subtitle {
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    /* Architecture Diagram Card */
+    .architecture-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      overflow-x: auto;
+    }
+
+    .card-title {
+      font-size: 1.02rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    /* Interactive Pure SVG Charts Grid */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .charts-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .chart-card svg {
+      width: 100%;
+      height: auto;
+    }
+
+    /* Chat Stats Strip */
+    .stats-strip {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }
+
+    .stat-pill {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .stat-num {
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-indigo);
+      font-size: 0.95rem;
+    }
+
+    /* Controls Bar */
+    .controls-bar {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }
+
+    .search-input {
+      flex: 1;
+      min-width: 260px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      outline: none;
+      transition: var(--transition);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 0 2px var(--accent-indigo-glow);
     }
 
     /* Section Headers */
@@ -599,11 +703,16 @@
       </div>
     </header>
 
-    <!-- Horizontal Tab Navigation Bar (Single-word intuitive names) -->
+    <!-- Horizontal Tab Navigation Bar (Single-word intuitive names: Overview, Chats, Questions) -->
     <nav class="tab-nav" role="tablist" aria-label="Dashboard Tabs">
       <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="overview">
         <span class="tab-icon">📊</span>
         <span class="tab-label">Overview</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-chats" role="tab" aria-selected="false" aria-controls="tab-chats" data-tab="chats">
+        <span class="tab-icon">📂</span>
+        <span class="tab-label">Chats</span>
+        <span class="tab-badge" id="tab-chats-badge">1</span>
       </button>
       <button class="tab-btn" id="tab-btn-questions" role="tab" aria-selected="false" aria-controls="tab-questions" data-tab="questions">
         <span class="tab-icon">💬</span>
@@ -614,55 +723,225 @@
 
     <!-- Legacy Search Box Compatibility Hook (Hidden) -->
     <input type="hidden" id="search-box" value="">
+    <input type="hidden" id="search-overview" value="">
 
-    <!-- Tab 1: Overview Panel (Metrics + Chat Breakdown Table) -->
+    <!-- Tab 1: Overview Panel (7 Single-Row KPIs + SVG Architecture + SVG Charts) -->
     <main id="tab-overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-overview">
-      <!-- Metrics Grid -->
-      <div class="metrics-grid">
-        <!-- Total Runs -->
-        <div class="metric-card card-runs">
-          <div class="metric-header">
-            <span class="metric-title">Total Automation Runs</span>
-            <span class="metric-icon">🚀</span>
+      <!-- 7 High-Level KPIs in a Single Horizontal Row Mandate -->
+      <div class="metrics-row-wrapper">
+        <div class="metrics-grid">
+          <!-- 1. Total Runs -->
+          <div class="metric-card card-runs">
+            <div class="metric-header">
+              <span class="metric-title">Total Automation Runs</span>
+              <span class="metric-icon">🚀</span>
+            </div>
+            <div class="metric-value">1</div>
+            <div class="metric-subtitle">Steps 1-3 Completed</div>
           </div>
-          <div class="metric-value">1</div>
-          <div class="metric-subtitle">Steps 1 → 2 → 3 Fully Completed</div>
-        </div>
 
-        <!-- Questions Answered -->
-        <div class="metric-card card-questions">
-          <div class="metric-header">
-            <span class="metric-title">Questions Answered</span>
-            <span class="metric-icon">💬</span>
+          <!-- 2. Questions Answered -->
+          <div class="metric-card card-questions">
+            <div class="metric-header">
+              <span class="metric-title">Questions Answered</span>
+              <span class="metric-icon">💬</span>
+            </div>
+            <div class="metric-value">4</div>
+            <div class="metric-subtitle">Grill-Me Resolved</div>
           </div>
-          <div class="metric-value">4</div>
-          <div class="metric-subtitle">Grill-Me Questions Resolved</div>
-        </div>
 
-        <!-- Script Runtime -->
-        <div class="metric-card card-runtime">
-          <div class="metric-header">
-            <span class="metric-title">Cumulative Runtime</span>
-            <span class="metric-icon">⏱️</span>
+          <!-- 3. Cumulative Runtime -->
+          <div class="metric-card card-runtime">
+            <div class="metric-header">
+              <span class="metric-title">Cumulative Runtime</span>
+              <span class="metric-icon">⏱️</span>
+            </div>
+            <div class="metric-value">14.3s</div>
+            <div class="metric-subtitle">14.32s Total Active</div>
           </div>
-          <div class="metric-value">14.3s</div>
-          <div class="metric-subtitle">14.32 Total Seconds Active</div>
-        </div>
 
-        <!-- Unique Chats -->
-        <div class="metric-card card-chats">
-          <div class="metric-header">
-            <span class="metric-title">Chats Automated</span>
-            <span class="metric-icon">📂</span>
+          <!-- 4. Chats Automated -->
+          <div class="metric-card card-chats">
+            <div class="metric-header">
+              <span class="metric-title">Chats Automated</span>
+              <span class="metric-icon">📂</span>
+            </div>
+            <div class="metric-value">1</div>
+            <div class="metric-subtitle">Unique Conversations</div>
           </div>
-          <div class="metric-value">1</div>
-          <div class="metric-subtitle">Unique Conversations Processed</div>
+
+          <!-- 5. Avg Duration / Run -->
+          <div class="metric-card card-duration">
+            <div class="metric-header">
+              <span class="metric-title">Avg Duration / Run</span>
+              <span class="metric-icon">⚡</span>
+            </div>
+            <div class="metric-value">14.3s</div>
+            <div class="metric-subtitle">Mean Pipeline Latency</div>
+          </div>
+
+          <!-- 6. Qs / Run Density -->
+          <div class="metric-card card-density">
+            <div class="metric-header">
+              <span class="metric-title">Qs / Run Density</span>
+              <span class="metric-icon">📊</span>
+            </div>
+            <div class="metric-value">4.0</div>
+            <div class="metric-subtitle">Avg Questions per Run</div>
+          </div>
+
+          <!-- 7. Recommendation Rate -->
+          <div class="metric-card card-accuracy">
+            <div class="metric-header">
+              <span class="metric-title">Recommendation Rate</span>
+              <span class="metric-icon">🎯</span>
+            </div>
+            <div class="metric-value">100%</div>
+            <div class="metric-subtitle">Option 1 Adherence</div>
+          </div>
         </div>
       </div>
 
-      <!-- Controls Bar for Overview -->
+      <!-- Pipeline Execution Architecture Diagram (Pure Vector SVG) -->
+      <div class="architecture-card">
+        <div class="card-title">🚀 Pipeline Execution Architecture (Step 0 → Step 4)</div>
+        <svg viewBox="0 0 1000 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">
+  <defs>
+    <marker id="pipeline-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6366f1" />
+    </marker>
+    <linearGradient id="pipeArrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+  </defs>
+  <line x1="180" y1="55" x2="220" y2="55" stroke="url(#pipeArrowGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#pipeline-arrow)" />
+  <line x1="380" y1="55" x2="420" y2="55" stroke="url(#pipeArrowGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#pipeline-arrow)" />
+  <line x1="580" y1="55" x2="620" y2="55" stroke="url(#pipeArrowGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#pipeline-arrow)" />
+  <line x1="780" y1="55" x2="820" y2="55" stroke="url(#pipeArrowGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#pipeline-arrow)" />
+  <g class="pipeline-step-node" transform="translate(20, 15)">
+    <rect width="160" height="80" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />
+    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />
+    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="#818cf8" text-anchor="middle">STEP 0</text>
+    <circle cx="142" cy="19" r="4.5" fill="#10b981" />
+    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Step 0: Detector</text>
+    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">AntiGravity Sentinel</text>
+  </g>
+  <g class="pipeline-step-node" transform="translate(220, 15)">
+    <rect width="160" height="80" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />
+    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />
+    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="#22d3ee" text-anchor="middle">STEP 1</text>
+    <circle cx="142" cy="19" r="4.5" fill="#10b981" />
+    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Step 1: Identifier</text>
+    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Target Chat Identify</text>
+  </g>
+  <g class="pipeline-step-node" transform="translate(420, 15)">
+    <rect width="160" height="80" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />
+    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />
+    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="#c084fc" text-anchor="middle">STEP 2</text>
+    <circle cx="142" cy="19" r="4.5" fill="#10b981" />
+    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Step 2: Focus</text>
+    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Precision Window Focus</text>
+  </g>
+  <g class="pipeline-step-node" transform="translate(620, 15)">
+    <rect width="160" height="80" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />
+    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />
+    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="#fbbf24" text-anchor="middle">STEP 3</text>
+    <circle cx="142" cy="19" r="4.5" fill="#10b981" />
+    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Step 3: Selector</text>
+    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Option 1 Auto-Select</text>
+  </g>
+  <g class="pipeline-step-node" transform="translate(820, 15)">
+    <rect width="160" height="80" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />
+    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />
+    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">STEP 4</text>
+    <circle cx="142" cy="19" r="4.5" fill="#10b981" />
+    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Step 4: Reporter</text>
+    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Visual Telemetry</text>
+  </g>
+</svg>
+      </div>
+
+      <!-- Interactive Zero-Dependency SVG Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="card-title">📊 Chat Automation & Questions Distribution</div>
+          <svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <defs>
+    <linearGradient id="barRunsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#818cf8" />
+      <stop offset="100%" stop-color="#4f46e5" />
+    </linearGradient>
+    <linearGradient id="barQsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="#34d399" />
+      <stop offset="100%" stop-color="#059669" />
+    </linearGradient>
+  </defs>
+  <!-- Legend -->
+  <g transform="translate(440, 14)">
+    <rect x="0" y="0" width="12" height="12" rx="3" fill="url(#barRunsGrad)" />
+    <text x="18" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Runs</text>
+    <rect x="70" y="0" width="12" height="12" rx="3" fill="url(#barQsGrad)" />
+    <text x="88" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Questions</text>
+  </g>
+  <line x1="50" y1="40" x2="620" y2="40" stroke="var(--border-subtle)" stroke-width="1" />
+  <line x1="50" y1="80" x2="620" y2="80" stroke="var(--border-subtle)" stroke-width="1" />
+  <line x1="50" y1="120" x2="620" y2="120" stroke="var(--border-subtle)" stroke-width="1" />
+  <line x1="50" y1="160" x2="620" y2="160" stroke="var(--border-subtle)" stroke-width="1" />
+  <line x1="50" y1="200" x2="620" y2="200" stroke="var(--border-subtle)" stroke-width="1" />
+  <line x1="50" y1="200" x2="620" y2="200" stroke="var(--border-subtle)" stroke-width="1.5" />
+  <rect x="315.0" y="163.0" width="22.0" height="37.0" rx="3" fill="url(#barRunsGrad)"><title>Runs: 1</title></rect>
+  <text x="326.0" y="159.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#818cf8" text-anchor="middle">1</text>
+  <rect x="343.0" y="50.0" width="22.0" height="150.0" rx="3" fill="url(#barQsGrad)"><title>Questions: 4</title></rect>
+  <text x="354.0" y="46.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">4</text>
+  <text x="340.0" y="222" font-size="10" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">e0645f63..</text>
+</svg>
+        </div>
+        <div class="chart-card">
+          <div class="card-title">🎯 Autonomous Recommendation Accuracy</div>
+          <svg viewBox="0 0 280 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <defs>
+    <linearGradient id="gaugeEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#10b981" />
+      <stop offset="100%" stop-color="#06b6d4" />
+    </linearGradient>
+  </defs>
+  <!-- Background Circle Track -->
+  <circle cx="140" cy="110" r="70" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="16" />
+  <!-- Progress Arc -->
+  <circle cx="140" cy="110" r="70" fill="none" stroke="url(#gaugeEmeraldGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="439.82" stroke-dashoffset="0.00" transform="rotate(-90 140 110)" />
+  <!-- Center Metrics -->
+  <text x="140" y="106" font-size="34" font-weight="800" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">100%</text>
+  <text x="140" y="128" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">OPTION 1 ACCURACY</text>
+  <!-- Subtitle Summary -->
+  <text x="140" y="202" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)" text-anchor="middle">100% Option 1 Adherence</text>
+  <text x="140" y="222" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)" text-anchor="middle">Autonomous Selection • Zero Deviations</text>
+</svg>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 2: Chats Panel (Chat-wise Breakdown Table & Dedicated Search) -->
+    <main id="tab-chats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-chats">
+      <!-- Chat Summary Stats Strip -->
+      <div class="stats-strip">
+        <div class="stat-pill">
+          <span class="stat-num">1</span>
+          <span>Total Unique Chats</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">1</span>
+          <span>Lifetime Pipeline Runs</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">1.0</span>
+          <span>Avg Runs / Chat</span>
+        </div>
+      </div>
+
+      <!-- Dedicated Search Controls for Chats -->
       <div class="controls-bar">
-        <input type="text" id="search-overview" class="search-input" placeholder="🔍 Search overview by Conversation ID or topic...">
+        <input type="text" id="search-chats" class="search-input" placeholder="🔍 Search chats by Conversation ID or topic summary...">
       </div>
 
       <!-- Chat-wise Automation Summary Table -->
@@ -685,9 +964,9 @@
       </div>
     </main>
 
-    <!-- Tab 2: Questions Panel (All Questions & Answers Ledger) -->
+    <!-- Tab 3: Questions Panel (All Questions & Answers Ledger & Dedicated Search) -->
     <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
-      <!-- Controls Bar for Questions -->
+      <!-- Dedicated Search Controls for Questions -->
       <div class="controls-bar">
         <input type="text" id="search-questions" class="search-input" placeholder="🔍 Search questions, options, topics, or conversation IDs...">
       </div>
@@ -703,7 +982,7 @@
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 06:44:27</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 07:06:07</span></div>
     </footer>
   </div>
 
@@ -716,8 +995,9 @@
     (function() {
       const rawData = JSON.parse(document.getElementById('history-data').textContent);
       const chats = rawData.chats || {};
-      const searchOverview = document.getElementById('search-overview');
+      const searchChats = document.getElementById('search-chats');
       const searchQuestions = document.getElementById('search-questions');
+      const searchOverview = document.getElementById('search-overview');
       const searchBoxFallback = document.getElementById('search-box');
       const summaryTbody = document.getElementById('summary-tbody');
       const detailsContainer = document.getElementById('details-container');
@@ -727,12 +1007,14 @@
       const savedTheme = localStorage.getItem('asc_dashboard_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
 
-      themeToggle.addEventListener('click', () => {
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('asc_dashboard_theme', next);
-      });
+      if (themeToggle) {
+        themeToggle.addEventListener('click', () => {
+          const current = document.documentElement.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('asc_dashboard_theme', next);
+        });
+      }
 
       // Horizontal Tab switching logic with localStorage persistence
       const tabBtns = document.querySelectorAll('.tab-btn');
@@ -740,15 +1022,18 @@
       const savedTab = localStorage.getItem('asc_dashboard_tab') || 'overview';
 
       function switchTab(tabId) {
+        const validTabs = ['overview', 'chats', 'questions'];
+        const targetTab = validTabs.includes(tabId) ? tabId : 'overview';
+
         tabBtns.forEach(btn => {
-          const isActive = btn.getAttribute('data-tab') === tabId;
+          const isActive = btn.getAttribute('data-tab') === targetTab;
           btn.classList.toggle('active', isActive);
           btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
         });
         tabPanels.forEach(panel => {
-          panel.classList.toggle('active', panel.id === `tab-${tabId}`);
+          panel.classList.toggle('active', panel.id === `tab-${targetTab}`);
         });
-        localStorage.setItem('asc_dashboard_tab', tabId);
+        localStorage.setItem('asc_dashboard_tab', targetTab);
       }
 
       tabBtns.forEach(btn => {
@@ -759,10 +1044,11 @@
       });
 
       // Restore active tab
-      switchTab(savedTab === 'questions' ? 'questions' : 'overview');
+      switchTab(savedTab);
 
-      // Render Tab 1: Overview Summary Table
-      function renderOverview(filter = '') {
+      // Render Tab 2: Chats Breakdown Table
+      function renderChats(filter = '') {
+        if (!summaryTbody) return;
         const filterLower = filter.toLowerCase().trim();
         const chatEntries = Object.entries(chats);
         summaryTbody.innerHTML = '';
@@ -770,15 +1056,17 @@
 
         for (const [cid, chat] of chatEntries) {
           const topic = chat.topic_summary || 'Untitled Conversation';
+          const prompt = chat.last_user_prompt || '';
           const match = !filterLower ||
             cid.toLowerCase().includes(filterLower) ||
-            topic.toLowerCase().includes(filterLower);
+            topic.toLowerCase().includes(filterLower) ||
+            prompt.toLowerCase().includes(filterLower);
 
           if (match) {
             tableRows++;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td><span class="chat-id-tag">${cid}</span></td>
+              <td><span class="chat-id-tag">${escapeHtml(cid)}</span></td>
               <td><strong>${escapeHtml(topic)}</strong></td>
               <td><span class="badge-count">${chat.run_count || 0}</span></td>
               <td><span class="badge-count">${chat.total_questions || 0}</span></td>
@@ -793,8 +1081,9 @@
         }
       }
 
-      // Render Tab 2: Detailed Questions & Answers
+      // Render Tab 3: Detailed Questions & Answers
       function renderQuestions(filter = '') {
+        if (!detailsContainer) return;
         const filterLower = filter.toLowerCase().trim();
         const chatEntries = Object.entries(chats);
         detailsContainer.innerHTML = '';
@@ -855,7 +1144,7 @@
               runsHtml += `
                 <div class="run-block">
                   <div class="run-header">
-                    <span>⚡ Run #${rIdx + 1} (${run.run_id || 'N/A'})</span>
+                    <span>⚡ Run #${rIdx + 1} (${escapeHtml(run.run_id || 'N/A')})</span>
                     <span>Duration: ${dur} | ${runDate}</span>
                   </div>
                   ${qHtml}
@@ -866,7 +1155,7 @@
             card.innerHTML = `
               <div class="chat-card-header">
                 <div class="chat-card-title">
-                  <span class="chat-id-tag">${cid}</span>
+                  <span class="chat-id-tag">${escapeHtml(cid)}</span>
                   <span>${escapeHtml(topic)}</span>
                 </div>
                 <div class="chat-card-meta">
@@ -904,21 +1193,24 @@
       }
 
       // Search listeners
-      if (searchOverview) {
-        searchOverview.addEventListener('input', (e) => renderOverview(e.target.value));
+      if (searchChats) {
+        searchChats.addEventListener('input', (e) => renderChats(e.target.value));
       }
       if (searchQuestions) {
         searchQuestions.addEventListener('input', (e) => renderQuestions(e.target.value));
       }
+      if (searchOverview) {
+        searchOverview.addEventListener('input', (e) => renderChats(e.target.value));
+      }
       if (searchBoxFallback) {
         searchBoxFallback.addEventListener('input', (e) => {
-          renderOverview(e.target.value);
+          renderChats(e.target.value);
           renderQuestions(e.target.value);
         });
       }
 
       // Initial Render
-      renderOverview();
+      renderChats();
       renderQuestions();
     })();
   </script>

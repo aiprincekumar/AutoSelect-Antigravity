@@ -453,8 +453,8 @@ class TestStep4Reporting(unittest.TestCase):
         history = self.engine.load_history()
         self.assertEqual(history.total_pipeline_runs, 1)
 
-    def test_13_two_tab_navigation_structure(self):
-        """Verify dashboard HTML contains the two horizontal tabs (Overview, Questions) and search inputs."""
+    def test_13_three_tab_navigation_structure(self):
+        """Verify dashboard HTML contains the three horizontal tabs (Overview, Chats, Questions) and dedicated search filters."""
         history = AutomationHistory(
             total_pipeline_runs=1,
             total_questions_answered=3,
@@ -498,30 +498,147 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn('data-tab="overview"', content)
         self.assertIn('<span class="tab-label">Overview</span>', content)
 
-        # 3. Verify Tab 2 button: Questions with question count badge
+        # 3. Verify Tab 2 button: Chats with count badge
+        self.assertIn('id="tab-btn-chats"', content)
+        self.assertIn('data-tab="chats"', content)
+        self.assertIn('<span class="tab-label">Chats</span>', content)
+        self.assertIn('id="tab-chats-badge">1</span>', content)
+
+        # 4. Verify Tab 3 button: Questions with question count badge
         self.assertIn('id="tab-btn-questions"', content)
         self.assertIn('data-tab="questions"', content)
         self.assertIn('<span class="tab-label">Questions</span>', content)
         self.assertIn('id="tab-questions-badge">3</span>', content)
 
-        # 4. Verify Tab 1 panel: Overview containing metrics and summary table
+        # 5. Verify Tab 1 panel: Overview (Single-row KPIs + SVG charts)
         self.assertIn('id="tab-overview" class="tab-panel active"', content)
-        self.assertIn('id="search-overview"', content)
+
+        # 6. Verify Tab 2 panel: Chats (Summary stats + Search + Breakdown Table)
+        self.assertIn('id="tab-chats" class="tab-panel"', content)
+        self.assertIn('id="search-chats"', content)
         self.assertIn('id="summary-table"', content)
+        self.assertIn('id="summary-tbody"', content)
         self.assertIn('📊 Chat-wise Automation Breakdown', content)
 
-        # 5. Verify Tab 2 panel: Questions containing questions ledger
+        # 7. Verify Tab 3 panel: Questions (Search + Questions Ledger)
         self.assertIn('id="tab-questions" class="tab-panel"', content)
         self.assertIn('id="search-questions"', content)
         self.assertIn('📝 Questions & Answers Ledger', content)
         self.assertIn('id="details-container"', content)
 
-        # 6. Verify fallback compatibility for search-box
+        # 8. Verify fallback compatibility for search hooks
         self.assertIn('id="search-box"', content)
+        self.assertIn('id="search-overview"', content)
 
-        # 7. Verify localStorage tab persistence logic in client script
+        # 9. Verify localStorage tab persistence logic in client script
         self.assertIn("localStorage.setItem('asc_dashboard_tab'", content)
         self.assertIn("localStorage.getItem('asc_dashboard_tab')", content)
+
+    def test_14_seven_kpis_single_row_and_svg_visualizations(self):
+        """Verify all 7 KPIs are present in a single horizontal row and pure SVG charts render correctly."""
+        history = AutomationHistory(
+            total_pipeline_runs=4,
+            total_questions_answered=8,
+            total_runtime_seconds=24.0,
+            total_unique_chats=2,
+            chats={
+                "chat_alpha": {
+                    "conversation_id": "chat_alpha",
+                    "topic_summary": "Alpha Microservice",
+                    "run_count": 2,
+                    "total_questions": 4,
+                    "runs": [
+                        {
+                            "run_id": "run_01",
+                            "timestamp": "2026-11-04T05:00:00Z",
+                            "duration_seconds": 6.0,
+                            "questions_count": 2,
+                            "questions": [
+                                {
+                                    "question_index": 1,
+                                    "question": "Deploy target?",
+                                    "options": ["(Recommended) Production", "Staging"],
+                                    "selected_option_index": 1,
+                                    "selected_option_text": "(Recommended) Production",
+                                    "is_recommended": True
+                                }
+                            ]
+                        }
+                    ]
+                },
+                "chat_beta": {
+                    "conversation_id": "chat_beta",
+                    "topic_summary": "Beta Frontend",
+                    "run_count": 2,
+                    "total_questions": 4,
+                    "runs": [
+                        {
+                            "run_id": "run_02",
+                            "timestamp": "2026-11-04T05:10:00Z",
+                            "duration_seconds": 6.0,
+                            "questions_count": 2,
+                            "questions": [
+                                {
+                                    "question_index": 1,
+                                    "question": "Build tool?",
+                                    "options": ["(Recommended) Vite", "Webpack"],
+                                    "selected_option_index": 1,
+                                    "selected_option_text": "(Recommended) Vite",
+                                    "is_recommended": True
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Verify Single Horizontal Row Layout Mandate (CSS repeat(7, ...))
+        self.assertIn("grid-template-columns: repeat(7, minmax(130px, 1fr))", content)
+        self.assertIn("metrics-row-wrapper", content)
+
+        # 2. Verify all 7 KPI cards
+        self.assertIn("Total Automation Runs", content)  # KPI 1
+        self.assertIn('<div class="metric-value">4</div>', content)
+
+        self.assertIn("Questions Answered", content)     # KPI 2
+        self.assertIn('<div class="metric-value">8</div>', content)
+
+        self.assertIn("Cumulative Runtime", content)     # KPI 3
+        self.assertIn('<div class="metric-value">24.0s</div>', content)
+
+        self.assertIn("Chats Automated", content)        # KPI 4
+        self.assertIn('<div class="metric-value">2</div>', content)
+
+        self.assertIn("Avg Duration / Run", content)     # KPI 5
+        self.assertIn('<div class="metric-value">6.0s</div>', content)
+
+        self.assertIn("Qs / Run Density", content)       # KPI 6
+        self.assertIn('<div class="metric-value">2.0</div>', content)
+
+        self.assertIn("Recommendation Rate", content)    # KPI 7
+        self.assertIn('<div class="metric-value">100%</div>', content)
+
+        # 3. Verify Pure Inline SVG Pipeline Diagram (Step 0 -> Step 4)
+        self.assertIn("Step 0: Detector", content)
+        self.assertIn("Step 1: Identifier", content)
+        self.assertIn("Step 2: Focus", content)
+        self.assertIn("Step 3: Selector", content)
+        self.assertIn("Step 4: Reporter", content)
+        self.assertIn('id="pipeline-arrow"', content)
+
+        # 4. Verify Pure Inline SVG Bar Chart
+        self.assertIn('barRunsGrad', content)
+        self.assertIn('barQsGrad', content)
+        self.assertIn("Chat Automation &amp; Questions Distribution", content.replace("&", "&amp;"))
+
+        # 5. Verify Pure Inline SVG Donut Accuracy Gauge
+        self.assertIn('gaugeEmeraldGrad', content)
+        self.assertIn("OPTION 1 ACCURACY", content)
+        self.assertIn("100% Option 1 Adherence", content)
 
 
 if __name__ == "__main__":

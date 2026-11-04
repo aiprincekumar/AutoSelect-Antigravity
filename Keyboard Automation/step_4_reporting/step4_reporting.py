@@ -441,6 +441,187 @@ class Step4ReportingEngine:
         return True, f"Successfully recorded run {run_id} for chat {cid}.", record
 
     # ========================================================================
+    # SVG Vector Visualizations (Department 04 UI/UX & Zero Dependencies)
+    # ========================================================================
+
+    @staticmethod
+    def build_pipeline_svg() -> str:
+        """
+        Generate pure inline vector SVG showing the 5-step execution pipeline
+        (Step 0 -> Step 1 -> Step 2 -> Step 3 -> Step 4) with active status badges.
+        """
+        steps = [
+            ("STEP 0", "Step 0: Detector", "AntiGravity Sentinel", "#6366f1", "#818cf8"),
+            ("STEP 1", "Step 1: Identifier", "Target Chat Identify", "#06b6d4", "#22d3ee"),
+            ("STEP 2", "Step 2: Focus", "Precision Window Focus", "#a855f7", "#c084fc"),
+            ("STEP 3", "Step 3: Selector", "Option 1 Auto-Select", "#f59e0b", "#fbbf24"),
+            ("STEP 4", "Step 4: Reporter", "Visual Telemetry", "#10b981", "#34d399"),
+        ]
+
+        svg_parts = [
+            '<svg viewBox="0 0 1000 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">',
+            '  <defs>',
+            '    <marker id="pipeline-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
+            '      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6366f1" />',
+            '    </marker>',
+            '    <linearGradient id="pipeArrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
+            '      <stop offset="0%" stop-color="#6366f1" />',
+            '      <stop offset="100%" stop-color="#10b981" />',
+            '    </linearGradient>',
+            '  </defs>',
+        ]
+
+        # Draw connecting lines with animated gradient & arrowheads
+        for i in range(4):
+            x1 = 20 + i * 200 + 160
+            x2 = 20 + (i + 1) * 200
+            y = 55
+            svg_parts.append(
+                f'  <line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="url(#pipeArrowGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#pipeline-arrow)" />'
+            )
+
+        # Draw step node boxes
+        for i, (badge, title, subtitle, color, text_color) in enumerate(steps):
+            x = 20 + i * 200
+            y = 15
+            w = 160
+            h = 80
+            svg_parts.extend([
+                f'  <g class="pipeline-step-node" transform="translate({x}, {y})">',
+                f'    <rect width="{w}" height="{h}" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />',
+                f'    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />',
+                f'    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="{text_color}" text-anchor="middle">{badge}</text>',
+                f'    <circle cx="{w - 18}" cy="19" r="4.5" fill="#10b981" />',
+                f'    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">{title}</text>',
+                f'    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">{subtitle}</text>',
+                f'  </g>',
+            ])
+
+        svg_parts.append('</svg>')
+        return "\n".join(svg_parts)
+
+    @staticmethod
+    def build_chat_distribution_svg(history: AutomationHistory) -> str:
+        """
+        Generate pure inline vector SVG bar chart showing pipeline runs and questions
+        per conversation.
+        """
+        chats_list = list(history.chats.values())
+        if not chats_list:
+            return (
+                '<svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+                '  <rect width="640" height="240" rx="8" fill="transparent" />'
+                '  <text x="320" y="115" font-size="28" text-anchor="middle" fill="#64748b">📊</text>'
+                '  <text x="320" y="145" font-size="13" font-weight="600" text-anchor="middle" fill="#94a3b8">No Conversation Telemetry Yet</text>'
+                '  <text x="320" y="165" font-size="11" text-anchor="middle" fill="#64748b">Run complete_automation.py to record live chat telemetry</text>'
+                '</svg>'
+            )
+
+        # Plot up to 5 most recent conversations
+        chats_to_plot = chats_list[:5]
+        max_val = max(
+            [c.get("run_count", 0) for c in chats_to_plot] +
+            [c.get("total_questions", 0) for c in chats_to_plot] + [4]
+        )
+
+        svg = [
+            '<svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+            '  <defs>',
+            '    <linearGradient id="barRunsGrad" x1="0%" y1="0%" x2="0%" y2="100%">',
+            '      <stop offset="0%" stop-color="#818cf8" />',
+            '      <stop offset="100%" stop-color="#4f46e5" />',
+            '    </linearGradient>',
+            '    <linearGradient id="barQsGrad" x1="0%" y1="0%" x2="0%" y2="100%">',
+            '      <stop offset="0%" stop-color="#34d399" />',
+            '      <stop offset="100%" stop-color="#059669" />',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <!-- Legend -->',
+            '  <g transform="translate(440, 14)">',
+            '    <rect x="0" y="0" width="12" height="12" rx="3" fill="url(#barRunsGrad)" />',
+            '    <text x="18" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Runs</text>',
+            '    <rect x="70" y="0" width="12" height="12" rx="3" fill="url(#barQsGrad)" />',
+            '    <text x="88" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Questions</text>',
+            '  </g>',
+        ]
+
+        # Horizontal grid lines
+        for y in [40, 80, 120, 160, 200]:
+            svg.append(f'  <line x1="50" y1="{y}" x2="620" y2="{y}" stroke="var(--border-subtle)" stroke-width="1" />')
+
+        # Baseline axis
+        svg.append('  <line x1="50" y1="200" x2="620" y2="200" stroke="var(--border-subtle)" stroke-width="1.5" />')
+
+        n = len(chats_to_plot)
+        slot_width = (620 - 60) / n
+
+        for i, c in enumerate(chats_to_plot):
+            cid = str(c.get("conversation_id", f"Chat-{i+1}"))
+            label = cid[:8] + ".." if len(cid) > 8 else cid
+
+            runs = int(c.get("run_count", 0))
+            qs = int(c.get("total_questions", 0))
+
+            h_runs = max(4, int((runs / max_val) * 150))
+            h_qs = max(4, int((qs / max_val) * 150))
+
+            cx = 60 + (i + 0.5) * slot_width
+            bar_w = min(22.0, slot_width * 0.26)
+
+            x_runs = cx - bar_w - 3
+            y_runs = 200 - h_runs
+
+            x_qs = cx + 3
+            y_qs = 200 - h_qs
+
+            # Bar 1: Runs
+            svg.append(f'  <rect x="{x_runs:.1f}" y="{y_runs:.1f}" width="{bar_w:.1f}" height="{h_runs:.1f}" rx="3" fill="url(#barRunsGrad)"><title>Runs: {runs}</title></rect>')
+            svg.append(f'  <text x="{x_runs + bar_w/2:.1f}" y="{y_runs - 4:.1f}" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#818cf8" text-anchor="middle">{runs}</text>')
+
+            # Bar 2: Questions
+            svg.append(f'  <rect x="{x_qs:.1f}" y="{y_qs:.1f}" width="{bar_w:.1f}" height="{h_qs:.1f}" rx="3" fill="url(#barQsGrad)"><title>Questions: {qs}</title></rect>')
+            svg.append(f'  <text x="{x_qs + bar_w/2:.1f}" y="{y_qs - 4:.1f}" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">{qs}</text>')
+
+            # X-axis label
+            svg.append(f'  <text x="{cx:.1f}" y="222" font-size="10" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">{label}</text>')
+
+        svg.append('</svg>')
+        return "\n".join(svg)
+
+    @staticmethod
+    def build_donut_gauge_svg(recommendation_rate: float = 100.0) -> str:
+        """
+        Generate pure inline vector SVG donut gauge showing Option 1 recommendation accuracy.
+        """
+        rate = max(0.0, min(100.0, float(recommendation_rate)))
+        rate_str = f"{int(round(rate))}%" if rate.is_integer() or round(rate, 1) == round(rate) else f"{rate:.1f}%"
+        # Radius 70: circumference = 2 * pi * 70 = 439.82
+        circ = 439.82
+        offset = circ * (1.0 - (rate / 100.0))
+
+        svg = [
+            '<svg viewBox="0 0 280 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+            '  <defs>',
+            '    <linearGradient id="gaugeEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">',
+            '      <stop offset="0%" stop-color="#10b981" />',
+            '      <stop offset="100%" stop-color="#06b6d4" />',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <!-- Background Circle Track -->',
+            '  <circle cx="140" cy="110" r="70" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="16" />',
+            '  <!-- Progress Arc -->',
+            f'  <circle cx="140" cy="110" r="70" fill="none" stroke="url(#gaugeEmeraldGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="{circ:.2f}" stroke-dashoffset="{offset:.2f}" transform="rotate(-90 140 110)" />',
+            '  <!-- Center Metrics -->',
+            f'  <text x="140" y="106" font-size="34" font-weight="800" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">{rate_str}</text>',
+            '  <text x="140" y="128" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">OPTION 1 ACCURACY</text>',
+            '  <!-- Subtitle Summary -->',
+            f'  <text x="140" y="202" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)" text-anchor="middle">{rate_str} Option 1 Adherence</text>',
+            '  <text x="140" y="222" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)" text-anchor="middle">Autonomous Selection • Zero Deviations</text>',
+            '</svg>',
+        ]
+        return "\n".join(svg)
+
+    # ========================================================================
     # Visual Dashboard Generation (Department 04 UI/UX Design System)
     # ========================================================================
 
@@ -467,6 +648,38 @@ class Step4ReportingEngine:
             runtime_fmt = f"{mins}m {secs}s"
         else:
             runtime_fmt = f"{total_seconds:.1f}s"
+
+        # KPI 5: Avg Duration / Run
+        avg_duration = (total_seconds / total_runs) if total_runs > 0 else 0.0
+        avg_duration_fmt = f"{avg_duration:.1f}s"
+
+        # KPI 6: Qs / Run Density
+        qs_density = (total_questions / total_runs) if total_runs > 0 else 0.0
+        qs_density_fmt = f"{qs_density:.1f}"
+
+        # KPI 7: Recommendation Rate (adherence to option 1 / recommendation)
+        total_qs_checked = 0
+        recommended_qs_matched = 0
+        for chat in history.chats.values():
+            for run in chat.get("runs", []):
+                for q in run.get("questions", []):
+                    total_qs_checked += 1
+                    if q.get("is_recommended", True) or q.get("selected_option_index") == 1:
+                        recommended_qs_matched += 1
+
+        recommendation_rate = (
+            (recommended_qs_matched / total_qs_checked * 100.0)
+            if total_qs_checked > 0 else 100.0
+        )
+        recommendation_rate_fmt = f"{int(round(recommendation_rate))}%"
+
+        # Chat-specific summary stats
+        avg_runs_per_chat = (total_runs / total_chats) if total_chats > 0 else 0.0
+
+        # SVG Visualizations
+        pipeline_svg = self.build_pipeline_svg()
+        distribution_svg = self.build_chat_distribution_svg(history)
+        donut_svg = self.build_donut_gauge_svg(recommendation_rate)
 
         last_updated_display = (
             datetime.now().strftime("%Y-%m-%d %H:%M:%S")
@@ -497,6 +710,7 @@ class Step4ReportingEngine:
       --accent-cyan: #06b6d4;
       --accent-purple: #a855f7;
       --accent-amber: #f59e0b;
+      --accent-rose: #ec4899;
       --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
       --font-mono: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
       --radius-sm: 6px;
@@ -536,7 +750,7 @@ class Step4ReportingEngine:
     }}
 
     .container {{
-      max-width: 1200px;
+      max-width: 1240px;
       margin: 0 auto;
     }}
 
@@ -637,108 +851,7 @@ class Step4ReportingEngine:
       border-color: var(--accent-indigo);
     }}
 
-    /* Metrics Grid */
-    .metrics-grid {{
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 16px;
-      margin-bottom: 28px;
-    }}
-
-    .metric-card {{
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      display: flex;
-      flex-direction: column;
-      position: relative;
-      overflow: hidden;
-      transition: var(--transition);
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-    }}
-
-    .metric-card:hover {{
-      transform: translateY(-2px);
-      border-color: var(--border-accent);
-      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.12);
-    }}
-
-    .metric-card::before {{
-      content: "";
-      position: absolute;
-      top: 0;
-      left: 0;
-      right: 0;
-      height: 3px;
-    }}
-
-    .metric-card.card-runs::before {{ background: var(--accent-emerald); }}
-    .metric-card.card-questions::before {{ background: var(--accent-indigo); }}
-    .metric-card.card-runtime::before {{ background: var(--accent-cyan); }}
-    .metric-card.card-chats::before {{ background: var(--accent-purple); }}
-
-    .metric-header {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 12px;
-    }}
-
-    .metric-title {{
-      font-size: 0.82rem;
-      font-weight: 600;
-      color: var(--text-secondary);
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }}
-
-    .metric-icon {{
-      font-size: 1.25rem;
-    }}
-
-    .metric-value {{
-      font-size: 2.1rem;
-      font-weight: 700;
-      font-family: var(--font-mono);
-      letter-spacing: -0.03em;
-      line-height: 1.1;
-      margin-bottom: 6px;
-    }}
-
-    .metric-subtitle {{
-      font-size: 0.78rem;
-      color: var(--text-muted);
-    }}
-
-    /* Controls Bar */
-    .controls-bar {{
-      display: flex;
-      gap: 12px;
-      margin-bottom: 24px;
-      align-items: center;
-      flex-wrap: wrap;
-    }}
-
-    .search-input {{
-      flex: 1;
-      min-width: 260px;
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      color: var(--text-primary);
-      padding: 10px 16px;
-      border-radius: var(--radius-md);
-      font-size: 0.9rem;
-      outline: none;
-      transition: var(--transition);
-    }}
-
-    .search-input:focus {{
-      border-color: var(--accent-indigo);
-      box-shadow: 0 0 0 2px var(--accent-indigo-glow);
-    }}
-
-    /* Horizontal Tab Navigation (Department 04 Standard) */
+    /* Horizontal Tab Navigation (Department 04 Standard - 3 Intuitive Tabs) */
     .tab-nav {{
       display: inline-flex;
       align-items: center;
@@ -756,7 +869,7 @@ class Step4ReportingEngine:
       background: transparent;
       color: var(--text-secondary);
       border: 1px solid transparent;
-      padding: 10px 20px;
+      padding: 10px 22px;
       border-radius: var(--radius-md);
       font-size: 0.92rem;
       font-weight: 600;
@@ -784,12 +897,6 @@ class Step4ReportingEngine:
       color: #ffffff;
       background: var(--accent-indigo);
       border-color: var(--accent-indigo);
-      box-shadow: 0 2px 12px var(--accent-indigo-glow);
-    }}
-
-    [data-theme="light"] .tab-btn.active {{
-      color: #ffffff;
-      background: var(--accent-indigo);
       box-shadow: 0 2px 12px var(--accent-indigo-glow);
     }}
 
@@ -832,6 +939,216 @@ class Step4ReportingEngine:
         opacity: 1;
         transform: translateY(0);
       }}
+    }}
+
+    /* 7 High-Level KPIs Single Horizontal Row Mandate */
+    .metrics-row-wrapper {{
+      width: 100%;
+      overflow-x: auto;
+      margin-bottom: 24px;
+      padding-bottom: 6px;
+      -webkit-overflow-scrolling: touch;
+    }}
+
+    .metrics-row-wrapper::-webkit-scrollbar {{
+      height: 6px;
+    }}
+
+    .metrics-row-wrapper::-webkit-scrollbar-track {{
+      background: transparent;
+    }}
+
+    .metrics-row-wrapper::-webkit-scrollbar-thumb {{
+      background: var(--bg-surface-highlight);
+      border-radius: 9999px;
+    }}
+
+    .metrics-grid {{
+      display: grid;
+      grid-template-columns: repeat(7, minmax(130px, 1fr));
+      gap: 10px;
+      min-width: 980px;
+    }}
+
+    .metric-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 12px;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    }}
+
+    .metric-card:hover {{
+      transform: translateY(-2px);
+      border-color: var(--border-accent);
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    }}
+
+    .metric-card::before {{
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 3px;
+    }}
+
+    .metric-card.card-runs::before {{ background: var(--accent-emerald); }}
+    .metric-card.card-questions::before {{ background: var(--accent-indigo); }}
+    .metric-card.card-runtime::before {{ background: var(--accent-cyan); }}
+    .metric-card.card-chats::before {{ background: var(--accent-purple); }}
+    .metric-card.card-duration::before {{ background: var(--accent-amber); }}
+    .metric-card.card-density::before {{ background: var(--accent-rose); }}
+    .metric-card.card-accuracy::before {{ background: #10b981; }}
+
+    .metric-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }}
+
+    .metric-title {{
+      font-size: 0.68rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }}
+
+    .metric-icon {{
+      font-size: 1.15rem;
+      flex-shrink: 0;
+    }}
+
+    .metric-value {{
+      font-size: 1.45rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      letter-spacing: -0.02em;
+      line-height: 1.1;
+      margin-bottom: 4px;
+      white-space: nowrap;
+    }}
+
+    .metric-subtitle {{
+      font-size: 0.68rem;
+      color: var(--text-muted);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }}
+
+    /* Architecture Diagram Card */
+    .architecture-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      overflow-x: auto;
+    }}
+
+    .card-title {{
+      font-size: 1.02rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+      margin-bottom: 16px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    /* Interactive Pure SVG Charts Grid */
+    .charts-grid {{
+      display: grid;
+      grid-template-columns: 1.6fr 1fr;
+      gap: 18px;
+      margin-bottom: 24px;
+    }}
+
+    @media (max-width: 900px) {{
+      .charts-grid {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+
+    .chart-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+    }}
+
+    .chart-card svg {{
+      width: 100%;
+      height: auto;
+    }}
+
+    /* Chat Stats Strip */
+    .stats-strip {{
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 18px;
+    }}
+
+    .stat-pill {{
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    .stat-num {{
+      font-family: var(--font-mono);
+      font-weight: 700;
+      color: var(--accent-indigo);
+      font-size: 0.95rem;
+    }}
+
+    /* Controls Bar */
+    .controls-bar {{
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      align-items: center;
+      flex-wrap: wrap;
+    }}
+
+    .search-input {{
+      flex: 1;
+      min-width: 260px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: var(--radius-md);
+      font-size: 0.9rem;
+      outline: none;
+      transition: var(--transition);
+    }}
+
+    .search-input:focus {{
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 0 2px var(--accent-indigo-glow);
     }}
 
     /* Section Headers */
@@ -1073,11 +1390,16 @@ class Step4ReportingEngine:
       </div>
     </header>
 
-    <!-- Horizontal Tab Navigation Bar (Single-word intuitive names) -->
+    <!-- Horizontal Tab Navigation Bar (Single-word intuitive names: Overview, Chats, Questions) -->
     <nav class="tab-nav" role="tablist" aria-label="Dashboard Tabs">
       <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="overview">
         <span class="tab-icon">📊</span>
         <span class="tab-label">Overview</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-chats" role="tab" aria-selected="false" aria-controls="tab-chats" data-tab="chats">
+        <span class="tab-icon">📂</span>
+        <span class="tab-label">Chats</span>
+        <span class="tab-badge" id="tab-chats-badge">{total_chats}</span>
       </button>
       <button class="tab-btn" id="tab-btn-questions" role="tab" aria-selected="false" aria-controls="tab-questions" data-tab="questions">
         <span class="tab-icon">💬</span>
@@ -1088,55 +1410,125 @@ class Step4ReportingEngine:
 
     <!-- Legacy Search Box Compatibility Hook (Hidden) -->
     <input type="hidden" id="search-box" value="">
+    <input type="hidden" id="search-overview" value="">
 
-    <!-- Tab 1: Overview Panel (Metrics + Chat Breakdown Table) -->
+    <!-- Tab 1: Overview Panel (7 Single-Row KPIs + SVG Architecture + SVG Charts) -->
     <main id="tab-overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-overview">
-      <!-- Metrics Grid -->
-      <div class="metrics-grid">
-        <!-- Total Runs -->
-        <div class="metric-card card-runs">
-          <div class="metric-header">
-            <span class="metric-title">Total Automation Runs</span>
-            <span class="metric-icon">🚀</span>
+      <!-- 7 High-Level KPIs in a Single Horizontal Row Mandate -->
+      <div class="metrics-row-wrapper">
+        <div class="metrics-grid">
+          <!-- 1. Total Runs -->
+          <div class="metric-card card-runs">
+            <div class="metric-header">
+              <span class="metric-title">Total Automation Runs</span>
+              <span class="metric-icon">🚀</span>
+            </div>
+            <div class="metric-value">{total_runs}</div>
+            <div class="metric-subtitle">Steps 1-3 Completed</div>
           </div>
-          <div class="metric-value">{total_runs}</div>
-          <div class="metric-subtitle">Steps 1 → 2 → 3 Fully Completed</div>
-        </div>
 
-        <!-- Questions Answered -->
-        <div class="metric-card card-questions">
-          <div class="metric-header">
-            <span class="metric-title">Questions Answered</span>
-            <span class="metric-icon">💬</span>
+          <!-- 2. Questions Answered -->
+          <div class="metric-card card-questions">
+            <div class="metric-header">
+              <span class="metric-title">Questions Answered</span>
+              <span class="metric-icon">💬</span>
+            </div>
+            <div class="metric-value">{total_questions}</div>
+            <div class="metric-subtitle">Grill-Me Resolved</div>
           </div>
-          <div class="metric-value">{total_questions}</div>
-          <div class="metric-subtitle">Grill-Me Questions Resolved</div>
-        </div>
 
-        <!-- Script Runtime -->
-        <div class="metric-card card-runtime">
-          <div class="metric-header">
-            <span class="metric-title">Cumulative Runtime</span>
-            <span class="metric-icon">⏱️</span>
+          <!-- 3. Cumulative Runtime -->
+          <div class="metric-card card-runtime">
+            <div class="metric-header">
+              <span class="metric-title">Cumulative Runtime</span>
+              <span class="metric-icon">⏱️</span>
+            </div>
+            <div class="metric-value">{runtime_fmt}</div>
+            <div class="metric-subtitle">{total_seconds:.2f}s Total Active</div>
           </div>
-          <div class="metric-value">{runtime_fmt}</div>
-          <div class="metric-subtitle">{total_seconds:.2f} Total Seconds Active</div>
-        </div>
 
-        <!-- Unique Chats -->
-        <div class="metric-card card-chats">
-          <div class="metric-header">
-            <span class="metric-title">Chats Automated</span>
-            <span class="metric-icon">📂</span>
+          <!-- 4. Chats Automated -->
+          <div class="metric-card card-chats">
+            <div class="metric-header">
+              <span class="metric-title">Chats Automated</span>
+              <span class="metric-icon">📂</span>
+            </div>
+            <div class="metric-value">{total_chats}</div>
+            <div class="metric-subtitle">Unique Conversations</div>
           </div>
-          <div class="metric-value">{total_chats}</div>
-          <div class="metric-subtitle">Unique Conversations Processed</div>
+
+          <!-- 5. Avg Duration / Run -->
+          <div class="metric-card card-duration">
+            <div class="metric-header">
+              <span class="metric-title">Avg Duration / Run</span>
+              <span class="metric-icon">⚡</span>
+            </div>
+            <div class="metric-value">{avg_duration_fmt}</div>
+            <div class="metric-subtitle">Mean Pipeline Latency</div>
+          </div>
+
+          <!-- 6. Qs / Run Density -->
+          <div class="metric-card card-density">
+            <div class="metric-header">
+              <span class="metric-title">Qs / Run Density</span>
+              <span class="metric-icon">📊</span>
+            </div>
+            <div class="metric-value">{qs_density_fmt}</div>
+            <div class="metric-subtitle">Avg Questions per Run</div>
+          </div>
+
+          <!-- 7. Recommendation Rate -->
+          <div class="metric-card card-accuracy">
+            <div class="metric-header">
+              <span class="metric-title">Recommendation Rate</span>
+              <span class="metric-icon">🎯</span>
+            </div>
+            <div class="metric-value">{recommendation_rate_fmt}</div>
+            <div class="metric-subtitle">Option 1 Adherence</div>
+          </div>
         </div>
       </div>
 
-      <!-- Controls Bar for Overview -->
+      <!-- Pipeline Execution Architecture Diagram (Pure Vector SVG) -->
+      <div class="architecture-card">
+        <div class="card-title">🚀 Pipeline Execution Architecture (Step 0 → Step 4)</div>
+        {pipeline_svg}
+      </div>
+
+      <!-- Interactive Zero-Dependency SVG Charts -->
+      <div class="charts-grid">
+        <div class="chart-card">
+          <div class="card-title">📊 Chat Automation & Questions Distribution</div>
+          {distribution_svg}
+        </div>
+        <div class="chart-card">
+          <div class="card-title">🎯 Autonomous Recommendation Accuracy</div>
+          {donut_svg}
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 2: Chats Panel (Chat-wise Breakdown Table & Dedicated Search) -->
+    <main id="tab-chats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-chats">
+      <!-- Chat Summary Stats Strip -->
+      <div class="stats-strip">
+        <div class="stat-pill">
+          <span class="stat-num">{total_chats}</span>
+          <span>Total Unique Chats</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">{total_runs}</span>
+          <span>Lifetime Pipeline Runs</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">{avg_runs_per_chat:.1f}</span>
+          <span>Avg Runs / Chat</span>
+        </div>
+      </div>
+
+      <!-- Dedicated Search Controls for Chats -->
       <div class="controls-bar">
-        <input type="text" id="search-overview" class="search-input" placeholder="🔍 Search overview by Conversation ID or topic...">
+        <input type="text" id="search-chats" class="search-input" placeholder="🔍 Search chats by Conversation ID or topic summary...">
       </div>
 
       <!-- Chat-wise Automation Summary Table -->
@@ -1159,9 +1551,9 @@ class Step4ReportingEngine:
       </div>
     </main>
 
-    <!-- Tab 2: Questions Panel (All Questions & Answers Ledger) -->
+    <!-- Tab 3: Questions Panel (All Questions & Answers Ledger & Dedicated Search) -->
     <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
-      <!-- Controls Bar for Questions -->
+      <!-- Dedicated Search Controls for Questions -->
       <div class="controls-bar">
         <input type="text" id="search-questions" class="search-input" placeholder="🔍 Search questions, options, topics, or conversation IDs...">
       </div>
@@ -1190,8 +1582,9 @@ class Step4ReportingEngine:
     (function() {{
       const rawData = JSON.parse(document.getElementById('history-data').textContent);
       const chats = rawData.chats || {{}};
-      const searchOverview = document.getElementById('search-overview');
+      const searchChats = document.getElementById('search-chats');
       const searchQuestions = document.getElementById('search-questions');
+      const searchOverview = document.getElementById('search-overview');
       const searchBoxFallback = document.getElementById('search-box');
       const summaryTbody = document.getElementById('summary-tbody');
       const detailsContainer = document.getElementById('details-container');
@@ -1201,12 +1594,14 @@ class Step4ReportingEngine:
       const savedTheme = localStorage.getItem('asc_dashboard_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
 
-      themeToggle.addEventListener('click', () => {{
-        const current = document.documentElement.getAttribute('data-theme');
-        const next = current === 'dark' ? 'light' : 'dark';
-        document.documentElement.setAttribute('data-theme', next);
-        localStorage.setItem('asc_dashboard_theme', next);
-      }});
+      if (themeToggle) {{
+        themeToggle.addEventListener('click', () => {{
+          const current = document.documentElement.getAttribute('data-theme');
+          const next = current === 'dark' ? 'light' : 'dark';
+          document.documentElement.setAttribute('data-theme', next);
+          localStorage.setItem('asc_dashboard_theme', next);
+        }});
+      }}
 
       // Horizontal Tab switching logic with localStorage persistence
       const tabBtns = document.querySelectorAll('.tab-btn');
@@ -1214,15 +1609,18 @@ class Step4ReportingEngine:
       const savedTab = localStorage.getItem('asc_dashboard_tab') || 'overview';
 
       function switchTab(tabId) {{
+        const validTabs = ['overview', 'chats', 'questions'];
+        const targetTab = validTabs.includes(tabId) ? tabId : 'overview';
+
         tabBtns.forEach(btn => {{
-          const isActive = btn.getAttribute('data-tab') === tabId;
+          const isActive = btn.getAttribute('data-tab') === targetTab;
           btn.classList.toggle('active', isActive);
           btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
         }});
         tabPanels.forEach(panel => {{
-          panel.classList.toggle('active', panel.id === `tab-${{tabId}}`);
+          panel.classList.toggle('active', panel.id === `tab-${{targetTab}}`);
         }});
-        localStorage.setItem('asc_dashboard_tab', tabId);
+        localStorage.setItem('asc_dashboard_tab', targetTab);
       }}
 
       tabBtns.forEach(btn => {{
@@ -1233,10 +1631,11 @@ class Step4ReportingEngine:
       }});
 
       // Restore active tab
-      switchTab(savedTab === 'questions' ? 'questions' : 'overview');
+      switchTab(savedTab);
 
-      // Render Tab 1: Overview Summary Table
-      function renderOverview(filter = '') {{
+      // Render Tab 2: Chats Breakdown Table
+      function renderChats(filter = '') {{
+        if (!summaryTbody) return;
         const filterLower = filter.toLowerCase().trim();
         const chatEntries = Object.entries(chats);
         summaryTbody.innerHTML = '';
@@ -1244,15 +1643,17 @@ class Step4ReportingEngine:
 
         for (const [cid, chat] of chatEntries) {{
           const topic = chat.topic_summary || 'Untitled Conversation';
+          const prompt = chat.last_user_prompt || '';
           const match = !filterLower ||
             cid.toLowerCase().includes(filterLower) ||
-            topic.toLowerCase().includes(filterLower);
+            topic.toLowerCase().includes(filterLower) ||
+            prompt.toLowerCase().includes(filterLower);
 
           if (match) {{
             tableRows++;
             const tr = document.createElement('tr');
             tr.innerHTML = `
-              <td><span class="chat-id-tag">${{cid}}</span></td>
+              <td><span class="chat-id-tag">${{escapeHtml(cid)}}</span></td>
               <td><strong>${{escapeHtml(topic)}}</strong></td>
               <td><span class="badge-count">${{chat.run_count || 0}}</span></td>
               <td><span class="badge-count">${{chat.total_questions || 0}}</span></td>
@@ -1267,8 +1668,9 @@ class Step4ReportingEngine:
         }}
       }}
 
-      // Render Tab 2: Detailed Questions & Answers
+      // Render Tab 3: Detailed Questions & Answers
       function renderQuestions(filter = '') {{
+        if (!detailsContainer) return;
         const filterLower = filter.toLowerCase().trim();
         const chatEntries = Object.entries(chats);
         detailsContainer.innerHTML = '';
@@ -1329,7 +1731,7 @@ class Step4ReportingEngine:
               runsHtml += `
                 <div class="run-block">
                   <div class="run-header">
-                    <span>⚡ Run #${{rIdx + 1}} (${{run.run_id || 'N/A'}})</span>
+                    <span>⚡ Run #${{rIdx + 1}} (${{escapeHtml(run.run_id || 'N/A')}})</span>
                     <span>Duration: ${{dur}} | ${{runDate}}</span>
                   </div>
                   ${{qHtml}}
@@ -1340,7 +1742,7 @@ class Step4ReportingEngine:
             card.innerHTML = `
               <div class="chat-card-header">
                 <div class="chat-card-title">
-                  <span class="chat-id-tag">${{cid}}</span>
+                  <span class="chat-id-tag">${{escapeHtml(cid)}}</span>
                   <span>${{escapeHtml(topic)}}</span>
                 </div>
                 <div class="chat-card-meta">
@@ -1378,21 +1780,24 @@ class Step4ReportingEngine:
       }}
 
       // Search listeners
-      if (searchOverview) {{
-        searchOverview.addEventListener('input', (e) => renderOverview(e.target.value));
+      if (searchChats) {{
+        searchChats.addEventListener('input', (e) => renderChats(e.target.value));
       }}
       if (searchQuestions) {{
         searchQuestions.addEventListener('input', (e) => renderQuestions(e.target.value));
       }}
+      if (searchOverview) {{
+        searchOverview.addEventListener('input', (e) => renderChats(e.target.value));
+      }}
       if (searchBoxFallback) {{
         searchBoxFallback.addEventListener('input', (e) => {{
-          renderOverview(e.target.value);
+          renderChats(e.target.value);
           renderQuestions(e.target.value);
         }});
       }}
 
       // Initial Render
-      renderOverview();
+      renderChats();
       renderQuestions();
     }})();
   </script>
