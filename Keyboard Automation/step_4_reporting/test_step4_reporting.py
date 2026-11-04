@@ -909,5 +909,181 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("collapsible-header[data-target]", content)
 
 
+
+    def test_19_dashboard_configuration_modal_and_controls(self):
+        """Verify the in-dashboard configuration modal, form controls, toast notification, and settings JS engine."""
+        history = AutomationHistory(
+            total_pipeline_runs=1,
+            total_questions_answered=2,
+            total_runtime_seconds=8.0,
+            total_unique_chats=1,
+            chats={"chat_cfg": {"conversation_id": "chat_cfg", "topic_summary": "Cfg Test", "run_count": 1, "runs": []}}
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Header Config Action Button & Auto-Refresh Badge
+        self.assertIn('id="config-toggle-btn"', content)
+        self.assertIn('⚙️ Config', content)
+        self.assertIn('id="auto-refresh-badge"', content)
+        self.assertIn('id="refresh-countdown"', content)
+
+        # 2. Modal Backdrop and Content
+        self.assertIn('id="config-modal"', content)
+        self.assertIn('class="modal-backdrop"', content)
+        self.assertIn('class="modal-content"', content)
+        self.assertIn('id="config-close-btn"', content)
+        self.assertIn('Dashboard &amp; Automation Settings', content.replace("&", "&amp;"))
+
+        # 3. All 6 Configurable Setting Inputs
+        self.assertIn('id="cfg-auto-refresh"', content)
+        self.assertIn('id="cfg-activity-delay"', content)
+        self.assertIn('id="cfg-default-tab"', content)
+        self.assertIn('id="cfg-selection-policy"', content)
+        self.assertIn('id="cfg-visual-effects"', content)
+        self.assertIn('id="cfg-sound-notify"', content)
+
+        # 4. Data Action Buttons & Modal Action Buttons
+        self.assertIn('id="cfg-export-btn"', content)
+        self.assertIn('id="cfg-reset-btn"', content)
+        self.assertIn('id="config-cancel-btn"', content)
+        self.assertIn('id="config-save-btn"', content)
+        self.assertIn('id="cfg-status-badge"', content)
+
+        # 5. Toast Notification Container
+        self.assertIn('id="toast-notify"', content)
+        self.assertIn('class="toast-notification"', content)
+
+        # 6. Client Script Configuration Engine Logic
+        self.assertIn("DEFAULT_CONFIG", content)
+        self.assertIn("asc_dashboard_config", content)
+        self.assertIn("function showToast", content)
+        self.assertIn("function playSoundChime", content)
+        self.assertIn("function syncFormWithConfig", content)
+        self.assertIn("function applyDynamicSettings", content)
+        self.assertIn("function openConfigModal", content)
+        self.assertIn("function closeConfigModal", content)
+
+    def test_20_advanced_svg_diagrams_and_telemetry_suite(self):
+        """Directly verify the upgraded topology diagram and 4 advanced SVG telemetry charts."""
+        # 1. System Component Topology SVG
+        topo_svg = Step4ReportingEngine.build_topology_svg()
+        self.assertIn("<svg", topo_svg)
+        self.assertIn("Antigravity IDE / Brain", topo_svg)
+        self.assertIn("Step 0: Detector", topo_svg)
+        self.assertIn("Step 1: Identifier", topo_svg)
+        self.assertIn("Step 2: Focus", topo_svg)
+        self.assertIn("Step 3: Selector", topo_svg)
+        self.assertIn("Step 4: Reporter", topo_svg)
+        self.assertIn("ONLINE", topo_svg)
+        self.assertIn("Win32 HOOK ACTIVE", topo_svg)
+        self.assertIn("100% INTEGRITY", topo_svg)
+        self.assertIn("PERSISTENT JSON", topo_svg)
+        self.assertIn("animateMotion", topo_svg)
+        self.assertIn("topoBusGrad", topo_svg)
+
+        # 2. Test empty history behavior for the 4 new charts
+        empty_hist = AutomationHistory()
+        empty_vel = Step4ReportingEngine.build_velocity_timeline_svg(empty_hist)
+        self.assertIn("No Velocity Timeline Data Yet", empty_vel)
+
+        empty_prod = Step4ReportingEngine.build_productivity_gauge_svg(empty_hist)
+        self.assertIn("prodGaugeGrad", empty_prod)
+        self.assertIn("MANUAL TIME SAVED", empty_prod)
+
+        empty_heat = Step4ReportingEngine.build_time_heatmap_svg(empty_hist)
+        self.assertIn("Activity Intensity:", empty_heat)
+        self.assertIn("Morning", empty_heat)
+        self.assertIn("Night", empty_heat)
+
+        empty_opt = Step4ReportingEngine.build_option_breakdown_svg(empty_hist)
+        self.assertIn("Option 1 Recommended Adherence Rate", empty_opt)
+
+        # 3. Test populated history behavior
+        pop_hist = AutomationHistory(
+            total_pipeline_runs=2,
+            total_questions_answered=4,
+            total_runtime_seconds=16.0,
+            total_unique_chats=1,
+            chats={
+                "chat_full": {
+                    "conversation_id": "chat_full",
+                    "topic_summary": "Full Telemetry Test",
+                    "run_count": 2,
+                    "total_questions": 4,
+                    "runs": [
+                        {
+                            "run_id": "run_a",
+                            "timestamp": "2026-11-04T08:30:00Z",
+                            "duration_seconds": 6.5,
+                            "questions_count": 2,
+                            "questions": [
+                                {"question_index": 1, "selected_option_index": 1, "is_recommended": True},
+                                {"question_index": 2, "selected_option_index": 1, "is_recommended": True},
+                            ]
+                        },
+                        {
+                            "run_id": "run_b",
+                            "timestamp": "2026-11-04T14:45:00Z",
+                            "duration_seconds": 9.5,
+                            "questions_count": 2,
+                            "questions": [
+                                {"question_index": 1, "selected_option_index": 1, "is_recommended": True},
+                                {"question_index": 2, "selected_option_index": 2, "is_recommended": False},
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+
+        pop_vel = Step4ReportingEngine.build_velocity_timeline_svg(pop_hist)
+        self.assertIn("velDurGrad", pop_vel)
+        self.assertIn("velBarGrad", pop_vel)
+        self.assertIn("Questions Velocity", pop_vel)
+
+        pop_prod = Step4ReportingEngine.build_productivity_gauge_svg(pop_hist)
+        self.assertIn("Productivity ROI", pop_prod)
+        self.assertIn("Estimated Human Time:", pop_prod)
+        self.assertIn("Faster", pop_prod)
+
+        pop_heat = Step4ReportingEngine.build_time_heatmap_svg(pop_hist)
+        self.assertIn("08h", pop_heat)
+        self.assertIn("Hour 14:00", pop_heat)
+
+        pop_opt = Step4ReportingEngine.build_option_breakdown_svg(pop_hist)
+        self.assertIn("Option 1 (Recommended)", pop_opt)
+        self.assertIn("Option 2 (Alternate)", pop_opt)
+
+    def test_21_overview_tab_cards_and_accordions_integrity(self):
+        """Verify all 8 Overview collapsible cards and their data-target bindings."""
+        history = AutomationHistory(
+            total_pipeline_runs=1,
+            total_questions_answered=1,
+            total_runtime_seconds=5.0,
+            total_unique_chats=1,
+            chats={"chat_ov": {"conversation_id": "chat_ov", "topic_summary": "Overview Test", "run_count": 1, "runs": []}}
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        cards_targets = [
+            ("card-architecture", "architecture-body"),
+            ("chart-card-velocity", "chart-body-velocity"),
+            ("chart-card-productivity", "chart-body-productivity"),
+            ("chart-card-heatmap", "chart-body-heatmap"),
+            ("chart-card-option-breakdown", "chart-body-option-breakdown"),
+            ("chart-card-distribution", "chart-body-distribution"),
+            ("chart-card-topic", "chart-body-topic"),
+            ("chart-card-latency", "chart-body-latency"),
+        ]
+
+        for card_id, target_id in cards_targets:
+            self.assertIn(f'id="{card_id}"', content, f"Missing card ID: {card_id}")
+            self.assertIn(f'data-target="{target_id}"', content, f"Missing data-target: {target_id}")
+            self.assertIn(f'id="{target_id}"', content, f"Missing collapsible body ID: {target_id}")
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

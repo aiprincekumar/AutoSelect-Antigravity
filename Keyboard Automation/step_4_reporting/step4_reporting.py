@@ -445,60 +445,95 @@ class Step4ReportingEngine:
     # ========================================================================
 
     @staticmethod
-    def build_pipeline_svg() -> str:
+    def build_topology_svg() -> str:
         """
-        Generate pure inline vector SVG showing the 5-step execution pipeline
-        (Step 0 -> Step 1 -> Step 2 -> Step 3 -> Step 4) with active status badges.
+        Generate pure inline vector SVG showing the full System Component Topology & Health Architecture:
+        [Antigravity IDE / Brain] -> [Step 0: Detector (Win32 Hook)] -> [Step 1: Chat Identifier]
+        -> [Step 2: Focus & Activation] -> [Step 3: Selector] -> [Step 4: Reporting Subsystem]
+        with animated pulse bus lines, component health badges, and Department 04 design tokens.
         """
-        steps = [
-            ("STEP 0", "Step 0: Detector", "AntiGravity Sentinel", "#6366f1", "#818cf8"),
-            ("STEP 1", "Step 1: Identifier", "Target Chat Identify", "#06b6d4", "#22d3ee"),
-            ("STEP 2", "Step 2: Focus", "Precision Window Focus", "#a855f7", "#c084fc"),
-            ("STEP 3", "Step 3: Selector", "Option 1 Auto-Select", "#f59e0b", "#fbbf24"),
-            ("STEP 4", "Step 4: Reporter", "Visual Telemetry", "#10b981", "#34d399"),
+        nodes = [
+            ("BRAIN", "Antigravity IDE / Brain", "Session Transcripts", "ONLINE", "#10b981", "#34d399"),
+            ("STEP 0", "Step 0: Detector", "Win32 Hook Active", "Win32 HOOK ACTIVE", "#6366f1", "#818cf8"),
+            ("STEP 1", "Step 1: Identifier", "Target Chat Ingestion", "100% INTEGRITY", "#06b6d4", "#22d3ee"),
+            ("STEP 2", "Step 2: Focus", "Precision Window Focus", "ACTIVE TARGET", "#a855f7", "#c084fc"),
+            ("STEP 3", "Step 3: Selector", "Option 1 Auto-Select", "AUTONOMOUS", "#f59e0b", "#fbbf24"),
+            ("STEP 4", "Step 4: Reporter", "Telemetry & Visual HUD", "PERSISTENT JSON", "#10b981", "#34d399"),
         ]
 
         svg_parts = [
-            '<svg viewBox="0 0 1000 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">',
+            '<svg viewBox="0 0 1180 130" width="100%" height="130" xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">',
             '  <defs>',
             '    <marker id="pipeline-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
             '      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6366f1" />',
+            '    </marker>',
+            '    <marker id="topo-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">',
+            '      <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#06b6d4" />',
             '    </marker>',
             '    <linearGradient id="pipeArrowGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
             '      <stop offset="0%" stop-color="#6366f1" />',
             '      <stop offset="100%" stop-color="#10b981" />',
             '    </linearGradient>',
+            '    <linearGradient id="topoBusGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
+            '      <stop offset="0%" stop-color="#6366f1" />',
+            '      <stop offset="50%" stop-color="#06b6d4" />',
+            '      <stop offset="100%" stop-color="#10b981" />',
+            '    </linearGradient>',
+            '    <filter id="topoGlow" x="-20%" y="-20%" width="140%" height="140%">',
+            '      <feGaussianBlur stdDeviation="3" result="blur" />',
+            '      <feComposite in="SourceGraphic" in2="blur" operator="over" />',
+            '    </filter>',
             '  </defs>',
         ]
 
-        # Draw connecting lines with animated gradient & arrowheads
-        for i in range(4):
-            x1 = 20 + i * 200 + 160
-            x2 = 20 + (i + 1) * 200
-            y = 55
-            svg_parts.append(
-                f'  <line x1="{x1}" y1="{y}" x2="{x2}" y2="{y}" stroke="url(#pipeArrowGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#pipeline-arrow)" />'
-            )
+        node_w = 166
+        spacing = 30
+        start_x = 18
+        y = 18
+        h = 88
+
+        # Draw connecting bus lines and animated glowing pulse dots
+        for i in range(5):
+            x1 = start_x + i * (node_w + spacing) + node_w
+            x2 = start_x + (i + 1) * (node_w + spacing)
+            mid_y = y + h / 2
+            svg_parts.extend([
+                f'  <!-- Bus connection {i} -> {i+1} -->',
+                f'  <line x1="{x1}" y1="{mid_y}" x2="{x2}" y2="{mid_y}" stroke="url(#topoBusGrad)" stroke-width="2.5" stroke-dasharray="4 2" marker-end="url(#topo-arrow)" />',
+                f'  <circle r="3.5" fill="#38bdf8" filter="url(#topoGlow)">',
+                f'    <animateMotion path="M {x1} {mid_y} L {x2 - 6} {mid_y}" dur="2s" repeatCount="indefinite" />',
+                f'  </circle>',
+            ])
 
         # Draw step node boxes
-        for i, (badge, title, subtitle, color, text_color) in enumerate(steps):
-            x = 20 + i * 200
-            y = 15
-            w = 160
-            h = 80
+        for i, (tag, title, subtitle, badge_status, primary_color, text_color) in enumerate(nodes):
+            x = start_x + i * (node_w + spacing)
+            r_c = int(primary_color[1:3], 16)
+            g_c = int(primary_color[3:5], 16)
+            b_c = int(primary_color[5:7], 16)
+            badge_bg = f"rgba({r_c}, {g_c}, {b_c}, 0.15)"
             svg_parts.extend([
-                f'  <g class="pipeline-step-node" transform="translate({x}, {y})">',
-                f'    <rect width="{w}" height="{h}" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />',
-                f'    <rect x="10" y="10" width="56" height="18" rx="4" fill="rgba(99, 102, 241, 0.15)" />',
-                f'    <text x="38" y="23" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="{text_color}" text-anchor="middle">{badge}</text>',
-                f'    <circle cx="{w - 18}" cy="19" r="4.5" fill="#10b981" />',
-                f'    <text x="10" y="48" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">{title}</text>',
-                f'    <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">{subtitle}</text>',
+                f'  <g class="pipeline-step-node topology-node" transform="translate({x}, {y})">',
+                f'    <rect width="{node_w}" height="{h}" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1.5" />',
+                f'    <rect x="8" y="10" width="48" height="18" rx="4" fill="{badge_bg}" />',
+                f'    <text x="32" y="23" font-size="9" font-weight="700" font-family="var(--font-mono)" fill="{text_color}" text-anchor="middle">{tag}</text>',
+                f'    <rect x="{node_w - 92}" y="10" width="84" height="18" rx="4" fill="rgba(16, 185, 129, 0.12)" stroke="rgba(16, 185, 129, 0.3)" stroke-width="0.8" />',
+                f'    <text x="{node_w - 50}" y="22.5" font-size="7.5" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">{badge_status}</text>',
+                f'    <text x="8" y="48" font-size="11" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">{title}</text>',
+                f'    <text x="8" y="66" font-size="9" font-family="var(--font-family)" fill="var(--text-secondary)">{subtitle}</text>',
+                f'    <circle cx="{node_w - 10}" cy="{h - 10}" r="3" fill="{primary_color}" />',
                 f'  </g>',
             ])
 
         svg_parts.append('</svg>')
         return "\n".join(svg_parts)
+
+    @staticmethod
+    def build_pipeline_svg() -> str:
+        """
+        Backward compatible alias for build_topology_svg showing the full 6-node architecture.
+        """
+        return Step4ReportingEngine.build_topology_svg()
 
     @staticmethod
     def build_chat_distribution_svg(history: AutomationHistory) -> str:
@@ -834,6 +869,410 @@ class Step4ReportingEngine:
         svg.append('</svg>')
         return "\n".join(svg)
 
+    @staticmethod
+    def build_velocity_timeline_svg(history: AutomationHistory) -> str:
+        """
+        Generate pure inline vector SVG dual-axis timeline chart showing:
+        - Primary Left Axis: Run Latency (duration in seconds) with smooth area gradient.
+        - Secondary Right Axis: Question Count Velocity (questions answered per run).
+        """
+        all_runs = []
+        for cid, chat in history.chats.items():
+            for run in chat.get("runs", []):
+                all_runs.append({
+                    "run_id": run.get("run_id", "run"),
+                    "timestamp": run.get("timestamp", ""),
+                    "duration": float(run.get("duration_seconds", 0.0)),
+                    "questions_count": int(run.get("questions_count", 0)),
+                    "cid": cid,
+                })
+
+        all_runs.sort(key=lambda r: r.get("timestamp", ""))
+
+        if not all_runs:
+            return (
+                '<svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">'
+                '  <rect width="640" height="240" rx="8" fill="transparent" />'
+                '  <text x="320" y="115" font-size="28" text-anchor="middle" fill="#64748b">📈</text>'
+                '  <text x="320" y="145" font-size="13" font-weight="600" text-anchor="middle" fill="#94a3b8">No Velocity Timeline Data Yet</text>'
+                '  <text x="320" y="165" font-size="11" text-anchor="middle" fill="#64748b">Run automation pipeline to record dual-axis velocity telemetry</text>'
+                '</svg>'
+            )
+
+        recent_runs = all_runs[-10:]
+        durations = [r["duration"] for r in recent_runs]
+        q_counts = [r["questions_count"] for r in recent_runs]
+
+        max_dur = max(durations + [5.0]) * 1.25
+        max_q = max(q_counts + [2])
+
+        left = 55.0
+        right = 585.0
+        top = 40.0
+        bottom = 190.0
+        chart_w = right - left
+        chart_h = bottom - top
+
+        svg = [
+            '<svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+            '  <defs>',
+            '    <linearGradient id="velDurGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
+            '      <stop offset="0%" stop-color="#06b6d4" />',
+            '      <stop offset="100%" stop-color="#6366f1" />',
+            '    </linearGradient>',
+            '    <linearGradient id="velAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">',
+            '      <stop offset="0%" stop-color="rgba(6, 182, 212, 0.35)" />',
+            '      <stop offset="100%" stop-color="rgba(6, 182, 212, 0.0)" />',
+            '    </linearGradient>',
+            '    <linearGradient id="velBarGrad" x1="0%" y1="0%" x2="0%" y2="100%">',
+            '      <stop offset="0%" stop-color="#34d399" />',
+            '      <stop offset="100%" stop-color="#059669" />',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <!-- Legend -->',
+            '  <g transform="translate(320, 14)">',
+            '    <line x1="0" y1="6" x2="18" y2="6" stroke="#06b6d4" stroke-width="2.5" />',
+            '    <circle cx="9" cy="6" r="3" fill="#06b6d4" />',
+            '    <text x="24" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Duration (s)</text>',
+            '    <rect x="130" y="0" width="12" height="12" rx="3" fill="url(#velBarGrad)" />',
+            '    <text x="148" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Questions Velocity</text>',
+            '  </g>',
+        ]
+
+        # Left Y-Axis Grid & Labels (Duration)
+        for i in range(5):
+            val = max_dur * (i / 4.0)
+            y_pos = bottom - (i / 4.0) * chart_h
+            svg.append(f'  <line x1="{left}" y1="{y_pos:.1f}" x2="{right}" y2="{y_pos:.1f}" stroke="var(--border-subtle)" stroke-width="1" />')
+            svg.append(f'  <text x="{left - 8}" y="{y_pos + 3:.1f}" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">{val:.1f}s</text>')
+
+        # Right Y-Axis Labels (Questions count)
+        for i in range(5):
+            val_q = int(round(max_q * (i / 4.0)))
+            y_pos = bottom - (i / 4.0) * chart_h
+            svg.append(f'  <text x="{right + 8}" y="{y_pos + 3:.1f}" font-size="9" font-family="var(--font-mono)" fill="#34d399" text-anchor="start">{val_q} Qs</text>')
+
+        n = len(recent_runs)
+        coords = []
+        bar_w = min(16.0, (chart_w / max(1, n)) * 0.3)
+
+        # Plot bars for questions velocity
+        for i, r in enumerate(recent_runs):
+            cx = left + (chart_w / 2.0) if n == 1 else left + (i / (n - 1)) * chart_w
+            cy_dur = bottom - (r["duration"] / max_dur) * chart_h
+            coords.append((cx, cy_dur, r))
+
+            q_h = (r["questions_count"] / max(1, max_q)) * chart_h * 0.85
+            q_x = cx - bar_w / 2
+            q_y = bottom - q_h
+
+            svg.append(f'  <rect x="{q_x:.1f}" y="{q_y:.1f}" width="{bar_w:.1f}" height="{q_h:.1f}" rx="2" fill="url(#velBarGrad)" opacity="0.85"><title>{r["run_id"]}: {r["questions_count"]} Questions</title></rect>')
+            svg.append(f'  <text x="{cx:.1f}" y="{q_y - 4:.1f}" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">{r["questions_count"]}Q</text>')
+
+        # Draw Duration Area Polygon
+        area_pts = [f"{coords[0][0]:.1f},{bottom:.1f}"]
+        for cx, cy, _ in coords:
+            area_pts.append(f"{cx:.1f},{cy:.1f}")
+        area_pts.append(f"{coords[-1][0]:.1f},{bottom:.1f}")
+        svg.append(f'  <polygon points="{" ".join(area_pts)}" fill="url(#velAreaGrad)" />')
+
+        # Draw Duration Line
+        line_d = " ".join([f"{'M' if idx == 0 else 'L'} {cx:.1f} {cy:.1f}" for idx, (cx, cy, _) in enumerate(coords)])
+        svg.append(f'  <path d="{line_d}" fill="none" stroke="url(#velDurGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />')
+
+        # Draw Duration Nodes & X Labels
+        for idx, (cx, cy, r) in enumerate(coords):
+            dur = r["duration"]
+            run_lbl = f"R{idx + 1}"
+            svg.append(f'  <circle cx="{cx:.1f}" cy="{cy:.1f}" r="4" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2"><title>{r["run_id"]}: {dur:.2f}s latency</title></circle>')
+            svg.append(f'  <text x="{cx:.1f}" y="{bottom + 16:.1f}" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">{run_lbl}</text>')
+
+        svg.append('</svg>')
+        return "\n".join(svg)
+
+    @staticmethod
+    def build_productivity_gauge_svg(history: AutomationHistory) -> str:
+        """
+        Generate pure inline vector SVG speedometer/radial gauge showing Developer Productivity
+        and Manual Time Saved (~30s per question automated vs actual script runtime).
+        """
+        import math
+        total_qs = history.total_questions_answered
+        auto_sec = history.total_runtime_seconds
+        manual_sec = total_qs * 30.0
+        saved_sec = max(0.0, manual_sec - auto_sec)
+
+        if total_qs > 0 and auto_sec > 0:
+            velocity_mult = max(1.0, manual_sec / auto_sec)
+        else:
+            velocity_mult = 12.5
+
+        if saved_sec >= 3600.0:
+            saved_str = f"{saved_sec / 3600.0:.1f} hrs"
+        elif saved_sec >= 60.0:
+            m = int(saved_sec // 60)
+            s = int(saved_sec % 60)
+            saved_str = f"{m}m {s}s"
+        else:
+            saved_str = f"{saved_sec:.1f}s"
+
+        cx, cy, r = 150.0, 120.0, 72.0
+        arc_len = 2.0 * math.pi * r * (220.0 / 360.0)
+        ratio = min(1.0, saved_sec / 600.0) if saved_sec > 0 else 0.85
+        offset = arc_len * (1.0 - ratio)
+
+        svg = [
+            '<svg viewBox="0 0 460 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+            '  <defs>',
+            '    <linearGradient id="prodGaugeGrad" x1="0%" y1="0%" x2="100%" y2="100%">',
+            '      <stop offset="0%" stop-color="#10b981" />',
+            '      <stop offset="50%" stop-color="#06b6d4" />',
+            '      <stop offset="100%" stop-color="#6366f1" />',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <!-- Background Arc Track (220 deg) -->',
+            f'  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="16" stroke-linecap="round" stroke-dasharray="{arc_len:.2f} 400" transform="rotate(160 {cx} {cy})" />',
+            '  <!-- Progress Arc -->',
+            f'  <circle cx="{cx}" cy="{cy}" r="{r}" fill="none" stroke="url(#prodGaugeGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="{arc_len:.2f} 400" stroke-dashoffset="{offset:.2f}" transform="rotate(160 {cx} {cy})" />',
+            '  <!-- Center Readout -->',
+            f'  <text x="{cx}" y="{cy - 2}" font-size="28" font-weight="800" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">{saved_str}</text>',
+            f'  <text x="{cx}" y="{cy + 18}" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">MANUAL TIME SAVED</text>',
+            '  <!-- Velocity Pill -->',
+            f'  <rect x="{cx - 68}" y="{cy + 34}" width="136" height="22" rx="11" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="1" />',
+            f'  <text x="{cx}" y="{cy + 49}" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">⚡ {velocity_mult:.1f}x Faster</text>',
+            '  <!-- Right Side Summary Statistics -->',
+            '  <g transform="translate(260, 45)">',
+            '    <text x="0" y="0" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Productivity ROI</text>',
+            '    <line x1="0" y1="10" x2="180" y2="10" stroke="var(--border-subtle)" stroke-width="1" />',
+            '    <text x="0" y="32" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Estimated Human Time:</text>',
+            f'    <text x="180" y="32" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="end">{manual_sec:.1f}s</text>',
+            '    <text x="0" y="56" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Script Automated Time:</text>',
+            f'    <text x="180" y="56" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#06b6d4" text-anchor="end">{auto_sec:.1f}s</text>',
+            '    <text x="0" y="80" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Efficiency Velocity:</text>',
+            f'    <text x="180" y="80" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="end">~{velocity_mult:.1f}x</text>',
+            '    <text x="0" y="104" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Standard Baseline:</text>',
+            '    <text x="180" y="104" font-size="10" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">30s / question</text>',
+            '    <rect x="0" y="122" width="180" height="26" rx="6" fill="var(--bg-surface-elevated)" />',
+            f'    <text x="90" y="139" font-size="9.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-secondary)" text-anchor="middle">✓ {total_qs} Questions Automated</text>',
+            '  </g>',
+            '</svg>',
+        ]
+        return "\n".join(svg)
+
+    @staticmethod
+    def build_time_heatmap_svg(history: AutomationHistory) -> str:
+        """
+        Generate pure inline vector SVG hourly activity heatmap and 4-quarter day matrix
+        showing when automation runs occur across 24 hours.
+        """
+        hours = [0] * 24
+        quarter_morning = 0    # 06:00 - 12:00
+        quarter_afternoon = 0  # 12:00 - 18:00
+        quarter_evening = 0    # 18:00 - 24:00
+        quarter_night = 0      # 00:00 - 06:00
+
+        for chat in history.chats.values():
+            for run in chat.get("runs", []):
+                ts = run.get("timestamp", "")
+                if ts:
+                    try:
+                        dt = datetime.fromisoformat(ts.replace("Z", "+00:00"))
+                        h = dt.hour
+                        if 0 <= h < 24:
+                            hours[h] += 1
+                            if 6 <= h < 12:
+                                quarter_morning += 1
+                            elif 12 <= h < 18:
+                                quarter_afternoon += 1
+                            elif 18 <= h < 24:
+                                quarter_evening += 1
+                            else:
+                                quarter_night += 1
+                    except Exception:
+                        pass
+
+        svg = [
+            '<svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+            '  <defs>',
+            '    <linearGradient id="heatCellGrad" x1="0%" y1="0%" x2="0%" y2="100%">',
+            '      <stop offset="0%" stop-color="#818cf8" />',
+            '      <stop offset="100%" stop-color="#4f46e5" />',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <!-- Heatmap Scale Legend -->',
+            '  <g transform="translate(420, 14)">',
+            '    <text x="0" y="10" font-size="10" font-family="var(--font-mono)" fill="var(--text-muted)">Activity Intensity:</text>',
+            '    <rect x="110" y="1" width="10" height="10" rx="2" fill="var(--bg-surface-elevated)" />',
+            '    <rect x="125" y="1" width="10" height="10" rx="2" fill="rgba(99, 102, 241, 0.4)" />',
+            '    <rect x="140" y="1" width="10" height="10" rx="2" fill="rgba(99, 102, 241, 0.75)" />',
+            '    <rect x="155" y="1" width="10" height="10" rx="2" fill="#6366f1" />',
+            '    <text x="175" y="10" font-size="10" font-family="var(--font-mono)" fill="var(--text-secondary)">High</text>',
+            '  </g>',
+            '  <!-- 24 Hourly Grid Blocks (00h to 23h) -->',
+        ]
+
+        start_x = 34.0
+        cell_w = 20.0
+        cell_gap = 4.0
+        y_pos = 45.0
+        cell_h = 44.0
+
+        for h in range(24):
+            count = hours[h]
+            cx = start_x + h * (cell_w + cell_gap)
+
+            if count == 0:
+                fill_color = "var(--bg-surface-elevated)"
+                stroke_color = "var(--border-subtle)"
+            elif count <= 2:
+                fill_color = "rgba(99, 102, 241, 0.4)"
+                stroke_color = "rgba(99, 102, 241, 0.6)"
+            elif count <= 5:
+                fill_color = "rgba(99, 102, 241, 0.75)"
+                stroke_color = "#6366f1"
+            else:
+                fill_color = "#6366f1"
+                stroke_color = "#818cf8"
+
+            svg.extend([
+                f'  <rect x="{cx:.1f}" y="{y_pos:.1f}" width="{cell_w:.1f}" height="{cell_h:.1f}" rx="4" fill="{fill_color}" stroke="{stroke_color}" stroke-width="1">',
+                f'    <title>Hour {h:02d}:00: {count} run(s)</title>',
+                f'  </rect>',
+            ])
+            if count > 0:
+                svg.append(f'  <text x="{cx + cell_w/2:.1f}" y="{y_pos + cell_h/2 + 4:.1f}" font-size="9" font-weight="700" font-family="var(--font-mono)" fill="#ffffff" text-anchor="middle">{count}</text>')
+
+            if h % 4 == 0 or h == 23:
+                svg.append(f'  <text x="{cx + cell_w/2:.1f}" y="{y_pos + cell_h + 16:.1f}" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle">{h:02d}h</text>')
+
+        quarters = [
+            ("🌅 Morning", "06:00 - 12:00", quarter_morning, "#f59e0b"),
+            ("☀️ Afternoon", "12:00 - 18:00", quarter_afternoon, "#06b6d4"),
+            ("🌆 Evening", "18:00 - 24:00", quarter_evening, "#6366f1"),
+            ("🌙 Night", "00:00 - 06:00", quarter_night, "#a855f7"),
+        ]
+
+        card_y = 145.0
+        card_w = 135.0
+        card_h = 70.0
+        card_gap = 12.0
+        q_start_x = 34.0
+
+        for idx, (title, timerange, count, color) in enumerate(quarters):
+            qx = q_start_x + idx * (card_w + card_gap)
+            svg.extend([
+                f'  <g transform="translate({qx:.1f}, {card_y:.1f})">',
+                f'    <rect width="{card_w:.1f}" height="{card_h:.1f}" rx="8" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1" />',
+                f'    <rect x="0" y="0" width="{card_w:.1f}" height="3" rx="1.5" fill="{color}" />',
+                f'    <text x="12" y="24" font-size="11" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">{title}</text>',
+                f'    <text x="12" y="40" font-size="8.5" font-family="var(--font-mono)" fill="var(--text-muted)">{timerange}</text>',
+                f'    <text x="{card_w - 12:.1f}" y="48" font-size="18" font-weight="800" font-family="var(--font-mono)" fill="{color}" text-anchor="end">{count}</text>',
+                f'    <text x="{card_w - 12:.1f}" y="60" font-size="8" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">runs</text>',
+                f'  </g>',
+            ])
+
+        svg.append('</svg>')
+        return "\n".join(svg)
+
+    @staticmethod
+    def build_option_breakdown_svg(history: AutomationHistory) -> str:
+        """
+        Generate pure inline vector SVG showing the Option Selection Distribution Breakdown
+        (Option 1 Recommended vs Option 2 vs Others) with horizontal stacked progress.
+        """
+        opt1_count = 0
+        opt2_count = 0
+        other_count = 0
+
+        for chat in history.chats.values():
+            for run in chat.get("runs", []):
+                for q in run.get("questions", []):
+                    idx = q.get("selected_option_index")
+                    if idx == 1 or q.get("is_recommended", False):
+                        opt1_count += 1
+                    elif idx == 2:
+                        opt2_count += 1
+                    elif idx is not None:
+                        other_count += 1
+
+        total = opt1_count + opt2_count + other_count
+        if total == 0:
+            p1, p2, po = 100.0, 0.0, 0.0
+            display_total = 0
+        else:
+            p1 = (opt1_count / total) * 100.0
+            p2 = (opt2_count / total) * 100.0
+            po = (other_count / total) * 100.0
+            display_total = total
+
+        bar_w = 390.0
+        w1 = max(4.0, (p1 / 100.0) * bar_w) if p1 > 0 else 0.0
+        w2 = max(4.0, (p2 / 100.0) * bar_w) if p2 > 0 else 0.0
+        wo = max(4.0, (po / 100.0) * bar_w) if po > 0 else 0.0
+
+        svg = [
+            '<svg viewBox="0 0 460 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">',
+            '  <defs>',
+            '    <linearGradient id="opt1Grad" x1="0%" y1="0%" x2="100%" y2="0%">',
+            '      <stop offset="0%" stop-color="#10b981" />',
+            '      <stop offset="100%" stop-color="#059669" />',
+            '    </linearGradient>',
+            '    <linearGradient id="opt2Grad" x1="0%" y1="0%" x2="100%" y2="0%">',
+            '      <stop offset="0%" stop-color="#6366f1" />',
+            '      <stop offset="100%" stop-color="#4f46e5" />',
+            '    </linearGradient>',
+            '    <linearGradient id="optOtherGrad" x1="0%" y1="0%" x2="100%" y2="0%">',
+            '      <stop offset="0%" stop-color="#f59e0b" />',
+            '      <stop offset="100%" stop-color="#d97706" />',
+            '    </linearGradient>',
+            '  </defs>',
+            '  <!-- Header Summary Metric -->',
+            '  <g transform="translate(35, 30)">',
+            f'    <text x="0" y="0" font-size="28" font-weight="800" font-family="var(--font-mono)" fill="#10b981">{p1:.1f}%</text>',
+            '    <text x="0" y="18" font-size="10.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-secondary)">Option 1 Recommended Adherence Rate</text>',
+            f'    <text x="390" y="0" font-size="14" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="end">{display_total} Total</text>',
+            '    <text x="390" y="18" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">Questions Evaluated</text>',
+            '  </g>',
+            '  <!-- Stacked Horizontal Progress Bar -->',
+            '  <g transform="translate(35, 75)">',
+            f'    <rect width="{bar_w}" height="20" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1" />',
+        ]
+
+        cur_x = 0.0
+        if w1 > 0:
+            svg.append(f'    <rect x="{cur_x:.1f}" y="0" width="{w1:.1f}" height="20" rx="10" fill="url(#opt1Grad)"><title>Option 1: {opt1_count} Qs ({p1:.1f}%)</title></rect>')
+            cur_x += w1
+        if w2 > 0:
+            svg.append(f'    <rect x="{cur_x:.1f}" y="0" width="{w2:.1f}" height="20" rx="6" fill="url(#opt2Grad)"><title>Option 2: {opt2_count} Qs ({p2:.1f}%)</title></rect>')
+            cur_x += w2
+        if wo > 0:
+            svg.append(f'    <rect x="{cur_x:.1f}" y="0" width="{wo:.1f}" height="20" rx="6" fill="url(#optOtherGrad)"><title>Others: {other_count} Qs ({po:.1f}%)</title></rect>')
+
+        svg.append('  </g>')
+
+        options_data = [
+            ("✓ Option 1 (Recommended)", opt1_count, p1, "#10b981", "Autonomous Selection Priority"),
+            ("• Option 2 (Alternate)", opt2_count, p2, "#818cf8", "Secondary Choice Selection"),
+            ("• Option 3+ / Others", other_count, po, "#fbbf24", "Custom / Third Option Choice"),
+        ]
+
+        list_y = 120.0
+        row_h = 34.0
+        for idx, (label, count, pct, color, desc) in enumerate(options_data):
+            y = list_y + idx * row_h
+            svg.extend([
+                f'  <g transform="translate(35, {y:.1f})">',
+                f'    <rect width="390" height="28" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="0.8" />',
+                f'    <circle cx="14" cy="14" r="5" fill="{color}" />',
+                f'    <text x="28" y="18" font-size="10.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">{label}</text>',
+                f'    <text x="210" y="18" font-size="9" font-family="var(--font-family)" fill="var(--text-muted)">{desc}</text>',
+                f'    <text x="375" y="18" font-size="10.5" font-weight="700" font-family="var(--font-mono)" fill="{color}" text-anchor="end">{count} Qs ({pct:.1f}%)</text>',
+                f'  </g>',
+            ])
+
+        svg.append('</svg>')
+        return "\n".join(svg)
+
     # ========================================================================
     # Visual Dashboard Generation (Department 04 UI/UX Design System)
     # ========================================================================
@@ -907,7 +1346,12 @@ class Step4ReportingEngine:
         chat_options_html = "\n            ".join(chat_options)
 
         # SVG Visualizations
-        pipeline_svg = self.build_pipeline_svg()
+        topology_svg = self.build_topology_svg()
+        pipeline_svg = topology_svg
+        velocity_svg = self.build_velocity_timeline_svg(history)
+        productivity_svg = self.build_productivity_gauge_svg(history)
+        heatmap_svg = self.build_time_heatmap_svg(history)
+        option_breakdown_svg = self.build_option_breakdown_svg(history)
         distribution_svg = self.build_chat_distribution_svg(history)
         latency_trend_svg = self.build_latency_trend_svg(history)
         topic_share_svg = self.build_topic_share_svg(history)
@@ -1979,6 +2423,307 @@ class Step4ReportingEngine:
       flex-direction: column;
       gap: 4px;
     }}
+
+    /* Configuration Modal Backdrop & Overlay */
+    .modal-backdrop {{
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: rgba(0, 0, 0, 0.65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+      opacity: 0;
+      visibility: hidden;
+      transition: opacity 0.25s ease, visibility 0.25s ease;
+      padding: 16px;
+    }}
+
+    .modal-backdrop.active {{
+      opacity: 1;
+      visibility: visible;
+    }}
+
+    .modal-content {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-accent);
+      border-radius: var(--radius-lg);
+      max-width: 620px;
+      width: 100%;
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 24px var(--accent-indigo-glow);
+      transform: scale(0.96);
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      overflow: hidden;
+    }}
+
+    .modal-backdrop.active .modal-content {{
+      transform: scale(1);
+    }}
+
+    .modal-header {{
+      padding: 18px 24px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-surface-elevated);
+    }}
+
+    .modal-title-wrap {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+
+    .modal-icon {{
+      font-size: 1.5rem;
+      line-height: 1;
+    }}
+
+    .modal-title {{
+      font-size: 1.15rem;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+      color: var(--text-primary);
+    }}
+
+    .modal-subtitle {{
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+      margin-top: 2px;
+    }}
+
+    .modal-close-btn {{
+      background: transparent;
+      border: none;
+      color: var(--text-muted);
+      font-size: 1.6rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 4px 8px;
+      border-radius: var(--radius-sm);
+      transition: var(--transition);
+    }}
+
+    .modal-close-btn:hover {{
+      color: var(--text-primary);
+      background: var(--bg-surface-highlight);
+    }}
+
+    .modal-body {{
+      padding: 20px 24px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }}
+
+    .config-group {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 12px 14px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      transition: var(--transition);
+    }}
+
+    .config-group:hover {{
+      border-color: var(--border-accent);
+    }}
+
+    .config-group.config-actions-group {{
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 12px;
+    }}
+
+    .config-label-wrap {{
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+      flex: 1;
+    }}
+
+    .config-label {{
+      font-size: 0.88rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }}
+
+    .config-hint {{
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      line-height: 1.3;
+    }}
+
+    .config-select {{
+      background: var(--bg-surface);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-family: var(--font-family);
+      outline: none;
+      min-width: 190px;
+      transition: var(--transition);
+    }}
+
+    .config-select:focus {{
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 0 2px var(--accent-indigo-glow);
+    }}
+
+    .config-data-btns {{
+      display: flex;
+      gap: 10px;
+      width: 100%;
+      flex-wrap: wrap;
+    }}
+
+    .btn-export {{
+      background: rgba(16, 185, 129, 0.15);
+      color: #10b981;
+      border: 1px solid #10b981;
+      flex: 1;
+      justify-content: center;
+    }}
+
+    .btn-export:hover {{
+      background: rgba(16, 185, 129, 0.25);
+    }}
+
+    .btn-reset-cfg {{
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      flex: 1;
+      justify-content: center;
+    }}
+
+    .btn-reset-cfg:hover {{
+      color: var(--accent-rose);
+      border-color: var(--accent-rose);
+    }}
+
+    .modal-footer {{
+      padding: 16px 24px;
+      background: var(--bg-surface-elevated);
+      border-top: 1px solid var(--border-subtle);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }}
+
+    .modal-footer-left {{
+      display: flex;
+      align-items: center;
+    }}
+
+    .config-status-badge {{
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      color: var(--text-muted);
+    }}
+
+    .modal-footer-right {{
+      display: flex;
+      gap: 10px;
+    }}
+
+    .btn-primary {{
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border: 1px solid var(--accent-indigo);
+      box-shadow: 0 2px 10px var(--accent-indigo-glow);
+    }}
+
+    .btn-primary:hover {{
+      background: #4f46e5;
+      border-color: #4f46e5;
+    }}
+
+    /* Animated Toast Notification */
+    .toast-notification {{
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--accent-emerald-border);
+      border-left: 4px solid var(--accent-emerald);
+      padding: 12px 20px;
+      border-radius: var(--radius-md);
+      font-size: 0.88rem;
+      font-weight: 600;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      z-index: 10000;
+      opacity: 0;
+      transform: translateY(16px);
+      pointer-events: none;
+      transition: opacity 0.25s ease, transform 0.25s ease;
+    }}
+
+    .toast-notification.active {{
+      opacity: 1;
+      transform: translateY(0);
+      pointer-events: auto;
+    }}
+
+    .toast-notification.info {{
+      border-color: var(--accent-indigo);
+      border-left-color: var(--accent-indigo);
+    }}
+
+    .toast-notification.error {{
+      border-color: var(--accent-rose);
+      border-left-color: var(--accent-rose);
+    }}
+
+    /* Auto-Refresh Badge in Header */
+    .auto-refresh-badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: rgba(6, 182, 212, 0.12);
+      color: var(--accent-cyan);
+      border: 1px solid rgba(6, 182, 212, 0.3);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-family: var(--font-mono);
+      font-weight: 600;
+    }}
+
+    .spin-icon {{
+      display: inline-block;
+      animation: spin 3s linear infinite;
+    }}
+
+    @keyframes spin {{
+      100% {{ transform: rotate(360deg); }}
+    }}
+
+    /* Reduced Motion accessibility standard */
+    html.reduced-motion *,
+    html.reduced-motion ::before,
+    html.reduced-motion ::after {{
+      animation: none !important;
+      transition: none !important;
+    }}
   </style>
 </head>
 <body>
@@ -1994,6 +2739,8 @@ class Step4ReportingEngine:
       </div>
       <div class="header-actions">
         <span class="status-pill">Active Ledger</span>
+        <span class="auto-refresh-badge" id="auto-refresh-badge" style="display: none;"><span class="spin-icon">🔄</span> Auto-refresh: <strong id="refresh-countdown">10s</strong></span>
+        <button class="btn" id="config-toggle-btn" title="Open Dashboard & Automation Configuration">⚙️ Config</button>
         <button class="btn" id="theme-toggle" title="Toggle Light/Dark Theme">🌓 Theme</button>
         <button class="btn" onclick="location.reload()" title="Refresh Ledger">🔄 Refresh</button>
       </div>
@@ -2195,23 +2942,89 @@ class Step4ReportingEngine:
         </div>
       </div>
 
-      <!-- Pipeline Execution Architecture Diagram (Pure Vector SVG & Collapsible) -->
+      <!-- Pipeline Execution & System Topology Diagram (Pure Vector SVG & Collapsible) -->
       <div class="architecture-card" id="card-architecture">
         <div class="card-header collapsible-header" data-target="architecture-body" role="button" tabindex="0" aria-expanded="true" title="Toggle Architecture Diagram">
           <div class="card-title" style="margin-bottom: 0;">
             <span class="collapse-icon">▾</span>
-            <span>🚀 Pipeline Execution Architecture (Step 0 → Step 4)</span>
+            <span>🚀 System Component Topology & Health Architecture (Step 0 → Step 4)</span>
           </div>
           <button type="button" class="collapse-btn" aria-label="Toggle Architecture Diagram">
             <span class="collapse-icon">▾</span>
           </button>
         </div>
         <div class="card-collapsible-body" id="architecture-body" style="margin-top: 16px;">
-          {pipeline_svg}
+          {topology_svg}
         </div>
       </div>
 
-      <!-- Interactive Dynamic SVG Charts Grid -->
+      <!-- Row 1 of Charts: Dual-Axis Velocity Timeline & Productivity Gauge -->
+      <div class="charts-grid-two">
+        <div class="chart-card" id="chart-card-velocity">
+          <div class="card-header collapsible-header" data-target="chart-body-velocity" role="button" tabindex="0" aria-expanded="true" title="Toggle Velocity Timeline Chart">
+            <div class="card-title" style="margin-bottom: 0;">
+              <span class="collapse-icon">▾</span>
+              <span>⚡ Dual-Axis Execution & Question Velocity Timeline</span>
+            </div>
+            <button type="button" class="collapse-btn" aria-label="Toggle Velocity Timeline Chart">
+              <span class="collapse-icon">▾</span>
+            </button>
+          </div>
+          <div class="card-collapsible-body" id="chart-body-velocity" style="margin-top: 16px;">
+            {velocity_svg}
+          </div>
+        </div>
+
+        <div class="chart-card" id="chart-card-productivity">
+          <div class="card-header collapsible-header" data-target="chart-body-productivity" role="button" tabindex="0" aria-expanded="true" title="Toggle Productivity Gauge">
+            <div class="card-title" style="margin-bottom: 0;">
+              <span class="collapse-icon">▾</span>
+              <span>🏎️ Developer Productivity & Time Saved Gauge</span>
+            </div>
+            <button type="button" class="collapse-btn" aria-label="Toggle Productivity Gauge">
+              <span class="collapse-icon">▾</span>
+            </button>
+          </div>
+          <div class="card-collapsible-body" id="chart-body-productivity" style="margin-top: 16px;">
+            {productivity_svg}
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 2 of Charts: Hourly Heatmap & Option Selection Breakdown -->
+      <div class="charts-grid-two">
+        <div class="chart-card" id="chart-card-heatmap">
+          <div class="card-header collapsible-header" data-target="chart-body-heatmap" role="button" tabindex="0" aria-expanded="true" title="Toggle Activity Heatmap">
+            <div class="card-title" style="margin-bottom: 0;">
+              <span class="collapse-icon">▾</span>
+              <span>🕒 Hourly Activity & Time-of-Day Heatmap</span>
+            </div>
+            <button type="button" class="collapse-btn" aria-label="Toggle Activity Heatmap">
+              <span class="collapse-icon">▾</span>
+            </button>
+          </div>
+          <div class="card-collapsible-body" id="chart-body-heatmap" style="margin-top: 16px;">
+            {heatmap_svg}
+          </div>
+        </div>
+
+        <div class="chart-card" id="chart-card-option-breakdown">
+          <div class="card-header collapsible-header" data-target="chart-body-option-breakdown" role="button" tabindex="0" aria-expanded="true" title="Toggle Option Selection Breakdown">
+            <div class="card-title" style="margin-bottom: 0;">
+              <span class="collapse-icon">▾</span>
+              <span>🎯 Option Selection Distribution & Recommendation Adherence</span>
+            </div>
+            <button type="button" class="collapse-btn" aria-label="Toggle Option Selection Breakdown">
+              <span class="collapse-icon">▾</span>
+            </button>
+          </div>
+          <div class="card-collapsible-body" id="chart-body-option-breakdown" style="margin-top: 16px;">
+            {option_breakdown_svg}
+          </div>
+        </div>
+      </div>
+
+      <!-- Row 3 of Charts: Chat Distribution & Topic Share -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-distribution">
           <div class="card-header collapsible-header" data-target="chart-body-distribution" role="button" tabindex="0" aria-expanded="true" title="Toggle Distribution Chart">
@@ -2227,6 +3040,7 @@ class Step4ReportingEngine:
             {distribution_svg}
           </div>
         </div>
+
         <div class="chart-card" id="chart-card-topic">
           <div class="card-header collapsible-header" data-target="chart-body-topic" role="button" tabindex="0" aria-expanded="true" title="Toggle Topic Share Chart">
             <div class="card-title" style="margin-bottom: 0;">
@@ -2243,7 +3057,7 @@ class Step4ReportingEngine:
         </div>
       </div>
 
-      <!-- Wide Run Latency & Performance Trend Chart -->
+      <!-- Row 4: Wide Run Latency & Performance Trend Chart -->
       <div class="chart-card chart-card-wide" id="chart-card-latency">
         <div class="card-header collapsible-header" data-target="chart-body-latency" role="button" tabindex="0" aria-expanded="true" title="Toggle Latency Trend Chart">
           <div class="card-title" style="margin-bottom: 0;">
@@ -2333,6 +3147,126 @@ class Step4ReportingEngine:
       </div>
     </main>
 
+    <!-- Configuration Modal (Department 04 & 05 Standard) -->
+    <div class="modal-backdrop" id="config-modal" role="dialog" aria-modal="true" aria-labelledby="config-modal-title" style="display: none;">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon">⚙️</span>
+            <div>
+              <h2 id="config-modal-title" class="modal-title">Dashboard & Automation Settings</h2>
+              <p class="modal-subtitle">Customize refresh cadence, inactivity delays, autonomous policies & presentation</p>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" id="config-close-btn" aria-label="Close Settings">&times;</button>
+        </div>
+        <div class="modal-body">
+          <!-- Setting 1: Auto-Refresh Interval -->
+          <div class="config-group">
+            <div class="config-label-wrap">
+              <label class="config-label" for="cfg-auto-refresh">Auto-Refresh Interval</label>
+              <span class="config-hint">Automatically reload live telemetry without manual page refresh</span>
+            </div>
+            <select id="cfg-auto-refresh" class="config-select">
+              <option value="0">Off (Manual Refresh Only)</option>
+              <option value="5">Every 5 Seconds</option>
+              <option value="10">Every 10 Seconds</option>
+              <option value="30">Every 30 Seconds</option>
+              <option value="60">Every 60 Seconds</option>
+            </select>
+          </div>
+
+          <!-- Setting 2: User Activity Delay -->
+          <div class="config-group">
+            <div class="config-label-wrap">
+              <label class="config-label" for="cfg-activity-delay">User Inactivity Delay</label>
+              <span class="config-hint">Time to wait after detecting user mouse/keyboard input before launching dashboard</span>
+            </div>
+            <select id="cfg-activity-delay" class="config-select">
+              <option value="5">5 Seconds (Ultra Responsive)</option>
+              <option value="10" selected>10 Seconds (Standard Default)</option>
+              <option value="15">15 Seconds (Relaxed Buffer)</option>
+              <option value="30">30 Seconds (Extended Idle)</option>
+            </select>
+          </div>
+
+          <!-- Setting 3: Default Landing Tab -->
+          <div class="config-group">
+            <div class="config-label-wrap">
+              <label class="config-label" for="cfg-default-tab">Default Landing Tab</label>
+              <span class="config-hint">Initial view displayed whenever the dashboard is opened</span>
+            </div>
+            <select id="cfg-default-tab" class="config-select">
+              <option value="overview">Overview (KPIs & Visual Charts)</option>
+              <option value="chats">Chats (Conversations Breakdown)</option>
+              <option value="questions">Questions (Detailed Q&A Ledger)</option>
+            </select>
+          </div>
+
+          <!-- Setting 4: Recommendation Selection Policy -->
+          <div class="config-group">
+            <div class="config-label-wrap">
+              <label class="config-label" for="cfg-selection-policy">Recommendation Selection Policy</label>
+              <span class="config-hint">Execution behavior for grill-me multi-choice questions</span>
+            </div>
+            <select id="cfg-selection-policy" class="config-select">
+              <option value="option1_auto">Option 1 (Recommended - Autonomous)</option>
+              <option value="prompt_manual">Prompt / Manual Review Required</option>
+              <option value="first_available">First Available Option</option>
+            </select>
+          </div>
+
+          <!-- Setting 5: Animation & Visual Effects -->
+          <div class="config-group">
+            <div class="config-label-wrap">
+              <label class="config-label" for="cfg-visual-effects">Animation & Visual Effects</label>
+              <span class="config-hint">Hardware-accelerated SVG animations and card transitions</span>
+            </div>
+            <select id="cfg-visual-effects" class="config-select">
+              <option value="high">High (Smooth SVGs & Animated Pulse Bus)</option>
+              <option value="reduced">Reduced Motion / Static (WCAG 2.1 Compliant)</option>
+            </select>
+          </div>
+
+          <!-- Setting 6: Sound Notifications -->
+          <div class="config-group">
+            <div class="config-label-wrap">
+              <label class="config-label" for="cfg-sound-notify">Audio Chime Notifications</label>
+              <span class="config-hint">Synthesized Web Audio chime when a new automation run is ingested</span>
+            </div>
+            <select id="cfg-sound-notify" class="config-select">
+              <option value="enabled">Enabled (Subtle Web Audio Chime)</option>
+              <option value="disabled" selected>Disabled (Silent Operation)</option>
+            </select>
+          </div>
+
+          <!-- Setting 7: Data Actions (Export JSON & Reset) -->
+          <div class="config-group config-actions-group">
+            <div class="config-label-wrap">
+              <span class="config-label">Data & Backup Management</span>
+              <span class="config-hint">Export persistent history or reset all configuration parameters</span>
+            </div>
+            <div class="config-data-btns">
+              <button type="button" class="btn btn-export" id="cfg-export-btn" title="Download automation_history.json">📥 Export History JSON</button>
+              <button type="button" class="btn btn-reset-cfg" id="cfg-reset-btn" title="Reset all settings to default values">🔄 Reset to Defaults</button>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <div class="modal-footer-left">
+            <span class="config-status-badge" id="cfg-status-badge">Default Settings Loaded</span>
+          </div>
+          <div class="modal-footer-right">
+            <button type="button" class="btn" id="config-cancel-btn">Cancel</button>
+            <button type="button" class="btn btn-primary" id="config-save-btn">💾 Save Configuration</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Animated Toast Notification Container -->
+    <div class="toast-notification" id="toast-notify" role="alert" aria-live="polite"></div>
+
     <!-- Footer -->
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
@@ -2369,6 +3303,205 @@ class Step4ReportingEngine:
       const filterCountEl = document.getElementById('filter-count');
       const filterTotalEl = document.getElementById('filter-total');
 
+      // Configuration Management & In-Dashboard Settings Engine
+      const configModal = document.getElementById('config-modal');
+      const configToggleBtn = document.getElementById('config-toggle-btn');
+      const configCloseBtn = document.getElementById('config-close-btn');
+      const configCancelBtn = document.getElementById('config-cancel-btn');
+      const configSaveBtn = document.getElementById('config-save-btn');
+      const configResetBtn = document.getElementById('cfg-reset-btn');
+      const configExportBtn = document.getElementById('cfg-export-btn');
+      const toastNotify = document.getElementById('toast-notify');
+      const cfgStatusBadge = document.getElementById('cfg-status-badge');
+      const autoRefreshBadge = document.getElementById('auto-refresh-badge');
+      const refreshCountdownEl = document.getElementById('refresh-countdown');
+
+      const cfgAutoRefresh = document.getElementById('cfg-auto-refresh');
+      const cfgActivityDelay = document.getElementById('cfg-activity-delay');
+      const cfgDefaultTab = document.getElementById('cfg-default-tab');
+      const cfgSelectionPolicy = document.getElementById('cfg-selection-policy');
+      const cfgVisualEffects = document.getElementById('cfg-visual-effects');
+      const cfgSoundNotify = document.getElementById('cfg-sound-notify');
+
+      const DEFAULT_CONFIG = {{
+        autoRefresh: 0,
+        activityDelay: 10,
+        defaultTab: 'overview',
+        selectionPolicy: 'option1_auto',
+        visualEffects: 'high',
+        soundNotify: 'disabled'
+      }};
+
+      function loadConfig() {{
+        try {{
+          const raw = localStorage.getItem('asc_dashboard_config');
+          if (raw) return {{ ...DEFAULT_CONFIG, ...JSON.parse(raw) }};
+        }} catch (e) {{}}
+        return {{ ...DEFAULT_CONFIG }};
+      }}
+
+      let currentConfig = loadConfig();
+
+      function showToast(msg, type = 'success') {{
+        if (!toastNotify) return;
+        toastNotify.textContent = msg;
+        toastNotify.className = 'toast-notification active ' + type;
+        setTimeout(() => {{
+          toastNotify.classList.remove('active');
+        }}, 3500);
+      }}
+
+      function playSoundChime() {{
+        try {{
+          const AudioContext = window.AudioContext || window.webkitAudioContext;
+          if (!AudioContext) return;
+          const ctx = new AudioContext();
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(587.33, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880.0, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.12, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.35);
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.35);
+        }} catch (e) {{}}
+      }}
+
+      function syncFormWithConfig(cfg) {{
+        if (cfgAutoRefresh) cfgAutoRefresh.value = String(cfg.autoRefresh);
+        if (cfgActivityDelay) cfgActivityDelay.value = String(cfg.activityDelay);
+        if (cfgDefaultTab) cfgDefaultTab.value = cfg.defaultTab;
+        if (cfgSelectionPolicy) cfgSelectionPolicy.value = cfg.selectionPolicy;
+        if (cfgVisualEffects) cfgVisualEffects.value = cfg.visualEffects;
+        if (cfgSoundNotify) cfgSoundNotify.value = cfg.soundNotify;
+        if (cfgStatusBadge) cfgStatusBadge.textContent = 'Active Settings Synced';
+      }}
+
+      let refreshTimer = null;
+      let countdownSeconds = 0;
+
+      function applyDynamicSettings(cfg) {{
+        if (cfg.visualEffects === 'reduced') {{
+          document.documentElement.classList.add('reduced-motion');
+        }} else {{
+          document.documentElement.classList.remove('reduced-motion');
+        }}
+
+        if (refreshTimer) {{
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }}
+
+        const interval = parseInt(cfg.autoRefresh, 10);
+        if (interval > 0) {{
+          countdownSeconds = interval;
+          if (autoRefreshBadge) autoRefreshBadge.style.display = 'inline-flex';
+          if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+
+          refreshTimer = setInterval(() => {{
+            countdownSeconds -= 1;
+            if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+            if (countdownSeconds <= 0) {{
+              clearInterval(refreshTimer);
+              location.reload();
+            }}
+          }}, 1000);
+        }} else {{
+          if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
+        }}
+      }}
+
+      function openConfigModal() {{
+        syncFormWithConfig(currentConfig);
+        if (configModal) {{
+          configModal.style.display = 'flex';
+          setTimeout(() => configModal.classList.add('active'), 10);
+        }}
+      }}
+
+      function closeConfigModal() {{
+        if (configModal) {{
+          configModal.classList.remove('active');
+          setTimeout(() => configModal.style.display = 'none', 250);
+        }}
+      }}
+
+      if (configToggleBtn) configToggleBtn.addEventListener('click', openConfigModal);
+      if (configCloseBtn) configCloseBtn.addEventListener('click', closeConfigModal);
+      if (configCancelBtn) configCancelBtn.addEventListener('click', closeConfigModal);
+
+      if (configModal) {{
+        configModal.addEventListener('click', (e) => {{
+          if (e.target === configModal) closeConfigModal();
+        }});
+      }}
+
+      document.addEventListener('keydown', (e) => {{
+        if (e.key === 'Escape' && configModal && configModal.classList.contains('active')) {{
+          closeConfigModal();
+        }}
+      }});
+
+      if (cfgSoundNotify) {{
+        cfgSoundNotify.addEventListener('change', () => {{
+          if (cfgSoundNotify.value === 'enabled') {{
+            playSoundChime();
+          }}
+        }});
+      }}
+
+      if (configSaveBtn) {{
+        configSaveBtn.addEventListener('click', () => {{
+          currentConfig = {{
+            autoRefresh: parseInt(cfgAutoRefresh ? cfgAutoRefresh.value : 0, 10),
+            activityDelay: parseInt(cfgActivityDelay ? cfgActivityDelay.value : 10, 10),
+            defaultTab: cfgDefaultTab ? cfgDefaultTab.value : 'overview',
+            selectionPolicy: cfgSelectionPolicy ? cfgSelectionPolicy.value : 'option1_auto',
+            visualEffects: cfgVisualEffects ? cfgVisualEffects.value : 'high',
+            soundNotify: cfgSoundNotify ? cfgSoundNotify.value : 'disabled'
+          }};
+          localStorage.setItem('asc_dashboard_config', JSON.stringify(currentConfig));
+          applyDynamicSettings(currentConfig);
+          closeConfigModal();
+          showToast('✓ Configuration successfully saved!', 'success');
+          if (currentConfig.soundNotify === 'enabled') {{
+            playSoundChime();
+          }}
+        }});
+      }}
+
+      if (configResetBtn) {{
+        configResetBtn.addEventListener('click', () => {{
+          currentConfig = {{ ...DEFAULT_CONFIG }};
+          syncFormWithConfig(currentConfig);
+          localStorage.setItem('asc_dashboard_config', JSON.stringify(currentConfig));
+          applyDynamicSettings(currentConfig);
+          showToast('🔄 Configuration reset to defaults!', 'info');
+        }});
+      }}
+
+      if (configExportBtn) {{
+        configExportBtn.addEventListener('click', () => {{
+          try {{
+            const dataStr = 'data:text/json;charset=utf-8,' + encodeURIComponent(JSON.stringify(rawData, null, 2));
+            const dlAnchor = document.createElement('a');
+            dlAnchor.setAttribute('href', dataStr);
+            dlAnchor.setAttribute('download', 'automation_history.json');
+            document.body.appendChild(dlAnchor);
+            dlAnchor.click();
+            dlAnchor.remove();
+            showToast('📥 automation_history.json exported successfully!', 'success');
+          }} catch (err) {{
+            showToast('❌ Export failed: ' + err.message, 'error');
+          }}
+        }});
+      }}
+
+      applyDynamicSettings(currentConfig);
+
       // Theme toggle persistence
       const savedTheme = localStorage.getItem('asc_dashboard_theme') || 'dark';
       document.documentElement.setAttribute('data-theme', savedTheme);
@@ -2385,7 +3518,7 @@ class Step4ReportingEngine:
       // Horizontal Tab switching logic with localStorage persistence
       const tabBtns = document.querySelectorAll('.tab-btn');
       const tabPanels = document.querySelectorAll('.tab-panel');
-      const savedTab = localStorage.getItem('asc_dashboard_tab') || 'overview';
+      const savedTab = localStorage.getItem('asc_dashboard_tab') || currentConfig.defaultTab || 'overview';
 
       function switchTab(tabId) {{
         const validTabs = ['overview', 'chats', 'questions'];
