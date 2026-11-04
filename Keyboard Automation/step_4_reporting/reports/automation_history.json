@@ -1,11 +1,11 @@
 {
   "success": true,
   "data": {
-    "total_pipeline_runs": 5,
-    "total_questions_answered": 20,
-    "total_runtime_seconds": 184.7,
-    "total_unique_chats": 1,
-    "last_updated": "2026-11-04T20:58:34.632404+00:00",
+    "total_pipeline_runs": 6,
+    "total_questions_answered": 21,
+    "total_runtime_seconds": 195.11,
+    "total_unique_chats": 2,
+    "last_updated": "2026-11-04T21:17:17.799568+00:00",
     "chats": {
       "e0645f63-cc82-41f8-8385-2538e9e8f6bf": {
         "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
@@ -326,11 +326,43 @@
             "selected_at": "2026-11-04T20:58:16.529648+00:00"
           }
         ]
+      },
+      "da5d63ec-df7c-43f1-9d53-ffda0040d3c8": {
+        "conversation_id": "da5d63ec-df7c-43f1-9d53-ffda0040d3c8",
+        "topic_summary": "डैशबोर्ड पर तुम्हें ये मेंशन करना होगा कि जब हम टेस्ट रन सिलेक्ट करके जब स्टार्ट...",
+        "last_user_prompt": "Overview जो टैब है, यानी कि फर्स्ट टैब है, जिसमें कि डैशबोर्ड दिखा रहा है, उसमें ये नियम लागू नहीं होना चाहिए कि एक बार ...",
+        "run_count": 1,
+        "total_questions": 1,
+        "last_run_timestamp": "2026-11-04T21:17:17.799568+00:00",
+        "runs": [
+          {
+            "run_id": "run_20261105_024717",
+            "timestamp": "2026-11-04T21:17:17.799568+00:00",
+            "duration_seconds": 10.41,
+            "questions_count": 1,
+            "questions": [
+              {
+                "question_index": 1,
+                "question": "क्या आप इन सभी कमिट किए गए परिवर्तनों को GitHub पर पुश करना चाहते हैं?",
+                "options": [
+                  "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+                  "नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+                "is_multi_select": false,
+                "is_recommended": true
+              }
+            ],
+            "status": "COMPLETED",
+            "selected_at": "2026-11-04T21:17:07.393404+00:00"
+          }
+        ]
       }
     }
   },
   "meta": {
-    "timestamp": "2026-11-04T20:58:34.632404+00:00",
+    "timestamp": "2026-11-04T21:17:17.799568+00:00",
     "step": "step_4_reporting",
     "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
     "format_version": "1.0.0"
