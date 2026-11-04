@@ -534,8 +534,8 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("localStorage.setItem('asc_dashboard_tab'", content)
         self.assertIn("localStorage.getItem('asc_dashboard_tab')", content)
 
-    def test_14_seven_kpis_single_row_and_svg_visualizations(self):
-        """Verify all 7 KPIs are present in a single horizontal row and pure SVG charts render correctly."""
+    def test_14_eight_kpis_two_rows_and_dynamic_svg_visualizations(self):
+        """Verify all 8 KPIs are present in exactly two balanced rows (4x2) and dynamic SVG charts render correctly."""
         history = AutomationHistory(
             total_pipeline_runs=4,
             total_questions_answered=8,
@@ -596,12 +596,16 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertTrue(html_path.is_file())
         content = html_path.read_text(encoding="utf-8")
 
-        # 1. Verify Single Horizontal Row Layout Mandate (CSS repeat(7, ...))
-        self.assertIn("grid-template-columns: repeat(7, minmax(130px, 1fr))", content)
-        self.assertIn("metrics-row-wrapper", content)
+        # 1. Verify Exactly Two Balanced Rows Layout Mandate (CSS repeat(4, 1fr))
+        self.assertIn(".metrics-grid-2rows", content)
+        self.assertIn("grid-template-columns: repeat(4, 1fr)", content)
 
-        # 2. Verify all 7 KPI cards
-        self.assertIn("Total Automation Runs", content)  # KPI 1
+        # 2. Verify Anti-Truncation CSS Rule (no clipping, white-space normal)
+        self.assertIn("white-space: normal;", content)
+
+        # 3. Verify all 8 KPI cards
+        # Row 1: Primary Activity & Scale
+        self.assertIn("Total Pipeline Runs", content)  # KPI 1
         self.assertIn('<div class="metric-value">4</div>', content)
 
         self.assertIn("Questions Answered", content)     # KPI 2
@@ -610,19 +614,26 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("Cumulative Runtime", content)     # KPI 3
         self.assertIn('<div class="metric-value">24.0s</div>', content)
 
-        self.assertIn("Chats Automated", content)        # KPI 4
+        self.assertIn("Unique Chats Automated", content)  # KPI 4
         self.assertIn('<div class="metric-value">2</div>', content)
 
-        self.assertIn("Avg Duration / Run", content)     # KPI 5
+        # Row 2: Performance, Density & Speed
+        self.assertIn("Mean Run Latency", content)       # KPI 5
         self.assertIn('<div class="metric-value">6.0s</div>', content)
 
-        self.assertIn("Qs / Run Density", content)       # KPI 6
-        self.assertIn('<div class="metric-value">2.0</div>', content)
+        self.assertIn("Questions per Run", content)      # KPI 6
+        self.assertIn("2.0", content)
+        self.assertIn("Qs/run", content)
 
-        self.assertIn("Recommendation Rate", content)    # KPI 7
-        self.assertIn('<div class="metric-value">100%</div>', content)
+        self.assertIn("Questions per Chat", content)     # KPI 7
+        self.assertIn("4.0", content)
+        self.assertIn("Qs/chat", content)
 
-        # 3. Verify Pure Inline SVG Pipeline Diagram (Step 0 -> Step 4)
+        self.assertIn("Execution Speed", content)        # KPI 8
+        self.assertIn("3.0s", content)
+        self.assertIn("s/Q", content)
+
+        # 4. Verify Pure Inline SVG Pipeline Diagram (Step 0 -> Step 4)
         self.assertIn("Step 0: Detector", content)
         self.assertIn("Step 1: Identifier", content)
         self.assertIn("Step 2: Focus", content)
@@ -630,15 +641,127 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("Step 4: Reporter", content)
         self.assertIn('id="pipeline-arrow"', content)
 
-        # 4. Verify Pure Inline SVG Bar Chart
+        # 5. Verify Pure Inline SVG Bar Chart
         self.assertIn('barRunsGrad', content)
         self.assertIn('barQsGrad', content)
         self.assertIn("Chat Automation &amp; Questions Distribution", content.replace("&", "&amp;"))
 
-        # 5. Verify Pure Inline SVG Donut Accuracy Gauge
-        self.assertIn('gaugeEmeraldGrad', content)
-        self.assertIn("OPTION 1 ACCURACY", content)
-        self.assertIn("100% Option 1 Adherence", content)
+        # 6. Verify Pure Inline SVG Workload & Topic Share Donut Chart
+        self.assertIn("Chat Workload &amp; Topic Share", content.replace("&", "&amp;"))
+        self.assertIn("TOTAL QS", content)
+
+        # 7. Verify Pure Inline SVG Run Latency Trend Chart
+        self.assertIn("Run Latency &amp; Performance Trend", content.replace("&", "&amp;"))
+        self.assertIn("Mean Latency", content)
+        self.assertIn("latencyLineGrad", content)
+        self.assertIn("latencyAreaGrad", content)
+
+    def test_15_interactive_multi_dimensional_filter_toolbar(self):
+        """Verify the interactive multi-dimensional filter toolbar and client-side filter logic."""
+        history = AutomationHistory(
+            total_pipeline_runs=2,
+            total_questions_answered=3,
+            total_runtime_seconds=12.0,
+            total_unique_chats=1,
+            chats={
+                "chat_filter_test": {
+                    "conversation_id": "chat_filter_test",
+                    "topic_summary": "Filter Test Chat",
+                    "run_count": 2,
+                    "total_questions": 3,
+                    "runs": [
+                        {
+                            "run_id": "run_01",
+                            "timestamp": "2026-11-04T02:00:00Z",
+                            "duration_seconds": 4.5,
+                            "questions_count": 1,
+                            "questions": []
+                        }
+                    ]
+                }
+            }
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Filter toolbar container & header
+        self.assertIn('<section class="filter-toolbar"', content)
+        self.assertIn('id="filter-stats-badge"', content)
+        self.assertIn('id="filter-count">2</span>', content)
+        self.assertIn('id="filter-total">2</span>', content)
+
+        # 2. Date Range filter inputs & presets
+        self.assertIn('id="filter-date-from"', content)
+        self.assertIn('id="filter-date-to"', content)
+        self.assertIn('data-preset="all"', content)
+        self.assertIn('data-preset="today"', content)
+        self.assertIn('data-preset="7d"', content)
+
+        # 3. Multi-dimensional dropdown selects
+        self.assertIn('id="filter-chat"', content)
+        self.assertIn('id="filter-complexity"', content)
+        self.assertIn('id="filter-speed"', content)
+
+        # 4. Reset Button
+        self.assertIn('id="filter-reset-btn"', content)
+        self.assertIn("Reset Filters", content)
+
+        # 5. Client JavaScript filter engine functions
+        self.assertIn("function runMatchesFilters", content)
+        self.assertIn("function applyFilters", content)
+
+    def test_16_svg_generator_methods_direct(self):
+        """Directly test the SVG generation methods for edge cases (empty and populated)."""
+        empty_history = AutomationHistory()
+        # Empty trend SVG
+        empty_trend = Step4ReportingEngine.build_latency_trend_svg(empty_history)
+        self.assertIn("<svg", empty_trend)
+        self.assertIn("No Run Latency Data Yet", empty_trend)
+
+        # Empty topic share SVG
+        empty_topic = Step4ReportingEngine.build_topic_share_svg(empty_history)
+        self.assertIn("<svg", empty_topic)
+        self.assertIn("No Workload Distribution Yet", empty_topic)
+
+        # Populated history with runs
+        history = AutomationHistory(
+            total_pipeline_runs=2,
+            total_questions_answered=3,
+            total_runtime_seconds=15.0,
+            total_unique_chats=1,
+            chats={
+                "chat_x": {
+                    "conversation_id": "chat_x",
+                    "topic_summary": "Architecture Review",
+                    "total_questions": 3,
+                    "runs": [
+                        {
+                            "run_id": "run_01",
+                            "timestamp": "2026-11-04T01:00:00Z",
+                            "duration_seconds": 7.0,
+                            "questions_count": 1,
+                        },
+                        {
+                            "run_id": "run_02",
+                            "timestamp": "2026-11-04T02:00:00Z",
+                            "duration_seconds": 8.0,
+                            "questions_count": 2,
+                        }
+                    ]
+                }
+            }
+        )
+        pop_trend = Step4ReportingEngine.build_latency_trend_svg(history)
+        self.assertIn("latencyLineGrad", pop_trend)
+        self.assertIn("Mean: 7.5s", pop_trend)
+        self.assertIn("R1", pop_trend)
+        self.assertIn("R2", pop_trend)
+
+        pop_topic = Step4ReportingEngine.build_topic_share_svg(history)
+        self.assertIn("Architecture Review", pop_topic)
+        self.assertIn("3 Qs", pop_topic)
+        self.assertIn("100.0% share", pop_topic)
 
 
 if __name__ == "__main__":

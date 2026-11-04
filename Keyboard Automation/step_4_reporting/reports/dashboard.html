@@ -254,46 +254,53 @@
       }
     }
 
-    /* 7 High-Level KPIs Single Horizontal Row Mandate */
+    /* 8 High-Level KPIs in Exactly Two Balanced Rows (4 per Row) */
+    .metrics-grid-2rows {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    @media (max-width: 992px) {
+      .metrics-grid-2rows {
+        grid-template-columns: repeat(2, 1fr);
+        gap: 12px;
+      }
+    }
+
+    @media (max-width: 520px) {
+      .metrics-grid-2rows {
+        grid-template-columns: 1fr;
+        gap: 10px;
+      }
+    }
+
+    /* Fallback compatibility for single-row wrapper if needed */
     .metrics-row-wrapper {
       width: 100%;
-      overflow-x: auto;
       margin-bottom: 24px;
-      padding-bottom: 6px;
-      -webkit-overflow-scrolling: touch;
-    }
-
-    .metrics-row-wrapper::-webkit-scrollbar {
-      height: 6px;
-    }
-
-    .metrics-row-wrapper::-webkit-scrollbar-track {
-      background: transparent;
-    }
-
-    .metrics-row-wrapper::-webkit-scrollbar-thumb {
-      background: var(--bg-surface-highlight);
-      border-radius: 9999px;
     }
 
     .metrics-grid {
       display: grid;
-      grid-template-columns: repeat(7, minmax(130px, 1fr));
-      gap: 10px;
-      min-width: 980px;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
     }
 
     .metric-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 14px 12px;
+      padding: 16px 18px;
       display: flex;
       flex-direction: column;
       position: relative;
       overflow: hidden;
       transition: var(--transition);
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+      min-height: 110px;
+      justify-content: space-between;
     }
 
     .metric-card:hover {
@@ -308,56 +315,220 @@
       top: 0;
       left: 0;
       right: 0;
-      height: 3px;
+      height: 3.5px;
     }
 
+    /* Card Top Accent Bars */
     .metric-card.card-runs::before { background: var(--accent-emerald); }
     .metric-card.card-questions::before { background: var(--accent-indigo); }
     .metric-card.card-runtime::before { background: var(--accent-cyan); }
     .metric-card.card-chats::before { background: var(--accent-purple); }
-    .metric-card.card-duration::before { background: var(--accent-amber); }
+    .metric-card.card-latency::before { background: var(--accent-amber); }
     .metric-card.card-density::before { background: var(--accent-rose); }
+    .metric-card.card-depth::before { background: #3b82f6; }
+    .metric-card.card-speed::before { background: #10b981; }
+    .metric-card.card-duration::before { background: var(--accent-amber); }
     .metric-card.card-accuracy::before { background: #10b981; }
 
     .metric-header {
       display: flex;
       justify-content: space-between;
-      align-items: center;
+      align-items: flex-start;
       margin-bottom: 8px;
+      gap: 8px;
     }
 
+    /* Anti-Truncation Standard: Never clip, hide, or truncate essential KPI text */
     .metric-title {
-      font-size: 0.68rem;
+      font-size: 0.78rem;
       font-weight: 700;
       color: var(--text-secondary);
       text-transform: uppercase;
       letter-spacing: 0.04em;
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+      white-space: normal;
+      word-break: normal;
+      line-height: 1.3;
     }
 
     .metric-icon {
-      font-size: 1.15rem;
+      font-size: 1.3rem;
       flex-shrink: 0;
+      line-height: 1;
     }
 
     .metric-value {
-      font-size: 1.45rem;
+      font-size: 1.65rem;
       font-weight: 700;
       font-family: var(--font-mono);
       letter-spacing: -0.02em;
-      line-height: 1.1;
+      line-height: 1.15;
       margin-bottom: 4px;
-      white-space: nowrap;
+      white-space: normal;
+      color: var(--text-primary);
+    }
+
+    .metric-unit {
+      font-size: 0.85rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-left: 2px;
     }
 
     .metric-subtitle {
-      font-size: 0.68rem;
+      font-size: 0.75rem;
       color: var(--text-muted);
+      white-space: normal;
+      line-height: 1.3;
+    }
+
+    /* Interactive Multi-Dimensional Filter Toolbar */
+    .filter-toolbar {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 16px 20px;
+      margin-bottom: 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+    }
+
+    .filter-toolbar-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .filter-toolbar-title {
+      font-size: 0.92rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--text-primary);
+    }
+
+    .filter-stats-badge {
+      font-size: 0.82rem;
+      font-family: var(--font-mono);
+      color: var(--accent-indigo);
+      background: var(--accent-indigo-glow);
+      padding: 4px 12px;
+      border-radius: 9999px;
+      font-weight: 600;
+    }
+
+    .filter-controls-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 16px;
+      align-items: flex-end;
+    }
+
+    .filter-control-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      min-width: 140px;
+      flex: 1 1 auto;
+    }
+
+    .filter-date-group {
+      min-width: 280px;
+      flex: 2 1 auto;
+    }
+
+    .filter-label {
+      font-size: 0.75rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .filter-date-inputs {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-date-sep {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    .filter-input-date,
+    .filter-select {
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-family: var(--font-family);
+      outline: none;
+      transition: var(--transition);
+      width: 100%;
+    }
+
+    .filter-input-date:focus,
+    .filter-select:focus {
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 0 2px var(--accent-indigo-glow);
+    }
+
+    .filter-presets {
+      display: flex;
+      gap: 6px;
+      margin-top: 4px;
+    }
+
+    .preset-btn {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 4px 10px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+    }
+
+    .preset-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-surface-highlight);
+    }
+
+    .preset-btn.active {
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border-color: var(--accent-indigo);
+    }
+
+    .btn-reset {
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
       white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
+    }
+
+    .btn-reset:hover {
+      color: var(--accent-rose);
+      border-color: var(--accent-rose);
+      background: var(--bg-surface-highlight);
     }
 
     /* Architecture Diagram Card */
@@ -382,6 +553,23 @@
     }
 
     /* Interactive Pure SVG Charts Grid */
+    .charts-grid-two {
+      display: grid;
+      grid-template-columns: 1.35fr 1fr;
+      gap: 18px;
+      margin-bottom: 20px;
+    }
+
+    @media (max-width: 900px) {
+      .charts-grid-two {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .chart-card-wide {
+      margin-bottom: 24px;
+    }
+
     .charts-grid {
       display: grid;
       grid-template-columns: 1.6fr 1fr;
@@ -725,80 +913,159 @@
     <input type="hidden" id="search-box" value="">
     <input type="hidden" id="search-overview" value="">
 
-    <!-- Tab 1: Overview Panel (7 Single-Row KPIs + SVG Architecture + SVG Charts) -->
+    <!-- Interactive Multi-Dimensional Filter Toolbar -->
+    <section class="filter-toolbar" aria-label="Filters Toolbar">
+      <div class="filter-toolbar-header">
+        <div class="filter-toolbar-title">
+          <span>🔍</span>
+          <span>Interactive Filter Toolbar</span>
+        </div>
+        <div class="filter-stats-badge" id="filter-stats-badge">
+          Showing <span id="filter-count">1</span> of <span id="filter-total">1</span> runs
+        </div>
+      </div>
+
+      <div class="filter-controls-row">
+        <!-- Date Range Filter -->
+        <div class="filter-control-group filter-date-group">
+          <label class="filter-label" for="filter-date-from">Date Range</label>
+          <div class="filter-date-inputs">
+            <input type="date" id="filter-date-from" class="filter-input-date" title="Filter From Date">
+            <span class="filter-date-sep">to</span>
+            <input type="date" id="filter-date-to" class="filter-input-date" title="Filter To Date">
+          </div>
+          <div class="filter-presets">
+            <button type="button" class="preset-btn active" data-preset="all">All</button>
+            <button type="button" class="preset-btn" data-preset="today">Today</button>
+            <button type="button" class="preset-btn" data-preset="7d">Last 7 Days</button>
+          </div>
+        </div>
+
+        <!-- Chat Filter Dropdown -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-chat">Conversation</label>
+          <select id="filter-chat" class="filter-select">
+            <option value="all">All Conversations (1)</option>
+            <option value="e0645f63-cc82-41f8-8385-2538e9e8f6bf">मुझे डेमो के लिए ग्रिड मी ऑप्शन .. (e0645f63..)</option>
+          </select>
+        </div>
+
+        <!-- Complexity Filter Dropdown -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-complexity">Complexity</label>
+          <select id="filter-complexity" class="filter-select">
+            <option value="all">All Runs</option>
+            <option value="single">Single-Question (1)</option>
+            <option value="multi">Multi-Question (2+)</option>
+          </select>
+        </div>
+
+        <!-- Speed Filter Dropdown -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-speed">Speed / Latency</label>
+          <select id="filter-speed" class="filter-select">
+            <option value="all">All Durations</option>
+            <option value="fast">Fast (&lt; 3s)</option>
+            <option value="moderate">Moderate (3s - 8s)</option>
+            <option value="heavy">Heavy (&gt; 8s)</option>
+          </select>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="filter-control-group filter-actions-group">
+          <label class="filter-label">&nbsp;</label>
+          <button type="button" class="btn btn-reset" id="filter-reset-btn" title="Reset all filters">
+            <span>🔄</span>
+            <span>Reset Filters</span>
+          </button>
+        </div>
+      </div>
+    </section>
+
+    <!-- Tab 1: Overview Panel (8 Two-Row KPIs + SVG Architecture + Dynamic SVG Charts) -->
     <main id="tab-overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-overview">
-      <!-- 7 High-Level KPIs in a Single Horizontal Row Mandate -->
-      <div class="metrics-row-wrapper">
-        <div class="metrics-grid">
-          <!-- 1. Total Runs -->
-          <div class="metric-card card-runs">
-            <div class="metric-header">
-              <span class="metric-title">Total Automation Runs</span>
-              <span class="metric-icon">🚀</span>
-            </div>
-            <div class="metric-value">1</div>
-            <div class="metric-subtitle">Steps 1-3 Completed</div>
+      <!-- 8 High-Level KPIs in Exactly Two Balanced Rows (4 in Row 1, 4 in Row 2) -->
+      <div class="metrics-grid-2rows">
+        <!-- Row 1: Primary Activity & Scale -->
+        <!-- 1. Total Runs -->
+        <div class="metric-card card-runs">
+          <div class="metric-header">
+            <span class="metric-title">Total Pipeline Runs</span>
+            <span class="metric-icon">🚀</span>
           </div>
+          <div class="metric-value">1</div>
+          <div class="metric-subtitle">Completed Runs</div>
+        </div>
 
-          <!-- 2. Questions Answered -->
-          <div class="metric-card card-questions">
-            <div class="metric-header">
-              <span class="metric-title">Questions Answered</span>
-              <span class="metric-icon">💬</span>
-            </div>
-            <div class="metric-value">4</div>
-            <div class="metric-subtitle">Grill-Me Resolved</div>
+        <!-- 2. Questions Answered -->
+        <div class="metric-card card-questions">
+          <div class="metric-header">
+            <span class="metric-title">Questions Answered</span>
+            <span class="metric-icon">💬</span>
           </div>
+          <div class="metric-value">4</div>
+          <div class="metric-subtitle">Grill-Me Resolved</div>
+        </div>
 
-          <!-- 3. Cumulative Runtime -->
-          <div class="metric-card card-runtime">
-            <div class="metric-header">
-              <span class="metric-title">Cumulative Runtime</span>
-              <span class="metric-icon">⏱️</span>
-            </div>
-            <div class="metric-value">14.3s</div>
-            <div class="metric-subtitle">14.32s Total Active</div>
+        <!-- 3. Cumulative Runtime -->
+        <div class="metric-card card-runtime">
+          <div class="metric-header">
+            <span class="metric-title">Cumulative Runtime</span>
+            <span class="metric-icon">⏱️</span>
           </div>
+          <div class="metric-value">14.3s</div>
+          <div class="metric-subtitle">14.3s Total Active</div>
+        </div>
 
-          <!-- 4. Chats Automated -->
-          <div class="metric-card card-chats">
-            <div class="metric-header">
-              <span class="metric-title">Chats Automated</span>
-              <span class="metric-icon">📂</span>
-            </div>
-            <div class="metric-value">1</div>
-            <div class="metric-subtitle">Unique Conversations</div>
+        <!-- 4. Unique Chats Automated -->
+        <div class="metric-card card-chats">
+          <div class="metric-header">
+            <span class="metric-title">Unique Chats Automated</span>
+            <span class="metric-icon">📂</span>
           </div>
+          <div class="metric-value">1</div>
+          <div class="metric-subtitle">Distinct Conversations</div>
+        </div>
 
-          <!-- 5. Avg Duration / Run -->
-          <div class="metric-card card-duration">
-            <div class="metric-header">
-              <span class="metric-title">Avg Duration / Run</span>
-              <span class="metric-icon">⚡</span>
-            </div>
-            <div class="metric-value">14.3s</div>
-            <div class="metric-subtitle">Mean Pipeline Latency</div>
+        <!-- Row 2: Performance, Density & Speed -->
+        <!-- 5. Mean Run Latency -->
+        <div class="metric-card card-latency card-duration">
+          <div class="metric-header">
+            <span class="metric-title">Mean Run Latency</span>
+            <span class="metric-icon">⚡</span>
           </div>
+          <div class="metric-value">14.3s</div>
+          <div class="metric-subtitle">Avg Seconds / Run</div>
+        </div>
 
-          <!-- 6. Qs / Run Density -->
-          <div class="metric-card card-density">
-            <div class="metric-header">
-              <span class="metric-title">Qs / Run Density</span>
-              <span class="metric-icon">📊</span>
-            </div>
-            <div class="metric-value">4.0</div>
-            <div class="metric-subtitle">Avg Questions per Run</div>
+        <!-- 6. Questions per Run Density -->
+        <div class="metric-card card-density">
+          <div class="metric-header">
+            <span class="metric-title">Questions per Run</span>
+            <span class="metric-icon">📊</span>
           </div>
+          <div class="metric-value">4.0 <span class="metric-unit">Qs/run</span></div>
+          <div class="metric-subtitle">Avg Question Density</div>
+        </div>
 
-          <!-- 7. Recommendation Rate -->
-          <div class="metric-card card-accuracy">
-            <div class="metric-header">
-              <span class="metric-title">Recommendation Rate</span>
-              <span class="metric-icon">🎯</span>
-            </div>
-            <div class="metric-value">100%</div>
-            <div class="metric-subtitle">Option 1 Adherence</div>
+        <!-- 7. Questions per Chat Depth -->
+        <div class="metric-card card-depth">
+          <div class="metric-header">
+            <span class="metric-title">Questions per Chat</span>
+            <span class="metric-icon">📑</span>
           </div>
+          <div class="metric-value">4.0 <span class="metric-unit">Qs/chat</span></div>
+          <div class="metric-subtitle">Avg Questions / Chat</div>
+        </div>
+
+        <!-- 8. Execution Speed -->
+        <div class="metric-card card-speed">
+          <div class="metric-header">
+            <span class="metric-title">Execution Speed</span>
+            <span class="metric-icon">🏎️</span>
+          </div>
+          <div class="metric-value">3.6s <span class="metric-unit">s/Q</span></div>
+          <div class="metric-subtitle">Sec / Question Resolved</div>
         </div>
       </div>
 
@@ -862,8 +1129,8 @@
 </svg>
       </div>
 
-      <!-- Interactive Zero-Dependency SVG Charts -->
-      <div class="charts-grid">
+      <!-- Interactive Dynamic SVG Charts Grid -->
+      <div class="charts-grid-two">
         <div class="chart-card">
           <div class="card-title">📊 Chat Automation & Questions Distribution</div>
           <svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
@@ -898,26 +1165,61 @@
 </svg>
         </div>
         <div class="chart-card">
-          <div class="card-title">🎯 Autonomous Recommendation Accuracy</div>
-          <svg viewBox="0 0 280 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
-  <defs>
-    <linearGradient id="gaugeEmeraldGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" stop-color="#10b981" />
-      <stop offset="100%" stop-color="#06b6d4" />
-    </linearGradient>
-  </defs>
-  <!-- Background Circle Track -->
-  <circle cx="140" cy="110" r="70" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="16" />
-  <!-- Progress Arc -->
-  <circle cx="140" cy="110" r="70" fill="none" stroke="url(#gaugeEmeraldGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="439.82" stroke-dashoffset="0.00" transform="rotate(-90 140 110)" />
-  <!-- Center Metrics -->
-  <text x="140" y="106" font-size="34" font-weight="800" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">100%</text>
-  <text x="140" y="128" font-size="9.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">OPTION 1 ACCURACY</text>
-  <!-- Subtitle Summary -->
-  <text x="140" y="202" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)" text-anchor="middle">100% Option 1 Adherence</text>
-  <text x="140" y="222" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)" text-anchor="middle">Autonomous Selection • Zero Deviations</text>
+          <div class="card-title">🥧 Chat Workload & Topic Share</div>
+          <svg viewBox="0 0 460 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <!-- Background Donut Track -->
+  <circle cx="95.0" cy="115.0" r="62.0" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="20" />
+  <circle cx="95.0" cy="115.0" r="62.0" fill="none" stroke="#6366f1" stroke-width="20" stroke-dasharray="389.56 0.00" stroke-dashoffset="-0.00" transform="rotate(-90 95.0 115.0)" />
+  <text x="95.0" y="113.0" font-size="24" font-weight="800" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">4</text>
+  <text x="95.0" y="131.0" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">TOTAL QS</text>
+  <circle cx="205" cy="41.0" r="5" fill="#6366f1" />
+  <text x="218" y="45.0" font-size="11" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">मुझे डेमो के लिए ग्रिड..</text>
+  <text x="218" y="59.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-secondary)">4 Qs • 100.0% share</text>
 </svg>
         </div>
+      </div>
+
+      <!-- Wide Run Latency & Performance Trend Chart -->
+      <div class="chart-card chart-card-wide">
+        <div class="card-title">⚡ Run Latency & Performance Trend</div>
+        <svg viewBox="0 0 640 220" width="100%" height="220" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+  <defs>
+    <linearGradient id="latencyLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" stop-color="#06b6d4" />
+      <stop offset="50%" stop-color="#6366f1" />
+      <stop offset="100%" stop-color="#10b981" />
+    </linearGradient>
+    <linearGradient id="latencyAreaGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" stop-color="rgba(99, 102, 241, 0.35)" />
+      <stop offset="100%" stop-color="rgba(99, 102, 241, 0.0)" />
+    </linearGradient>
+  </defs>
+  <!-- Legend -->
+  <g transform="translate(370, 12)">
+    <line x1="0" y1="6" x2="20" y2="6" stroke="#06b6d4" stroke-width="2.5" />
+    <circle cx="10" cy="6" r="3" fill="#06b6d4" />
+    <text x="26" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Run Duration (s)</text>
+    <line x1="140" y1="6" x2="160" y2="6" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 2" />
+    <text x="166" y="10" font-size="11" font-family="var(--font-family)" fill="var(--text-secondary)">Mean Latency</text>
+  </g>
+  <line x1="55.0" y1="180.0" x2="610.0" y2="180.0" stroke="var(--border-subtle)" stroke-width="1" />
+  <text x="47.0" y="183.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">0.0s</text>
+  <line x1="55.0" y1="143.8" x2="610.0" y2="143.8" stroke="var(--border-subtle)" stroke-width="1" />
+  <text x="47.0" y="146.8" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">4.5s</text>
+  <line x1="55.0" y1="107.5" x2="610.0" y2="107.5" stroke="var(--border-subtle)" stroke-width="1" />
+  <text x="47.0" y="110.5" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">8.9s</text>
+  <line x1="55.0" y1="71.2" x2="610.0" y2="71.2" stroke="var(--border-subtle)" stroke-width="1" />
+  <text x="47.0" y="74.2" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">13.4s</text>
+  <line x1="55.0" y1="35.0" x2="610.0" y2="35.0" stroke="var(--border-subtle)" stroke-width="1" />
+  <text x="47.0" y="38.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">17.9s</text>
+  <polygon points="332.5,180.0 332.5,64.0 332.5,180.0" fill="url(#latencyAreaGrad)" />
+  <path d="M 332.5 64.0" fill="none" stroke="url(#latencyLineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <line x1="55.0" y1="64.0" x2="610.0" y2="64.0" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9" />
+  <text x="610.0" y="58.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#f59e0b" text-anchor="end">Mean: 14.3s</text>
+  <circle cx="332.5" cy="64.0" r="4.5" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2.5"><title>run_20261104_061022: 14.32s (4 Qs)</title></circle>
+  <text x="332.5" y="56.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">14.3s</text>
+  <text x="332.5" y="196.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R1</text>
+</svg>
       </div>
     </main>
 
@@ -982,7 +1284,7 @@
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 07:06:07</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 07:36:26</span></div>
     </footer>
   </div>
 
@@ -1002,6 +1304,17 @@
       const summaryTbody = document.getElementById('summary-tbody');
       const detailsContainer = document.getElementById('details-container');
       const themeToggle = document.getElementById('theme-toggle');
+
+      // Filter Toolbar elements
+      const filterDateFrom = document.getElementById('filter-date-from');
+      const filterDateTo = document.getElementById('filter-date-to');
+      const filterChat = document.getElementById('filter-chat');
+      const filterComplexity = document.getElementById('filter-complexity');
+      const filterSpeed = document.getElementById('filter-speed');
+      const filterResetBtn = document.getElementById('filter-reset-btn');
+      const presetBtns = document.querySelectorAll('.preset-btn');
+      const filterCountEl = document.getElementById('filter-count');
+      const filterTotalEl = document.getElementById('filter-total');
 
       // Theme toggle persistence
       const savedTheme = localStorage.getItem('asc_dashboard_theme') || 'dark';
@@ -1046,10 +1359,48 @@
       // Restore active tab
       switchTab(savedTab);
 
+      // Multi-dimensional run filter evaluator
+      function runMatchesFilters(cid, chat, run) {
+        const fromVal = filterDateFrom ? filterDateFrom.value : '';
+        const toVal = filterDateTo ? filterDateTo.value : '';
+        const selChat = filterChat ? filterChat.value : 'all';
+        const selComplexity = filterComplexity ? filterComplexity.value : 'all';
+        const selSpeed = filterSpeed ? filterSpeed.value : 'all';
+
+        // 1. Conversation filter
+        if (selChat !== 'all' && cid !== selChat) {
+          return false;
+        }
+
+        // 2. Date range filter
+        if (run && run.timestamp) {
+          const runDateStr = run.timestamp.split('T')[0];
+          if (fromVal && runDateStr < fromVal) return false;
+          if (toVal && runDateStr > toVal) return false;
+        }
+
+        // 3. Complexity filter
+        if (run) {
+          const qCount = run.questions_count !== undefined ? run.questions_count : (run.questions ? run.questions.length : 0);
+          if (selComplexity === 'single' && qCount !== 1) return false;
+          if (selComplexity === 'multi' && qCount < 2) return false;
+        }
+
+        // 4. Latency / Speed filter
+        if (run) {
+          const dur = typeof run.duration_seconds === 'number' ? run.duration_seconds : 0.0;
+          if (selSpeed === 'fast' && dur >= 3.0) return false;
+          if (selSpeed === 'moderate' && (dur < 3.0 || dur > 8.0)) return false;
+          if (selSpeed === 'heavy' && dur <= 8.0) return false;
+        }
+
+        return true;
+      }
+
       // Render Tab 2: Chats Breakdown Table
-      function renderChats(filter = '') {
+      function renderChats() {
         if (!summaryTbody) return;
-        const filterLower = filter.toLowerCase().trim();
+        const searchVal = (searchChats ? searchChats.value : (searchBoxFallback ? searchBoxFallback.value : '')).toLowerCase().trim();
         const chatEntries = Object.entries(chats);
         summaryTbody.innerHTML = '';
         let tableRows = 0;
@@ -1057,19 +1408,31 @@
         for (const [cid, chat] of chatEntries) {
           const topic = chat.topic_summary || 'Untitled Conversation';
           const prompt = chat.last_user_prompt || '';
-          const match = !filterLower ||
-            cid.toLowerCase().includes(filterLower) ||
-            topic.toLowerCase().includes(filterLower) ||
-            prompt.toLowerCase().includes(filterLower);
+          const runs = chat.runs || [];
 
-          if (match) {
+          // Text match
+          const textMatch = !searchVal ||
+            cid.toLowerCase().includes(searchVal) ||
+            topic.toLowerCase().includes(searchVal) ||
+            prompt.toLowerCase().includes(searchVal);
+
+          if (!textMatch) continue;
+
+          // Check if any run matches active multidimensional filters
+          const matchingRuns = runs.filter(run => runMatchesFilters(cid, chat, run));
+          const chatFilterMatch = runs.length > 0 ? (matchingRuns.length > 0) : (filterChat ? filterChat.value === 'all' || filterChat.value === cid : true);
+
+          if (chatFilterMatch) {
             tableRows++;
+            const displayRunCount = runs.length > 0 ? matchingRuns.length : (chat.run_count || 0);
+            const displayQsCount = runs.length > 0 ? matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0) : (chat.total_questions || 0);
+
             const tr = document.createElement('tr');
             tr.innerHTML = `
               <td><span class="chat-id-tag">${escapeHtml(cid)}</span></td>
               <td><strong>${escapeHtml(topic)}</strong></td>
-              <td><span class="badge-count">${chat.run_count || 0}</span></td>
-              <td><span class="badge-count">${chat.total_questions || 0}</span></td>
+              <td><span class="badge-count">${displayRunCount}</span></td>
+              <td><span class="badge-count">${displayQsCount}</span></td>
               <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">${chat.last_run_timestamp ? new Date(chat.last_run_timestamp).toLocaleString() : 'N/A'}</td>
             `;
             summaryTbody.appendChild(tr);
@@ -1082,9 +1445,9 @@
       }
 
       // Render Tab 3: Detailed Questions & Answers
-      function renderQuestions(filter = '') {
+      function renderQuestions() {
         if (!detailsContainer) return;
-        const filterLower = filter.toLowerCase().trim();
+        const searchVal = (searchQuestions ? searchQuestions.value : (searchBoxFallback ? searchBoxFallback.value : '')).toLowerCase().trim();
         const chatEntries = Object.entries(chats);
         detailsContainer.innerHTML = '';
         let cardsCount = 0;
@@ -1093,13 +1456,15 @@
           const topic = chat.topic_summary || 'Untitled Conversation';
           const runs = chat.runs || [];
 
-          // Filter inside questions
+          // Filter inside questions and runs
           const matchingRuns = runs.filter(run => {
-            if (!filterLower) return true;
-            if (cid.toLowerCase().includes(filterLower) || topic.toLowerCase().includes(filterLower)) return true;
+            if (!runMatchesFilters(cid, chat, run)) return false;
+
+            if (!searchVal) return true;
+            if (cid.toLowerCase().includes(searchVal) || topic.toLowerCase().includes(searchVal)) return true;
             return (run.questions || []).some(q =>
-              (q.question || '').toLowerCase().includes(filterLower) ||
-              (q.options || []).some(opt => opt.toLowerCase().includes(filterLower))
+              (q.question || '').toLowerCase().includes(searchVal) ||
+              (q.options || []).some(opt => opt.toLowerCase().includes(searchVal))
             );
           });
 
@@ -1152,6 +1517,8 @@
               `;
             });
 
+            const totalFilteredQs = matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0);
+
             card.innerHTML = `
               <div class="chat-card-header">
                 <div class="chat-card-title">
@@ -1159,8 +1526,8 @@
                   <span>${escapeHtml(topic)}</span>
                 </div>
                 <div class="chat-card-meta">
-                  <span class="badge-count">${chat.run_count || 0} run(s)</span>
-                  <span class="badge-count">${chat.total_questions || 0} question(s)</span>
+                  <span class="badge-count">${matchingRuns.length} run(s)</span>
+                  <span class="badge-count">${totalFilteredQs} question(s)</span>
                 </div>
               </div>
               <div class="chat-card-body">
@@ -1176,10 +1543,31 @@
             <div class="empty-state">
               <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
               <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">No Questions Found</div>
-              <div>No questions match your search filter or none have been processed yet.</div>
+              <div>No questions match your filter criteria or search query.</div>
             </div>
           `;
         }
+      }
+
+      function applyFilters() {
+        let totalRunsCount = 0;
+        let matchingRunsCount = 0;
+
+        for (const [cid, chat] of Object.entries(chats)) {
+          const runs = chat.runs || [];
+          totalRunsCount += runs.length;
+          runs.forEach(run => {
+            if (runMatchesFilters(cid, chat, run)) {
+              matchingRunsCount++;
+            }
+          });
+        }
+
+        if (filterCountEl) filterCountEl.textContent = matchingRunsCount;
+        if (filterTotalEl) filterTotalEl.textContent = totalRunsCount;
+
+        renderChats();
+        renderQuestions();
       }
 
       function escapeHtml(str) {
@@ -1192,26 +1580,84 @@
           .replace(/'/g, '&#039;');
       }
 
-      // Search listeners
-      if (searchChats) {
-        searchChats.addEventListener('input', (e) => renderChats(e.target.value));
+      // Preset button handlers
+      presetBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          presetBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          const preset = btn.getAttribute('data-preset');
+
+          if (preset === 'all') {
+            if (filterDateFrom) filterDateFrom.value = '';
+            if (filterDateTo) filterDateTo.value = '';
+          } else if (preset === 'today') {
+            const today = new Date().toISOString().split('T')[0];
+            if (filterDateFrom) filterDateFrom.value = today;
+            if (filterDateTo) filterDateTo.value = today;
+          } else if (preset === '7d') {
+            const now = new Date();
+            const past = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
+            if (filterDateFrom) filterDateFrom.value = past.toISOString().split('T')[0];
+            if (filterDateTo) filterDateTo.value = now.toISOString().split('T')[0];
+          }
+
+          applyFilters();
+        });
+      });
+
+      // Filter change listeners
+      if (filterDateFrom) {
+        filterDateFrom.addEventListener('change', () => {
+          presetBtns.forEach(b => b.classList.remove('active'));
+          applyFilters();
+        });
       }
-      if (searchQuestions) {
-        searchQuestions.addEventListener('input', (e) => renderQuestions(e.target.value));
+      if (filterDateTo) {
+        filterDateTo.addEventListener('change', () => {
+          presetBtns.forEach(b => b.classList.remove('active'));
+          applyFilters();
+        });
       }
-      if (searchOverview) {
-        searchOverview.addEventListener('input', (e) => renderChats(e.target.value));
-      }
-      if (searchBoxFallback) {
-        searchBoxFallback.addEventListener('input', (e) => {
-          renderChats(e.target.value);
-          renderQuestions(e.target.value);
+      if (filterChat) filterChat.addEventListener('change', applyFilters);
+      if (filterComplexity) filterComplexity.addEventListener('change', applyFilters);
+      if (filterSpeed) filterSpeed.addEventListener('change', applyFilters);
+
+      // Reset button listener
+      if (filterResetBtn) {
+        filterResetBtn.addEventListener('click', () => {
+          if (filterDateFrom) filterDateFrom.value = '';
+          if (filterDateTo) filterDateTo.value = '';
+          if (filterChat) filterChat.value = 'all';
+          if (filterComplexity) filterComplexity.value = 'all';
+          if (filterSpeed) filterSpeed.value = 'all';
+          if (searchChats) searchChats.value = '';
+          if (searchQuestions) searchQuestions.value = '';
+          if (searchOverview) searchOverview.value = '';
+          if (searchBoxFallback) searchBoxFallback.value = '';
+          presetBtns.forEach(b => b.classList.toggle('active', b.getAttribute('data-preset') === 'all'));
+          applyFilters();
         });
       }
 
-      // Initial Render
-      renderChats();
-      renderQuestions();
+      // Search listeners
+      if (searchChats) {
+        searchChats.addEventListener('input', () => renderChats());
+      }
+      if (searchQuestions) {
+        searchQuestions.addEventListener('input', () => renderQuestions());
+      }
+      if (searchOverview) {
+        searchOverview.addEventListener('input', () => renderChats());
+      }
+      if (searchBoxFallback) {
+        searchBoxFallback.addEventListener('input', () => {
+          renderChats();
+          renderQuestions();
+        });
+      }
+
+      // Initial Render & Filter Count Initialization
+      applyFilters();
     })();
   </script>
 </body>
