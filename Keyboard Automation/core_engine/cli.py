@@ -16,12 +16,16 @@ import logging
 
 from .constants import IS_WINDOWS, DEFAULT_TARGET_WINDOW, STEP_ID, STEP_NUMBER, STEP_NAME
 from .automator import GrillMeAutomator, Step3KeyboardAutomator
+from .config_manager import load_runtime_config, get_settle_delay, apply_logging_config
 
 logger = logging.getLogger("Step3KeyboardAutomation.CLI")
 
 
 def parse_arguments():
     """Defines and parses command-line arguments for Step 3: Keyboard Automation."""
+    cfg = load_runtime_config()
+    default_settle = get_settle_delay(cfg)
+
     parser = argparse.ArgumentParser(
         description="STEP 3: Keyboard Automation Suite for Antigravity 2.0 Harness & Chat Interfaces (AutoSelect-Commander Pipeline).",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter
@@ -61,8 +65,14 @@ def parse_arguments():
     parser.add_argument(
         "--settle-delay",
         type=float,
-        default=0.3,
-        help="Delay in seconds after window focus/maximize to allow UI rendering to settle."
+        default=default_settle,
+        help="Delay in seconds after window focus/maximize to allow UI rendering to settle (default from config.json)."
+    )
+    parser.add_argument(
+        "--config",
+        type=str,
+        default=None,
+        help="Path to custom runtime config.json."
     )
     parser.add_argument(
         "-c", "--countdown",
@@ -183,6 +193,8 @@ def print_banner(args, automator=None):
 def main():
     """Main CLI execution entrypoint."""
     args = parse_arguments()
+    cfg = load_runtime_config(getattr(args, "config", None))
+    apply_logging_config(cfg, logger, step_name="Step 3: Keyboard Automation")
 
     automator = GrillMeAutomator(
         engine=args.engine,

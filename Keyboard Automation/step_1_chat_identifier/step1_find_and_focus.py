@@ -37,6 +37,17 @@ _root_dir = _this_dir.parent if _this_dir.name.startswith(("step_", "step-")) el
 if str(_root_dir) not in sys.path:
     sys.path.insert(0, str(_root_dir))
 
+try:
+    from core_engine.config_manager import (
+        load_runtime_config,
+        apply_logging_config,
+    )
+except ImportError:
+    def load_runtime_config(p=None):
+        return {}
+    def apply_logging_config(c=None, l=None, s=""):
+        pass
+
 # Reconfigure stdout/stderr for proper UTF-8 handling on Windows
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -192,8 +203,18 @@ class GrillMeDetector:
         Path(r"C:\Users\Atul Verma\.gemini\antigravity\brain"),
     ]
 
-    def __init__(self, brain_dir: Optional[str] = None):
+    def __init__(
+        self,
+        brain_dir: Optional[str] = None,
+        active_hours: Optional[float] = None,
+        require_grill_me: Optional[bool] = None,
+        config_path: Optional[Union[str, Path]] = None,
+    ):
         self.brain_dir = self._resolve_brain_dir(brain_dir)
+        self.config = load_runtime_config(config_path)
+        self.active_hours = active_hours if active_hours is not None else float(self.config.get("antigravity", {}).get("active_hours", 12.0))
+        self.require_grill_me = require_grill_me if require_grill_me is not None else bool(self.config.get("antigravity", {}).get("require_grill_me", True))
+        apply_logging_config(self.config, logger, step_name="Step 1: Find & Focus")
 
     def _resolve_brain_dir(self, explicit_dir: Optional[str]) -> Path:
         if explicit_dir:
@@ -232,6 +253,15 @@ class GrillMeDetector:
         entries.sort(key=lambda p: p.stat().st_mtime, reverse=True)
 
         for convo_dir in entries:
+            # Check active_hours window if configured
+            if self.active_hours > 0:
+                try:
+                    age_hours = (time.time() - convo_dir.stat().st_mtime) / 3600.0
+                    if age_hours > self.active_hours:
+                        continue
+                except Exception:
+                    pass
+
             cid = convo_dir.name
             logs_dir = convo_dir / ".system_generated" / "logs"
             # Prioritize transcript_full.jsonl to avoid tool_calls truncation on large questionnaires (N >= 4)
@@ -637,8 +667,13 @@ def run_step1(
     target_cid: Optional[str] = None,
     dry_run: bool = False,
     no_focus: bool = False,
-    state_file: str = "target_chat.json"
+    state_file: str = "target_chat.json",
+    active_hours: Optional[float] = None,
+    require_grill_me: Optional[bool] = None,
+    config_path: Optional[Union[str, Path]] = None,
 ) -> int:
+    cfg = load_runtime_config(config_path)
+    apply_logging_config(cfg, logger, step_name="Step 1: Find & Focus")
     target_state_path, legacy_state_path = resolve_state_file_path(state_file)
 
     print("=" * 76)
@@ -648,7 +683,12 @@ def run_step1(
 
     # 1. Scan Brain Transcripts
     logger.info("Scanning Antigravity brain transcripts for active Grill Me chats...")
-    detector = GrillMeDetector(brain_dir)
+    detector = GrillMeDetector(
+        brain_dir=brain_dir,
+        active_hours=active_hours,
+        require_grill_me=require_grill_me,
+        config_path=config_path,
+    )
     chats = detector.scan_transcripts()
 
     if not chats:
@@ -811,6 +851,10 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Simulate without shifting window focus")
     parser.add_argument("--no-focus", action="store_true", help="Skip bringing window to foreground")
     parser.add_argument("--state-file", type=str, default="target_chat.json", help="State file name")
+    parser.add_argument("--active-hours", type=float, default=None, help="Hours window to consider session active (defaults to config.json)")
+    parser.add_argument("--require-grill-me", dest="require_grill_me", action="store_true", default=None, help="Require pending ask_question (defaults to config.json)")
+    parser.add_argument("--no-require-grill-me", dest="require_grill_me", action="store_false", help="Do not require pending ask_question")
+    parser.add_argument("--config", type=str, default=None, help="Path to custom runtime config.json")
     parser.add_argument("--no-pause", action="store_true", help="Non-interactive execution flag")
 
     args, _ = parser.parse_known_args()
@@ -819,7 +863,10 @@ def main() -> int:
         target_cid=args.cid,
         dry_run=args.dry_run,
         no_focus=args.no_focus,
-        state_file=args.state_file
+        state_file=args.state_file,
+        active_hours=args.active_hours,
+        require_grill_me=args.require_grill_me,
+        config_path=args.config
     )
 
 

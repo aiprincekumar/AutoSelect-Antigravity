@@ -1362,6 +1362,196 @@
       margin-bottom: 32px;
     }
 
+    /* Global Expand / Collapse All Toolbar */
+    .config-global-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 12px 18px;
+      margin-bottom: 8px;
+      gap: 12px;
+      flex-wrap: wrap;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+    }
+
+    .toolbar-title-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .toolbar-label {
+      font-size: 0.94rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .toolbar-badge {
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      color: var(--accent-indigo);
+      background: rgba(99, 102, 241, 0.12);
+      border: 1px solid rgba(99, 102, 241, 0.3);
+      padding: 2px 8px;
+      border-radius: var(--radius-sm);
+    }
+
+    .toolbar-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .btn-collapse-control {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.82rem;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .btn-collapse-control:hover {
+      background: var(--bg-surface-highlight);
+      border-color: var(--border-accent);
+      color: var(--text-primary);
+    }
+
+    .btn-collapse-control:focus-visible {
+      ring: 2px solid var(--accent-indigo);
+      outline: 2px solid var(--accent-indigo);
+    }
+
+    /* Collapsible Card Headers & Chevron Indicators */
+    .collapsible-card-header {
+      cursor: pointer;
+      user-select: none;
+      transition: background 0.2s ease;
+      border-radius: var(--radius-md);
+      padding: 4px 6px;
+      margin: -4px -6px 18px -6px;
+    }
+
+    .collapsible-card-header:hover {
+      background: rgba(255, 255, 255, 0.02);
+    }
+
+    .collapsible-card-header:focus-visible,
+    .config-subgroup-header:focus-visible {
+      outline: 2px solid var(--accent-indigo);
+      outline-offset: 2px;
+    }
+
+    .accordion-chevron,
+    .subaccordion-chevron {
+      font-size: 1.15rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      transition: transform 0.28s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease, border-color 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      line-height: 1;
+    }
+
+    .collapsible-card-header:hover .accordion-chevron,
+    .config-subgroup-header:hover .subaccordion-chevron {
+      color: var(--text-primary);
+      border-color: var(--border-accent);
+      background: var(--bg-surface-highlight);
+    }
+
+    .collapsible-card-header[aria-expanded="false"] .accordion-chevron,
+    .config-subgroup-header[aria-expanded="false"] .subaccordion-chevron {
+      transform: rotate(-90deg);
+    }
+
+    .collapsible-card-body {
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease;
+      overflow: hidden;
+    }
+
+    .collapsible-card-body.collapsed {
+      max-height: 0 !important;
+      opacity: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      pointer-events: none;
+    }
+
+    /* Sub-Accordions inside Cards */
+    .accordion-group {
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-elevated);
+      overflow: hidden;
+      transition: var(--transition);
+      padding: 0;
+    }
+
+    .accordion-group:hover {
+      border-color: var(--border-accent);
+    }
+
+    .config-subgroup-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      cursor: pointer;
+      user-select: none;
+      background: var(--bg-surface-elevated);
+      transition: background 0.2s ease;
+      border-bottom: 1px solid transparent;
+    }
+
+    .config-subgroup-header:hover {
+      background: var(--bg-surface-highlight);
+    }
+
+    .config-subgroup-header[aria-expanded="true"] {
+      border-bottom-color: var(--border-subtle);
+    }
+
+    .config-subgroup-body {
+      padding: 16px 18px;
+      transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.25s ease, padding 0.3s ease;
+      overflow: hidden;
+    }
+
+    .config-subgroup-body.collapsed {
+      max-height: 0 !important;
+      opacity: 0;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      pointer-events: none;
+    }
+
     .config-section-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -2817,9 +3007,30 @@
     <!-- Tab 4: Config Panel (Always the Last Tab - System Runtime & Dashboard Configuration) -->
     <main id="tab-config" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-config">
       <div class="config-panel-container">
+        <!-- Global Expand / Collapse All Controls -->
+        <div class="config-global-toolbar">
+          <div class="toolbar-title-wrap">
+            <span class="toolbar-icon">⚙️</span>
+            <div>
+              <span class="toolbar-label">Unified Configuration Control Center</span>
+              <span class="toolbar-badge">Cross-Step Synchronized</span>
+            </div>
+          </div>
+          <div class="toolbar-actions">
+            <button type="button" class="btn-collapse-control" id="btn-expand-all-config" title="Expand all configuration cards and sections">
+              <span>📂</span>
+              <span>Expand All Sections</span>
+            </button>
+            <button type="button" class="btn-collapse-control" id="btn-collapse-all-config" title="Collapse all configuration cards and sections">
+              <span>📁</span>
+              <span>Collapse All Sections</span>
+            </button>
+          </div>
+        </div>
+
         <!-- Section 1: System Runtime Configuration (step_9_complete_automation/config.json) -->
-        <div class="config-section-card" id="runtime-config-section">
-          <div class="config-section-header">
+        <div class="config-section-card collapsible-card" id="runtime-config-section">
+          <div class="config-section-header collapsible-card-header" id="header-runtime-config" role="button" tabindex="0" aria-expanded="true" aria-controls="body-runtime-config">
             <div class="config-section-title-wrap">
               <span class="config-section-icon">⚡</span>
               <div>
@@ -2832,262 +3043,292 @@
             </div>
             <div class="config-section-meta">
               <span class="status-indicator-live">● Live Engine Seam</span>
+              <span class="accordion-chevron" aria-hidden="true">▾</span>
             </div>
           </div>
 
-          <div class="config-section-body">
-            <!-- A. Execution Mode -->
-            <div class="config-card-subgroup">
-              <div class="config-subgroup-title">
-                <span>🛡️</span>
-                <span>Operating Execution Mode</span>
+          <div class="config-section-body collapsible-card-body" id="body-runtime-config">
+            <!-- 1. Execution Mode & Environment -->
+            <div class="config-card-subgroup accordion-group" id="acc-runtime-mode">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-mode">
+                <div class="config-subgroup-title">
+                  <span>🛡️</span>
+                  <span>Execution Mode &amp; Environment</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <p class="config-subgroup-desc">Select whether the automation pipeline runs in full autonomous Production mode (polling every 300s) or fast Test mode (10s intervals).</p>
-              
-              <div class="mode-pill-selector" role="radiogroup" aria-label="Operating Mode">
-                <button type="button" class="mode-pill active" id="cfg-mode-prod-btn" data-mode="production">
-                  <div class="mode-pill-content">
-                    <span class="mode-pill-icon">🛡️</span>
-                    <div class="mode-pill-text">
-                      <strong>Production Mode</strong>
-                      <small>Real-time autonomous polling (300.0s cycle)</small>
+              <div class="config-subgroup-body" id="subbody-runtime-mode">
+                <p class="config-subgroup-desc">Select whether the automation pipeline runs in full autonomous Production mode (polling every 300s) or fast Test mode (10s intervals).</p>
+                
+                <div class="mode-pill-selector" role="radiogroup" aria-label="Operating Mode">
+                  <button type="button" class="mode-pill active" id="cfg-mode-prod-btn" data-mode="production">
+                    <div class="mode-pill-content">
+                      <span class="mode-pill-icon">🛡️</span>
+                      <div class="mode-pill-text">
+                        <strong>Production Mode</strong>
+                        <small>Real-time autonomous polling (300.0s cycle)</small>
+                      </div>
                     </div>
-                  </div>
-                  <span class="mode-pill-check">✓</span>
-                </button>
-                <button type="button" class="mode-pill " id="cfg-mode-test-btn" data-mode="test">
-                  <div class="mode-pill-content">
-                    <span class="mode-pill-icon">🧪</span>
-                    <div class="mode-pill-text">
-                      <strong>Test Mode</strong>
-                      <small>High-speed validation cycle (10.0s interval)</small>
+                    <span class="mode-pill-check">✓</span>
+                  </button>
+                  <button type="button" class="mode-pill " id="cfg-mode-test-btn" data-mode="test">
+                    <div class="mode-pill-content">
+                      <span class="mode-pill-icon">🧪</span>
+                      <div class="mode-pill-text">
+                        <strong>Test Mode</strong>
+                        <small>High-speed validation cycle (10.0s interval)</small>
+                      </div>
                     </div>
-                  </div>
-                  <span class="mode-pill-check">✓</span>
-                </button>
-              </div>
-              <input type="hidden" id="cfg-runtime-mode" value="production">
-            </div>
-
-            <!-- B. Pipeline Steps Toggles (Enabled Steps) -->
-            <div class="config-card-subgroup">
-              <div class="config-subgroup-title">
-                <span>🔄</span>
-                <span>Autonomous Pipeline Steps (Enabled Stages)</span>
-              </div>
-              <p class="config-subgroup-desc">Toggle individual execution steps. Disabled steps are cleanly bypassed during execution with zero side-effects.</p>
-
-              <div class="steps-toggle-grid">
-                <!-- Step 1 -->
-                <div class="step-toggle-card">
-                  <div class="step-toggle-info">
-                    <div class="step-toggle-title-row">
-                      <span class="step-tag-pill">Step 1</span>
-                      <strong>Find &amp; Focus Target Window</strong>
-                    </div>
-                    <span class="step-toggle-desc">Win32 process targeting, window activation &amp; focus</span>
-                  </div>
-                  <label class="switch-toggle" for="cfg-step1-enabled">
-                    <input type="checkbox" id="cfg-step1-enabled" checked>
-                    <span class="slider-round"></span>
-                  </label>
+                    <span class="mode-pill-check">✓</span>
+                  </button>
                 </div>
-
-                <!-- Step 2 -->
-                <div class="step-toggle-card">
-                  <div class="step-toggle-info">
-                    <div class="step-toggle-title-row">
-                      <span class="step-tag-pill">Step 2</span>
-                      <strong>GUI Chat Select &amp; Focus</strong>
-                    </div>
-                    <span class="step-toggle-desc">Locates active pending conversation with Grill-Me options</span>
-                  </div>
-                  <label class="switch-toggle" for="cfg-step2-enabled">
-                    <input type="checkbox" id="cfg-step2-enabled" checked>
-                    <span class="slider-round"></span>
-                  </label>
-                </div>
-
-                <!-- Step 3 -->
-                <div class="step-toggle-card">
-                  <div class="step-toggle-info">
-                    <div class="step-toggle-title-row">
-                      <span class="step-tag-pill">Step 3</span>
-                      <strong>Keyboard Recommendation Selector</strong>
-                    </div>
-                    <span class="step-toggle-desc">Autonomous Option 1 keypress navigation &amp; Enter selection</span>
-                  </div>
-                  <label class="switch-toggle" for="cfg-step3-enabled">
-                    <input type="checkbox" id="cfg-step3-enabled" checked>
-                    <span class="slider-round"></span>
-                  </label>
-                </div>
-
-                <!-- Step 4 -->
-                <div class="step-toggle-card">
-                  <div class="step-toggle-info">
-                    <div class="step-toggle-title-row">
-                      <span class="step-tag-pill">Step 4</span>
-                      <strong>Visual Reporting &amp; Telemetry</strong>
-                    </div>
-                    <span class="step-toggle-desc">Telemetry recording, dynamic charts &amp; user inactivity HUD</span>
-                  </div>
-                  <label class="switch-toggle" for="cfg-step4-enabled">
-                    <input type="checkbox" id="cfg-step4-enabled" checked>
-                    <span class="slider-round"></span>
-                  </label>
-                </div>
+                <input type="hidden" id="cfg-runtime-mode" value="production">
               </div>
             </div>
 
-            <!-- C. Timing & Delays Engine -->
-            <div class="config-card-subgroup">
-              <div class="config-subgroup-title">
-                <span>⏱️</span>
-                <span>Timing &amp; Delays Engine</span>
-              </div>
-              <p class="config-subgroup-desc">Configure sleep intervals, inter-step settle buffers, and user activity detection pauses.</p>
-
-              <div class="timing-inputs-grid">
-                <div class="input-card">
-                  <label class="input-card-label" for="cfg-timing-prod-poll">
-                    <span>Step 0 Polling Interval (Prod)</span>
-                    <span class="unit-tag">sec</span>
-                  </label>
-                  <input type="number" id="cfg-timing-prod-poll" class="cfg-num-input" value="300.0" step="5" min="1" max="3600">
-                  <span class="input-card-help">Main idle polling cycle interval in production mode</span>
-                </div>
-
-                <div class="input-card">
-                  <label class="input-card-label" for="cfg-timing-test-poll">
-                    <span>Step 0 Polling Interval (Test)</span>
-                    <span class="unit-tag">sec</span>
-                  </label>
-                  <input type="number" id="cfg-timing-test-poll" class="cfg-num-input" value="10.0" step="1" min="1" max="300">
-                  <span class="input-card-help">Accelerated validation cycle for testing</span>
-                </div>
-
-                <div class="input-card">
-                  <label class="input-card-label" for="cfg-timing-settle">
-                    <span>Settle Delay Between Steps</span>
-                    <span class="unit-tag">sec</span>
-                  </label>
-                  <input type="number" id="cfg-timing-settle" class="cfg-num-input" value="0.8" step="0.1" min="0" max="10">
-                  <span class="input-card-help">Pause between step transitions for UI stability</span>
-                </div>
-
-                <div class="input-card">
-                  <label class="input-card-label" for="cfg-timing-activity-delay">
-                    <span>Step 4 User Inactivity Delay</span>
-                    <span class="unit-tag">sec</span>
-                  </label>
-                  <input type="number" id="cfg-timing-activity-delay" class="cfg-num-input" value="10.0" step="0.5" min="0" max="120">
-                  <span class="input-card-help">Wait time after mouse/key detection before opening report</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- D. AntiGravity Governance Rules -->
-            <div class="config-card-subgroup">
-              <div class="config-subgroup-title">
-                <span>🛡️</span>
-                <span>AntiGravity Governance Rules</span>
-              </div>
-              <p class="config-subgroup-desc">Define targeting policies and threshold safety parameters.</p>
-
-              <div class="governance-grid">
-                <div class="governance-card">
-                  <div class="governance-info">
-                    <label class="config-label" for="cfg-antigravity-require-grillme">Require Grill-Me Detection</label>
-                    <span class="config-hint">Only act on Antigravity windows with active interactive questionnaire</span>
-                  </div>
-                  <label class="switch-toggle" for="cfg-antigravity-require-grillme">
-                    <input type="checkbox" id="cfg-antigravity-require-grillme" checked>
-                    <span class="slider-round"></span>
-                  </label>
-                </div>
-
-                <div class="governance-card">
-                  <div class="governance-info">
-                    <label class="config-label" for="cfg-antigravity-active-hours">Active Window Max Age</label>
-                    <span class="config-hint">Maximum window age before skipping stale conversation sessions</span>
-                  </div>
-                  <div class="input-with-suffix">
-                    <input type="number" id="cfg-antigravity-active-hours" class="cfg-num-input" value="12.0" step="0.5" min="0.5" max="168">
-                    <span class="suffix-badge">hrs</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            <!-- E. Logging & Telemetry Engine -->
-            <div class="config-card-subgroup">
-              <div class="config-subgroup-title">
-                <span>📝</span>
-                <span>Logging &amp; Telemetry Engine</span>
-              </div>
-              <p class="config-subgroup-desc">Configure daemon logging output file and console verbosity standard.</p>
-
-              <div class="logging-grid">
-                <div class="logging-card">
-                  <div class="logging-info">
-                    <label class="config-label" for="cfg-logging-verbose">Verbose Logging</label>
-                    <span class="config-hint">Emit comprehensive step details and timestamps in logs</span>
-                  </div>
-                  <label class="switch-toggle" for="cfg-logging-verbose">
-                    <input type="checkbox" id="cfg-logging-verbose" checked>
-                    <span class="slider-round"></span>
-                  </label>
-                </div>
-
-                <div class="logging-card">
-                  <div class="logging-info">
-                    <label class="config-label" for="cfg-logging-file">Log File Name</label>
-                    <span class="config-hint">Target output file relative to step_9_complete_automation/</span>
-                  </div>
-                  <input type="text" id="cfg-logging-file" class="cfg-text-input" value="complete_automation.log">
-                </div>
-              </div>
-            </div>
-
-            <!-- F. Action Controls & CLI Command Generator -->
-            <div class="config-card-subgroup actions-subgroup">
-              <div class="config-subgroup-title">
-                <span>⚡</span>
-                <span>Action Controls &amp; CLI Command Generator</span>
-              </div>
-              <p class="config-subgroup-desc">Apply settings, copy the 1-click PowerShell/Python CLI command to update config.json directly, or download the configuration.</p>
-
-              <div class="runtime-action-buttons">
-                <button type="button" class="btn btn-primary" id="btn-save-runtime-cfg" title="Save runtime configuration in browser cache">
-                  <span>💾</span>
-                  <span>Save Runtime Config</span>
-                </button>
-                <button type="button" class="btn btn-cli" id="btn-copy-cli-cmd" title="Copy 1-click Python/PowerShell CLI command to persist into config.json directly">
-                  <span>📋</span>
-                  <span>Copy CLI Command / Apply</span>
-                </button>
-                <button type="button" class="btn btn-download" id="btn-download-runtime-cfg" title="Download updated config.json">
-                  <span>📥</span>
-                  <span>Download config.json</span>
-                </button>
-                <button type="button" class="btn" id="btn-toggle-json-preview" title="Show formatted JSON representation">
-                  <span>👁️</span>
-                  <span>Preview config.json</span>
-                </button>
-                <button type="button" class="btn btn-reset" id="btn-reset-runtime-cfg" title="Reset fields to original disk config">
+            <!-- 2. Pipeline Steps Toggles (Enabled Steps) -->
+            <div class="config-card-subgroup accordion-group" id="acc-runtime-steps">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-steps">
+                <div class="config-subgroup-title">
                   <span>🔄</span>
-                  <span>Reset to Defaults</span>
-                </button>
-              </div>
-
-              <!-- Collapsible Formatted JSON Preview Drawer -->
-              <div class="json-preview-drawer" id="runtime-json-drawer" style="display: none;">
-                <div class="drawer-header">
-                  <span class="drawer-title">📄 Preview: step_9_complete_automation/config.json</span>
-                  <span class="drawer-badge">Live Formatted JSON</span>
+                  <span>Pipeline Steps Toggles</span>
                 </div>
-                <pre class="json-preview-code"><code id="runtime-json-preview">{
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-runtime-steps">
+                <p class="config-subgroup-desc">Toggle individual execution steps. Disabled steps are cleanly bypassed during execution with zero side-effects.</p>
+
+                <div class="steps-toggle-grid">
+                  <!-- Step 1 -->
+                  <div class="step-toggle-card">
+                    <div class="step-toggle-info">
+                      <div class="step-toggle-title-row">
+                        <span class="step-tag-pill">Step 1</span>
+                        <strong>Find &amp; Focus Target Window</strong>
+                      </div>
+                      <span class="step-toggle-desc">Win32 process targeting, window activation &amp; focus</span>
+                    </div>
+                    <label class="switch-toggle" for="cfg-step1-enabled">
+                      <input type="checkbox" id="cfg-step1-enabled" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <!-- Step 2 -->
+                  <div class="step-toggle-card">
+                    <div class="step-toggle-info">
+                      <div class="step-toggle-title-row">
+                        <span class="step-tag-pill">Step 2</span>
+                        <strong>GUI Chat Select &amp; Focus</strong>
+                      </div>
+                      <span class="step-toggle-desc">Locates active pending conversation with Grill-Me options</span>
+                    </div>
+                    <label class="switch-toggle" for="cfg-step2-enabled">
+                      <input type="checkbox" id="cfg-step2-enabled" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <!-- Step 3 -->
+                  <div class="step-toggle-card">
+                    <div class="step-toggle-info">
+                      <div class="step-toggle-title-row">
+                        <span class="step-tag-pill">Step 3</span>
+                        <strong>Keyboard Recommendation Selector</strong>
+                      </div>
+                      <span class="step-toggle-desc">Autonomous Option 1 keypress navigation &amp; Enter selection</span>
+                    </div>
+                    <label class="switch-toggle" for="cfg-step3-enabled">
+                      <input type="checkbox" id="cfg-step3-enabled" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <!-- Step 4 -->
+                  <div class="step-toggle-card">
+                    <div class="step-toggle-info">
+                      <div class="step-toggle-title-row">
+                        <span class="step-tag-pill">Step 4</span>
+                        <strong>Visual Reporting &amp; Telemetry</strong>
+                      </div>
+                      <span class="step-toggle-desc">Telemetry recording, dynamic charts &amp; user inactivity HUD</span>
+                    </div>
+                    <label class="switch-toggle" for="cfg-step4-enabled">
+                      <input type="checkbox" id="cfg-step4-enabled" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Timing & Delays Engine -->
+            <div class="config-card-subgroup accordion-group" id="acc-runtime-timing">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-timing">
+                <div class="config-subgroup-title">
+                  <span>⏱️</span>
+                  <span>Timing &amp; Delays Engine</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-runtime-timing">
+                <p class="config-subgroup-desc">Configure sleep intervals, inter-step settle buffers, and user activity detection pauses.</p>
+
+                <div class="timing-inputs-grid">
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-prod-poll">
+                      <span>Step 0 Polling Interval (Prod)</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-prod-poll" class="cfg-num-input" value="300.0" step="5" min="1" max="3600">
+                    <span class="input-card-help">Main idle polling cycle interval in production mode</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-test-poll">
+                      <span>Step 0 Polling Interval (Test)</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-test-poll" class="cfg-num-input" value="10.0" step="1" min="1" max="300">
+                    <span class="input-card-help">Accelerated validation cycle for testing</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-settle">
+                      <span>Settle Delay Between Steps</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-settle" class="cfg-num-input" value="0.8" step="0.1" min="0" max="10">
+                    <span class="input-card-help">Pause between step transitions for UI stability</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-activity-delay">
+                      <span>Step 4 User Inactivity Delay</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-activity-delay" class="cfg-num-input" value="10.0" step="0.5" min="0" max="120">
+                    <span class="input-card-help">Wait time after mouse/key detection before opening report</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. AntiGravity Governance Rules -->
+            <div class="config-card-subgroup accordion-group" id="acc-runtime-governance">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-governance">
+                <div class="config-subgroup-title">
+                  <span>🛡️</span>
+                  <span>AntiGravity Governance Rules</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-runtime-governance">
+                <p class="config-subgroup-desc">Define targeting policies and threshold safety parameters.</p>
+
+                <div class="governance-grid">
+                  <div class="governance-card">
+                    <div class="governance-info">
+                      <label class="config-label" for="cfg-antigravity-require-grillme">Require Grill-Me Detection</label>
+                      <span class="config-hint">Only act on Antigravity windows with active interactive questionnaire</span>
+                    </div>
+                    <label class="switch-toggle" for="cfg-antigravity-require-grillme">
+                      <input type="checkbox" id="cfg-antigravity-require-grillme" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <div class="governance-card">
+                    <div class="governance-info">
+                      <label class="config-label" for="cfg-antigravity-active-hours">Active Window Max Age</label>
+                      <span class="config-hint">Maximum window age before skipping stale conversation sessions</span>
+                    </div>
+                    <div class="input-with-suffix">
+                      <input type="number" id="cfg-antigravity-active-hours" class="cfg-num-input" value="12.0" step="0.5" min="0.5" max="168">
+                      <span class="suffix-badge">hrs</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 5. Logging & Telemetry Engine -->
+            <div class="config-card-subgroup accordion-group" id="acc-runtime-logging">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-logging">
+                <div class="config-subgroup-title">
+                  <span>📝</span>
+                  <span>Logging &amp; Telemetry Engine</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-runtime-logging">
+                <p class="config-subgroup-desc">Configure daemon logging output file and console verbosity standard.</p>
+
+                <div class="logging-grid">
+                  <div class="logging-card">
+                    <div class="logging-info">
+                      <label class="config-label" for="cfg-logging-verbose">Verbose Logging</label>
+                      <span class="config-hint">Emit comprehensive step details and timestamps in logs</span>
+                    </div>
+                    <label class="switch-toggle" for="cfg-logging-verbose">
+                      <input type="checkbox" id="cfg-logging-verbose" checked>
+                      <span class="slider-round"></span>
+                    </label>
+                  </div>
+
+                  <div class="logging-card">
+                    <div class="logging-info">
+                      <label class="config-label" for="cfg-logging-file">Log File Name</label>
+                      <span class="config-hint">Target output file relative to step_9_complete_automation/</span>
+                    </div>
+                    <input type="text" id="cfg-logging-file" class="cfg-text-input" value="complete_automation.log">
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 6. Action Controls & 1-Click CLI Apply -->
+            <div class="config-card-subgroup actions-subgroup accordion-group" id="acc-runtime-actions">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-actions">
+                <div class="config-subgroup-title">
+                  <span>⚡</span>
+                  <span>Action Controls &amp; 1-Click CLI Apply</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-runtime-actions">
+                <p class="config-subgroup-desc">Apply settings, copy the 1-click PowerShell/Python CLI command to update config.json directly, or download the configuration.</p>
+
+                <div class="runtime-action-buttons">
+                  <button type="button" class="btn btn-primary" id="btn-save-runtime-cfg" title="Save runtime configuration in browser cache">
+                    <span>💾</span>
+                    <span>Save Runtime Config</span>
+                  </button>
+                  <button type="button" class="btn btn-cli" id="btn-copy-cli-cmd" title="Copy 1-click Python/PowerShell CLI command to persist into config.json directly">
+                    <span>📋</span>
+                    <span>Copy CLI Command / Apply</span>
+                  </button>
+                  <button type="button" class="btn btn-download" id="btn-download-runtime-cfg" title="Download updated config.json">
+                    <span>📥</span>
+                    <span>Download config.json</span>
+                  </button>
+                  <button type="button" class="btn" id="btn-toggle-json-preview" title="Show formatted JSON representation">
+                    <span>👁️</span>
+                    <span>Preview config.json</span>
+                  </button>
+                  <button type="button" class="btn btn-reset" id="btn-reset-runtime-cfg" title="Reset fields to original disk config">
+                    <span>🔄</span>
+                    <span>Reset to Defaults</span>
+                  </button>
+                </div>
+
+                <!-- Collapsible Formatted JSON Preview Drawer -->
+                <div class="json-preview-drawer" id="runtime-json-drawer" style="display: none;">
+                  <div class="drawer-header">
+                    <span class="drawer-title">📄 Preview: step_9_complete_automation/config.json</span>
+                    <span class="drawer-badge">Live Formatted JSON</span>
+                  </div>
+                  <pre class="json-preview-code"><code id="runtime-json-preview">{
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
   "mode": "production",
   "timing": {
@@ -3111,6 +3352,7 @@
     "verbose": true
   }
 }</code></pre>
+                </div>
               </div>
             </div>
 
@@ -3118,8 +3360,8 @@
         </div>
 
         <!-- Section 2: Dashboard UI Configuration -->
-        <div class="config-section-card" id="dashboard-config-section">
-          <div class="config-section-header">
+        <div class="config-section-card collapsible-card" id="dashboard-config-section">
+          <div class="config-section-header collapsible-card-header" id="header-dashboard-config" role="button" tabindex="0" aria-expanded="true" aria-controls="body-dashboard-config">
             <div class="config-section-title-wrap">
               <span class="config-section-icon">🎨</span>
               <div>
@@ -3132,116 +3374,180 @@
             </div>
             <div class="config-section-meta">
               <span class="status-indicator-client">● Browser State</span>
+              <span class="accordion-chevron" aria-hidden="true">▾</span>
             </div>
           </div>
 
-          <div class="config-section-body">
-            <div class="dashboard-config-grid">
-              <!-- Setting 1: Auto-Refresh Interval -->
-              <div class="dash-cfg-card">
-                <div class="dash-cfg-label-wrap">
-                  <label class="config-label" for="cfg-auto-refresh">Auto-Refresh Interval</label>
-                  <span class="config-hint">Automatically reload live telemetry without manual page refresh</span>
+          <div class="config-section-body collapsible-card-body" id="body-dashboard-config">
+            <!-- 1. Auto-Refresh & Inactivity Timers -->
+            <div class="config-card-subgroup accordion-group" id="acc-dash-timers">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-timers">
+                <div class="config-subgroup-title">
+                  <span>⏱️</span>
+                  <span>Auto-Refresh &amp; Inactivity Timers</span>
                 </div>
-                <select id="cfg-auto-refresh" class="config-select">
-                  <option value="0">Off (Manual Refresh Only)</option>
-                  <option value="5">Every 5 Seconds</option>
-                  <option value="10">Every 10 Seconds</option>
-                  <option value="30">Every 30 Seconds</option>
-                  <option value="60">Every 60 Seconds</option>
-                </select>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
+              <div class="config-subgroup-body" id="subbody-dash-timers">
+                <p class="config-subgroup-desc">Configure client-side polling intervals and auto-launch countdown timers.</p>
 
-              <!-- Setting 2: User Inactivity Delay -->
-              <div class="dash-cfg-card">
-                <div class="dash-cfg-label-wrap">
-                  <label class="config-label" for="cfg-activity-delay">User Inactivity Delay</label>
-                  <span class="config-hint">Time to wait after detecting user input before launching dashboard</span>
-                </div>
-                <select id="cfg-activity-delay" class="config-select">
-                  <option value="5">5 Seconds (Ultra Responsive)</option>
-                  <option value="10" selected>10 Seconds (Standard Default)</option>
-                  <option value="15">15 Seconds (Relaxed Buffer)</option>
-                  <option value="30">30 Seconds (Extended Idle)</option>
-                </select>
-              </div>
+                <div class="dashboard-config-grid">
+                  <!-- Setting 1: Auto-Refresh Interval -->
+                  <div class="dash-cfg-card">
+                    <div class="dash-cfg-label-wrap">
+                      <label class="config-label" for="cfg-auto-refresh">Auto-Refresh Interval</label>
+                      <span class="config-hint">Automatically reload live telemetry without manual page refresh</span>
+                    </div>
+                    <select id="cfg-auto-refresh" class="config-select">
+                      <option value="0">Off (Manual Refresh Only)</option>
+                      <option value="5">Every 5 Seconds</option>
+                      <option value="10">Every 10 Seconds</option>
+                      <option value="30">Every 30 Seconds</option>
+                      <option value="60">Every 60 Seconds</option>
+                    </select>
+                  </div>
 
-              <!-- Setting 3: Default Landing Tab -->
-              <div class="dash-cfg-card">
-                <div class="dash-cfg-label-wrap">
-                  <label class="config-label" for="cfg-default-tab">Default Landing Tab</label>
-                  <span class="config-hint">Initial view displayed whenever the dashboard is opened</span>
-                </div>
-                <select id="cfg-default-tab" class="config-select">
-                  <option value="overview">Overview (KPIs &amp; Visual Charts)</option>
-                  <option value="chats">Chats (Conversations Breakdown)</option>
-                  <option value="questions">Questions (Detailed Q&amp;A Ledger)</option>
-                  <option value="config">Config (Master System &amp; Dashboard Settings)</option>
-                </select>
-              </div>
-
-              <!-- Setting 4: Recommendation Selection Policy -->
-              <div class="dash-cfg-card">
-                <div class="dash-cfg-label-wrap">
-                  <label class="config-label" for="cfg-selection-policy">Recommendation Selection Policy</label>
-                  <span class="config-hint">Execution behavior for grill-me multi-choice questions</span>
-                </div>
-                <select id="cfg-selection-policy" class="config-select">
-                  <option value="option1_auto">Option 1 (Recommended - Autonomous)</option>
-                  <option value="prompt_manual">Prompt / Manual Review Required</option>
-                  <option value="first_available">First Available Option</option>
-                </select>
-              </div>
-
-              <!-- Setting 5: Animation & Visual Effects -->
-              <div class="dash-cfg-card">
-                <div class="dash-cfg-label-wrap">
-                  <label class="config-label" for="cfg-visual-effects">Animation &amp; Visual Effects</label>
-                  <span class="config-hint">Hardware-accelerated SVG animations and card transitions</span>
-                </div>
-                <select id="cfg-visual-effects" class="config-select">
-                  <option value="high">High (Smooth SVGs &amp; Animated Pulse Bus)</option>
-                  <option value="reduced">Reduced Motion / Static (WCAG 2.1 Compliant)</option>
-                </select>
-              </div>
-
-              <!-- Setting 6: Sound Notifications -->
-              <div class="dash-cfg-card">
-                <div class="dash-cfg-label-wrap">
-                  <label class="config-label" for="cfg-sound-notify">Audio Chime Notifications</label>
-                  <span class="config-hint">Synthesized Web Audio chime when a new automation run is ingested</span>
-                </div>
-                <div class="dash-cfg-sound-row">
-                  <select id="cfg-sound-notify" class="config-select">
-                    <option value="enabled">Enabled (Subtle Web Audio Chime)</option>
-                    <option value="disabled" selected>Disabled (Silent Operation)</option>
-                  </select>
-                  <button type="button" class="btn btn-sm btn-chime" id="btn-test-chime" title="Test synthesized Web Audio chime">
-                    <span>🔔</span>
-                    <span>Test Chime</span>
-                  </button>
+                  <!-- Setting 2: User Inactivity Delay -->
+                  <div class="dash-cfg-card">
+                    <div class="dash-cfg-label-wrap">
+                      <label class="config-label" for="cfg-activity-delay">User Inactivity Delay</label>
+                      <span class="config-hint">Time to wait after detecting user input before launching dashboard</span>
+                    </div>
+                    <select id="cfg-activity-delay" class="config-select">
+                      <option value="5">5 Seconds (Ultra Responsive)</option>
+                      <option value="10" selected>10 Seconds (Standard Default)</option>
+                      <option value="15">15 Seconds (Relaxed Buffer)</option>
+                      <option value="30">30 Seconds (Extended Idle)</option>
+                    </select>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <!-- Data Management & Save Row -->
-            <div class="dash-cfg-footer">
-              <div class="dash-cfg-footer-left">
-                <button type="button" class="btn btn-export" id="cfg-export-btn" title="Download automation_history.json">
-                  <span>📥</span>
-                  <span>Export History JSON</span>
-                </button>
-                <button type="button" class="btn btn-reset-cfg" id="cfg-reset-btn" title="Reset all dashboard settings to defaults">
-                  <span>🔄</span>
-                  <span>Reset Dashboard Defaults</span>
-                </button>
+            <!-- 2. Visual Theme & Motion Modes -->
+            <div class="config-card-subgroup accordion-group" id="acc-dash-visual">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-visual">
+                <div class="config-subgroup-title">
+                  <span>🎭</span>
+                  <span>Visual Theme &amp; Motion Modes</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="dash-cfg-footer-right">
-                <span class="config-status-badge" id="cfg-status-badge">Active Settings Synced</span>
-                <button type="button" class="btn btn-primary" id="config-save-btn">
+              <div class="config-subgroup-body" id="subbody-dash-visual">
+                <p class="config-subgroup-desc">Tune animation speeds, hardware-accelerated SVG motion, and question choice selection behaviors.</p>
+
+                <div class="dashboard-config-grid">
+                  <!-- Setting 4: Recommendation Selection Policy -->
+                  <div class="dash-cfg-card">
+                    <div class="dash-cfg-label-wrap">
+                      <label class="config-label" for="cfg-selection-policy">Recommendation Selection Policy</label>
+                      <span class="config-hint">Execution behavior for grill-me multi-choice questions</span>
+                    </div>
+                    <select id="cfg-selection-policy" class="config-select">
+                      <option value="option1_auto">Option 1 (Recommended - Autonomous)</option>
+                      <option value="prompt_manual">Prompt / Manual Review Required</option>
+                      <option value="first_available">First Available Option</option>
+                    </select>
+                  </div>
+
+                  <!-- Setting 5: Animation & Visual Effects -->
+                  <div class="dash-cfg-card">
+                    <div class="dash-cfg-label-wrap">
+                      <label class="config-label" for="cfg-visual-effects">Animation &amp; Visual Effects</label>
+                      <span class="config-hint">Hardware-accelerated SVG animations and card transitions</span>
+                    </div>
+                    <select id="cfg-visual-effects" class="config-select">
+                      <option value="high">High (Smooth SVGs &amp; Animated Pulse Bus)</option>
+                      <option value="reduced">Reduced Motion / Static (WCAG 2.1 Compliant)</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 3. Audio Alerts & Synthesizer Chime -->
+            <div class="config-card-subgroup accordion-group" id="acc-dash-audio">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-audio">
+                <div class="config-subgroup-title">
+                  <span>🔔</span>
+                  <span>Audio Alerts &amp; Synthesizer Chime</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-dash-audio">
+                <p class="config-subgroup-desc">Web Audio harmonic chime cues and run completion acoustic alerts.</p>
+
+                <div class="dashboard-config-grid">
+                  <!-- Setting 6: Sound Notifications -->
+                  <div class="dash-cfg-card">
+                    <div class="dash-cfg-label-wrap">
+                      <label class="config-label" for="cfg-sound-notify">Audio Chime Notifications</label>
+                      <span class="config-hint">Synthesized Web Audio chime when a new automation run is ingested</span>
+                    </div>
+                    <div class="dash-cfg-sound-row">
+                      <select id="cfg-sound-notify" class="config-select">
+                        <option value="enabled">Enabled (Subtle Web Audio Chime)</option>
+                        <option value="disabled" selected>Disabled (Silent Operation)</option>
+                      </select>
+                      <button type="button" class="btn btn-sm btn-chime" id="btn-test-chime" title="Test synthesized Web Audio chime">
+                        <span>🔔</span>
+                        <span>Test Chime</span>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- 4. Default Tab & Data Backups -->
+            <div class="config-card-subgroup accordion-group" id="acc-dash-data">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-data">
+                <div class="config-subgroup-title">
                   <span>💾</span>
-                  <span>Save Dashboard Config</span>
-                </button>
+                  <span>Default Tab &amp; Data Backups</span>
+                </div>
+                <span class="subaccordion-chevron" aria-hidden="true">▾</span>
+              </div>
+              <div class="config-subgroup-body" id="subbody-dash-data">
+                <p class="config-subgroup-desc">Select initial view and manage export/reset operations for local telemetry storage.</p>
+
+                <div class="dashboard-config-grid">
+                  <!-- Setting 3: Default Landing Tab -->
+                  <div class="dash-cfg-card">
+                    <div class="dash-cfg-label-wrap">
+                      <label class="config-label" for="cfg-default-tab">Default Landing Tab</label>
+                      <span class="config-hint">Initial view displayed whenever the dashboard is opened</span>
+                    </div>
+                    <select id="cfg-default-tab" class="config-select">
+                      <option value="overview">Overview (KPIs &amp; Visual Charts)</option>
+                      <option value="chats">Chats (Conversations Breakdown)</option>
+                      <option value="questions">Questions (Detailed Q&amp;A Ledger)</option>
+                      <option value="config">Config (Master System &amp; Dashboard Settings)</option>
+                    </select>
+                  </div>
+                </div>
+
+                <!-- Data Management & Save Row -->
+                <div class="dash-cfg-footer">
+                  <div class="dash-cfg-footer-left">
+                    <button type="button" class="btn btn-export" id="cfg-export-btn" title="Download automation_history.json">
+                      <span>📥</span>
+                      <span>Export History JSON</span>
+                    </button>
+                    <button type="button" class="btn btn-reset-cfg" id="cfg-reset-btn" title="Reset all dashboard settings to defaults">
+                      <span>🔄</span>
+                      <span>Reset Dashboard Defaults</span>
+                    </button>
+                  </div>
+                  <div class="dash-cfg-footer-right">
+                    <span class="config-status-badge" id="cfg-status-badge">Active Settings Synced</span>
+                    <button type="button" class="btn btn-primary" id="config-save-btn">
+                      <span>💾</span>
+                      <span>Save Dashboard Config</span>
+                    </button>
+                  </div>
+                </div>
+
               </div>
             </div>
 
@@ -3284,7 +3590,7 @@
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 09:43:57</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 21:24:29</span></div>
     </footer>
   </div>
 
@@ -3692,6 +3998,66 @@
         } else {
           if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
         }
+      }
+
+      // ======================================================================
+      // Collapsible Sections & Accordion Controllers (Dept 04 & 05 Standards)
+      // ======================================================================
+      function setElementCollapsed(header, isCollapsed) {
+        if (!header) return;
+        header.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+        const targetId = header.getAttribute('aria-controls');
+        const body = targetId ? document.getElementById(targetId) : null;
+        const chevron = header.querySelector('.accordion-chevron, .subaccordion-chevron');
+
+        if (body) {
+          if (isCollapsed) {
+            body.classList.add('collapsed');
+          } else {
+            body.classList.remove('collapsed');
+          }
+        }
+        if (chevron) {
+          chevron.textContent = isCollapsed ? '▸' : '▾';
+        }
+      }
+
+      function toggleHeader(header) {
+        if (!header) return;
+        const currentlyExpanded = header.getAttribute('aria-expanded') === 'true';
+        setElementCollapsed(header, currentlyExpanded);
+      }
+
+      const allCollapsibleHeaders = document.querySelectorAll('.collapsible-card-header, .config-subgroup-header');
+      allCollapsibleHeaders.forEach(header => {
+        header.addEventListener('click', (e) => {
+          if (['BUTTON', 'INPUT', 'SELECT', 'A'].includes(e.target.tagName)) return;
+          toggleHeader(header);
+        });
+        header.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            if (['BUTTON', 'INPUT', 'SELECT', 'A'].includes(e.target.tagName)) return;
+            e.preventDefault();
+            toggleHeader(header);
+          }
+        });
+      });
+
+      const btnExpandAllConfig = document.getElementById('btn-expand-all-config');
+      const btnCollapseAllConfig = document.getElementById('btn-collapse-all-config');
+
+      if (btnExpandAllConfig) {
+        btnExpandAllConfig.addEventListener('click', () => {
+          allCollapsibleHeaders.forEach(header => setElementCollapsed(header, false));
+          showToast('📂 All configuration sections expanded', 'info');
+        });
+      }
+
+      if (btnCollapseAllConfig) {
+        btnCollapseAllConfig.addEventListener('click', () => {
+          allCollapsibleHeaders.forEach(header => setElementCollapsed(header, true));
+          showToast('📁 All configuration sections collapsed', 'info');
+        });
       }
 
       function openConfigModal() {

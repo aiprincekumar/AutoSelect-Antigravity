@@ -90,8 +90,28 @@ from .window_manager import (
 from .cdp_helper import AntigravityCDPClient
 from .automator import GrillMeAutomator, Step3KeyboardAutomator, execute_multi_question
 from .cli import parse_arguments, print_banner, main
+from .config_manager import (
+    get_canonical_config_path,
+    get_default_runtime_config,
+    load_runtime_config,
+    save_runtime_config,
+    get_effective_poll_interval,
+    get_settle_delay,
+    get_user_activity_delay,
+    is_step_enabled,
+    apply_logging_config,
+)
 
 __all__ = [
+    "get_canonical_config_path",
+    "get_default_runtime_config",
+    "load_runtime_config",
+    "save_runtime_config",
+    "get_effective_poll_interval",
+    "get_settle_delay",
+    "get_user_activity_delay",
+    "is_step_enabled",
+    "apply_logging_config",
     "STEP_ID",
     "STEP_NUMBER",
     "STEP_NAME",

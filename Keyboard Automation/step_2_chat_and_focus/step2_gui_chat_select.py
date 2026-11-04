@@ -41,6 +41,20 @@ _root_dir = _this_dir.parent if _this_dir.name.startswith(("step_", "step-")) el
 if str(_root_dir) not in sys.path:
     sys.path.insert(0, str(_root_dir))
 
+try:
+    from core_engine.config_manager import (
+        load_runtime_config,
+        get_settle_delay,
+        apply_logging_config,
+    )
+except ImportError:
+    def load_runtime_config(p=None):
+        return {}
+    def get_settle_delay(c=None):
+        return 0.8
+    def apply_logging_config(c=None, l=None, s=""):
+        pass
+
 # Reconfigure stdout/stderr for proper UTF-8 handling on Windows
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -561,8 +575,14 @@ def run_step2(
     explicit_cid: Optional[str] = None,
     dry_run: bool = False,
     select_option: Optional[int] = None,
-    auto_submit: bool = False
+    auto_submit: bool = False,
+    settle_delay: Optional[float] = None,
+    config_path: Optional[Union[str, Path]] = None,
 ) -> int:
+    cfg = load_runtime_config(config_path)
+    apply_logging_config(cfg, logger, step_name="Step 2: GUI Chat Select")
+    effective_settle = float(settle_delay) if settle_delay is not None else get_settle_delay(cfg)
+
     target_state_path, legacy_state_path = resolve_state_file_path(state_file)
 
     print("=" * 76)
@@ -660,6 +680,9 @@ def run_step2(
         if selection_res["screen_coordinates"]:
             print(f"   Coordinates : Screen {selection_res['screen_coordinates']}")
         print(f"   Chat Focus  : Ctrl + L dispatched, input box ready.")
+        if effective_settle > 0:
+            logger.info("Applying configured settle delay between steps: %.2fs...", effective_settle)
+            time.sleep(effective_settle)
         print("=" * 76)
         return 0
     else:
@@ -675,6 +698,8 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Simulate without clicking or moving mouse")
     parser.add_argument("--select-option", type=int, default=None, help="Option number to choose (e.g. 1)")
     parser.add_argument("--auto-submit", action="store_true", help="Automatically submit option after selecting")
+    parser.add_argument("--settle-delay", type=float, default=None, help="Delay in seconds after selection (defaults to config.json)")
+    parser.add_argument("--config", type=str, default=None, help="Custom runtime config.json path")
     parser.add_argument("--no-pause", action="store_true", help="Non-interactive execution flag")
 
     args, _ = parser.parse_known_args()
@@ -683,7 +708,9 @@ def main() -> int:
         explicit_cid=args.cid,
         dry_run=args.dry_run,
         select_option=args.select_option,
-        auto_submit=args.auto_submit
+        auto_submit=args.auto_submit,
+        settle_delay=args.settle_delay,
+        config_path=args.config
     )
 
 

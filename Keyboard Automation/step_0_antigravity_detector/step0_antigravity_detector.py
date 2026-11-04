@@ -85,7 +85,7 @@ def clear_screen():
 def format_dashboard_box(
     result: DetectionResult,
     chat_stats: Optional[Dict[str, Any]] = None,
-    poll_interval: float = DEFAULT_TEST_POLL_INTERVAL,
+    poll_interval: Optional[float] = None,
 ) -> str:
     """
     Format the ultra-clean, numbers-focused 100% Screen Purity Unicode dashboard box.
@@ -97,6 +97,8 @@ def format_dashboard_box(
     active_chats = stats.get("active_chats", 0)
     inactive_chats = stats.get("inactive_chats", 0)
     pending_chats = stats.get("pending_grill_me_chats", 0)
+
+    effective_interval = poll_interval if poll_interval is not None else DEFAULT_TEST_POLL_INTERVAL
 
     # Status formatting
     if result.is_detected:
@@ -165,14 +167,14 @@ def parse_args():
     parser.add_argument(
         "--interval",
         type=float,
-        default=DEFAULT_TEST_POLL_INTERVAL,
-        help="Polling interval in seconds between detection checks (default: 10.0s)"
+        default=None,
+        help="Polling interval in seconds between detection checks (default: from config.json based on mode)"
     )
     parser.add_argument(
         "--active-hours",
         type=float,
-        default=DEFAULT_ACTIVE_HOURS,
-        help="Hours threshold to classify a conversation as active session (default: 12.0 hours)"
+        default=None,
+        help="Hours threshold to classify a conversation as active session (default: from config.json)"
     )
     parser.add_argument(
         "--brain-dir",
@@ -231,7 +233,7 @@ def wait_for_user(msg: Optional[str] = None):
 def main():
     args = parse_args()
     pause_enabled = should_pause(args)
-    require_grill_me = not args.any_antigravity
+    require_grill_me = False if args.any_antigravity else None
 
     detector = AntiGravityDetector(
         poll_interval=args.interval,
@@ -241,6 +243,7 @@ def main():
         active_hours=args.active_hours,
         require_grill_me=require_grill_me,
     )
+    actual_interval = detector.poll_interval
 
     if args.once:
         result = detector.detect()
@@ -253,7 +256,7 @@ def main():
                 result,
                 chat_stats=result.chat_stats,
                 wipe_screen=True,
-                poll_interval=args.interval,
+                poll_interval=actual_interval,
             )
 
         exit_code = 0 if result.is_detected else 1
@@ -271,7 +274,7 @@ def main():
                     result,
                     chat_stats=result.chat_stats,
                     wipe_screen=True,
-                    poll_interval=args.interval,
+                    poll_interval=actual_interval,
                 )
 
             # Two-Factor Trigger: Antigravity open AND pending Grill-Me chat detected!
@@ -285,7 +288,7 @@ def main():
                 sys.exit(0)
 
             # Sleep in small increments for Ctrl+C responsiveness
-            sleep_remaining = args.interval
+            sleep_remaining = actual_interval
             while sleep_remaining > 0:
                 time.sleep(min(0.5, sleep_remaining))
                 sleep_remaining -= 0.5

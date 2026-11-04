@@ -77,6 +77,16 @@ except ImportError:
         clear_screen,
     )
 
+from core_engine.config_manager import (
+    load_runtime_config,
+    save_runtime_config,
+    get_canonical_config_path,
+    get_effective_poll_interval,
+    get_settle_delay,
+    is_step_enabled,
+    apply_logging_config,
+)
+
 # Standard Exit Codes
 EXIT_CODE_SUCCESS = 0
 EXIT_CODE_NO_PENDING_CHATS = 10
@@ -281,51 +291,37 @@ class AutomationConfig:
 
     @classmethod
     def load_from_file(cls, path: Optional[Union[str, Path]] = None) -> "AutomationConfig":
-        """Load configuration from JSON file with graceful fallback to defaults."""
-        target_path = Path(path) if path else (_this_dir / "config.json")
-        if not target_path.is_file():
-            # Try workspace root
-            root_cfg = _root_dir / "config.json"
-            if root_cfg.is_file():
-                target_path = root_cfg
-            else:
-                return cls()
+        """Load configuration using canonical core_engine.config_manager."""
+        data = load_runtime_config(path)
+        mode = data.get("mode", "production")
+        timing_data = data.get("timing", {})
+        enabled_data = data.get("enabled_steps", {})
+        ag_data = data.get("antigravity", {})
+        log_data = data.get("logging", {})
 
-        try:
-            with open(target_path, "r", encoding="utf-8") as f:
-                data = json.load(f)
+        timing = TimingConfig(
+            step0_poll_interval_prod_seconds=float(timing_data.get("step0_poll_interval_prod_seconds", 300.0)),
+            step0_poll_interval_test_seconds=float(timing_data.get("step0_poll_interval_test_seconds", 10.0)),
+            settle_delay_between_steps_seconds=float(timing_data.get("settle_delay_between_steps_seconds", 0.8)),
+            step4_user_activity_delay_seconds=float(timing_data.get("step4_user_activity_delay_seconds", 10.0)),
+        )
 
-            mode = data.get("mode", "production")
-            timing_data = data.get("timing", {})
-            enabled_data = data.get("enabled_steps", {})
-            ag_data = data.get("antigravity", {})
-            log_data = data.get("logging", {})
+        enabled = EnabledStepsConfig(
+            step1_find_and_focus=bool(enabled_data.get("step1_find_and_focus", True)),
+            step2_gui_chat_select=bool(enabled_data.get("step2_gui_chat_select", True)),
+            step3_keyboard_automation=bool(enabled_data.get("step3_keyboard_automation", True)),
+            step4_reporting=bool(enabled_data.get("step4_reporting", True)),
+        )
 
-            timing = TimingConfig(
-                step0_poll_interval_prod_seconds=float(timing_data.get("step0_poll_interval_prod_seconds", 300.0)),
-                step0_poll_interval_test_seconds=float(timing_data.get("step0_poll_interval_test_seconds", 10.0)),
-                settle_delay_between_steps_seconds=float(timing_data.get("settle_delay_between_steps_seconds", 0.8)),
-                step4_user_activity_delay_seconds=float(timing_data.get("step4_user_activity_delay_seconds", 10.0)),
-            )
-
-            enabled = EnabledStepsConfig(
-                step1_find_and_focus=bool(enabled_data.get("step1_find_and_focus", True)),
-                step2_gui_chat_select=bool(enabled_data.get("step2_gui_chat_select", True)),
-                step3_keyboard_automation=bool(enabled_data.get("step3_keyboard_automation", True)),
-                step4_reporting=bool(enabled_data.get("step4_reporting", True)),
-            )
-
-            return cls(
-                mode=mode,
-                timing=timing,
-                enabled_steps=enabled,
-                require_grill_me=bool(ag_data.get("require_grill_me", True)),
-                active_hours=float(ag_data.get("active_hours", 12.0)),
-                log_file=str(log_data.get("log_file", "complete_automation.log")),
-                verbose=bool(log_data.get("verbose", True)),
-            )
-        except Exception:
-            return cls()
+        return cls(
+            mode=mode,
+            timing=timing,
+            enabled_steps=enabled,
+            require_grill_me=bool(ag_data.get("require_grill_me", True)),
+            active_hours=float(ag_data.get("active_hours", 12.0)),
+            log_file=str(log_data.get("log_file", "complete_automation.log")),
+            verbose=bool(log_data.get("verbose", True)),
+        )
 
     def to_dict(self) -> Dict[str, Any]:
         return {

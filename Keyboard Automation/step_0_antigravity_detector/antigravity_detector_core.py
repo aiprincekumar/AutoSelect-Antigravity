@@ -39,6 +39,26 @@ from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple, Callable, Union
 
+# Root workspace resolution
+_this_dir = Path(__file__).resolve().parent
+_root_dir = _this_dir.parent if _this_dir.name.startswith("step_") else _this_dir
+if str(_root_dir) not in sys.path:
+    sys.path.insert(0, str(_root_dir))
+
+try:
+    from core_engine.config_manager import (
+        load_runtime_config,
+        get_effective_poll_interval,
+        apply_logging_config,
+    )
+except ImportError:
+    def load_runtime_config(p=None):
+        return {}
+    def get_effective_poll_interval(c=None):
+        return 300.0
+    def apply_logging_config(c=None, l=None, s=""):
+        pass
+
 # UTF-8 Stream configuration for Windows consoles
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -331,40 +351,62 @@ class AntiGravityDetector:
 
     def __init__(
         self,
-        poll_interval: float = DEFAULT_PRODUCTION_POLL_INTERVAL,
+        poll_interval: Optional[float] = None,
         headless: bool = False,
-        verbose: bool = True,
+        verbose: Optional[bool] = None,
         log_file_path: Optional[str] = None,
         brain_dir: Optional[Union[str, Path]] = None,
-        active_hours: float = DEFAULT_ACTIVE_HOURS,
-        require_grill_me: bool = True,
+        active_hours: Optional[float] = None,
+        require_grill_me: Optional[bool] = None,
+        config_path: Optional[Union[str, Path]] = None,
     ):
         """
         Initialize the AntiGravityDetector.
 
-        :param poll_interval: Polling sleep interval in seconds (default: 300.0s for prod, 10.0s for test).
-        :param headless: Run fully silent without printing logs to stdout.
-        :param verbose: Enable detailed log output when not headless.
-        :param log_file_path: Optional file path to persist structured detection logs.
-        :param brain_dir: Custom path to Antigravity brain directory (auto-detected if None).
-        :param active_hours: Hours window to consider conversation active (default: 12.0).
-        :param require_grill_me: If True, requires both Antigravity running AND pending Grill-Me chat to match trigger.
+        Automatically synchronizes with step_9_complete_automation/config.json:
+        - When mode == "production", default poll interval is step0_poll_interval_prod_seconds (300.0s).
+        - When mode == "test", default poll interval is step0_poll_interval_test_seconds (10.0s).
+        - Respects antigravity.active_hours, antigravity.require_grill_me, and logging settings.
         """
-        self.poll_interval = max(0.5, float(poll_interval))
+        # Load unified runtime configuration
+        self.config = load_runtime_config(config_path)
+        self.mode = self.config.get("mode", "production")
+
+        # Determine effective poll interval
+        if poll_interval is not None:
+            self.poll_interval = max(0.01, float(poll_interval))
+        else:
+            self.poll_interval = get_effective_poll_interval(self.config)
+
         self.headless = headless
-        self.verbose = verbose and not headless
-        self.require_grill_me = require_grill_me
+        if verbose is not None:
+            self.verbose = verbose and not headless
+        else:
+            self.verbose = bool(self.config.get("logging", {}).get("verbose", True)) and not headless
+
+        if require_grill_me is not None:
+            self.require_grill_me = require_grill_me
+        else:
+            self.require_grill_me = bool(self.config.get("antigravity", {}).get("require_grill_me", True))
+
         self.brain_dir = brain_dir
-        self.active_hours = active_hours
+        if active_hours is not None:
+            self.active_hours = float(active_hours)
+        else:
+            self.active_hours = float(self.config.get("antigravity", {}).get("active_hours", DEFAULT_ACTIVE_HOURS))
+
         self._stop_requested = False
 
         # Workspace base directory resolution
         self._this_dir = Path(__file__).resolve().parent
         self._root_dir = self._this_dir.parent if self._this_dir.name.startswith("step_") else self._this_dir
 
+        # Effective log file
+        effective_log_file = log_file_path or self.config.get("logging", {}).get("log_file")
+
         # Logger configuration
         self.logger = logging.getLogger("Step0-AntiGravityDetector")
-        self._setup_logger(log_file_path)
+        self._setup_logger(effective_log_file)
 
     def _setup_logger(self, log_file_path: Optional[str]):
         """Configure logging handlers based on headless/verbose settings."""

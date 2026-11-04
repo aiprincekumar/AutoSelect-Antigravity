@@ -1241,5 +1241,66 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertEqual(loaded_back["mode"], "test")
         self.assertEqual(loaded_back["timing"]["step0_poll_interval_test_seconds"], 5.0)
 
+    def test_26_collapsible_sections_in_config_tab(self):
+        """Verify Collapsible Accordions and Expand/Collapse All controls in Config tab UI."""
+        history = AutomationHistory(total_pipeline_runs=1, total_questions_answered=1, total_runtime_seconds=5.0, total_unique_chats=1)
+        html_path = self.engine.generate_html_dashboard(history)
+        html_text = html_path.read_text(encoding="utf-8")
+
+        # 1. Global Expand / Collapse All Controls
+        self.assertIn('id="btn-expand-all-config"', html_text)
+        self.assertIn('id="btn-collapse-all-config"', html_text)
+        self.assertIn('Expand All Sections', html_text)
+        self.assertIn('Collapse All Sections', html_text)
+
+        # 2. Card 1 Collapsible Header & 6 Sub-Accordions
+        self.assertIn('id="header-runtime-config"', html_text)
+        self.assertIn('id="acc-runtime-mode"', html_text)
+        self.assertIn('id="acc-runtime-steps"', html_text)
+        self.assertIn('id="acc-runtime-timing"', html_text)
+        self.assertIn('id="acc-runtime-governance"', html_text)
+        self.assertIn('id="acc-runtime-logging"', html_text)
+        self.assertIn('id="acc-runtime-actions"', html_text)
+
+        # 3. Card 2 Collapsible Header & 4 Sub-Accordions
+        self.assertIn('id="header-dashboard-config"', html_text)
+        self.assertIn('id="acc-dash-timers"', html_text)
+        self.assertIn('id="acc-dash-visual"', html_text)
+        self.assertIn('id="acc-dash-audio"', html_text)
+        self.assertIn('id="acc-dash-data"', html_text)
+
+        # 4. Accessibility Attributes & Chevrons
+        self.assertIn('aria-expanded="true"', html_text)
+        self.assertIn('accordion-chevron', html_text)
+        self.assertIn('subaccordion-chevron', html_text)
+        self.assertIn('collapsible-card-header', html_text)
+        self.assertIn('config-subgroup-header', html_text)
+
+        # 5. JavaScript Controllers
+        self.assertIn('function setElementCollapsed', html_text)
+        self.assertIn('function toggleHeader', html_text)
+
+    def test_27_unified_config_cross_step_integration(self):
+        """Verify cross-step configuration synchronization using core_engine.config_manager."""
+        import core_engine.config_manager as cm
+        cfg = cm.load_runtime_config()
+        self.assertIn("mode", cfg)
+        self.assertIn("timing", cfg)
+        self.assertIn("enabled_steps", cfg)
+        self.assertIn("antigravity", cfg)
+        self.assertIn("logging", cfg)
+
+        # Verify step enabling
+        self.assertTrue(cm.is_step_enabled(1, cfg))
+        self.assertTrue(cm.is_step_enabled(2, cfg))
+        self.assertTrue(cm.is_step_enabled(3, cfg))
+        self.assertTrue(cm.is_step_enabled(4, cfg))
+
+        # Verify effective polling interval
+        prod_interval = cm.get_effective_poll_interval({"mode": "production", "timing": {"step0_poll_interval_prod_seconds": 300.0}})
+        test_interval = cm.get_effective_poll_interval({"mode": "test", "timing": {"step0_poll_interval_test_seconds": 10.0}})
+        self.assertEqual(prod_interval, 300.0)
+        self.assertEqual(test_interval, 10.0)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
