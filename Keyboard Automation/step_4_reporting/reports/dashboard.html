@@ -308,6 +308,364 @@
       color: var(--text-secondary);
     }
 
+    /* ==========================================================================
+       Execution Mode Lifecycle Banner & Callouts (Dept 04 & 05 Standards)
+       ========================================================================== */
+    .mode-lifecycle-banner {
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-top: 2px solid var(--accent-indigo);
+      border-bottom: 2px solid var(--accent-indigo);
+      border-radius: var(--radius-lg);
+      padding: 18px 22px;
+      margin-bottom: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      transition: var(--transition);
+      position: relative;
+    }
+
+    .mode-lifecycle-banner:hover {
+      border-top-color: #818cf8;
+      border-bottom-color: #818cf8;
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.15);
+    }
+
+    .mode-lifecycle-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }
+
+    .mode-lifecycle-title-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .mode-lifecycle-title-group .title-icon {
+      font-size: 1.25rem;
+      line-height: 1;
+    }
+
+    .mode-lifecycle-title-group .title-main {
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+
+    .mode-lifecycle-title-group .title-sep {
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    .mode-lifecycle-title-group .title-sub {
+      font-size: 0.86rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+    }
+
+    .banner-mode-controls {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .banner-controls-label {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .banner-mode-switcher {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      background: var(--bg-surface-elevated);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .banner-mode-btn {
+      padding: 7px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      font-family: var(--font-family);
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      outline: none;
+    }
+
+    .banner-mode-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-surface-highlight);
+    }
+
+    .banner-mode-btn:focus-visible {
+      box-shadow: 0 0 0 2px var(--accent-indigo);
+    }
+
+    .banner-mode-btn.active {
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border-color: var(--accent-indigo);
+      box-shadow: 0 2px 10px var(--accent-indigo-glow);
+    }
+
+    .banner-mode-btn[data-mode="production"].active {
+      background: #059669;
+      border-color: #059669;
+      box-shadow: 0 2px 10px rgba(16, 185, 129, 0.3);
+    }
+
+    .banner-mode-btn[data-mode="test"].active {
+      background: #d97706;
+      border-color: #d97706;
+      box-shadow: 0 2px 10px rgba(245, 158, 11, 0.3);
+    }
+
+    .banner-mode-indicator {
+      font-size: 0.72rem;
+      padding: 1px 6px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.2);
+      font-family: var(--font-mono);
+    }
+
+    .mode-lifecycle-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 16px;
+    }
+
+    .lifecycle-card {
+      background: var(--bg-surface-elevated);
+      border: 1.5px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      cursor: pointer;
+      transition: var(--transition);
+      position: relative;
+      outline: none;
+    }
+
+    .lifecycle-card:hover {
+      border-color: var(--border-accent);
+      background: var(--bg-surface-highlight);
+      transform: translateY(-1px);
+    }
+
+    .lifecycle-card:focus-visible {
+      box-shadow: 0 0 0 2px var(--accent-indigo);
+    }
+
+    .lifecycle-card.active-mode-card {
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 16px var(--accent-indigo-glow);
+      background: var(--bg-surface-highlight);
+    }
+
+    .lifecycle-card.card-test.active-mode-card {
+      border-color: var(--accent-amber);
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.25);
+    }
+
+    .lifecycle-card.card-production.active-mode-card {
+      border-color: var(--accent-emerald);
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.25);
+    }
+
+    .lifecycle-card-top {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .lifecycle-card-title {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.95rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }
+
+    .lifecycle-card-title .card-icon {
+      font-size: 1.2rem;
+      line-height: 1;
+    }
+
+    .lifecycle-card-title .card-title-hindi {
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text-secondary);
+      margin-left: 4px;
+    }
+
+    .lifecycle-card-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.74rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      white-space: nowrap;
+    }
+
+    .badge-test-mode {
+      background: rgba(245, 158, 11, 0.14);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }
+
+    .badge-prod-mode {
+      background: rgba(16, 185, 129, 0.14);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .lifecycle-card-desc {
+      font-size: 0.85rem;
+      line-height: 1.55;
+      color: var(--text-secondary);
+    }
+
+    .lifecycle-card-desc strong {
+      color: var(--text-primary);
+    }
+
+    .lifecycle-card-features {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 2px;
+    }
+
+    .lifecycle-feature-tag {
+      font-size: 0.74rem;
+      font-family: var(--font-mono);
+      background: var(--bg-surface);
+      padding: 4px 9px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .active-mode-card .lifecycle-feature-tag {
+      color: var(--text-primary);
+      border-color: rgba(99, 102, 241, 0.35);
+      background: var(--bg-surface-elevated);
+    }
+
+    /* Configuration Tab Mode Lifecycle Callout Block */
+    .mode-lifecycle-divider {
+      border: 0;
+      height: 1px;
+      background: linear-gradient(90deg, transparent, var(--border-accent), transparent);
+      margin: 18px 0;
+    }
+
+    .mode-lifecycle-callout {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-left: 4px solid var(--accent-indigo);
+      border-radius: var(--radius-md);
+      padding: 16px 18px;
+    }
+
+    .mode-lifecycle-callout-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: 12px;
+    }
+
+    .mode-lifecycle-callout-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+    }
+
+    .mode-callout-item {
+      background: var(--bg-surface);
+      padding: 12px 14px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .mode-callout-item-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+
+    .mode-callout-item-title {
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .mode-callout-item-desc {
+      font-size: 0.81rem;
+      line-height: 1.5;
+      color: var(--text-secondary);
+    }
+
+    .mode-callout-item-desc strong {
+      color: var(--text-primary);
+    }
+
+    @media (max-width: 768px) {
+      .mode-lifecycle-grid,
+      .mode-lifecycle-callout-grid {
+        grid-template-columns: 1fr;
+      }
+      .mode-lifecycle-header {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+      .banner-mode-controls {
+        width: 100%;
+        justify-content: space-between;
+      }
+    }
+
     /* Tab Panels */
     .tab-panel {
       display: none;
@@ -2284,6 +2642,83 @@
       </button>
     </nav>
 
+    <!-- Horizontal Mode Lifecycle Banner (Execution Mode Rules & Single-Run Auto-Stop Standard) -->
+    <section class="mode-lifecycle-banner" id="mode-lifecycle-banner" aria-label="Execution Mode Lifecycle">
+      <div class="mode-lifecycle-header">
+        <div class="mode-lifecycle-title-group">
+          <span class="title-icon">⚡</span>
+          <span class="title-main">Execution Mode Lifecycle</span>
+          <span class="title-sep">•</span>
+          <span class="title-sub">रन मोड कार्यप्रणाली एवं स्टॉप नियम</span>
+        </div>
+        <div class="banner-mode-controls">
+          <span class="banner-controls-label">Mode Switcher:</span>
+          <div class="banner-mode-switcher" role="radiogroup" aria-label="Active Execution Mode Switcher">
+            <button type="button" class="banner-mode-btn " id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+              <span>🧪 Test Mode</span>
+              <span class="banner-mode-indicator">Auto-Stop</span>
+            </button>
+            <button type="button" class="banner-mode-btn active" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+              <span>🛡️ Production</span>
+              <span class="banner-mode-indicator">Loop</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <div class="mode-lifecycle-grid">
+        <!-- 1. Test Mode Card -->
+        <div class="lifecycle-card card-test " id="banner-card-test" role="button" tabindex="0" title="Click to select Test Mode">
+          <div class="lifecycle-card-top">
+            <div class="lifecycle-card-title">
+              <span class="card-icon">🧪</span>
+              <div class="card-title-text">
+                <strong>Test Mode</strong>
+                <span class="card-title-hindi">(टेस्ट रन - One-Time Run &amp; Auto-Stop)</span>
+              </div>
+            </div>
+            <span class="lifecycle-card-badge badge-test-mode">
+              <span>●</span>
+              <span>Single-Run • Auto-Stops on Task Complete</span>
+            </span>
+          </div>
+          <p class="lifecycle-card-desc">
+            जब <strong>Test Run</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह सिर्फ <strong>1 बार (Single Cycle)</strong> चलेगा और टास्क/पाइपलाइन कम्प्लीट होते ही प्रोसेस अपने आप <strong>Stop</strong> हो जाएगा।
+          </p>
+          <div class="lifecycle-card-features">
+            <span class="lifecycle-feature-tag">⚡ 1 Single Cycle Execution</span>
+            <span class="lifecycle-feature-tag">🛑 Auto-Exits on Task Completion</span>
+            <span class="lifecycle-feature-tag">🔬 Safe Verification &amp; Dry-Runs</span>
+          </div>
+        </div>
+
+        <!-- 2. Production Mode Card -->
+        <div class="lifecycle-card card-production active-mode-card" id="banner-card-prod" role="button" tabindex="0" title="Click to select Production Mode">
+          <div class="lifecycle-card-top">
+            <div class="lifecycle-card-title">
+              <span class="card-icon">🛡️</span>
+              <div class="card-title-text">
+                <strong>Production Mode</strong>
+                <span class="card-title-hindi">(प्रोडक्शन लेवल - Continuous Autonomous Loop)</span>
+              </div>
+            </div>
+            <span class="lifecycle-card-badge badge-prod-mode">
+              <span>●</span>
+              <span>Continuous Loop • Runs Until Manual Stop</span>
+            </span>
+          </div>
+          <p class="lifecycle-card-desc">
+            जब <strong>Production Level</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह बैकग्राउंड में अनवरत <strong>(Continuous Loop - 300s चक्र)</strong> चलता रहेगा जब तक कि आप मैन्युअली <strong>Stop</strong> बटन न दबाएँ।
+          </p>
+          <div class="lifecycle-card-features">
+            <span class="lifecycle-feature-tag">🔄 Continuous 300s Polling Loop</span>
+            <span class="lifecycle-feature-tag">♾️ Runs Indefinitely in Background</span>
+            <span class="lifecycle-feature-tag">👤 Manual User Stop Required</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
     <!-- Legacy Search Box Compatibility Hook (Hidden) -->
     <input type="hidden" id="search-box" value="">
     <input type="hidden" id="search-overview" value="">
@@ -3180,15 +3615,15 @@
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
               <div class="config-subgroup-body collapsed" id="subbody-runtime-mode">
-                <p class="config-subgroup-desc">Select whether the automation pipeline runs in full autonomous Production mode (polling every 300s) or fast Test mode (10s intervals).</p>
+                <p class="config-subgroup-desc">Select whether the automation pipeline runs in full autonomous Production mode (continuous loop until manually stopped) or fast Test mode (single-run auto-stop).</p>
                 
                 <div class="mode-pill-selector" role="radiogroup" aria-label="Operating Mode">
                   <button type="button" class="mode-pill active" id="cfg-mode-prod-btn" data-mode="production">
                     <div class="mode-pill-content">
                       <span class="mode-pill-icon">🛡️</span>
                       <div class="mode-pill-text">
-                        <strong>Production Mode</strong>
-                        <small>Real-time autonomous polling (300.0s cycle)</small>
+                        <strong>Production Mode (Continuous Loop)</strong>
+                        <small>Runs continuously in background until manually stopped by user (300.0s cycle)</small>
                       </div>
                     </div>
                     <span class="mode-pill-check">✓</span>
@@ -3197,14 +3632,43 @@
                     <div class="mode-pill-content">
                       <span class="mode-pill-icon">🧪</span>
                       <div class="mode-pill-text">
-                        <strong>Test Mode</strong>
-                        <small>High-speed validation cycle (10.0s interval)</small>
+                        <strong>Test Mode (Single-Run Auto-Stop)</strong>
+                        <small>Runs once and automatically stops as soon as the task completes (10.0s interval)</small>
                       </div>
                     </div>
                     <span class="mode-pill-check">✓</span>
                   </button>
                 </div>
                 <input type="hidden" id="cfg-runtime-mode" value="production">
+
+                <!-- Dedicated Horizontal Divider & Mode Lifecycle Callout Block -->
+                <hr class="mode-lifecycle-divider">
+                <div class="mode-lifecycle-callout">
+                  <div class="mode-lifecycle-callout-header">
+                    <span class="callout-header-icon">ℹ️</span>
+                    <span>Execution Mode Lifecycle Rules / रन मोड कार्यप्रणाली एवं स्टॉप नियम</span>
+                  </div>
+                  <div class="mode-lifecycle-callout-grid">
+                    <div class="mode-callout-item callout-test">
+                      <div class="mode-callout-item-header">
+                        <span class="mode-callout-item-title">🧪 <strong>Test Mode (टेस्ट रन)</strong></span>
+                        <span class="lifecycle-card-badge badge-test-mode">Single-Run Auto-Stop</span>
+                      </div>
+                      <p class="mode-callout-item-desc">
+                        जब आप <strong>Test Run</strong> चुनते हैं, तो ऑटोमेशन केवल <strong>1 बार (Single Cycle)</strong> निष्पादित होता है। जैसे ही टास्क या चैट प्रोसेसिंग पूर्ण होती है, प्रोसेस अपने आप (Automatically) सुरक्षित रूप से <strong>Stop</strong> हो जाता है। यह टेस्टिंग और सत्यापन के लिए आदर्श है।
+                      </p>
+                    </div>
+                    <div class="mode-callout-item callout-prod">
+                      <div class="mode-callout-item-header">
+                        <span class="mode-callout-item-title">🛡️ <strong>Production Mode (प्रोडक्शन लेवल)</strong></span>
+                        <span class="lifecycle-card-badge badge-prod-mode">Continuous Loop</span>
+                      </div>
+                      <p class="mode-callout-item-desc">
+                        जब आप <strong>Production Level</strong> चुनते हैं, तो ऑटोमेशन बैकग्राउंड में अनवरत <strong>(Continuous Loop - 300s अंतराल)</strong> चलता रहता है। यह तब तक लगातार निगरानी और निष्पादन करता रहेगा जब तक कि आप स्वयं मैन्युअली <strong>Stop</strong> बटन न दबाएँ।
+                      </p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -3842,7 +4306,7 @@
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-05 00:50:00</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-05 01:44:26</span></div>
     </footer>
   </div>
 
@@ -4051,20 +4515,71 @@
         runtimeJsonPreview.textContent = JSON.stringify(cfgObj, null, 2);
       }
 
-      // Mode pill clicks
+      // Mode selection synchronization across Banner & Config Tab (Dept 05 Standard)
+      function setExecutionMode(mode, updateConfig = true) {
+        const targetMode = (mode === 'test') ? 'test' : 'production';
+
+        // 1. Update hidden form input
+        if (cfgRuntimeMode) cfgRuntimeMode.value = targetMode;
+
+        // 2. Update Banner Mode Buttons
+        const bannerTestBtn = document.getElementById('banner-mode-test-btn');
+        const bannerProdBtn = document.getElementById('banner-mode-prod-btn');
+        if (bannerTestBtn) bannerTestBtn.classList.toggle('active', targetMode === 'test');
+        if (bannerProdBtn) bannerProdBtn.classList.toggle('active', targetMode === 'production');
+
+        // 3. Update Banner Lifecycle Cards Active Highlight
+        const bannerTestCard = document.getElementById('banner-card-test');
+        const bannerProdCard = document.getElementById('banner-card-prod');
+        if (bannerTestCard) bannerTestCard.classList.toggle('active-mode-card', targetMode === 'test');
+        if (bannerProdCard) bannerProdCard.classList.toggle('active-mode-card', targetMode === 'production');
+
+        // 4. Update Config Tab Mode Pills
+        if (cfgModeTestBtn) cfgModeTestBtn.classList.toggle('active', targetMode === 'test');
+        if (cfgModeProdBtn) cfgModeProdBtn.classList.toggle('active', targetMode === 'production');
+
+        // 5. Update Current Config Object and Live JSON Preview
+        if (typeof currentConfig !== 'undefined' && currentConfig) currentConfig.mode = targetMode;
+        if (updateConfig && typeof updateRuntimeJsonPreview === 'function') {
+          updateRuntimeJsonPreview();
+        }
+      }
+
+      // Banner Mode Buttons & Card Clicks
+      const bannerModeTestBtn = document.getElementById('banner-mode-test-btn');
+      const bannerModeProdBtn = document.getElementById('banner-mode-prod-btn');
+      const bannerCardTest = document.getElementById('banner-card-test');
+      const bannerCardProd = document.getElementById('banner-card-prod');
+
+      if (bannerModeTestBtn) {
+        bannerModeTestBtn.addEventListener('click', () => setExecutionMode('test'));
+      }
+      if (bannerModeProdBtn) {
+        bannerModeProdBtn.addEventListener('click', () => setExecutionMode('production'));
+      }
+      if (bannerCardTest) {
+        bannerCardTest.addEventListener('click', () => setExecutionMode('test'));
+      }
+      if (bannerCardProd) {
+        bannerCardProd.addEventListener('click', () => setExecutionMode('production'));
+      }
+
+      // Keyboard accessibility for interactive banner cards
+      [bannerCardTest, bannerCardProd].forEach(card => {
+        if (card) {
+          card.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              card.click();
+            }
+          });
+        }
+      });
+
+      // Config Tab Mode Pills
       if (cfgModeProdBtn && cfgModeTestBtn) {
-        cfgModeProdBtn.addEventListener('click', () => {
-          cfgModeProdBtn.classList.add('active');
-          cfgModeTestBtn.classList.remove('active');
-          if (cfgRuntimeMode) cfgRuntimeMode.value = 'production';
-          updateRuntimeJsonPreview();
-        });
-        cfgModeTestBtn.addEventListener('click', () => {
-          cfgModeTestBtn.classList.add('active');
-          cfgModeProdBtn.classList.remove('active');
-          if (cfgRuntimeMode) cfgRuntimeMode.value = 'test';
-          updateRuntimeJsonPreview();
-        });
+        cfgModeProdBtn.addEventListener('click', () => setExecutionMode('production'));
+        cfgModeTestBtn.addEventListener('click', () => setExecutionMode('test'));
       }
 
       // Form change listeners
@@ -4362,6 +4877,8 @@
         return localStorage.getItem('asc_automation_running') === 'true';
       }
 
+      let userInitiatedStop = false;
+
       async function checkProcessStatus() {
         try {
           const controller = new AbortController();
@@ -4375,6 +4892,23 @@
             const res = await resp.json();
             if (res.success && res.data) {
               const running = !!res.data.running;
+              const wasRunning = isAutomationActive || getAutomationRunning();
+              const recordedMode = localStorage.getItem('asc_automation_last_mode') || res.data.mode || (cfgRuntimeMode ? cfgRuntimeMode.value : 'production');
+
+              if (running) {
+                if (res.data.mode) {
+                  localStorage.setItem('asc_automation_last_mode', res.data.mode);
+                }
+              } else if (wasRunning && !userInitiatedStop) {
+                // Automation finished and exited automatically
+                if (recordedMode === 'test') {
+                  showToast('✅ Test Mode task completed! Automation stopped automatically.', 'success');
+                } else {
+                  showToast('⏹️ Automation process completed or stopped.', 'info');
+                }
+              }
+
+              userInitiatedStop = false;
               isAutomationActive = running;
               localStorage.setItem('asc_automation_running', String(running));
               updateAutomationUI(running, false);
@@ -4460,9 +4994,19 @@
           automationToggleBtn.disabled = true;
           if (controlLabelEl) controlLabelEl.textContent = currentlyRunning ? 'Stopping...' : 'Starting...';
 
+          if (currentlyRunning) {
+            userInitiatedStop = true;
+          }
+
           try {
             const endpoint = API_BASE + (currentlyRunning ? '/api/automation/stop' : '/api/automation/start');
-            const payload = currentlyRunning ? {} : { mode: (currentConfig && currentConfig.mode) || 'production' };
+            const selectedMode = (cfgRuntimeMode ? cfgRuntimeMode.value : null) || 'production';
+            const payload = currentlyRunning ? {} : { mode: selectedMode };
+
+            if (!currentlyRunning) {
+              localStorage.setItem('asc_automation_last_mode', selectedMode);
+              userInitiatedStop = false;
+            }
 
             const controller = new AbortController();
             const tid = setTimeout(() => controller.abort(), 6000);
@@ -4484,7 +5028,7 @@
                 updateAutomationUI(isNowRunning, true);
                 return;
               } else {
-                showToast(`❌ Action failed: ${res.error?.message || 'Server error'}`, 'error');
+                showToast(`❌ Action failed: ${res.error?.message || res.message || 'Server error'}`, 'error');
               }
             } else {
               throw new Error(`HTTP ${resp.status}`);
