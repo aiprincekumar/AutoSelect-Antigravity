@@ -329,6 +329,8 @@ class AutomationProcessManager:
                     "start_time": self.start_time,
                     "mode": eff_mode,
                     "cmd": cmd,
+                    "is_paused": False,
+                    "user_idle_seconds": 0.0,
                 }
                 self.pid_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.pid_file, "w", encoding="utf-8") as f:
@@ -422,12 +424,43 @@ class AutomationProcessManager:
         pid = self.get_pid() if running else None
         uptime = (time.time() - self.start_time) if (running and self.start_time) else 0.0
 
+        is_paused = False
+        idle_seconds = 0.0
+
+        if running:
+            is_prod = str(self.active_mode).lower() == "production"
+            if is_prod:
+                try:
+                    from core_engine.win32_api import get_idle_duration_seconds
+                    idle_seconds = get_idle_duration_seconds()
+                except Exception:
+                    idle_seconds = 0.0
+
+                threshold = 60.0
+                try:
+                    cfg_path = get_canonical_config_path(self.workspace_dir)
+                    cfg = core_load_runtime_config(cfg_path)
+                    threshold = float(cfg.get("timing", {}).get("user_activity_pause_threshold_seconds", 60.0))
+                except Exception:
+                    threshold = 60.0
+
+                is_paused = (idle_seconds < threshold)
+                status_text = "Paused" if is_paused else "Active"
+            else:
+                is_paused = False
+                status_text = "Active"
+        else:
+            is_paused = False
+            status_text = "Inactive"
+
         return {
             "running": running,
             "pid": pid,
             "uptime_seconds": round(uptime, 1),
             "mode": self.active_mode,
-            "status_text": "Active" if running else "Inactive",
+            "status_text": status_text,
+            "is_paused": is_paused,
+            "user_idle_seconds": round(idle_seconds, 1),
             "python_exe": str(self.python_exe),
             "master_script": str(self.master_script),
             "log_file": str(self.log_file),

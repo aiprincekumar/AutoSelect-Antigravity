@@ -86,6 +86,10 @@ from core_engine.config_manager import (
     is_step_enabled,
     apply_logging_config,
 )
+from core_engine.win32_api import (
+    get_idle_duration_seconds,
+    get_last_input_info,
+)
 
 # Standard Exit Codes
 EXIT_CODE_SUCCESS = 0
@@ -268,6 +272,7 @@ class TimingConfig:
     step0_poll_interval_prod_seconds: float = 300.0
     step0_poll_interval_test_seconds: float = 10.0
     settle_delay_between_steps_seconds: float = 0.8
+    user_activity_pause_threshold_seconds: float = 60.0
     step4_user_activity_delay_seconds: float = 10.0
     step4_poll_interval_seconds: float = 0.1
     step1_window_focus_delay_seconds: float = 0.2
@@ -311,6 +316,7 @@ class AutomationConfig:
             step0_poll_interval_prod_seconds=float(timing_data.get("step0_poll_interval_prod_seconds", 300.0)),
             step0_poll_interval_test_seconds=float(timing_data.get("step0_poll_interval_test_seconds", 10.0)),
             settle_delay_between_steps_seconds=float(timing_data.get("settle_delay_between_steps_seconds", 0.8)),
+            user_activity_pause_threshold_seconds=float(timing_data.get("user_activity_pause_threshold_seconds", 60.0)),
             step4_user_activity_delay_seconds=float(timing_data.get("step4_user_activity_delay_seconds", 10.0)),
             step4_poll_interval_seconds=float(timing_data.get("step4_poll_interval_seconds", 0.1)),
             step1_window_focus_delay_seconds=float(timing_data.get("step1_window_focus_delay_seconds", 0.2)),
@@ -376,6 +382,7 @@ class CompleteAutomationController:
 
         self.workspace_dir = _root_dir
         self.state_file = Path(state_file_path).resolve() if state_file_path else (_root_dir / "target_chat.json").resolve()
+        self.pid_file = (self.workspace_dir / "step_4_reporting" / ".automation_process.json").resolve()
         self.python_exe = self._resolve_python_exe(python_exe_path)
         self.pipeline_steps = discover_pipeline_steps(root_dir=self.workspace_dir, include_future=True)
 
@@ -591,6 +598,64 @@ class CompleteAutomationController:
         self.logger.info(summary)
         return True, EXIT_CODE_SUCCESS, summary, step_reports
 
+    def _update_process_state(self, is_paused: bool, idle_seconds: float) -> None:
+        """Atomically persist live state to .automation_process.json."""
+        try:
+            self.pid_file.parent.mkdir(parents=True, exist_ok=True)
+            data: Dict[str, Any] = {}
+            if self.pid_file.is_file():
+                try:
+                    with open(self.pid_file, "r", encoding="utf-8") as f:
+                        data = json.load(f)
+                except Exception:
+                    data = {}
+            data["pid"] = os.getpid()
+            data["mode"] = self.config.mode
+            data["is_paused"] = is_paused
+            data["user_idle_seconds"] = round(idle_seconds, 1)
+            data["last_updated"] = time.time()
+
+            tmp = self.pid_file.with_suffix(".tmp")
+            with open(tmp, "w", encoding="utf-8") as f:
+                json.dump(data, f, indent=2)
+            tmp.replace(self.pid_file)
+        except Exception as e:
+            self.logger.debug("Failed to write .automation_process.json: %s", e)
+
+    def _wait_for_user_idle(self, pause_threshold: float) -> bool:
+        """
+        In Production mode: if user is active (idle < threshold), block until idle >= threshold.
+        While waiting:
+          - State is marked is_paused = True in memory and in .automation_process.json.
+          - Timers and actions are completely halted.
+        Returns True if pausing occurred, False if user was already idle.
+        """
+        was_paused = False
+        while not self._stop_requested:
+            idle_seconds = get_idle_duration_seconds()
+            if idle_seconds < pause_threshold:
+                if not was_paused:
+                    was_paused = True
+                    self.logger.info(
+                        "User activity detected (idle time: %.1fs < %.1fs). Production automation is PAUSED.",
+                        idle_seconds, pause_threshold
+                    )
+                    if not self.headless:
+                        print(f"\n[PAUSED] User activity detected (idle: {idle_seconds:.1f}s < {pause_threshold:.1f}s). Automation paused.")
+                self._update_process_state(is_paused=True, idle_seconds=idle_seconds)
+                time.sleep(1.0)
+            else:
+                if was_paused:
+                    self.logger.info(
+                        "User idle threshold reached (idle time: %.1fs >= %.1fs). Production automation is ACTIVE. Resuming normal monitoring.",
+                        idle_seconds, pause_threshold
+                    )
+                    if not self.headless:
+                        print(f"\n[ACTIVE] User idle for {idle_seconds:.1f}s >= {pause_threshold:.1f}s. Resuming active monitoring...")
+                self._update_process_state(is_paused=False, idle_seconds=idle_seconds)
+                break
+        return was_paused
+
     def stop(self):
         """Signal controller loop to stop cleanly."""
         self._stop_requested = True
@@ -600,7 +665,8 @@ class CompleteAutomationController:
         """
         Run the complete automation lifecycle.
         In test mode: provides clean Unicode numbers dashboard every 10s.
-        In production mode: runs silent background polling every 300s.
+        In production mode: runs silent background polling every 60s/300s,
+        automatically pausing whenever user is active (idle < threshold).
         """
         def _handle_signal(signum, frame):
             self.logger.info("Termination signal received. Exiting gracefully...")
@@ -616,6 +682,12 @@ class CompleteAutomationController:
             else self.config.timing.step0_poll_interval_prod_seconds
         )
         self.detector.poll_interval = interval
+        pause_threshold = self.config.timing.user_activity_pause_threshold_seconds
+
+        # Record initial process state
+        initial_idle = get_idle_duration_seconds() if not self.is_test_mode else 0.0
+        initial_paused = (initial_idle < pause_threshold) if not self.is_test_mode else False
+        self._update_process_state(is_paused=initial_paused, idle_seconds=initial_idle)
 
         if not self.headless:
             print("\n" + "=" * 78)
@@ -623,6 +695,7 @@ class CompleteAutomationController:
             print("=" * 78)
             print(f"  Operating Mode   : {self.config.mode.upper()}")
             print(f"  Polling Rate     : {interval:.1f}s ({interval / 60:.2f} min)")
+            print(f"  Pause Threshold  : {pause_threshold:.1f}s (User Activity Auto-Pause)")
             print(f"  Settle Delay     : {self.config.timing.settle_delay_between_steps_seconds:.2f}s")
             print(f"  Python Engine    : {self.python_exe}")
             print(f"  State File       : {self.state_file}")
@@ -634,6 +707,12 @@ class CompleteAutomationController:
 
         check_count = 0
         while not self._stop_requested:
+            # In Production Mode: check and wait for user to become idle before proceeding
+            if not self.is_test_mode:
+                self._wait_for_user_idle(pause_threshold)
+                if self._stop_requested:
+                    break
+
             check_count += 1
             res = self.detector.detect()
 
@@ -641,6 +720,12 @@ class CompleteAutomationController:
                 display_dashboard(res, chat_stats=res.chat_stats, wipe_screen=True, poll_interval=interval)
 
             if res.trigger_matched:
+                # In Production Mode: re-verify user did not begin typing/mouse movement right before pipeline
+                if not self.is_test_mode:
+                    self._wait_for_user_idle(pause_threshold)
+                    if self._stop_requested:
+                        break
+
                 if not self.headless:
                     now_str = datetime.now().strftime("%H:%M:%S")
                     print(f"\n[{now_str}] [TRIGGER MATCHED] Antigravity is open and pending Grill-Me chat detected ({res.pending_grill_me_chats})!")
@@ -664,9 +749,16 @@ class CompleteAutomationController:
             if once:
                 return 0 if res.is_detected else 1
 
-            # Sleep in 0.5s chunks for prompt Ctrl+C interrupt
+            # Sleep in 0.5s chunks for prompt Ctrl+C interrupt; halt timer if user is active in production mode
             sleep_remaining = interval
             while sleep_remaining > 0 and not self._stop_requested:
+                if not self.is_test_mode:
+                    idle_sec = get_idle_duration_seconds()
+                    if idle_sec < pause_threshold:
+                        self._wait_for_user_idle(pause_threshold)
+                        if self._stop_requested:
+                            break
+                        self._update_process_state(is_paused=False, idle_seconds=get_idle_duration_seconds())
                 time.sleep(min(0.5, sleep_remaining))
                 sleep_remaining -= 0.5
 

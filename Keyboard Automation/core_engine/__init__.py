@@ -73,6 +73,13 @@ from .win32_api import (
     ensure_input_desktop,
     get_process_info_for_hwnd,
     get_active_window_title,
+    get_last_input_info,
+    get_idle_duration_seconds,
+    LASTINPUTINFO,
+)
+from .user_activity import (
+    is_user_active,
+    wait_for_user_idle,
 )
 from .input_injector import (
     get_option_vk,
@@ -98,6 +105,7 @@ from .config_manager import (
     get_effective_poll_interval,
     get_settle_delay,
     get_user_activity_delay,
+    get_user_activity_pause_threshold,
     get_window_focus_delay,
     get_dom_click_settle_delay,
     get_step4_poll_interval,
@@ -115,6 +123,7 @@ __all__ = [
     "get_effective_poll_interval",
     "get_settle_delay",
     "get_user_activity_delay",
+    "get_user_activity_pause_threshold",
     "get_window_focus_delay",
     "get_dom_click_settle_delay",
     "get_step4_poll_interval",
@@ -175,6 +184,11 @@ __all__ = [
     "ensure_input_desktop",
     "get_process_info_for_hwnd",
     "get_active_window_title",
+    "get_last_input_info",
+    "get_idle_duration_seconds",
+    "LASTINPUTINFO",
+    "is_user_active",
+    "wait_for_user_idle",
     "get_option_vk",
     "send_key_combo",
     "send_single_key",

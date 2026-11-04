@@ -1608,6 +1608,18 @@ class Step4ReportingEngine:
       animation: none;
     }}
 
+    .status-pill.status-paused {{
+      background: rgba(245, 158, 11, 0.12);
+      color: #f59e0b;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }}
+
+    .status-pill.status-paused::before {{
+      background: #f59e0b;
+      box-shadow: 0 0 8px #f59e0b;
+      animation: pulse 1.5s infinite;
+    }}
+
     .status-pill.status-active {{
       background: var(--accent-emerald-bg, rgba(16, 185, 129, 0.12));
       color: var(--accent-emerald, #10b981);
@@ -6157,6 +6169,42 @@ class Step4ReportingEngine:
 
       let userInitiatedStop = false;
 
+      function updateProcessStatusUI(status) {{
+        const dashboardStatusPill = document.getElementById('dashboard-status-pill');
+        const modesStatusPill = document.getElementById('modes-status-pill');
+
+        let pillClass = 'status-pill status-idle';
+        let pillHtml = '⚪ Inactive';
+        let modesHtml = '⚪ Automation Inactive';
+        let pillTitle = 'Automation is not running';
+
+        if (status && status.running) {{
+          if (status.is_paused) {{
+            pillClass = 'status-pill status-paused';
+            pillHtml = '⏸️ Paused (User Active)';
+            modesHtml = '⏸️ Paused (User Active)';
+            pillTitle = 'Automation paused: user activity detected (idle < 60s)';
+          }} else {{
+            pillClass = 'status-pill status-active';
+            pillHtml = '🟢 Active';
+            modesHtml = '🟢 Active';
+            pillTitle = 'Automation active: background monitoring enabled';
+          }}
+        }}
+
+        if (dashboardStatusPill) {{
+          dashboardStatusPill.className = pillClass;
+          dashboardStatusPill.innerHTML = pillHtml;
+          dashboardStatusPill.setAttribute('title', pillTitle);
+        }}
+
+        if (modesStatusPill) {{
+          modesStatusPill.className = pillClass;
+          modesStatusPill.innerHTML = modesHtml;
+          modesStatusPill.setAttribute('title', pillTitle);
+        }}
+      }}
+
       async function checkProcessStatus() {{
         try {{
           const controller = new AbortController();
@@ -6189,7 +6237,8 @@ class Step4ReportingEngine:
               userInitiatedStop = false;
               isAutomationActive = running;
               localStorage.setItem('asc_automation_running', String(running));
-              updateAutomationUI(running, false);
+              updateAutomationUI(running, false, res.data);
+              updateProcessStatusUI(res.data);
               return running;
             }}
           }}
@@ -6199,7 +6248,7 @@ class Step4ReportingEngine:
         return false;
       }}
 
-      function startProcessStatusPolling(intervalMs = 3000) {{
+      function startProcessStatusPolling(intervalMs = 2000) {{
         if (statusPollTimer) clearInterval(statusPollTimer);
         statusPollTimer = setInterval(checkProcessStatus, intervalMs);
       }}
@@ -6211,11 +6260,10 @@ class Step4ReportingEngine:
         }}
       }}
 
-      function updateAutomationUI(isRunning, triggerToast = false) {{
+      function updateAutomationUI(isRunning, triggerToast = false, statusData = null) {{
         const modesAutomationToggleBtn = document.getElementById('modes-automation-toggle-btn');
         const modesControlIconEl = document.getElementById('modes-control-icon');
         const modesControlLabelEl = document.getElementById('modes-control-label');
-        const modesStatusPill = document.getElementById('modes-status-pill');
 
         if (isRunning) {{
           if (automationToggleBtn) {{
@@ -6234,17 +6282,8 @@ class Step4ReportingEngine:
             modesAutomationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
           }}
 
-          if (dashboardStatusPill) {{
-            dashboardStatusPill.className = 'status-pill status-active';
-            dashboardStatusPill.innerHTML = '🟢 Active';
-          }}
-
-          if (modesStatusPill) {{
-            modesStatusPill.className = 'status-pill status-active';
-            modesStatusPill.innerHTML = '🟢 Active';
-          }}
-
-          startProcessStatusPolling(3000);
+          updateProcessStatusUI(statusData || {{ running: true, is_paused: false }});
+          startProcessStatusPolling(2000);
 
           if (triggerToast) {{
             showToast('🚀 Automation Started! AutoSelect-Commander is actively monitoring chats.', 'success');
@@ -6266,16 +6305,7 @@ class Step4ReportingEngine:
             modesAutomationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
           }}
 
-          if (dashboardStatusPill) {{
-            dashboardStatusPill.className = 'status-pill status-idle';
-            dashboardStatusPill.innerHTML = '⚪ Inactive';
-          }}
-
-          if (modesStatusPill) {{
-            modesStatusPill.className = 'status-pill status-idle';
-            modesStatusPill.innerHTML = '⚪ Inactive';
-          }}
-
+          updateProcessStatusUI(statusData || {{ running: false, is_paused: false }});
           stopProcessStatusPolling();
 
           if (triggerToast) {{

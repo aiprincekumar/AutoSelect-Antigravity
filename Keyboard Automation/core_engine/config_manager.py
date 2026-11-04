@@ -37,6 +37,7 @@ DEFAULT_RUNTIME_CONFIG: Dict[str, Any] = {
         "step0_poll_interval_prod_seconds": 300.0,
         "step0_poll_interval_test_seconds": 10.0,
         "settle_delay_between_steps_seconds": 0.8,
+        "user_activity_pause_threshold_seconds": 60.0,
         "step4_user_activity_delay_seconds": 10.0,
         "step4_poll_interval_seconds": 0.1,
         "step1_window_focus_delay_seconds": 0.2,
@@ -229,6 +230,12 @@ def get_user_activity_delay(config_data: Optional[Dict[str, Any]] = None) -> flo
     """Returns Step 4 user inactivity buffer in seconds (default: 10.0s)."""
     cfg = config_data if config_data is not None else load_runtime_config()
     return float(cfg.get("timing", {}).get("step4_user_activity_delay_seconds", 10.0))
+
+
+def get_user_activity_pause_threshold(config_data: Optional[Dict[str, Any]] = None) -> float:
+    """Returns user activity pause threshold in seconds (default: 60.0s)."""
+    cfg = config_data if config_data is not None else load_runtime_config()
+    return float(cfg.get("timing", {}).get("user_activity_pause_threshold_seconds", 60.0))
 
 
 def get_window_focus_delay(config_data: Optional[Dict[str, Any]] = None) -> float:

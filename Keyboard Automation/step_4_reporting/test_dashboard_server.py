@@ -137,6 +137,8 @@ class TestDashboardServer(unittest.TestCase):
         self.assertFalse(status["running"])
         self.assertIsNone(status["pid"])
         self.assertEqual(status["status_text"], "Inactive")
+        self.assertFalse(status["is_paused"])
+        self.assertEqual(status["user_idle_seconds"], 0.0)
 
     def test_02_manager_start_and_stop_mock(self):
         """Manager should spawn process and handle start/stop cycle."""
@@ -183,6 +185,10 @@ class TestDashboardServer(unittest.TestCase):
         self.assertTrue(body["success"])
         self.assertIn("running", body["data"])
         self.assertFalse(body["data"]["running"])
+        self.assertIn("is_paused", body["data"])
+        self.assertFalse(body["data"]["is_paused"])
+        self.assertIn("user_idle_seconds", body["data"])
+        self.assertEqual(body["data"]["status_text"], "Inactive")
         self.assertEqual(headers.get("Access-Control-Allow-Origin"), "*")
 
     def test_05_options_cors_preflight(self):
@@ -327,6 +333,82 @@ class TestDashboardServer(unittest.TestCase):
 
             # Stop
             self._http_request("POST", "/api/automation/stop")
+
+    def test_13_status_production_mode_paused_when_user_active(self):
+        """In Production mode, user idle < 60s sets is_paused=True and status_text='Paused'."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 66666
+        mock_proc.poll.return_value = None
+
+        with patch("subprocess.Popen", return_value=mock_proc), \
+             patch("core_engine.win32_api.get_idle_duration_seconds", return_value=12.5):
+            res = self.manager.start(mode="production")
+            self.assertTrue(res["running"])
+
+            status = self.manager.get_status()
+            self.assertTrue(status["running"])
+            self.assertTrue(status["is_paused"])
+            self.assertEqual(status["status_text"], "Paused")
+            self.assertEqual(status["user_idle_seconds"], 12.5)
+
+            # API check
+            api_status, _, api_body = self._http_request("GET", "/api/automation/status")
+            self.assertEqual(api_status, 200)
+            self.assertTrue(api_body["data"]["is_paused"])
+            self.assertEqual(api_body["data"]["status_text"], "Paused")
+            self.assertEqual(api_body["data"]["user_idle_seconds"], 12.5)
+
+            self.manager.stop()
+
+    def test_14_status_production_mode_active_when_user_idle(self):
+        """In Production mode, user idle >= 60s sets is_paused=False and status_text='Active'."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 77777
+        mock_proc.poll.return_value = None
+
+        with patch("subprocess.Popen", return_value=mock_proc), \
+             patch("core_engine.win32_api.get_idle_duration_seconds", return_value=85.0):
+            res = self.manager.start(mode="production")
+            self.assertTrue(res["running"])
+
+            status = self.manager.get_status()
+            self.assertTrue(status["running"])
+            self.assertFalse(status["is_paused"])
+            self.assertEqual(status["status_text"], "Active")
+            self.assertEqual(status["user_idle_seconds"], 85.0)
+
+            # API check
+            api_status, _, api_body = self._http_request("GET", "/api/automation/status")
+            self.assertEqual(api_status, 200)
+            self.assertFalse(api_body["data"]["is_paused"])
+            self.assertEqual(api_body["data"]["status_text"], "Active")
+            self.assertEqual(api_body["data"]["user_idle_seconds"], 85.0)
+
+            self.manager.stop()
+
+    def test_15_status_test_mode_always_active(self):
+        """In Test mode, automation is never paused even if user idle < 60s."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 88888
+        mock_proc.poll.return_value = None
+
+        with patch("subprocess.Popen", return_value=mock_proc), \
+             patch("core_engine.win32_api.get_idle_duration_seconds", return_value=5.0):
+            res = self.manager.start(mode="test")
+            self.assertTrue(res["running"])
+
+            status = self.manager.get_status()
+            self.assertTrue(status["running"])
+            self.assertFalse(status["is_paused"])
+            self.assertEqual(status["status_text"], "Active")
+
+            # API check
+            api_status, _, api_body = self._http_request("GET", "/api/automation/status")
+            self.assertEqual(api_status, 200)
+            self.assertFalse(api_body["data"]["is_paused"])
+            self.assertEqual(api_body["data"]["status_text"], "Active")
+
+            self.manager.stop()
 
 
 if __name__ == "__main__":

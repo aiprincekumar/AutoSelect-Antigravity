@@ -5,6 +5,7 @@
     "step0_poll_interval_prod_seconds": 60,
     "step0_poll_interval_test_seconds": 10,
     "settle_delay_between_steps_seconds": 0.8,
+    "user_activity_pause_threshold_seconds": 60,
     "step4_user_activity_delay_seconds": 10,
     "step4_poll_interval_seconds": 0.1,
     "step1_window_focus_delay_seconds": 0.2,

@@ -387,6 +387,12 @@ class TestStep4Reporting(unittest.TestCase):
         # Check badge formatting
         self.assertIn("✓ Selected (Recommended)", content)
 
+        # Check 3-state status pill CSS and functions (Active, Paused, Inactive)
+        self.assertIn(".status-pill.status-paused", content)
+        self.assertIn("updateProcessStatusUI", content)
+        self.assertIn('id="dashboard-status-pill"', content)
+        self.assertIn('id="modes-status-pill"', content)
+
     def test_08_get_last_input_tick(self):
         """Test Win32 GetLastInputInfo returns a valid integer tick count."""
         tick = get_last_input_tick()

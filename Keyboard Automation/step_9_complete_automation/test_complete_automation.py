@@ -48,6 +48,7 @@ class TestAutomationConfig(unittest.TestCase):
         self.assertEqual(cfg.timing.step0_poll_interval_prod_seconds, 300.0)
         self.assertEqual(cfg.timing.step0_poll_interval_test_seconds, 10.0)
         self.assertEqual(cfg.timing.settle_delay_between_steps_seconds, 0.8)
+        self.assertEqual(cfg.timing.user_activity_pause_threshold_seconds, 60.0)
         self.assertEqual(cfg.timing.step4_user_activity_delay_seconds, 10.0)
         self.assertTrue(cfg.enabled_steps.step1_find_and_focus)
         self.assertTrue(cfg.enabled_steps.step2_gui_chat_select)
@@ -62,6 +63,7 @@ class TestAutomationConfig(unittest.TestCase):
                     "step0_poll_interval_prod_seconds": 120.0,
                     "step0_poll_interval_test_seconds": 5.0,
                     "settle_delay_between_steps_seconds": 0.5,
+                    "user_activity_pause_threshold_seconds": 45.0,
                     "step4_user_activity_delay_seconds": 8.0,
                 },
                 "enabled_steps": {
@@ -78,6 +80,7 @@ class TestAutomationConfig(unittest.TestCase):
             self.assertEqual(cfg.mode, "test")
             self.assertEqual(cfg.timing.step0_poll_interval_test_seconds, 5.0)
             self.assertEqual(cfg.timing.settle_delay_between_steps_seconds, 0.5)
+            self.assertEqual(cfg.timing.user_activity_pause_threshold_seconds, 45.0)
             self.assertFalse(cfg.enabled_steps.step2_gui_chat_select)
             self.assertFalse(cfg.enabled_steps.step4_reporting)
             self.assertTrue(cfg.enabled_steps.step1_find_and_focus)
@@ -253,9 +256,10 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         ))
 
     @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds", return_value=120.0)
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
-    def test_run_production_mode_continues_loop_after_pipeline(self, mock_pipeline, mock_detect, mock_sleep):
+    def test_run_production_mode_continues_loop_after_pipeline(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
         """Verify Production Mode does NOT exit after pipeline execution, continuing until manually stopped."""
         prod_cfg = AutomationConfig(
             mode="production",
@@ -293,6 +297,46 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     def test_stop(self):
         self.controller.stop()
         self.assertTrue(self.controller._stop_requested)
+
+    @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds")
+    def test_wait_for_user_idle_pauses_and_resumes(self, mock_idle, mock_sleep):
+        """Verify _wait_for_user_idle pauses while idle < 60s and resumes when idle >= 60s."""
+        # Returns 10.0 (active), 25.0 (active), 65.0 (idle)
+        mock_idle.side_effect = [10.0, 25.0, 65.0]
+
+        with self.assertLogs(self.controller.logger, level="INFO") as log_cm:
+            paused = self.controller._wait_for_user_idle(pause_threshold=60.0)
+
+        self.assertTrue(paused)
+        self.assertEqual(mock_sleep.call_count, 2)
+        self.assertTrue(any("Production automation is PAUSED" in msg for msg in log_cm.output))
+        self.assertTrue(any("Production automation is ACTIVE. Resuming normal monitoring" in msg for msg in log_cm.output))
+
+    @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds")
+    @patch.object(AntiGravityDetector, "detect")
+    @patch.object(CompleteAutomationController, "execute_pipeline")
+    def test_run_production_mode_auto_pauses_on_user_activity(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
+        """Verify run() in production mode halts execution while user is active, and proceeds once idle."""
+        prod_cfg = AutomationConfig(
+            mode="production",
+            timing=TimingConfig(user_activity_pause_threshold_seconds=60.0)
+        )
+        prod_controller = CompleteAutomationController(config=prod_cfg, headless=True)
+
+        idle_sequence = [5.0, 5.0, 75.0]
+        mock_idle.side_effect = lambda: idle_sequence.pop(0) if idle_sequence else 80.0
+        mock_detect.return_value = DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1)
+        mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
+
+        with self.assertLogs(prod_controller.logger, level="INFO") as log_cm:
+            code = prod_controller.run(once=True)
+
+        self.assertEqual(code, 0)
+        mock_pipeline.assert_called_once()
+        self.assertTrue(any("Production automation is PAUSED" in msg for msg in log_cm.output))
+        self.assertTrue(any("Production automation is ACTIVE" in msg for msg in log_cm.output))
 
 
 if __name__ == "__main__":

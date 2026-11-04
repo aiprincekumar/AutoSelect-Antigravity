@@ -9,6 +9,7 @@ desktop input attachment, and foreground window detection.
 
 import os
 import sys
+import time
 import logging
 from typing import Tuple, Optional
 from .constants import IS_WINDOWS
@@ -71,7 +72,19 @@ if IS_WINDOWS:
             ("rcNormalPosition", wintypes.RECT),
         ]
 
+    class LASTINPUTINFO(ctypes.Structure):
+        _fields_ = [
+            ("cbSize", wintypes.UINT),
+            ("dwTime", wintypes.DWORD),
+        ]
+
     # Function prototypes
+    user32.GetLastInputInfo.argtypes = [ctypes.c_void_p]
+    user32.GetLastInputInfo.restype = wintypes.BOOL
+
+    kernel32.GetTickCount.argtypes = []
+    kernel32.GetTickCount.restype = wintypes.DWORD
+
     user32.SendInput.argtypes = [wintypes.UINT, ctypes.POINTER(INPUT), ctypes.c_int]
     user32.SendInput.restype = wintypes.UINT
 
@@ -229,12 +242,45 @@ if IS_WINDOWS:
         except Exception as e:
             return f"<Detection Error: {e}>"
 
+    def get_last_input_info() -> int:
+        """
+        Query Windows user32.GetLastInputInfo to obtain the millisecond tick count
+        of the most recent mouse movement, click, or keyboard keystroke.
+        Returns tick count as integer (or current millisecond time on fallback).
+        """
+        try:
+            lii = LASTINPUTINFO()
+            lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
+            if user32.GetLastInputInfo(ctypes.byref(lii)):
+                return int(lii.dwTime)
+        except Exception as e:
+            logger.debug(f"user32.GetLastInputInfo failed: {e}")
+        return int(time.time() * 1000)
+
+    def get_idle_duration_seconds() -> float:
+        """
+        Calculate the elapsed duration in seconds since the last user mouse/keyboard input.
+        Uses user32.GetLastInputInfo and kernel32.GetTickCount with wrap-around safety.
+        Returns elapsed idle seconds as float (0.0 on fallback or non-Windows).
+        """
+        try:
+            lii = LASTINPUTINFO()
+            lii.cbSize = ctypes.sizeof(LASTINPUTINFO)
+            if user32.GetLastInputInfo(ctypes.byref(lii)):
+                current_tick = kernel32.GetTickCount()
+                elapsed_ms = (current_tick - lii.dwTime) & 0xFFFFFFFF
+                return max(0.0, float(elapsed_ms) / 1000.0)
+        except Exception as e:
+            logger.debug(f"Error calculating idle duration: {e}")
+        return 0.0
+
 else:
     # Non-Windows fallback stubs
     user32 = None
     kernel32 = None
     INPUT = None
     WINDOWPLACEMENT = None
+    LASTINPUTINFO = None
     WNDENUMPROC = None
 
     def ensure_input_desktop():
@@ -245,3 +291,9 @@ else:
 
     def get_active_window_title() -> str:
         return "<Platform Not Windows>"
+
+    def get_last_input_info() -> int:
+        return int(time.time() * 1000)
+
+    def get_idle_duration_seconds() -> float:
+        return 0.0
