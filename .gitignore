@@ -4,6 +4,16 @@ venv/
 ENV/
 env/
 
+# Dependencies
+node_modules/
+
+# Secrets & Environment variables
+.env
+.env.*
+*.env
+*.pem
+*.key
+
 # Python byte-code & caches
 __pycache__/
 *.py[cod]
