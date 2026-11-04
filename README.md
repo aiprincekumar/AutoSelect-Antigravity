@@ -61,7 +61,7 @@ When running long autonomous coding workflows with **Google AntiGravity** (such 
 │        LOCAL CONTROL SERVER BRIDGE & VISUAL TELEMETRY DASHBOARD (PORT 8501)     │
 ├─────────────────────────────────────────────────────────────────────────────────┤
 │ • RESTful Control: GET/POST /api/automation/status, /api/automation/start/stop  │
-│ • Server Health Pill: 🟢 Server Bridge Online (8501) | 🔴 Server Bridge Offline  │
+│ • Server Health Pill: 🟢 Server Online | 🔴 Server Offline  │
 │ • 3-State Execution:  🟢 Active | ⏸️ Paused (User Active <60s) | ⚪ Inactive     │
 │ • Silent Runner:     start_dashboard_background.vbs (Headless Window Style 0)   │
 └─────────────────────────────────────────────────────────────────────────────────┘
@@ -74,8 +74,8 @@ When running long autonomous coding workflows with **Google AntiGravity** (such 
 The visual dashboard (`step_4_reporting/reports/dashboard.html`) connects directly to the local Python control daemon (`dashboard_server.py`) running on `http://127.0.0.1:8501/`.
 
 ### 1. Live Server Health Bridge Indicator
-- **🟢 Server Bridge Online (Port 8501):** Displays when the backend control daemon is alive and responding. Enables direct 1-click Start/Stop from the browser.
-- **🔴 Server Bridge Offline:** Displays if the server is stopped or closed. The dashboard maintains an automatic background reconnect poller (every 3 seconds). The instant the server starts, the UI automatically transitions to Online and triggers:
+- **🟢 Server Online:** Displays when the backend control daemon is alive and responding. Enables direct 1-click Start/Stop from the browser.
+- **🔴 Server Offline:** Displays if the server is stopped or closed. The dashboard maintains an automatic background reconnect poller (every 3 seconds). The instant the server starts, the UI automatically transitions to Online and triggers:
   > `🟢 Server Reconnected! Control daemon is active on port 8501.`
 
 ### 2. 3-State Real-Time Process Control

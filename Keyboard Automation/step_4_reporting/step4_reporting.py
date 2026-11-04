@@ -4347,7 +4347,7 @@ class Step4ReportingEngine:
         </div>
       </div>
       <div class="header-actions">
-        <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Server Bridge connection state on port 8501">🟢 Server Bridge Online (Port 8501)</span>
+        <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Control Server active on port 8501">🟢 Server Online</span>
         <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Inactive</span>
         <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect-Commander Automation">
           <span class="control-icon" id="control-icon">▶️</span>
@@ -6210,11 +6210,11 @@ class Step4ReportingEngine:
         if (!bridgePill) return;
         if (isOnline) {{
           bridgePill.className = 'status-pill status-bridge-online';
-          bridgePill.innerHTML = '🟢 Server Bridge Online (Port 8501)';
+          bridgePill.innerHTML = '🟢 Server Online';
           bridgePill.setAttribute('title', 'Server Bridge connected: Control daemon is active on port 8501');
         }} else {{
           bridgePill.className = 'status-pill status-bridge-offline';
-          bridgePill.innerHTML = '🔴 Server Bridge Offline';
+          bridgePill.innerHTML = '🔴 Server Offline';
           bridgePill.setAttribute('title', 'Server Bridge offline on port 8501. Run start_dashboard_background.vbs or run_dashboard.bat to connect.');
         }}
       }}

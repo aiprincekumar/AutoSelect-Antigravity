@@ -1595,7 +1595,7 @@ class TestStep4Reporting(unittest.TestCase):
 
         # 1. Header elements
         self.assertIn('id="server-bridge-pill"', html_content)
-        self.assertIn('🟢 Server Bridge Online (Port 8501)', html_content)
+        self.assertIn('🟢 Server Online', html_content)
         self.assertIn('.status-pill.status-bridge-online', html_content)
         self.assertIn('.status-pill.status-bridge-offline', html_content)
 
