@@ -133,6 +133,12 @@ from core_engine import (
     load_runtime_config,
     save_runtime_config,
     get_settle_delay,
+    get_user_activity_delay,
+    get_window_focus_delay,
+    get_dom_click_settle_delay,
+    get_step4_poll_interval,
+    get_keyboard_timing,
+    get_step_timing,
     apply_logging_config,
 )
 

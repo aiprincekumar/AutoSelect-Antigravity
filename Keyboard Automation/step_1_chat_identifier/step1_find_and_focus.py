@@ -40,11 +40,14 @@ if str(_root_dir) not in sys.path:
 try:
     from core_engine.config_manager import (
         load_runtime_config,
+        get_window_focus_delay,
         apply_logging_config,
     )
 except ImportError:
     def load_runtime_config(p=None):
         return {}
+    def get_window_focus_delay(c=None):
+        return 0.2
     def apply_logging_config(c=None, l=None, s=""):
         pass
 
@@ -559,7 +562,7 @@ class AntigravityFocusManager:
         return top[1], top[2], top[3]
 
     @classmethod
-    def bring_to_foreground(cls, hwnd: int) -> bool:
+    def bring_to_foreground(cls, hwnd: int, focus_delay: Optional[float] = None, config_path: Optional[Union[str, Path]] = None) -> bool:
         if not IS_WINDOWS:
             return False
 
@@ -625,7 +628,14 @@ class AntigravityFocusManager:
             if attached_target:
                 user32.AttachThreadInput(cur_thread, target_thread, False)
 
-        time.sleep(0.2)
+        # Settle delay after window focus from config.json (step1_window_focus_delay_seconds)
+        if focus_delay is not None:
+            eff_delay = max(0.01, float(focus_delay))
+        else:
+            cfg = load_runtime_config(config_path)
+            eff_delay = get_window_focus_delay(cfg)
+
+        time.sleep(eff_delay)
         new_fg = user32.GetForegroundWindow()
         success = (new_fg == hwnd)
         if success:
@@ -671,10 +681,12 @@ def run_step1(
     active_hours: Optional[float] = None,
     require_grill_me: Optional[bool] = None,
     config_path: Optional[Union[str, Path]] = None,
+    focus_delay: Optional[float] = None,
 ) -> int:
     cfg = load_runtime_config(config_path)
     apply_logging_config(cfg, logger, step_name="Step 1: Find & Focus")
     target_state_path, legacy_state_path = resolve_state_file_path(state_file)
+    eff_focus_delay = float(focus_delay) if focus_delay is not None else get_window_focus_delay(cfg)
 
     print("=" * 76)
     print("🚀 [STEP 1 / 2] SEARCH, STATE STORE & WINDOW FOCUS")
@@ -783,7 +795,7 @@ def run_step1(
                 logger.info("[DRY-RUN] Would bring Antigravity window (HWND: %d) to foreground.", hwnd)
                 focused = True
             else:
-                focused = AntigravityFocusManager.bring_to_foreground(hwnd)
+                focused = AntigravityFocusManager.bring_to_foreground(hwnd, focus_delay=eff_focus_delay)
         else:
             logger.warning("Antigravity window not detected. Continuing with state store...")
 
@@ -854,6 +866,7 @@ def main() -> int:
     parser.add_argument("--active-hours", type=float, default=None, help="Hours window to consider session active (defaults to config.json)")
     parser.add_argument("--require-grill-me", dest="require_grill_me", action="store_true", default=None, help="Require pending ask_question (defaults to config.json)")
     parser.add_argument("--no-require-grill-me", dest="require_grill_me", action="store_false", help="Do not require pending ask_question")
+    parser.add_argument("--focus-delay", type=float, default=None, help="Delay in seconds after window focus (defaults to config.json step1_window_focus_delay_seconds)")
     parser.add_argument("--config", type=str, default=None, help="Path to custom runtime config.json")
     parser.add_argument("--no-pause", action="store_true", help="Non-interactive execution flag")
 
@@ -866,7 +879,8 @@ def main() -> int:
         state_file=args.state_file,
         active_hours=args.active_hours,
         require_grill_me=args.require_grill_me,
-        config_path=args.config
+        config_path=args.config,
+        focus_delay=args.focus_delay,
     )
 
 

@@ -1153,6 +1153,14 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn('id="cfg-timing-test-poll"', content)
         self.assertIn('id="cfg-timing-settle"', content)
         self.assertIn('id="cfg-timing-activity-delay"', content)
+        self.assertIn('id="cfg-timing-step4-poll"', content)
+        self.assertIn('id="cfg-timing-step1-focus"', content)
+        self.assertIn('id="cfg-timing-step2-dom-settle"', content)
+        self.assertIn('id="cfg-timing-step3-countdown"', content)
+        self.assertIn('id="cfg-timing-step3-hold-ms"', content)
+        self.assertIn('id="cfg-timing-step3-post-ms"', content)
+        self.assertIn('id="cfg-timing-step3-inter-q-ms"', content)
+        self.assertIn('id="cfg-timing-step3-round-ms"', content)
 
         # 5. AntiGravity Governance Rules
         self.assertIn('id="cfg-antigravity-require-grillme"', content)
@@ -1301,6 +1309,19 @@ class TestStep4Reporting(unittest.TestCase):
         test_interval = cm.get_effective_poll_interval({"mode": "test", "timing": {"step0_poll_interval_test_seconds": 10.0}})
         self.assertEqual(prod_interval, 300.0)
         self.assertEqual(test_interval, 10.0)
+
+        # Verify all granular timing keys
+        kb_timing = cm.get_keyboard_timing(cfg)
+        self.assertIn("countdown", kb_timing)
+        self.assertIn("hold_delay_s", kb_timing)
+        self.assertIn("post_keypress_delay_s", kb_timing)
+        self.assertIn("inter_question_delay_s", kb_timing)
+        self.assertIn("round_completion_pause_s", kb_timing)
+        self.assertEqual(kb_timing["countdown"], 3.0)
+        self.assertEqual(kb_timing["hold_delay_s"], 0.05)
+        self.assertEqual(kb_timing["post_keypress_delay_s"], 0.25)
+        self.assertEqual(kb_timing["inter_question_delay_s"], 0.5)
+        self.assertEqual(kb_timing["round_completion_pause_s"], 1.0)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

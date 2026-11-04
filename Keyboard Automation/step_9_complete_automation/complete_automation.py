@@ -269,6 +269,14 @@ class TimingConfig:
     step0_poll_interval_test_seconds: float = 10.0
     settle_delay_between_steps_seconds: float = 0.8
     step4_user_activity_delay_seconds: float = 10.0
+    step4_poll_interval_seconds: float = 0.1
+    step1_window_focus_delay_seconds: float = 0.2
+    step2_dom_click_settle_delay_seconds: float = 0.3
+    step3_countdown_seconds: float = 3.0
+    step3_key_hold_delay_ms: float = 50.0
+    step3_post_keypress_delay_ms: float = 250.0
+    step3_inter_question_delay_ms: float = 500.0
+    step3_round_completion_pause_ms: float = 1000.0
 
 
 @dataclass
@@ -304,6 +312,14 @@ class AutomationConfig:
             step0_poll_interval_test_seconds=float(timing_data.get("step0_poll_interval_test_seconds", 10.0)),
             settle_delay_between_steps_seconds=float(timing_data.get("settle_delay_between_steps_seconds", 0.8)),
             step4_user_activity_delay_seconds=float(timing_data.get("step4_user_activity_delay_seconds", 10.0)),
+            step4_poll_interval_seconds=float(timing_data.get("step4_poll_interval_seconds", 0.1)),
+            step1_window_focus_delay_seconds=float(timing_data.get("step1_window_focus_delay_seconds", 0.2)),
+            step2_dom_click_settle_delay_seconds=float(timing_data.get("step2_dom_click_settle_delay_seconds", 0.3)),
+            step3_countdown_seconds=float(timing_data.get("step3_countdown_seconds", 3.0)),
+            step3_key_hold_delay_ms=float(timing_data.get("step3_key_hold_delay_ms", 50.0)),
+            step3_post_keypress_delay_ms=float(timing_data.get("step3_post_keypress_delay_ms", 250.0)),
+            step3_inter_question_delay_ms=float(timing_data.get("step3_inter_question_delay_ms", 500.0)),
+            step3_round_completion_pause_ms=float(timing_data.get("step3_round_completion_pause_ms", 1000.0)),
         )
 
         enabled = EnabledStepsConfig(
@@ -484,17 +500,33 @@ class CompleteAutomationController:
                 self.logger.debug("Applying settle delay (%.2fs) before Step %d...", settle_delay, step.step_index)
                 time.sleep(settle_delay)
 
-            # Build command
+            # Build command with explicit config timers
             cmd = [
                 str(self.python_exe),
                 str(step.script_path),
                 "--state-file",
                 str(self.state_file),
             ]
-            if step.step_index == 3:
+            if step.step_index == 1:
+                cmd.extend(["--focus-delay", str(self.config.timing.step1_window_focus_delay_seconds)])
+            elif step.step_index == 2:
+                cmd.extend([
+                    "--dom-settle-delay", str(self.config.timing.step2_dom_click_settle_delay_seconds),
+                    "--settle-delay", str(self.config.timing.settle_delay_between_steps_seconds),
+                ])
+            elif step.step_index == 3:
                 cmd.append("--no-countdown")
-            if step.step_index == 4:
-                cmd.extend(["--delay", str(self.config.timing.step4_user_activity_delay_seconds)])
+                cmd.extend([
+                    "--step-delay", str(self.config.timing.step3_post_keypress_delay_ms / 1000.0),
+                    "--hold-delay", str(self.config.timing.step3_key_hold_delay_ms / 1000.0),
+                    "--inter-question-delay", str(self.config.timing.step3_inter_question_delay_ms / 1000.0),
+                    "--round-completion-pause", str(self.config.timing.step3_round_completion_pause_ms / 1000.0),
+                ])
+            elif step.step_index == 4:
+                cmd.extend([
+                    "--delay", str(self.config.timing.step4_user_activity_delay_seconds),
+                    "--poll-interval", str(self.config.timing.step4_poll_interval_seconds),
+                ])
 
             if extra_args:
                 cmd.extend(extra_args)

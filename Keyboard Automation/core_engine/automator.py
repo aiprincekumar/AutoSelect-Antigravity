@@ -47,6 +47,11 @@ from .window_manager import (
     get_window_info,
     ensure_window_on_screen,
 )
+from .config_manager import (
+    load_runtime_config,
+    get_keyboard_timing,
+    get_settle_delay,
+)
 
 logger = logging.getLogger("Step3KeyboardAutomation.Automator")
 
@@ -71,8 +76,8 @@ class GrillMeAutomator:
     def __init__(
         self,
         engine: str = "auto",
-        step_delay: float = 0.22,
-        hold_delay: float = 0.05,
+        step_delay: Optional[float] = None,
+        hold_delay: Optional[float] = None,
         option: str = "1",
         skip_ctrl_l: bool = False,
         skip_enter: bool = False,
@@ -80,13 +85,31 @@ class GrillMeAutomator:
         target_window: str = DEFAULT_TARGET,
         auto_focus: bool = True,
         auto_maximize: bool = True,
-        settle_delay: float = 0.3,
+        settle_delay: Optional[float] = None,
         questions: Optional[Union[int, str]] = None,
         options_list: Optional[Union[List[Union[str, int]], str]] = None,
         state_file: Optional[str] = None,
+        config_path: Optional[Union[str, Path]] = None,
+        post_keypress_delay: Optional[float] = None,
+        inter_question_delay: Optional[float] = None,
+        round_completion_pause: Optional[float] = None,
+        countdown: Optional[float] = None,
     ):
-        self.step_delay = max(0.05, step_delay)
-        self.hold_delay = max(0.01, hold_delay)
+        self.config_path = config_path
+        self.config = load_runtime_config(config_path)
+        kb_timing = get_keyboard_timing(self.config)
+
+        # Wire all granular delays directly to config.json
+        self.hold_delay = max(0.001, float(hold_delay if hold_delay is not None else kb_timing["hold_delay_s"]))
+        eff_post = post_keypress_delay if post_keypress_delay is not None else (step_delay if step_delay is not None else kb_timing["post_keypress_delay_s"])
+        self.post_keypress_delay = max(0.001, float(eff_post))
+        self.step_delay = self.post_keypress_delay
+        self.inter_question_delay = max(0.001, float(inter_question_delay if inter_question_delay is not None else kb_timing["inter_question_delay_s"]))
+        self.round_completion_pause = max(0.0, float(round_completion_pause if round_completion_pause is not None else kb_timing["round_completion_pause_s"]))
+        self.countdown = max(0.0, float(countdown if countdown is not None else kb_timing["countdown"]))
+
+        eff_settle = settle_delay if settle_delay is not None else get_settle_delay(self.config)
+        self.settle_delay = max(0.0, float(eff_settle))
         self.option = str(option)
         self.skip_ctrl_l = skip_ctrl_l
         self.skip_enter = skip_enter
@@ -94,7 +117,6 @@ class GrillMeAutomator:
         self.target_window = target_window or self.DEFAULT_TARGET
         self.auto_focus = auto_focus
         self.auto_maximize = auto_maximize
-        self.settle_delay = max(0.0, settle_delay)
         self.target_hwnd: Optional[int] = None
         self.target_title: Optional[str] = None
         self.state_file = state_file
@@ -358,8 +380,9 @@ class GrillMeAutomator:
         )
         return success
 
-    def run_countdown(self, seconds: int = 5):
+    def run_countdown(self, seconds: Optional[int] = None):
         """Displays visual countdown in terminal allowing user or system to focus target window."""
+        cd_seconds = int(seconds if seconds is not None else self.countdown)
         print("\n" + "=" * 65)
         print("  [*] GRILL ME AUTOMATION - HYBRID FOCUS & TARGETING")
         print("=" * 65)
@@ -368,11 +391,11 @@ class GrillMeAutomator:
         if self.auto_focus or self.auto_maximize:
             self.prepare_target_window()
 
-        if seconds > 0:
+        if cd_seconds > 0:
             print("Target window is positioned and focused.")
-            print(f"Automation sequence will execute in {seconds} seconds...\n")
+            print(f"Automation sequence will execute in {cd_seconds} seconds...\n")
 
-            for remaining in range(seconds, 0, -1):
+            for remaining in range(cd_seconds, 0, -1):
                 curr_title = get_active_window_title() if IS_WINDOWS else "Active Window"
                 display_title = (curr_title[:45] + "...") if len(curr_title) > 48 else curr_title
                 sys.stdout.write(f"\r  [-] Starting in {remaining:2d}s... | Active Window: [{display_title}]")
@@ -513,9 +536,10 @@ class GrillMeAutomator:
             logger.error("No valid automation engine available on this platform.")
             return False
 
-        # Define settle pause and UI transition pause
-        settle_pause = max(0.20, min(0.25, self.step_delay)) if not self.dry_run else 0.001
-        transition_pause = max(0.45, self.step_delay * 2) if not self.dry_run else 0.001
+        # Define settle pause, UI transition pause, and round completion pause directly from config.json
+        settle_pause = max(0.001, self.post_keypress_delay) if not self.dry_run else 0.001
+        transition_pause = max(0.001, self.inter_question_delay) if not self.dry_run else 0.001
+        round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
 
         try:
             for q_idx in range(1, total_questions + 1):
@@ -608,6 +632,11 @@ class GrillMeAutomator:
                         time.sleep(transition_pause)
                 else:
                     logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
+
+            # Round completion pause directly from config.json (step3_round_completion_pause_ms)
+            if round_pause > 0 and not self.dry_run:
+                logger.info(f"Round completion pause ({round_pause:.2f}s) after full questionnaire sequence...")
+                time.sleep(round_pause)
 
             logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {total_questions} question(s) via physical keystrokes!")
             return True

@@ -45,6 +45,7 @@ try:
     from core_engine.config_manager import (
         load_runtime_config,
         get_settle_delay,
+        get_dom_click_settle_delay,
         apply_logging_config,
     )
 except ImportError:
@@ -52,6 +53,8 @@ except ImportError:
         return {}
     def get_settle_delay(c=None):
         return 0.8
+    def get_dom_click_settle_delay(c=None):
+        return 0.3
     def apply_logging_config(c=None, l=None, s=""):
         pass
 
@@ -312,8 +315,15 @@ class AntigravityGUISelector:
         hwnd: int = 0,
         dry_run: bool = False,
         select_option_number: Optional[int] = None,
-        auto_submit: bool = False
+        auto_submit: bool = False,
+        dom_click_settle_delay: Optional[float] = None,
+        settle_delay: Optional[float] = None,
+        config_path: Optional[Union[str, Path]] = None,
     ) -> Dict[str, Any]:
+        cfg = load_runtime_config(config_path)
+        eff_dom_settle = float(dom_click_settle_delay) if dom_click_settle_delay is not None else get_dom_click_settle_delay(cfg)
+        eff_settle = float(settle_delay) if settle_delay is not None else get_settle_delay(cfg)
+
         result = {
             "success": False,
             "method": "none",
@@ -386,7 +396,7 @@ class AntigravityGUISelector:
                     }})()
                     """
                     cdp.eval_js(dispatch_js)
-                    time.sleep(0.4)
+                    time.sleep(eff_dom_settle)
 
                     result["success"] = True
                     result["method"] = "cdp_dom_click"
@@ -577,11 +587,13 @@ def run_step2(
     select_option: Optional[int] = None,
     auto_submit: bool = False,
     settle_delay: Optional[float] = None,
+    dom_click_settle_delay: Optional[float] = None,
     config_path: Optional[Union[str, Path]] = None,
 ) -> int:
     cfg = load_runtime_config(config_path)
     apply_logging_config(cfg, logger, step_name="Step 2: GUI Chat Select")
     effective_settle = float(settle_delay) if settle_delay is not None else get_settle_delay(cfg)
+    effective_dom_settle = float(dom_click_settle_delay) if dom_click_settle_delay is not None else get_dom_click_settle_delay(cfg)
 
     target_state_path, legacy_state_path = resolve_state_file_path(state_file)
 
@@ -646,7 +658,10 @@ def run_step2(
         hwnd=hwnd,
         dry_run=dry_run,
         select_option_number=select_option,
-        auto_submit=auto_submit
+        auto_submit=auto_submit,
+        dom_click_settle_delay=effective_dom_settle,
+        settle_delay=effective_settle,
+        config_path=config_path,
     )
 
     # 3. Update and Save State
@@ -698,7 +713,8 @@ def main() -> int:
     parser.add_argument("--dry-run", action="store_true", help="Simulate without clicking or moving mouse")
     parser.add_argument("--select-option", type=int, default=None, help="Option number to choose (e.g. 1)")
     parser.add_argument("--auto-submit", action="store_true", help="Automatically submit option after selecting")
-    parser.add_argument("--settle-delay", type=float, default=None, help="Delay in seconds after selection (defaults to config.json)")
+    parser.add_argument("--settle-delay", type=float, default=None, help="Delay in seconds after selection (defaults to config.json settle_delay_between_steps_seconds)")
+    parser.add_argument("--dom-settle-delay", type=float, default=None, help="Delay in seconds after DOM click (defaults to config.json step2_dom_click_settle_delay_seconds)")
     parser.add_argument("--config", type=str, default=None, help="Custom runtime config.json path")
     parser.add_argument("--no-pause", action="store_true", help="Non-interactive execution flag")
 
@@ -710,6 +726,7 @@ def main() -> int:
         select_option=args.select_option,
         auto_submit=args.auto_submit,
         settle_delay=args.settle_delay,
+        dom_click_settle_delay=args.dom_settle_delay,
         config_path=args.config
     )
 

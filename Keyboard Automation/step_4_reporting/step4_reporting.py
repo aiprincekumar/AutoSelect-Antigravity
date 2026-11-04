@@ -59,6 +59,11 @@ from core_engine.config_manager import (
     get_effective_poll_interval,
     get_settle_delay,
     get_user_activity_delay,
+    get_window_focus_delay,
+    get_dom_click_settle_delay,
+    get_step4_poll_interval,
+    get_keyboard_timing,
+    get_step_timing,
     apply_logging_config,
 )
 
@@ -1421,6 +1426,14 @@ class Step4ReportingEngine:
         step0_poll_test = timing_cfg.get("step0_poll_interval_test_seconds", 10.0)
         settle_delay = timing_cfg.get("settle_delay_between_steps_seconds", 0.8)
         step4_delay = timing_cfg.get("step4_user_activity_delay_seconds", 10.0)
+        step4_poll = timing_cfg.get("step4_poll_interval_seconds", 0.1)
+        step1_focus = timing_cfg.get("step1_window_focus_delay_seconds", 0.2)
+        step2_dom_settle = timing_cfg.get("step2_dom_click_settle_delay_seconds", 0.3)
+        step3_countdown = timing_cfg.get("step3_countdown_seconds", 3.0)
+        step3_hold_ms = timing_cfg.get("step3_key_hold_delay_ms", 50.0)
+        step3_post_ms = timing_cfg.get("step3_post_keypress_delay_ms", 250.0)
+        step3_inter_q_ms = timing_cfg.get("step3_inter_question_delay_ms", 500.0)
+        step3_round_ms = timing_cfg.get("step3_round_completion_pause_ms", 1000.0)
 
         antigravity_cfg = runtime_cfg.get("antigravity", {})
         require_grill_me_checked = "checked" if antigravity_cfg.get("require_grill_me", True) else ""
@@ -4206,6 +4219,78 @@ class Step4ReportingEngine:
                     <input type="number" id="cfg-timing-activity-delay" class="cfg-num-input" value="{step4_delay}" step="0.5" min="0" max="120">
                     <span class="input-card-help">Wait time after mouse/key detection before opening report</span>
                   </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step4-poll">
+                      <span>Step 4 Activity Polling Interval</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step4-poll" class="cfg-num-input" value="{step4_poll}" step="0.05" min="0.01" max="5">
+                    <span class="input-card-help">Polling interval for user mouse and keystroke detection</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step1-focus">
+                      <span>Step 1 Window Focus Delay</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step1-focus" class="cfg-num-input" value="{step1_focus}" step="0.05" min="0" max="5">
+                    <span class="input-card-help">Settle buffer after bringing Antigravity window to foreground</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step2-dom-settle">
+                      <span>Step 2 DOM Click Settle Delay</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step2-dom-settle" class="cfg-num-input" value="{step2_dom_settle}" step="0.05" min="0" max="5">
+                    <span class="input-card-help">Settle pause after simulated click on chat row in GUI</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step3-countdown">
+                      <span>Step 3 Countdown Delay</span>
+                      <span class="unit-tag">sec</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step3-countdown" class="cfg-num-input" value="{step3_countdown}" step="0.5" min="0" max="30">
+                    <span class="input-card-help">Pre-execution countdown before keystrokes are transmitted</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step3-hold-ms">
+                      <span>Step 3 Key Hold Duration</span>
+                      <span class="unit-tag">ms</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step3-hold-ms" class="cfg-num-input" value="{step3_hold_ms}" step="10" min="5" max="1000">
+                    <span class="input-card-help">Hardware scan code hold duration during keyboard press</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step3-post-ms">
+                      <span>Step 3 Post-Keypress Pause</span>
+                      <span class="unit-tag">ms</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step3-post-ms" class="cfg-num-input" value="{step3_post_ms}" step="25" min="10" max="5000">
+                    <span class="input-card-help">Pause after each individual key stroke (बटन दबने के बाद का पॉज़)</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step3-inter-q-ms">
+                      <span>Step 3 Inter-Question Delay</span>
+                      <span class="unit-tag">ms</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step3-inter-q-ms" class="cfg-num-input" value="{step3_inter_q_ms}" step="50" min="50" max="10000">
+                    <span class="input-card-help">Pause between answering consecutive questionnaire prompts</span>
+                  </div>
+
+                  <div class="input-card">
+                    <label class="input-card-label" for="cfg-timing-step3-round-ms">
+                      <span>Step 3 Round Completion Pause</span>
+                      <span class="unit-tag">ms</span>
+                    </label>
+                    <input type="number" id="cfg-timing-step3-round-ms" class="cfg-num-input" value="{step3_round_ms}" step="100" min="100" max="30000">
+                    <span class="input-card-help">Cooldown pause after completing an entire questionnaire round</span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -4642,6 +4727,14 @@ class Step4ReportingEngine:
       const cfgTimingTestPoll = document.getElementById('cfg-timing-test-poll');
       const cfgTimingSettle = document.getElementById('cfg-timing-settle');
       const cfgTimingActivityDelay = document.getElementById('cfg-timing-activity-delay');
+      const cfgTimingStep4Poll = document.getElementById('cfg-timing-step4-poll');
+      const cfgTimingStep1Focus = document.getElementById('cfg-timing-step1-focus');
+      const cfgTimingStep2DomSettle = document.getElementById('cfg-timing-step2-dom-settle');
+      const cfgTimingStep3Countdown = document.getElementById('cfg-timing-step3-countdown');
+      const cfgTimingStep3HoldMs = document.getElementById('cfg-timing-step3-hold-ms');
+      const cfgTimingStep3PostMs = document.getElementById('cfg-timing-step3-post-ms');
+      const cfgTimingStep3InterQMs = document.getElementById('cfg-timing-step3-inter-q-ms');
+      const cfgTimingStep3RoundMs = document.getElementById('cfg-timing-step3-round-ms');
 
       const cfgAntigravityRequireGrillme = document.getElementById('cfg-antigravity-require-grillme');
       const cfgAntigravityActiveHours = document.getElementById('cfg-antigravity-active-hours');
@@ -4670,6 +4763,14 @@ class Step4ReportingEngine:
         const tPoll = cfgTimingTestPoll ? parseFloat(cfgTimingTestPoll.value) || 10.0 : 10.0;
         const setl = cfgTimingSettle ? parseFloat(cfgTimingSettle.value) || 0.8 : 0.8;
         const actDel = cfgTimingActivityDelay ? parseFloat(cfgTimingActivityDelay.value) || 10.0 : 10.0;
+        const s4Poll = cfgTimingStep4Poll ? parseFloat(cfgTimingStep4Poll.value) || 0.1 : 0.1;
+        const s1Focus = cfgTimingStep1Focus ? parseFloat(cfgTimingStep1Focus.value) || 0.2 : 0.2;
+        const s2DomSettle = cfgTimingStep2DomSettle ? parseFloat(cfgTimingStep2DomSettle.value) || 0.3 : 0.3;
+        const s3Countdown = cfgTimingStep3Countdown ? parseFloat(cfgTimingStep3Countdown.value) || 3.0 : 3.0;
+        const s3HoldMs = cfgTimingStep3HoldMs ? parseFloat(cfgTimingStep3HoldMs.value) || 50.0 : 50.0;
+        const s3PostMs = cfgTimingStep3PostMs ? parseFloat(cfgTimingStep3PostMs.value) || 250.0 : 250.0;
+        const s3InterQMs = cfgTimingStep3InterQMs ? parseFloat(cfgTimingStep3InterQMs.value) || 500.0 : 500.0;
+        const s3RoundMs = cfgTimingStep3RoundMs ? parseFloat(cfgTimingStep3RoundMs.value) || 1000.0 : 1000.0;
 
         const reqGm = cfgAntigravityRequireGrillme ? cfgAntigravityRequireGrillme.checked : true;
         const actHrs = cfgAntigravityActiveHours ? parseFloat(cfgAntigravityActiveHours.value) || 12.0 : 12.0;
@@ -4684,7 +4785,15 @@ class Step4ReportingEngine:
             step0_poll_interval_prod_seconds: pPoll,
             step0_poll_interval_test_seconds: tPoll,
             settle_delay_between_steps_seconds: setl,
-            step4_user_activity_delay_seconds: actDel
+            step4_user_activity_delay_seconds: actDel,
+            step4_poll_interval_seconds: s4Poll,
+            step1_window_focus_delay_seconds: s1Focus,
+            step2_dom_click_settle_delay_seconds: s2DomSettle,
+            step3_countdown_seconds: s3Countdown,
+            step3_key_hold_delay_ms: s3HoldMs,
+            step3_post_keypress_delay_ms: s3PostMs,
+            step3_inter_question_delay_ms: s3InterQMs,
+            step3_round_completion_pause_ms: s3RoundMs
           }},
           enabled_steps: {{
             step1_find_and_focus: s1,
@@ -4729,6 +4838,9 @@ class Step4ReportingEngine:
       const runtimeInputs = [
         cfgStep1Enabled, cfgStep2Enabled, cfgStep3Enabled, cfgStep4Enabled,
         cfgTimingProdPoll, cfgTimingTestPoll, cfgTimingSettle, cfgTimingActivityDelay,
+        cfgTimingStep4Poll, cfgTimingStep1Focus, cfgTimingStep2DomSettle,
+        cfgTimingStep3Countdown, cfgTimingStep3HoldMs, cfgTimingStep3PostMs,
+        cfgTimingStep3InterQMs, cfgTimingStep3RoundMs,
         cfgAntigravityRequireGrillme, cfgAntigravityActiveHours,
         cfgLoggingVerbose, cfgLoggingFile
       ];
@@ -4834,10 +4946,18 @@ class Step4ReportingEngine:
           if (cfgStep4Enabled) cfgStep4Enabled.checked = steps.step4_reporting !== false;
 
           const tm = baseRuntimeConfig.timing || {{}};
-          if (cfgTimingProdPoll) cfgTimingProdPoll.value = tm.step0_poll_interval_prod_seconds || 300.0;
-          if (cfgTimingTestPoll) cfgTimingTestPoll.value = tm.step0_poll_interval_test_seconds || 10.0;
-          if (cfgTimingSettle) cfgTimingSettle.value = tm.settle_delay_between_steps_seconds || 0.8;
-          if (cfgTimingActivityDelay) cfgTimingActivityDelay.value = tm.step4_user_activity_delay_seconds || 10.0;
+          if (cfgTimingProdPoll) cfgTimingProdPoll.value = tm.step0_poll_interval_prod_seconds ?? 300.0;
+          if (cfgTimingTestPoll) cfgTimingTestPoll.value = tm.step0_poll_interval_test_seconds ?? 10.0;
+          if (cfgTimingSettle) cfgTimingSettle.value = tm.settle_delay_between_steps_seconds ?? 0.8;
+          if (cfgTimingActivityDelay) cfgTimingActivityDelay.value = tm.step4_user_activity_delay_seconds ?? 10.0;
+          if (cfgTimingStep4Poll) cfgTimingStep4Poll.value = tm.step4_poll_interval_seconds ?? 0.1;
+          if (cfgTimingStep1Focus) cfgTimingStep1Focus.value = tm.step1_window_focus_delay_seconds ?? 0.2;
+          if (cfgTimingStep2DomSettle) cfgTimingStep2DomSettle.value = tm.step2_dom_click_settle_delay_seconds ?? 0.3;
+          if (cfgTimingStep3Countdown) cfgTimingStep3Countdown.value = tm.step3_countdown_seconds ?? 3.0;
+          if (cfgTimingStep3HoldMs) cfgTimingStep3HoldMs.value = tm.step3_key_hold_delay_ms ?? 50.0;
+          if (cfgTimingStep3PostMs) cfgTimingStep3PostMs.value = tm.step3_post_keypress_delay_ms ?? 250.0;
+          if (cfgTimingStep3InterQMs) cfgTimingStep3InterQMs.value = tm.step3_inter_question_delay_ms ?? 500.0;
+          if (cfgTimingStep3RoundMs) cfgTimingStep3RoundMs.value = tm.step3_round_completion_pause_ms ?? 1000.0;
 
           const ag = baseRuntimeConfig.antigravity || {{}};
           if (cfgAntigravityRequireGrillme) cfgAntigravityRequireGrillme.checked = ag.require_grill_me !== false;
@@ -5647,39 +5767,50 @@ class Step4ReportingEngine:
 
     def watch_and_launch(
         self,
-        delay_seconds: float = 10.0,
+        delay_seconds: Optional[float] = None,
         timeout: Optional[float] = None,
-        poll_interval: float = 0.25,
+        poll_interval: Optional[float] = None,
     ) -> bool:
         """
         Two-Way Process:
           1. Wait silently until user moves mouse or strikes a key.
-          2. Once user activity is detected, wait exactly delay_seconds (10s).
+          2. Once user activity is detected, wait exactly delay_seconds (from config or param).
           3. Pop up dashboard.html in the user's browser.
           4. Exit cleanly (Universal Rule 26 hygiene).
         """
-        detected = watch_for_user_input(timeout=timeout, poll_interval=poll_interval)
+        cfg = self.load_runtime_config()
+        eff_delay = delay_seconds if delay_seconds is not None else get_user_activity_delay(cfg)
+        eff_poll = poll_interval if poll_interval is not None else get_step4_poll_interval(cfg)
+        detected = watch_for_user_input(timeout=timeout, poll_interval=eff_poll)
         if detected:
-            if delay_seconds > 0:
-                time.sleep(delay_seconds)
+            if eff_delay > 0:
+                time.sleep(eff_delay)
             self.open_dashboard()
             return True
         return False
 
-    def spawn_background_watcher(self, delay_seconds: float = 10.0) -> bool:
+    def spawn_background_watcher(
+        self,
+        delay_seconds: Optional[float] = None,
+        poll_interval: Optional[float] = None,
+    ) -> bool:
         """
         Spawn a completely detached background worker process that monitors for user input
-        and opens the dashboard 10s after movement. Allows the main pipeline to complete
+        and opens the dashboard after configured delay. Allows the main pipeline to complete
         without blocking.
         """
         python_exe = sys.executable
         script_path = self._this_dir / "step4_reporting.py"
+        cfg = self.load_runtime_config()
+        eff_delay = delay_seconds if delay_seconds is not None else get_user_activity_delay(cfg)
+        eff_poll = poll_interval if poll_interval is not None else get_step4_poll_interval(cfg)
 
         cmd = [
             str(python_exe),
             str(script_path),
             "--watch-worker",
-            "--delay", str(delay_seconds),
+            "--delay", str(eff_delay),
+            "--poll-interval", str(eff_poll),
             "--reports-dir", str(self.reports_dir),
             "--history-file", str(self.history_file),
         ]
@@ -5755,8 +5886,14 @@ def main() -> int:
     parser.add_argument(
         "--delay",
         type=float,
-        default=10.0,
-        help="Delay in seconds after user input detection before showing dashboard (default: 10.0s)"
+        default=None,
+        help="Delay in seconds after user input detection before showing dashboard (default: from config.json)"
+    )
+    parser.add_argument(
+        "--poll-interval",
+        type=float,
+        default=None,
+        help="Polling interval in seconds between user activity checks (default: from config.json)"
     )
     parser.add_argument(
         "--timeout",
@@ -5815,7 +5952,7 @@ def main() -> int:
 
     # Internal Detached Watcher Worker
     if args.watch_worker:
-        engine.watch_and_launch(delay_seconds=args.delay, timeout=args.timeout)
+        engine.watch_and_launch(delay_seconds=args.delay, timeout=args.timeout, poll_interval=args.poll_interval)
         return 0
 
     # Ingest the latest run from target_chat.json
@@ -5827,13 +5964,13 @@ def main() -> int:
 
     # If --watch, run watcher synchronously
     if args.watch:
-        engine.watch_and_launch(delay_seconds=args.delay, timeout=args.timeout)
+        engine.watch_and_launch(delay_seconds=args.delay, timeout=args.timeout, poll_interval=args.poll_interval)
         return 0
 
     # Default Automated Pipeline Mode:
     # Spawn background watcher so calling pipeline exits cleanly, while watcher waits
-    # for physical user input + 10s delay to show dashboard without terminal clutter!
-    engine.spawn_background_watcher(delay_seconds=args.delay)
+    # for physical user input + delay to show dashboard without terminal clutter!
+    engine.spawn_background_watcher(delay_seconds=args.delay, poll_interval=args.poll_interval)
     return 0
 
 

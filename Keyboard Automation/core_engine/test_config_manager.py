@@ -31,6 +31,11 @@ from core_engine.config_manager import (
     get_effective_poll_interval,
     get_settle_delay,
     get_user_activity_delay,
+    get_window_focus_delay,
+    get_dom_click_settle_delay,
+    get_step4_poll_interval,
+    get_keyboard_timing,
+    get_step_timing,
     is_step_enabled,
     apply_logging_config,
     DEFAULT_RUNTIME_CONFIG,
@@ -71,6 +76,14 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(cfg["timing"]["step0_poll_interval_test_seconds"], 10.0)
         self.assertEqual(cfg["timing"]["settle_delay_between_steps_seconds"], 0.8)
         self.assertEqual(cfg["timing"]["step4_user_activity_delay_seconds"], 10.0)
+        self.assertEqual(cfg["timing"]["step4_poll_interval_seconds"], 0.1)
+        self.assertEqual(cfg["timing"]["step1_window_focus_delay_seconds"], 0.2)
+        self.assertEqual(cfg["timing"]["step2_dom_click_settle_delay_seconds"], 0.3)
+        self.assertEqual(cfg["timing"]["step3_countdown_seconds"], 3.0)
+        self.assertEqual(cfg["timing"]["step3_key_hold_delay_ms"], 50.0)
+        self.assertEqual(cfg["timing"]["step3_post_keypress_delay_ms"], 250.0)
+        self.assertEqual(cfg["timing"]["step3_inter_question_delay_ms"], 500.0)
+        self.assertEqual(cfg["timing"]["step3_round_completion_pause_ms"], 1000.0)
 
         self.assertTrue(cfg["enabled_steps"]["step1_find_and_focus"])
         self.assertTrue(cfg["enabled_steps"]["step2_gui_chat_select"])
@@ -149,6 +162,52 @@ class TestConfigManager(unittest.TestCase):
         cfg_verbose = {"logging": {"verbose": True, "log_file": "test_auto.log"}}
         apply_logging_config(cfg_verbose, test_logger, step_name="UnitTest")
         self.assertEqual(test_logger.level, logging.INFO)
+
+    def test_09_all_granular_timing_helpers(self):
+        """Verify all granular timing helpers return exact values."""
+        cfg = {
+            "timing": {
+                "step0_poll_interval_prod_seconds": 120.0,
+                "step0_poll_interval_test_seconds": 5.0,
+                "settle_delay_between_steps_seconds": 1.2,
+                "step4_user_activity_delay_seconds": 15.0,
+                "step4_poll_interval_seconds": 0.05,
+                "step1_window_focus_delay_seconds": 0.5,
+                "step2_dom_click_settle_delay_seconds": 0.6,
+                "step3_countdown_seconds": 2.0,
+                "step3_key_hold_delay_ms": 60.0,
+                "step3_post_keypress_delay_ms": 300.0,
+                "step3_inter_question_delay_ms": 600.0,
+                "step3_round_completion_pause_ms": 1500.0,
+            }
+        }
+        self.assertEqual(get_settle_delay(cfg), 1.2)
+        self.assertEqual(get_user_activity_delay(cfg), 15.0)
+        self.assertEqual(get_window_focus_delay(cfg), 0.5)
+        self.assertEqual(get_dom_click_settle_delay(cfg), 0.6)
+        self.assertEqual(get_step4_poll_interval(cfg), 0.05)
+
+        kb_timing = get_keyboard_timing(cfg)
+        self.assertEqual(kb_timing["countdown"], 2.0)
+        self.assertEqual(kb_timing["hold_delay_s"], 0.06)
+        self.assertEqual(kb_timing["post_keypress_delay_s"], 0.3)
+        self.assertEqual(kb_timing["inter_question_delay_s"], 0.6)
+        self.assertEqual(kb_timing["round_completion_pause_s"], 1.5)
+
+        s0 = get_step_timing(0, cfg)
+        self.assertEqual(s0["step0_poll_interval_prod_seconds"], 120.0)
+        s1 = get_step_timing(1, cfg)
+        self.assertEqual(s1["step1_window_focus_delay_seconds"], 0.5)
+        s2 = get_step_timing(2, cfg)
+        self.assertEqual(s2["step2_dom_click_settle_delay_seconds"], 0.6)
+        s3 = get_step_timing(3, cfg)
+        self.assertEqual(s3["countdown"], 2.0)
+        self.assertEqual(s3["post_keypress_delay_s"], 0.3)
+        self.assertEqual(s3["round_completion_pause_s"], 1.5)
+        s4 = get_step_timing(4, cfg)
+        self.assertEqual(s4["step4_user_activity_delay_seconds"], 15.0)
+        s9 = get_step_timing(9, cfg)
+        self.assertEqual(s9["settle_delay_between_steps_seconds"], 1.2)
 
 
 if __name__ == "__main__":

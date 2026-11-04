@@ -38,6 +38,14 @@ DEFAULT_RUNTIME_CONFIG: Dict[str, Any] = {
         "step0_poll_interval_test_seconds": 10.0,
         "settle_delay_between_steps_seconds": 0.8,
         "step4_user_activity_delay_seconds": 10.0,
+        "step4_poll_interval_seconds": 0.1,
+        "step1_window_focus_delay_seconds": 0.2,
+        "step2_dom_click_settle_delay_seconds": 0.3,
+        "step3_countdown_seconds": 3.0,
+        "step3_key_hold_delay_ms": 50.0,
+        "step3_post_keypress_delay_ms": 250.0,
+        "step3_inter_question_delay_ms": 500.0,
+        "step3_round_completion_pause_ms": 1000.0,
     },
     "enabled_steps": {
         "step1_find_and_focus": True,
@@ -129,6 +137,12 @@ def load_runtime_config(path: Optional[Union[str, Path]] = None) -> Dict[str, An
                         cfg["timing"][k] = float(timing_data[k])
                     except (ValueError, TypeError):
                         pass
+            for k, v in timing_data.items():
+                if k not in cfg["timing"]:
+                    try:
+                        cfg["timing"][k] = float(v)
+                    except (ValueError, TypeError):
+                        pass
 
         # Merge enabled_steps section
         enabled_data = data.get("enabled_steps")
@@ -215,6 +229,77 @@ def get_user_activity_delay(config_data: Optional[Dict[str, Any]] = None) -> flo
     """Returns Step 4 user inactivity buffer in seconds (default: 10.0s)."""
     cfg = config_data if config_data is not None else load_runtime_config()
     return float(cfg.get("timing", {}).get("step4_user_activity_delay_seconds", 10.0))
+
+
+def get_window_focus_delay(config_data: Optional[Dict[str, Any]] = None) -> float:
+    """Returns Step 1 window focus settle delay in seconds (default: 0.2s)."""
+    cfg = config_data if config_data is not None else load_runtime_config()
+    return float(cfg.get("timing", {}).get("step1_window_focus_delay_seconds", 0.2))
+
+
+def get_dom_click_settle_delay(config_data: Optional[Dict[str, Any]] = None) -> float:
+    """Returns Step 2 DOM click settle delay in seconds (default: 0.3s)."""
+    cfg = config_data if config_data is not None else load_runtime_config()
+    return float(cfg.get("timing", {}).get("step2_dom_click_settle_delay_seconds", 0.3))
+
+
+def get_step4_poll_interval(config_data: Optional[Dict[str, Any]] = None) -> float:
+    """Returns Step 4 user activity polling interval in seconds (default: 0.1s)."""
+    cfg = config_data if config_data is not None else load_runtime_config()
+    return float(cfg.get("timing", {}).get("step4_poll_interval_seconds", 0.1))
+
+
+def get_keyboard_timing(config_data: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
+    """
+    Returns Step 3 keyboard automation timing dictionary:
+      - countdown: float (seconds)
+      - hold_delay_s: float (seconds)
+      - post_keypress_delay_s: float (seconds)
+      - inter_question_delay_s: float (seconds)
+      - round_completion_pause_s: float (seconds)
+    """
+    cfg = config_data if config_data is not None else load_runtime_config()
+    timing = cfg.get("timing", {})
+    return {
+        "countdown": float(timing.get("step3_countdown_seconds", 3.0)),
+        "hold_delay_s": float(timing.get("step3_key_hold_delay_ms", 50.0)) / 1000.0,
+        "post_keypress_delay_s": float(timing.get("step3_post_keypress_delay_ms", 250.0)) / 1000.0,
+        "inter_question_delay_s": float(timing.get("step3_inter_question_delay_ms", 500.0)) / 1000.0,
+        "round_completion_pause_s": float(timing.get("step3_round_completion_pause_ms", 1000.0)) / 1000.0,
+    }
+
+
+def get_step_timing(step_idx: int, config_data: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
+    """
+    Returns granular timing parameters for a given step index (0..4, 9).
+    """
+    cfg = config_data if config_data is not None else load_runtime_config()
+    timing = cfg.get("timing", {})
+    if step_idx == 0:
+        return {
+            "step0_poll_interval_prod_seconds": float(timing.get("step0_poll_interval_prod_seconds", 300.0)),
+            "step0_poll_interval_test_seconds": float(timing.get("step0_poll_interval_test_seconds", 10.0)),
+        }
+    elif step_idx == 1:
+        return {
+            "step1_window_focus_delay_seconds": float(timing.get("step1_window_focus_delay_seconds", 0.2)),
+        }
+    elif step_idx == 2:
+        return {
+            "step2_dom_click_settle_delay_seconds": float(timing.get("step2_dom_click_settle_delay_seconds", 0.3)),
+            "settle_delay_between_steps_seconds": float(timing.get("settle_delay_between_steps_seconds", 0.8)),
+        }
+    elif step_idx == 3:
+        return get_keyboard_timing(cfg)
+    elif step_idx == 4:
+        return {
+            "step4_user_activity_delay_seconds": float(timing.get("step4_user_activity_delay_seconds", 10.0)),
+            "step4_poll_interval_seconds": float(timing.get("step4_poll_interval_seconds", 0.1)),
+        }
+    else:
+        return {
+            "settle_delay_between_steps_seconds": float(timing.get("settle_delay_between_steps_seconds", 0.8)),
+        }
 
 
 def is_step_enabled(

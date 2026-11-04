@@ -16,7 +16,12 @@ import logging
 
 from .constants import IS_WINDOWS, DEFAULT_TARGET_WINDOW, STEP_ID, STEP_NUMBER, STEP_NAME
 from .automator import GrillMeAutomator, Step3KeyboardAutomator
-from .config_manager import load_runtime_config, get_settle_delay, apply_logging_config
+from .config_manager import (
+    load_runtime_config,
+    get_settle_delay,
+    get_keyboard_timing,
+    apply_logging_config,
+)
 
 logger = logging.getLogger("Step3KeyboardAutomation.CLI")
 
@@ -25,6 +30,7 @@ def parse_arguments():
     """Defines and parses command-line arguments for Step 3: Keyboard Automation."""
     cfg = load_runtime_config()
     default_settle = get_settle_delay(cfg)
+    kb_timing = get_keyboard_timing(cfg)
 
     parser = argparse.ArgumentParser(
         description="STEP 3: Keyboard Automation Suite for Antigravity 2.0 Harness & Chat Interfaces (AutoSelect-Commander Pipeline).",
@@ -77,20 +83,32 @@ def parse_arguments():
     parser.add_argument(
         "-c", "--countdown",
         type=int,
-        default=5,
-        help="Seconds of countdown to focus the target chat window before keystrokes are sent."
+        default=int(kb_timing["countdown"]),
+        help="Seconds of countdown to focus the target chat window before keystrokes are sent (default from config.json)."
     )
     parser.add_argument(
-        "-d", "--step-delay",
+        "-d", "--step-delay", "--post-keypress-delay",
         type=float,
-        default=0.22,
-        help="Delay in seconds between keystroke steps (default: 0.22 = 220ms, calibrated for GUI settle)."
+        default=kb_timing["post_keypress_delay_s"],
+        help="Delay in seconds between keystroke steps (default from config.json step3_post_keypress_delay_ms)."
     )
     parser.add_argument(
         "--hold-delay",
         type=float,
-        default=0.05,
-        help="Duration in seconds keys are held down before releasing."
+        default=kb_timing["hold_delay_s"],
+        help="Duration in seconds keys are held down before releasing (default from config.json step3_key_hold_delay_ms)."
+    )
+    parser.add_argument(
+        "--inter-question-delay",
+        type=float,
+        default=kb_timing["inter_question_delay_s"],
+        help="Pause in seconds between questions in multi-question questionnaire (default from config.json step3_inter_question_delay_ms)."
+    )
+    parser.add_argument(
+        "--round-completion-pause",
+        type=float,
+        default=kb_timing["round_completion_pause_s"],
+        help="Pause in seconds after the questionnaire round finishes (default from config.json step3_round_completion_pause_ms)."
     )
     parser.add_argument(
         "-o", "--option",
@@ -200,6 +218,10 @@ def main():
         engine=args.engine,
         step_delay=args.step_delay,
         hold_delay=args.hold_delay,
+        post_keypress_delay=args.step_delay,
+        inter_question_delay=args.inter_question_delay,
+        round_completion_pause=args.round_completion_pause,
+        countdown=args.countdown,
         option=args.option,
         skip_ctrl_l=args.skip_ctrl_l,
         skip_enter=args.skip_enter,
@@ -211,6 +233,7 @@ def main():
         questions=args.questions,
         options_list=args.options_list,
         state_file=args.state_file,
+        config_path=getattr(args, "config", None),
     )
 
     print_banner(args, automator=automator)
