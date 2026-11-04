@@ -266,6 +266,68 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(status, 404)
         self.assertFalse(body["success"])
 
+    def test_11_manager_test_mode_process_completion_cleanup(self):
+        """When test mode process completes, is_running() naturally returns False and cleans up PID file."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 44444
+        mock_proc.poll.return_value = None  # initially running
+
+        with patch("subprocess.Popen", return_value=mock_proc):
+            res = self.manager.start(mode="test")
+            self.assertTrue(res["running"])
+            self.assertEqual(res["pid"], 44444)
+            self.assertEqual(res["mode"], "test")
+            self.assertTrue(self.manager.is_running())
+            self.assertTrue(self.manager.pid_file.is_file())
+
+            # Now simulate single-run task completion (process exits with 0)
+            mock_proc.poll.return_value = 0
+
+            # Next check should detect process exit, clean up PID file, and return False
+            self.assertFalse(self.manager.is_running())
+            self.assertIsNone(self.manager.get_pid())
+            self.assertFalse(self.manager.pid_file.is_file())
+
+            status = self.manager.get_status()
+            self.assertFalse(status["running"])
+            self.assertIsNone(status["pid"])
+            self.assertEqual(status["status_text"], "Inactive")
+
+    def test_12_start_endpoint_accepts_modes_and_persists_config(self):
+        """POST /api/automation/start accepts mode='test' and mode='production' and persists to config.json."""
+        mock_proc = MagicMock()
+        mock_proc.pid = 55555
+        mock_proc.poll.return_value = None
+
+        with patch("subprocess.Popen", return_value=mock_proc), patch("subprocess.run"):
+            # 1. Start with test mode
+            status, _, body = self._http_request("POST", "/api/automation/start", {"mode": "test"})
+            self.assertEqual(status, 200)
+            self.assertTrue(body["success"])
+            self.assertEqual(body["data"]["mode"], "test")
+
+            # Check config.json persisted mode
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            self.assertEqual(cfg["mode"], "test")
+
+            # Stop
+            self._http_request("POST", "/api/automation/stop")
+
+            # 2. Start with production mode
+            status, _, body = self._http_request("POST", "/api/automation/start", {"mode": "production"})
+            self.assertEqual(status, 200)
+            self.assertTrue(body["success"])
+            self.assertEqual(body["data"]["mode"], "production")
+
+            # Check config.json persisted mode
+            with open(self.config_file, "r", encoding="utf-8") as f:
+                cfg = json.load(f)
+            self.assertEqual(cfg["mode"], "production")
+
+            # Stop
+            self._http_request("POST", "/api/automation/stop")
+
 
 if __name__ == "__main__":
     unittest.main()

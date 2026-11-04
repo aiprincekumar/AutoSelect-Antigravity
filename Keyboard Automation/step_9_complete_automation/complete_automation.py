@@ -380,7 +380,7 @@ class CompleteAutomationController:
         self.pipeline_steps = discover_pipeline_steps(root_dir=self.workspace_dir, include_future=True)
 
         # Mode determination
-        self.is_test_mode = (self.config.mode.lower() == "test")
+        self._is_test_mode_override: Optional[bool] = None
         if headless is None:
             self.headless = not self.is_test_mode  # Production is headless by default
         else:
@@ -405,6 +405,18 @@ class CompleteAutomationController:
             active_hours=self.config.active_hours,
             require_grill_me=self.config.require_grill_me,
         )
+
+    @property
+    def is_test_mode(self) -> bool:
+        """Dynamic check whether current operating mode is test mode."""
+        if getattr(self, "_is_test_mode_override", None) is not None:
+            return bool(self._is_test_mode_override)
+        return bool(getattr(self, "config", None) and str(self.config.mode).lower() == "test")
+
+    @is_test_mode.setter
+    def is_test_mode(self, value: bool) -> None:
+        """Allow explicit override of test mode status."""
+        self._is_test_mode_override = bool(value)
 
     def _resolve_python_exe(self, explicit_path: Optional[Union[str, Path]]) -> Path:
         """Resolve python interpreter in .venv or sys.executable."""
@@ -603,6 +615,7 @@ class CompleteAutomationController:
             if self.is_test_mode
             else self.config.timing.step0_poll_interval_prod_seconds
         )
+        self.detector.poll_interval = interval
 
         if not self.headless:
             print("\n" + "=" * 78)
@@ -638,12 +651,15 @@ class CompleteAutomationController:
                 if self.is_test_mode:
                     if not self.headless:
                         print(f"\n[RESULT] {msg} (Exit Code: {code})")
+                    self.logger.info("Test Mode: Single-run task completed successfully. Automatically stopping automation as configured.")
+                    return code
+                else:
+                    self.logger.info("Production Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.")
+                    if not self.headless:
+                        print(f"\n[RESULT] {msg} (Exit Code: {code})")
+                        print("Production Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.")
                     if once:
                         return code
-                else:
-                    # In production mode: cleanly exit with code 0 upon triggering
-                    self.logger.info("Production automation cycle finished. Clean exit.")
-                    return code
 
             if once:
                 return 0 if res.is_detected else 1

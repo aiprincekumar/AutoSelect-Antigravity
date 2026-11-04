@@ -201,6 +201,7 @@ class AutomationProcessManager:
                     return True
                 else:
                     self.proc = None
+                    self.start_time = None
                     self._cleanup_pid_file()
                     return False
 
@@ -213,16 +214,24 @@ class AutomationProcessManager:
                     if pid and is_pid_alive(pid):
                         return True
                     else:
+                        self.start_time = None
                         self._cleanup_pid_file()
                 except Exception:
+                    self.start_time = None
                     self._cleanup_pid_file()
 
             return False
 
     def get_pid(self) -> Optional[int]:
         """Return current automation PID if active."""
-        if self.proc and self.proc.poll() is None:
-            return self.proc.pid
+        if self.proc:
+            if self.proc.poll() is None:
+                return self.proc.pid
+            else:
+                self.proc = None
+                self.start_time = None
+                self._cleanup_pid_file()
+                return None
         if self.pid_file.is_file():
             try:
                 with open(self.pid_file, "r", encoding="utf-8") as f:
@@ -230,8 +239,12 @@ class AutomationProcessManager:
                 pid = data.get("pid")
                 if pid and is_pid_alive(pid):
                     return pid
+                else:
+                    self.start_time = None
+                    self._cleanup_pid_file()
             except Exception:
-                pass
+                self.start_time = None
+                self._cleanup_pid_file()
         return None
 
     def start(self, mode: Optional[str] = None, run_pipeline: bool = False) -> Dict[str, Any]:
@@ -263,7 +276,21 @@ class AutomationProcessManager:
                 cfg = core_load_runtime_config(get_canonical_config_path(self.workspace_dir))
                 eff_mode = cfg.get("mode", "production")
 
+            if eff_mode and isinstance(eff_mode, str):
+                eff_mode = eff_mode.strip().lower()
+
             self.active_mode = eff_mode
+
+            # If mode is explicitly passed, persist it to config.json
+            if mode:
+                try:
+                    cfg_path = get_canonical_config_path(self.workspace_dir)
+                    cfg = core_load_runtime_config(cfg_path)
+                    if cfg.get("mode") != eff_mode:
+                        cfg["mode"] = eff_mode
+                        core_save_runtime_config(cfg, cfg_path)
+                except Exception as e:
+                    logger.warning(f"Could not persist mode to config.json: {e}")
 
             # Build command line
             cmd = [str(self.python_exe), str(self.master_script)]
@@ -565,6 +592,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         # 1. API: Start Automation
         if path == "/api/automation/start":
             mode = body.get("mode")
+            if mode and isinstance(mode, str):
+                mode = mode.strip().lower()
             run_pipeline = bool(body.get("run_pipeline", False))
             result = mgr.start(mode=mode, run_pipeline=run_pipeline)
             self.send_json_response(result)

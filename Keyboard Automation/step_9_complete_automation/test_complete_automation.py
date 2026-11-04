@@ -208,6 +208,88 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         self.assertEqual(code, 0)
         mock_pipeline.assert_called_once()
 
+    @patch.object(AntiGravityDetector, "detect")
+    @patch.object(CompleteAutomationController, "execute_pipeline")
+    def test_run_test_mode_exits_after_single_trigger_and_pipeline(self, mock_pipeline, mock_detect):
+        """Verify Test Mode automatically stops and returns code after 1 trigger + pipeline run (once=False)."""
+        mock_detect.return_value = DetectionResult(
+            is_detected=True,
+            trigger_matched=True,
+            pending_grill_me_chats=1
+        )
+        mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
+
+        with self.assertLogs(self.controller.logger, level="INFO") as log_cm:
+            # Note: once=False, yet test mode must automatically stop!
+            code = self.controller.run(once=False)
+
+        self.assertEqual(code, 0)
+        mock_pipeline.assert_called_once()
+        self.assertTrue(any(
+            "Test Mode: Single-run task completed successfully. Automatically stopping automation as configured." in msg
+            for msg in log_cm.output
+        ))
+
+    @patch("time.sleep")
+    @patch.object(AntiGravityDetector, "detect")
+    @patch.object(CompleteAutomationController, "execute_pipeline")
+    def test_run_test_mode_polls_until_trigger_then_exits(self, mock_pipeline, mock_detect, mock_sleep):
+        """Verify Test Mode polls on interval when no trigger, and exits on subsequent trigger."""
+        mock_detect.side_effect = [
+            DetectionResult(is_detected=True, trigger_matched=False),
+            DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1),
+        ]
+        mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
+
+        with self.assertLogs(self.controller.logger, level="INFO") as log_cm:
+            code = self.controller.run(once=False)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(mock_detect.call_count, 2)
+        mock_pipeline.assert_called_once()
+        self.assertTrue(any(
+            "Test Mode: Single-run task completed successfully. Automatically stopping automation as configured." in msg
+            for msg in log_cm.output
+        ))
+
+    @patch("time.sleep")
+    @patch.object(AntiGravityDetector, "detect")
+    @patch.object(CompleteAutomationController, "execute_pipeline")
+    def test_run_production_mode_continues_loop_after_pipeline(self, mock_pipeline, mock_detect, mock_sleep):
+        """Verify Production Mode does NOT exit after pipeline execution, continuing until manually stopped."""
+        prod_cfg = AutomationConfig(
+            mode="production",
+            timing=TimingConfig(step0_poll_interval_prod_seconds=300.0)
+        )
+        prod_controller = CompleteAutomationController(config=prod_cfg, headless=True)
+
+        call_count = 0
+        def detect_side_effect():
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                # First check: trigger matched -> executes pipeline
+                return DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1)
+            elif call_count == 2:
+                # Second check: proves the loop continued after pipeline run! Stop controller.
+                prod_controller.stop()
+                return DetectionResult(is_detected=True, trigger_matched=False)
+            return DetectionResult(is_detected=False, trigger_matched=False)
+
+        mock_detect.side_effect = detect_side_effect
+        mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
+
+        with self.assertLogs(prod_controller.logger, level="INFO") as log_cm:
+            code = prod_controller.run(once=False)
+
+        self.assertEqual(code, 0)
+        self.assertEqual(call_count, 2)
+        mock_pipeline.assert_called_once()
+        self.assertTrue(any(
+            "Production Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user." in msg
+            for msg in log_cm.output
+        ))
+
     def test_stop(self):
         self.controller.stop()
         self.assertTrue(self.controller._stop_requested)
