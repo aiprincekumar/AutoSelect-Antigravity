@@ -453,6 +453,76 @@ class TestStep4Reporting(unittest.TestCase):
         history = self.engine.load_history()
         self.assertEqual(history.total_pipeline_runs, 1)
 
+    def test_13_two_tab_navigation_structure(self):
+        """Verify dashboard HTML contains the two horizontal tabs (Overview, Questions) and search inputs."""
+        history = AutomationHistory(
+            total_pipeline_runs=1,
+            total_questions_answered=3,
+            total_runtime_seconds=10.0,
+            total_unique_chats=1,
+            chats={
+                "chat_tab_test": {
+                    "conversation_id": "chat_tab_test",
+                    "topic_summary": "Horizontal Tab Test",
+                    "run_count": 1,
+                    "total_questions": 3,
+                    "runs": [
+                        {
+                            "run_id": "run_test_tab",
+                            "timestamp": "2026-11-04T05:00:00Z",
+                            "duration_seconds": 10.0,
+                            "questions_count": 1,
+                            "questions": [
+                                {
+                                    "question_index": 1,
+                                    "question": "Tab layout verified?",
+                                    "options": ["(Recommended) Yes", "No"],
+                                    "selected_option_index": 1,
+                                    "selected_option_text": "(Recommended) Yes",
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Verify Horizontal Tab Navigation bar & role attributes
+        self.assertIn('<nav class="tab-nav" role="tablist"', content)
+
+        # 2. Verify Tab 1 button: Overview
+        self.assertIn('id="tab-btn-overview"', content)
+        self.assertIn('data-tab="overview"', content)
+        self.assertIn('<span class="tab-label">Overview</span>', content)
+
+        # 3. Verify Tab 2 button: Questions with question count badge
+        self.assertIn('id="tab-btn-questions"', content)
+        self.assertIn('data-tab="questions"', content)
+        self.assertIn('<span class="tab-label">Questions</span>', content)
+        self.assertIn('id="tab-questions-badge">3</span>', content)
+
+        # 4. Verify Tab 1 panel: Overview containing metrics and summary table
+        self.assertIn('id="tab-overview" class="tab-panel active"', content)
+        self.assertIn('id="search-overview"', content)
+        self.assertIn('id="summary-table"', content)
+        self.assertIn('📊 Chat-wise Automation Breakdown', content)
+
+        # 5. Verify Tab 2 panel: Questions containing questions ledger
+        self.assertIn('id="tab-questions" class="tab-panel"', content)
+        self.assertIn('id="search-questions"', content)
+        self.assertIn('📝 Questions & Answers Ledger', content)
+        self.assertIn('id="details-container"', content)
+
+        # 6. Verify fallback compatibility for search-box
+        self.assertIn('id="search-box"', content)
+
+        # 7. Verify localStorage tab persistence logic in client script
+        self.assertIn("localStorage.setItem('asc_dashboard_tab'", content)
+        self.assertIn("localStorage.getItem('asc_dashboard_tab')", content)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

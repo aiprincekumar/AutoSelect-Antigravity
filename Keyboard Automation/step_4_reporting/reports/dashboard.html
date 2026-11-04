@@ -264,6 +264,102 @@
       box-shadow: 0 0 0 2px var(--accent-indigo-glow);
     }
 
+    /* Horizontal Tab Navigation (Department 04 Standard) */
+    .tab-nav {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      margin-bottom: 24px;
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+      position: relative;
+    }
+
+    .tab-btn {
+      background: transparent;
+      color: var(--text-secondary);
+      border: 1px solid transparent;
+      padding: 10px 20px;
+      border-radius: var(--radius-md);
+      font-size: 0.92rem;
+      font-weight: 600;
+      font-family: var(--font-family);
+      cursor: pointer;
+      transition: var(--transition);
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      position: relative;
+      user-select: none;
+      outline: none;
+    }
+
+    .tab-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-surface-elevated);
+    }
+
+    .tab-btn:focus-visible {
+      box-shadow: 0 0 0 2px var(--accent-indigo);
+    }
+
+    .tab-btn.active {
+      color: #ffffff;
+      background: var(--accent-indigo);
+      border-color: var(--accent-indigo);
+      box-shadow: 0 2px 12px var(--accent-indigo-glow);
+    }
+
+    [data-theme="light"] .tab-btn.active {
+      color: #ffffff;
+      background: var(--accent-indigo);
+      box-shadow: 0 2px 12px var(--accent-indigo-glow);
+    }
+
+    .tab-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.2);
+      color: #ffffff;
+      font-size: 0.72rem;
+      font-weight: 700;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: 9999px;
+      line-height: 1;
+      margin-left: 2px;
+    }
+
+    .tab-btn:not(.active) .tab-badge {
+      background: var(--bg-surface-highlight);
+      color: var(--text-secondary);
+    }
+
+    /* Tab Panels */
+    .tab-panel {
+      display: none;
+      animation: fadeIn 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
     /* Section Headers */
     .section-title {
       font-size: 1.1rem;
@@ -503,84 +599,111 @@
       </div>
     </header>
 
-    <!-- Metrics Grid -->
-    <div class="metrics-grid">
-      <!-- Total Runs -->
-      <div class="metric-card card-runs">
-        <div class="metric-header">
-          <span class="metric-title">Total Automation Runs</span>
-          <span class="metric-icon">🚀</span>
+    <!-- Horizontal Tab Navigation Bar (Single-word intuitive names) -->
+    <nav class="tab-nav" role="tablist" aria-label="Dashboard Tabs">
+      <button class="tab-btn active" id="tab-btn-overview" role="tab" aria-selected="true" aria-controls="tab-overview" data-tab="overview">
+        <span class="tab-icon">📊</span>
+        <span class="tab-label">Overview</span>
+      </button>
+      <button class="tab-btn" id="tab-btn-questions" role="tab" aria-selected="false" aria-controls="tab-questions" data-tab="questions">
+        <span class="tab-icon">💬</span>
+        <span class="tab-label">Questions</span>
+        <span class="tab-badge" id="tab-questions-badge">4</span>
+      </button>
+    </nav>
+
+    <!-- Legacy Search Box Compatibility Hook (Hidden) -->
+    <input type="hidden" id="search-box" value="">
+
+    <!-- Tab 1: Overview Panel (Metrics + Chat Breakdown Table) -->
+    <main id="tab-overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-overview">
+      <!-- Metrics Grid -->
+      <div class="metrics-grid">
+        <!-- Total Runs -->
+        <div class="metric-card card-runs">
+          <div class="metric-header">
+            <span class="metric-title">Total Automation Runs</span>
+            <span class="metric-icon">🚀</span>
+          </div>
+          <div class="metric-value">1</div>
+          <div class="metric-subtitle">Steps 1 → 2 → 3 Fully Completed</div>
         </div>
-        <div class="metric-value">1</div>
-        <div class="metric-subtitle">Steps 1 → 2 → 3 Fully Completed</div>
+
+        <!-- Questions Answered -->
+        <div class="metric-card card-questions">
+          <div class="metric-header">
+            <span class="metric-title">Questions Answered</span>
+            <span class="metric-icon">💬</span>
+          </div>
+          <div class="metric-value">4</div>
+          <div class="metric-subtitle">Grill-Me Questions Resolved</div>
+        </div>
+
+        <!-- Script Runtime -->
+        <div class="metric-card card-runtime">
+          <div class="metric-header">
+            <span class="metric-title">Cumulative Runtime</span>
+            <span class="metric-icon">⏱️</span>
+          </div>
+          <div class="metric-value">14.3s</div>
+          <div class="metric-subtitle">14.32 Total Seconds Active</div>
+        </div>
+
+        <!-- Unique Chats -->
+        <div class="metric-card card-chats">
+          <div class="metric-header">
+            <span class="metric-title">Chats Automated</span>
+            <span class="metric-icon">📂</span>
+          </div>
+          <div class="metric-value">1</div>
+          <div class="metric-subtitle">Unique Conversations Processed</div>
+        </div>
       </div>
 
-      <!-- Questions Answered -->
-      <div class="metric-card card-questions">
-        <div class="metric-header">
-          <span class="metric-title">Questions Answered</span>
-          <span class="metric-icon">💬</span>
-        </div>
-        <div class="metric-value">4</div>
-        <div class="metric-subtitle">Grill-Me Questions Resolved</div>
+      <!-- Controls Bar for Overview -->
+      <div class="controls-bar">
+        <input type="text" id="search-overview" class="search-input" placeholder="🔍 Search overview by Conversation ID or topic...">
       </div>
 
-      <!-- Script Runtime -->
-      <div class="metric-card card-runtime">
-        <div class="metric-header">
-          <span class="metric-title">Cumulative Runtime</span>
-          <span class="metric-icon">⏱️</span>
-        </div>
-        <div class="metric-value">14.3s</div>
-        <div class="metric-subtitle">14.32 Total Seconds Active</div>
+      <!-- Chat-wise Automation Summary Table -->
+      <div class="section-title">📊 Chat-wise Automation Breakdown</div>
+      <div class="table-container">
+        <table id="summary-table">
+          <thead>
+            <tr>
+              <th>Conversation ID</th>
+              <th>Topic Summary</th>
+              <th>Runs Count</th>
+              <th>Questions Answered</th>
+              <th>Last Automated</th>
+            </tr>
+          </thead>
+          <tbody id="summary-tbody">
+            <!-- Dynamically populated by client JS -->
+          </tbody>
+        </table>
+      </div>
+    </main>
+
+    <!-- Tab 2: Questions Panel (All Questions & Answers Ledger) -->
+    <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
+      <!-- Controls Bar for Questions -->
+      <div class="controls-bar">
+        <input type="text" id="search-questions" class="search-input" placeholder="🔍 Search questions, options, topics, or conversation IDs...">
       </div>
 
-      <!-- Unique Chats -->
-      <div class="metric-card card-chats">
-        <div class="metric-header">
-          <span class="metric-title">Chats Automated</span>
-          <span class="metric-icon">📂</span>
-        </div>
-        <div class="metric-value">1</div>
-        <div class="metric-subtitle">Unique Conversations Processed</div>
+      <!-- Detailed Questions & Answers Ledger -->
+      <div class="section-title">📝 Questions & Answers Ledger</div>
+      <div id="details-container">
+        <!-- Dynamically populated by client JS -->
       </div>
-    </div>
-
-    <!-- Controls Bar -->
-    <div class="controls-bar">
-      <input type="text" id="search-box" class="search-input" placeholder="🔍 Search by Conversation ID, topic, question, or option...">
-    </div>
-
-    <!-- Chat-wise Automation Summary Table -->
-    <div class="section-title">📊 Chat-wise Automation Breakdown</div>
-    <div class="table-container">
-      <table id="summary-table">
-        <thead>
-          <tr>
-            <th>Conversation ID</th>
-            <th>Topic Summary</th>
-            <th>Runs Count</th>
-            <th>Questions Answered</th>
-            <th>Last Automated</th>
-          </tr>
-        </thead>
-        <tbody id="summary-tbody">
-          <!-- Dynamically populated by client JS -->
-        </tbody>
-      </table>
-    </div>
-
-    <!-- Detailed Questions & Options Breakdown -->
-    <div class="section-title">📝 Detailed Questions & Options History</div>
-    <div id="details-container">
-      <!-- Dynamically populated by client JS -->
-    </div>
+    </main>
 
     <!-- Footer -->
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 06:10:22</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 06:44:27</span></div>
     </footer>
   </div>
 
@@ -593,7 +716,9 @@
     (function() {
       const rawData = JSON.parse(document.getElementById('history-data').textContent);
       const chats = rawData.chats || {};
-      const searchBox = document.getElementById('search-box');
+      const searchOverview = document.getElementById('search-overview');
+      const searchQuestions = document.getElementById('search-questions');
+      const searchBoxFallback = document.getElementById('search-box');
       const summaryTbody = document.getElementById('summary-tbody');
       const detailsContainer = document.getElementById('details-container');
       const themeToggle = document.getElementById('theme-toggle');
@@ -609,11 +734,37 @@
         localStorage.setItem('asc_dashboard_theme', next);
       });
 
-      function render(filter = '') {
+      // Horizontal Tab switching logic with localStorage persistence
+      const tabBtns = document.querySelectorAll('.tab-btn');
+      const tabPanels = document.querySelectorAll('.tab-panel');
+      const savedTab = localStorage.getItem('asc_dashboard_tab') || 'overview';
+
+      function switchTab(tabId) {
+        tabBtns.forEach(btn => {
+          const isActive = btn.getAttribute('data-tab') === tabId;
+          btn.classList.toggle('active', isActive);
+          btn.setAttribute('aria-selected', isActive ? 'true' : 'false');
+        });
+        tabPanels.forEach(panel => {
+          panel.classList.toggle('active', panel.id === `tab-${tabId}`);
+        });
+        localStorage.setItem('asc_dashboard_tab', tabId);
+      }
+
+      tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          const tabId = btn.getAttribute('data-tab');
+          if (tabId) switchTab(tabId);
+        });
+      });
+
+      // Restore active tab
+      switchTab(savedTab === 'questions' ? 'questions' : 'overview');
+
+      // Render Tab 1: Overview Summary Table
+      function renderOverview(filter = '') {
         const filterLower = filter.toLowerCase().trim();
         const chatEntries = Object.entries(chats);
-
-        // Render Summary Table
         summaryTbody.innerHTML = '';
         let tableRows = 0;
 
@@ -640,8 +791,12 @@
         if (tableRows === 0) {
           summaryTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">No matching chat records found.</td></tr>`;
         }
+      }
 
-        // Render Detailed Cards
+      // Render Tab 2: Detailed Questions & Answers
+      function renderQuestions(filter = '') {
+        const filterLower = filter.toLowerCase().trim();
+        const chatEntries = Object.entries(chats);
         detailsContainer.innerHTML = '';
         let cardsCount = 0;
 
@@ -731,8 +886,8 @@
           detailsContainer.innerHTML = `
             <div class="empty-state">
               <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
-              <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">No Detailed Records Found</div>
-              <div>No questions or options have been processed yet or matched your search filter.</div>
+              <div style="font-weight: 600; font-size: 1.1rem; margin-bottom: 4px;">No Questions Found</div>
+              <div>No questions match your search filter or none have been processed yet.</div>
             </div>
           `;
         }
@@ -748,8 +903,23 @@
           .replace(/'/g, '&#039;');
       }
 
-      searchBox.addEventListener('input', (e) => render(e.target.value));
-      render();
+      // Search listeners
+      if (searchOverview) {
+        searchOverview.addEventListener('input', (e) => renderOverview(e.target.value));
+      }
+      if (searchQuestions) {
+        searchQuestions.addEventListener('input', (e) => renderQuestions(e.target.value));
+      }
+      if (searchBoxFallback) {
+        searchBoxFallback.addEventListener('input', (e) => {
+          renderOverview(e.target.value);
+          renderQuestions(e.target.value);
+        });
+      }
+
+      // Initial Render
+      renderOverview();
+      renderQuestions();
     })();
   </script>
 </body>
