@@ -393,6 +393,14 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn('id="dashboard-status-pill"', content)
         self.assertIn('id="modes-status-pill"', content)
 
+        # Check Server Bridge Health Indicator and Reconnect logic
+        self.assertIn('id="server-bridge-pill"', content)
+        self.assertIn(".status-pill.status-bridge-online", content)
+        self.assertIn(".status-pill.status-bridge-offline", content)
+        self.assertIn("updateServerBridgeUI", content)
+        self.assertIn("startServerHealthPolling", content)
+        self.assertIn("btn-copy-automation-vbs", content)
+
     def test_08_get_last_input_tick(self):
         """Test Win32 GetLastInputInfo returns a valid integer tick count."""
         tick = get_last_input_tick()
@@ -1577,6 +1585,33 @@ class TestStep4Reporting(unittest.TestCase):
         # 2. Verify mutual exclusion exemption logic in script for #tab-overview
         self.assertIn("const isOverview = !!header.closest('#tab-overview');", content)
         self.assertIn("if (!isOverview) {", content)
+
+
+    def test_51_server_bridge_and_vbs_launcher(self):
+        """Verify presence of server bridge health pill, styling, and background VBS launchers."""
+        html_path = self.engine.generate_html_dashboard()
+        with open(html_path, "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        # 1. Header elements
+        self.assertIn('id="server-bridge-pill"', html_content)
+        self.assertIn('🟢 Server Bridge Online (Port 8501)', html_content)
+        self.assertIn('.status-pill.status-bridge-online', html_content)
+        self.assertIn('.status-pill.status-bridge-offline', html_content)
+
+        # 2. Client-side JS functions
+        self.assertIn('updateServerBridgeUI', html_content)
+        self.assertIn('startServerHealthPolling', html_content)
+        self.assertIn('btn-copy-automation-vbs', html_content)
+        self.assertIn('btn-copy-automation-run-bat', html_content)
+
+        # 3. Verify VBS launchers and README exist on disk
+        workspace_dir = Path(__file__).resolve().parent.parent
+        repo_root = workspace_dir.parent
+        self.assertTrue((workspace_dir / "start_dashboard_background.vbs").is_file())
+        self.assertTrue((workspace_dir / "step_4_reporting" / "start_dashboard_background.vbs").is_file())
+        self.assertTrue((repo_root / "start_dashboard_background.vbs").is_file())
+        self.assertTrue((repo_root / "README.md").is_file())
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

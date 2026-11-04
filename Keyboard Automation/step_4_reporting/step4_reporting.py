@@ -1632,6 +1632,30 @@ class Step4ReportingEngine:
       animation: pulse 2s infinite;
     }}
 
+    .status-pill.status-bridge-online {{
+      background: var(--accent-emerald-bg, rgba(16, 185, 129, 0.12));
+      color: var(--accent-emerald, #10b981);
+      border: 1px solid var(--accent-emerald-border, #059669);
+    }}
+
+    .status-pill.status-bridge-online::before {{
+      background: var(--accent-emerald, #10b981);
+      box-shadow: 0 0 8px var(--accent-emerald, #10b981);
+      animation: pulse 2s infinite;
+    }}
+
+    .status-pill.status-bridge-offline {{
+      background: rgba(239, 68, 68, 0.12);
+      color: #ef4444;
+      border: 1px solid rgba(239, 68, 68, 0.35);
+    }}
+
+    .status-pill.status-bridge-offline::before {{
+      background: #ef4444;
+      box-shadow: none;
+      animation: none;
+    }}
+
     @keyframes pulse {{
       0%, 100% {{ opacity: 1; }}
       50% {{ opacity: 0.4; }}
@@ -4323,6 +4347,7 @@ class Step4ReportingEngine:
         </div>
       </div>
       <div class="header-actions">
+        <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Server Bridge connection state on port 8501">🟢 Server Bridge Online (Port 8501)</span>
         <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Inactive</span>
         <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect-Commander Automation">
           <span class="control-icon" id="control-icon">▶️</span>
@@ -5588,9 +5613,17 @@ class Step4ReportingEngine:
 
           <div style="margin-bottom: 16px;">
             <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">
-              1-Click Terminal Execution Commands:
+              1-Click Server &amp; Terminal Execution Commands:
             </label>
             <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-emerald);">wscript start_dashboard_background.vbs</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-vbs" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-emerald);">.\\run_dashboard.bat</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-run-bat" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
               <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
                 <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">python step_9_complete_automation/complete_automation.py</code>
                 <button type="button" class="btn btn-sm" id="btn-copy-automation-cmd" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
@@ -6168,6 +6201,23 @@ class Step4ReportingEngine:
       }}
 
       let userInitiatedStop = false;
+      let isServerBridgeOnline = false;
+      let serverHealthPollTimer = null;
+      let isCheckingStatus = false;
+
+      function updateServerBridgeUI(isOnline) {{
+        const bridgePill = document.getElementById('server-bridge-pill');
+        if (!bridgePill) return;
+        if (isOnline) {{
+          bridgePill.className = 'status-pill status-bridge-online';
+          bridgePill.innerHTML = '🟢 Server Bridge Online (Port 8501)';
+          bridgePill.setAttribute('title', 'Server Bridge connected: Control daemon is active on port 8501');
+        }} else {{
+          bridgePill.className = 'status-pill status-bridge-offline';
+          bridgePill.innerHTML = '🔴 Server Bridge Offline';
+          bridgePill.setAttribute('title', 'Server Bridge offline on port 8501. Run start_dashboard_background.vbs or run_dashboard.bat to connect.');
+        }}
+      }}
 
       function updateProcessStatusUI(status) {{
         const dashboardStatusPill = document.getElementById('dashboard-status-pill');
@@ -6206,6 +6256,8 @@ class Step4ReportingEngine:
       }}
 
       async function checkProcessStatus() {{
+        if (isCheckingStatus) return isAutomationActive;
+        isCheckingStatus = true;
         try {{
           const controller = new AbortController();
           const tid = setTimeout(() => controller.abort(), 2000);
@@ -6217,6 +6269,14 @@ class Step4ReportingEngine:
           if (resp.ok) {{
             const res = await resp.json();
             if (res.success && res.data) {{
+              const wasOffline = !isServerBridgeOnline;
+              isServerBridgeOnline = true;
+              updateServerBridgeUI(true);
+
+              if (wasOffline) {{
+                showToast('🟢 Server Reconnected! Control daemon is active on port 8501.', 'success');
+              }}
+
               const running = !!res.data.running;
               const wasRunning = isAutomationActive || getAutomationRunning();
               const recordedMode = localStorage.getItem('asc_automation_last_mode') || res.data.mode || (cfgRuntimeMode ? cfgRuntimeMode.value : 'production');
@@ -6243,21 +6303,31 @@ class Step4ReportingEngine:
             }}
           }}
         }} catch (e) {{
-          // Server offline
+          // Server offline / not reachable
+          isServerBridgeOnline = false;
+          updateServerBridgeUI(false);
+          updateProcessStatusUI({{ running: false, is_paused: false }});
+          isAutomationActive = false;
+          localStorage.setItem('asc_automation_running', 'false');
+          updateAutomationUI(false, false);
+        }} finally {{
+          isCheckingStatus = false;
         }}
         return false;
       }}
 
+      function startServerHealthPolling(intervalMs = 3000) {{
+        if (serverHealthPollTimer) clearInterval(serverHealthPollTimer);
+        checkProcessStatus();
+        serverHealthPollTimer = setInterval(checkProcessStatus, intervalMs);
+      }}
+
       function startProcessStatusPolling(intervalMs = 2000) {{
-        if (statusPollTimer) clearInterval(statusPollTimer);
-        statusPollTimer = setInterval(checkProcessStatus, intervalMs);
+        startServerHealthPolling(intervalMs);
       }}
 
       function stopProcessStatusPolling() {{
-        if (statusPollTimer) {{
-          clearInterval(statusPollTimer);
-          statusPollTimer = null;
-        }}
+        startServerHealthPolling(3000);
       }}
 
       function updateAutomationUI(isRunning, triggerToast = false, statusData = null) {{
@@ -6339,6 +6409,19 @@ class Step4ReportingEngine:
         automationToggleBtn.addEventListener('click', async () => {{
           const currentlyRunning = isAutomationActive || getAutomationRunning();
 
+          if (!currentlyRunning && !isServerBridgeOnline) {{
+            const isAlive = await checkProcessStatus();
+            if (!isAlive) {{
+              showToast(
+                `⚠️ Local Control Server is offline at ${{API_BASE}}. Run 'wscript start_dashboard_background.vbs' or 'run_dashboard.bat' to launch the server.`,
+                'error',
+                7000
+              );
+              openAutomationModal();
+              return;
+            }}
+          }}
+
           automationToggleBtn.disabled = true;
           if (modesAutomationToggleBtn) modesAutomationToggleBtn.disabled = true;
           if (controlLabelEl) controlLabelEl.textContent = currentlyRunning ? 'Stopping...' : 'Starting...';
@@ -6385,8 +6468,10 @@ class Step4ReportingEngine:
               throw new Error(`HTTP ${{resp.status}}`);
             }}
           }} catch (err) {{
+            isServerBridgeOnline = false;
+            updateServerBridgeUI(false);
             showToast(
-              `⚠️ Local Control Server not reachable at ${{API_BASE}}. Run 'python step_4_reporting/dashboard_server.py' or 'run_dashboard.bat' to start the server.`,
+              `⚠️ Local Control Server not reachable at ${{API_BASE}}. Run 'wscript start_dashboard_background.vbs' or 'run_dashboard.bat' to start the server.`,
               'error',
               7000
             );
@@ -6412,6 +6497,20 @@ class Step4ReportingEngine:
           if (e.target === automationModal) closeAutomationModal();
         }});
       }}
+      const btnCopyAutomationVbs = document.getElementById('btn-copy-automation-vbs');
+      const btnCopyAutomationRunBat = document.getElementById('btn-copy-automation-run-bat');
+
+      if (btnCopyAutomationVbs) {{
+        btnCopyAutomationVbs.addEventListener('click', () => {{
+          copyTextToClipboard('wscript start_dashboard_background.vbs', '📋 VBS background launcher command copied to clipboard!');
+        }});
+      }}
+      if (btnCopyAutomationRunBat) {{
+        btnCopyAutomationRunBat.addEventListener('click', () => {{
+          copyTextToClipboard('.\\run_dashboard.bat', '📋 Dashboard launcher batch command copied to clipboard!');
+        }});
+      }}
+
       if (btnCopyAutomationCmd) {{
         btnCopyAutomationCmd.addEventListener('click', () => {{
           copyTextToClipboard('python step_9_complete_automation/complete_automation.py', '📋 Execution command copied to clipboard!');
@@ -7186,6 +7285,9 @@ class Step4ReportingEngine:
           }});
         }});
       }}
+
+      // Initialize Server Bridge Health & Process Status Polling
+      startServerHealthPolling(3000);
 
       // Initial Render & Filter Count Initialization
       applyFilters();
