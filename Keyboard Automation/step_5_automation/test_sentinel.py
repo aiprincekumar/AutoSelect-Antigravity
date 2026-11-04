@@ -104,7 +104,7 @@ class TestAntigravityLifecycleSentinel(unittest.TestCase):
         self.assertTrue(res["antigravity_running"])
         self.assertTrue(res["server_listening"])
         self.assertEqual(res["action_taken"], "STARTED_AUTOMATION")
-        mock_post.assert_called_once_with("start", port=8599, payload={"mode": "test", "run_pipeline": True})
+        mock_post.assert_called_once_with("start", port=8599, payload={"mode": "test", "run_pipeline": False})
 
     @patch("step_5_automation.antigravity_lifecycle_sentinel.is_antigravity_running", return_value=False)
     @patch("step_5_automation.antigravity_lifecycle_sentinel.is_port_listening", return_value=True)

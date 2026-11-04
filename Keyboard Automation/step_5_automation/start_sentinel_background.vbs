@@ -25,13 +25,13 @@ Else
     workspaceDir = fso.GetParentFolderName(scriptDir)
 End If
 
-' 2. Resolve Python Executable (Prefer .venv\Scripts\pythonw.exe)
-If fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")) Then
-    pythonExe = fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")
-ElseIf fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\python.exe")) Then
+' 2. Resolve Python Executable (Prefer .venv\Scripts\python.exe with WindowStyle 0 hidden)
+If fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\python.exe")) Then
     pythonExe = fso.BuildPath(workspaceDir, ".venv\Scripts\python.exe")
+ElseIf fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")) Then
+    pythonExe = fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")
 Else
-    pythonExe = "pythonw.exe"
+    pythonExe = "python.exe"
 End If
 
 ' 3. Resolve antigravity_lifecycle_sentinel.py Path

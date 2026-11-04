@@ -64,11 +64,12 @@ if not logger.handlers:
     )
     logger.addHandler(rf_handler)
 
-    console_handler = logging.StreamHandler(sys.stdout)
-    console_handler.setFormatter(
-        logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
-    )
-    logger.addHandler(console_handler)
+    if sys.stdout is not None:
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setFormatter(
+            logging.Formatter("[%(asctime)s] [%(levelname)s] %(message)s", datefmt="%H:%M:%S")
+        )
+        logger.addHandler(console_handler)
 
 
 # ============================================================================
@@ -212,6 +213,7 @@ class AntigravityLifecycleSentinel:
         self.default_mode = default_mode
         self._running = False
         self._last_ag_state: Optional[bool] = None
+        self._session_automation_started: bool = False
 
         # Resolve Python Executable (Prefer .venv\Scripts\python.exe)
         venv_python = self.workspace_dir / ".venv" / "Scripts" / "python.exe"
@@ -335,22 +337,27 @@ class AntigravityLifecycleSentinel:
         time.sleep(0.5)
         released = not is_port_listening("127.0.0.1", self.port)
         if released:
+            self._session_automation_started = False
             logger.info("Dashboard server terminated. Port 8501 released cleanly.")
         return released
 
     def trigger_automation_start(self) -> bool:
         """
         Trigger the start of Step 0 to 4 pipeline through the server API.
+        Runs continuous background monitoring loop (controller.run()), NOT a 1-pass exit.
         """
         status = api_get_status(port=self.port)
         if status and status.get("running"):
             logger.info(f"Automation is already running (PID: {status.get('pid')}).")
+            self._session_automation_started = True
             return True
 
         logger.info(f"Triggering Automation Start in '{self.default_mode}' mode via API...")
-        success = api_post_command("start", port=self.port, payload={"mode": self.default_mode, "run_pipeline": True})
+        # Note: Do NOT set run_pipeline=True so complete_automation runs in persistent monitoring loop
+        success = api_post_command("start", port=self.port, payload={"mode": self.default_mode, "run_pipeline": False})
         if success:
-            logger.info("Automation task pipeline successfully started!")
+            self._session_automation_started = True
+            logger.info("Automation task pipeline successfully started in background loop!")
         else:
             logger.warning("Server responded with failure or timeout on /api/automation/start.")
         return success
@@ -380,18 +387,21 @@ class AntigravityLifecycleSentinel:
                 server_listening = is_port_listening("127.0.0.1", self.port)
                 result["action_taken"] = "STARTED_SERVER"
 
-            # 1.2 Ensure automation is started
-            if server_listening:
+            # 1.2 Ensure automation is started once per Antigravity open session
+            if server_listening and not self._session_automation_started:
                 automation_status = api_get_status(port=self.port)
                 if not (automation_status and automation_status.get("running")):
                     logger.info("Server is up. Automatically activating Automation Task (Step 0 to 4)...")
-                    self.trigger_automation_start()
-                    result["action_taken"] = (
-                        "STARTED_SERVER_AND_AUTOMATION" if result["action_taken"] == "STARTED_SERVER" else "STARTED_AUTOMATION"
-                    )
+                    if self.trigger_automation_start():
+                        result["action_taken"] = (
+                            "STARTED_SERVER_AND_AUTOMATION" if result["action_taken"] == "STARTED_SERVER" else "STARTED_AUTOMATION"
+                        )
+                else:
+                    self._session_automation_started = True
 
         # Case 2: Antigravity is CLOSED
         else:
+            self._session_automation_started = False
             if server_listening or automation_running:
                 logger.info("Antigravity detected CLOSED / EXITED. Shutting down server and automation...")
                 self.stop_dashboard_server()
