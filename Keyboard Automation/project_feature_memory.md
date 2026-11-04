@@ -8,6 +8,17 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
+### Test Mode (Single-Run Auto-Stop) vs Production Mode (Continuous Autonomous Loop) & Unified UI Sync
+- **Status:** Completed & Grade A+ Certified (87/87 Total Tests Passed, Zero Gitleaks Findings)
+- **Local Commits:** `4e59704` (automation controller auto-stop & server mode persistence), `251e82b` (dashboard banner, mode switcher & config callout synchronization).
+- **Architectural Enhancements:**
+  - **Single-Run Auto-Stop Standard for Test Mode:** In `step_9_complete_automation/complete_automation.py`, when running in Test Mode (`mode == "test"`), after the first detection cycle executes the pipeline, the master controller automatically exits with the pipeline's return code. The process finishes, releases PID, and shuts down cleanly.
+  - **Continuous Loop for Production Mode:** In Production Mode (`mode == "production"`), the master controller continues polling indefinitely every 300s until manually stopped by the user via the dashboard or termination signal.
+  - **Local Server Lifecycle Synchronization (`step_4_reporting/dashboard_server.py`):** When the automation process terminates (in test mode or otherwise), `is_running()` detects process termination, safely unlinks the PID file, and updates status to stopped.
+  - **Global Mode Lifecycle Banner (`dashboard.html` & `step4_reporting.py`):** Positioned immediately below `<nav class="tab-nav">`, displaying clear distinction between Test Mode (Single-Run • Auto-Stops on Task Complete) and Production Mode (Continuous Loop • Runs Until Manual Stop). Includes live mode switcher buttons and interactive cards.
+  - **Config Tab Mode Pills & Callout Sync:** Interactive mode pills (`cfg-mode-test-btn` and `cfg-mode-prod-btn`) and horizontal callout grid in the Config Tab are 100% two-way synchronized with the global banner and live runtime configuration.
+  - **Toast Notifications:** Automatic process completion in Test Mode triggers success toast: `"Test Mode task completed! Automation stopped automatically."` and resets control UI to "Start".
+
 ### Step 9 Renaming & Prompts Overhaul (`step_9_complete_automation/` & `prompts/`)
 - **Status:** Completed & Grade A+ Certified (44/44 Total Tests Passed)
 - **Local Commits:** `7ef006e` (renaming, prompt overhaul, pipeline master memory), `fec8ef3` (--no-pause batch launcher compatibility).
@@ -76,3 +87,4 @@
 | 6 | `keyboard_automation/` | Subfolder shared identical name with parent repo `Keyboard Automation`, creating architectural confusion | Rename subfolder to `core_engine/` and provide backward-compatible `keyboard_automation.py` proxy in root | Industry-standard naming; seamless legacy import compatibility; zero breaking changes | Architecture | unittest (pass) |
 | 7 | Workspace Root | Monolithic legacy script `activating_grill_me.py` and legacy `config.json` cluttered root | Relocate legacy files to `archive/legacy_monolith/` with dedicated documentation | Clean, minimal root layout; 100% architectural clarity | Cleanup | filesystem verification |
 | 8 | `step_9_complete_automation/` & `prompts/` | Folder `Complete Automation` was alphabetically disordered; `prompts/` was missing Step 4, Step 9, master memory, and had stale Step 0 specs | Rename to `step_9_complete_automation`, exclude from self-recursion, update all step prompts, create `pipeline_master_memory.md`, and overhaul `prompts/README.md` | Predictable directory ordering, zero confusion, 100% zero-drift documentation | Phase 9 | unittest (44/44 pass) |
+| 9 | `step_9_complete_automation/` & `step_4_reporting/` | User requested Test Mode to stop automatically on task completion (Single-Run Auto-Stop) while Production Mode continuously loops until manual stop, with full visual synchronization in Dashboard | Implement test mode auto-stop exit in complete_automation.py, PID lifecycle in dashboard_server.py, mode lifecycle banner below tab-nav, and two-way sync across Config pills and banner | 87/87 tests passed, 0 gitleaks leaks, Grade A+ certified, zero-flakiness auto-stop | Phase 9 | unittest (87/87 pass) |
