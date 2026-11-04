@@ -1557,27 +1557,37 @@ class Step4ReportingEngine:
     .header-actions {{
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 8px;
+      flex-wrap: nowrap;
+    }}
+
+    @media (max-width: 768px) {{
+      header {{
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 16px;
+      }}
+      .header-actions {{
+        flex-wrap: wrap;
+        width: 100%;
+      }}
     }}
 
     .status-pill {{
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 4px 12px;
+      padding: 6px 14px;
       border-radius: 9999px;
-      font-size: 0.75rem;
+      font-size: 0.8rem;
       font-weight: 600;
       letter-spacing: 0.02em;
       transition: all 0.25s ease;
+      white-space: nowrap;
     }}
 
     .status-pill::before {{
-      content: "";
-      width: 8px;
-      height: 8px;
-      border-radius: 50%;
-      transition: all 0.25s ease;
+      display: none;
     }}
 
     .status-pill.status-idle {{
@@ -2840,24 +2850,38 @@ class Step4ReportingEngine:
       border-left-color: var(--accent-rose);
     }}
 
-    /* Auto-Refresh Badge in Header */
-    .auto-refresh-badge {{
+    /* Refresh & Combined Auto-Refresh Tag in Header */
+    .btn-refresh {{
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: rgba(6, 182, 212, 0.12);
-      color: var(--accent-cyan);
-      border: 1px solid rgba(6, 182, 212, 0.3);
-      padding: 4px 12px;
-      border-radius: 9999px;
-      font-size: 0.75rem;
+      white-space: nowrap;
+    }}
+
+    .btn-refresh.is-polling {{
+      border-color: rgba(6, 182, 212, 0.45);
+      background: rgba(6, 182, 212, 0.08);
+    }}
+
+    .auto-refresh-tag,
+    .auto-refresh-badge {{
+      display: inline-flex;
+      align-items: center;
+      color: var(--accent-cyan, #06b6d4);
+      font-size: 0.78rem;
       font-family: var(--font-mono);
       font-weight: 600;
+      margin-left: 2px;
     }}
 
     .spin-icon {{
       display: inline-block;
-      animation: spin 3s linear infinite;
+      transition: transform 0.3s ease;
+    }}
+
+    .btn-refresh:hover .spin-icon,
+    .btn-refresh.is-polling .spin-icon {{
+      animation: spin 2.5s linear infinite;
     }}
 
     @keyframes spin {{
@@ -3665,15 +3689,17 @@ class Step4ReportingEngine:
         </div>
       </div>
       <div class="header-actions">
-        <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Automation Idle</span>
-        <span class="auto-refresh-badge" id="auto-refresh-badge" style="display: none;"><span class="spin-icon">🔄</span> Auto-refresh: <strong id="refresh-countdown">10s</strong></span>
+        <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Inactive</span>
         <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect-Commander Automation">
           <span class="control-icon" id="control-icon">▶️</span>
-          <span class="control-label" id="control-label">Start Automation</span>
+          <span class="control-label" id="control-label">Start</span>
         </button>
-        <button class="btn" id="config-toggle-btn" title="Open Master System &amp; Dashboard Configuration">⚙️ Config</button>
         <button class="btn" id="theme-toggle" title="Toggle Light/Dark Theme">🌓 Theme</button>
-        <button class="btn" onclick="location.reload()" title="Refresh Ledger">🔄 Refresh</button>
+        <button class="btn btn-refresh" id="btn-header-refresh" onclick="location.reload()" title="Refresh Ledger / Auto-refresh">
+          <span class="spin-icon">🔄</span>
+          <span>Refresh</span>
+          <span class="auto-refresh-tag" id="auto-refresh-tag" style="display: none;">(<span id="refresh-countdown">10s</span>)</span>
+        </button>
       </div>
     </header>
 
@@ -4806,7 +4832,6 @@ class Step4ReportingEngine:
 
       // Configuration Management & In-Dashboard Settings Engine
       const configModal = document.getElementById('config-modal');
-      const configToggleBtn = document.getElementById('config-toggle-btn');
       const configCloseBtn = document.getElementById('config-close-btn');
       const configCancelBtn = document.getElementById('config-cancel-btn');
       const configSaveBtn = document.getElementById('config-save-btn');
@@ -4814,8 +4839,10 @@ class Step4ReportingEngine:
       const configExportBtn = document.getElementById('cfg-export-btn');
       const toastNotify = document.getElementById('toast-notify');
       const cfgStatusBadge = document.getElementById('cfg-status-badge');
-      const autoRefreshBadge = document.getElementById('auto-refresh-badge');
+      const autoRefreshTag = document.getElementById('auto-refresh-tag');
+      const autoRefreshBadge = document.getElementById('auto-refresh-badge') || autoRefreshTag;
       const refreshCountdownEl = document.getElementById('refresh-countdown');
+      const btnHeaderRefresh = document.getElementById('btn-header-refresh');
 
       const cfgAutoRefresh = document.getElementById('cfg-auto-refresh');
       const cfgActivityDelay = document.getElementById('cfg-activity-delay');
@@ -5164,8 +5191,10 @@ class Step4ReportingEngine:
           refreshTimer = null;
         }}
         countdownSeconds = intervalSeconds;
-        if (autoRefreshBadge) autoRefreshBadge.style.display = 'inline-flex';
+        if (autoRefreshTag) autoRefreshTag.style.display = 'inline';
+        if (autoRefreshBadge && autoRefreshBadge !== autoRefreshTag) autoRefreshBadge.style.display = 'inline-flex';
         if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+        if (btnHeaderRefresh) btnHeaderRefresh.classList.add('is-polling');
 
         refreshTimer = setInterval(() => {{
           countdownSeconds -= 1;
@@ -5182,7 +5211,9 @@ class Step4ReportingEngine:
           clearInterval(refreshTimer);
           refreshTimer = null;
         }}
-        if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
+        if (autoRefreshTag) autoRefreshTag.style.display = 'none';
+        if (autoRefreshBadge && autoRefreshBadge !== autoRefreshTag) autoRefreshBadge.style.display = 'none';
+        if (btnHeaderRefresh) btnHeaderRefresh.classList.remove('is-polling');
       }}
 
       function applyDynamicSettings(cfg) {{
@@ -5232,12 +5263,12 @@ class Step4ReportingEngine:
           automationToggleBtn.classList.remove('state-stopped');
           automationToggleBtn.classList.add('state-running');
           if (controlIconEl) controlIconEl.textContent = '⏹️';
-          if (controlLabelEl) controlLabelEl.textContent = 'Stop Automation';
+          if (controlLabelEl) controlLabelEl.textContent = 'Stop';
           automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
 
           if (dashboardStatusPill) {{
             dashboardStatusPill.className = 'status-pill status-active';
-            dashboardStatusPill.innerHTML = '🟢 Automation Active';
+            dashboardStatusPill.innerHTML = '🟢 Active';
           }}
 
           const configuredRefresh = parseInt(currentConfig.autoRefresh, 10);
@@ -5252,12 +5283,12 @@ class Step4ReportingEngine:
           automationToggleBtn.classList.remove('state-running');
           automationToggleBtn.classList.add('state-stopped');
           if (controlIconEl) controlIconEl.textContent = '▶️';
-          if (controlLabelEl) controlLabelEl.textContent = 'Start Automation';
+          if (controlLabelEl) controlLabelEl.textContent = 'Start';
           automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
 
           if (dashboardStatusPill) {{
             dashboardStatusPill.className = 'status-pill status-idle';
-            dashboardStatusPill.innerHTML = '⚪ Automation Idle';
+            dashboardStatusPill.innerHTML = '⚪ Inactive';
           }}
 
           stopLivePolling();
@@ -5389,7 +5420,6 @@ class Step4ReportingEngine:
         }}
       }}
 
-      if (configToggleBtn) configToggleBtn.addEventListener('click', () => switchTab('config'));
       if (configCloseBtn) configCloseBtn.addEventListener('click', closeConfigModal);
       if (configCancelBtn) configCancelBtn.addEventListener('click', closeConfigModal);
 

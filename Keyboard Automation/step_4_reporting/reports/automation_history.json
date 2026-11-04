@@ -1,19 +1,19 @@
 {
   "success": true,
   "data": {
-    "total_pipeline_runs": 3,
-    "total_questions_answered": 12,
-    "total_runtime_seconds": 160.1,
+    "total_pipeline_runs": 4,
+    "total_questions_answered": 16,
+    "total_runtime_seconds": 166.6,
     "total_unique_chats": 1,
-    "last_updated": "2026-11-04T17:50:41.908770+00:00",
+    "last_updated": "2026-11-04T18:12:41.399836+00:00",
     "chats": {
       "e0645f63-cc82-41f8-8385-2538e9e8f6bf": {
         "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
         "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...",
         "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 4 multiple question at once",
-        "run_count": 3,
-        "total_questions": 12,
-        "last_run_timestamp": "2026-11-04T17:50:41.907662+00:00",
+        "run_count": 4,
+        "total_questions": 16,
+        "last_run_timestamp": "2026-11-04T18:12:41.393829+00:00",
         "runs": [
           {
             "run_id": "run_20261104_061022",
@@ -200,13 +200,75 @@
             ],
             "status": "COMPLETED",
             "selected_at": "2026-11-04T17:48:22.627898+00:00"
+          },
+          {
+            "run_id": "run_20261104_234241",
+            "timestamp": "2026-11-04T18:12:41.393829+00:00",
+            "duration_seconds": 6.5,
+            "questions_count": 4,
+            "questions": [
+              {
+                "question_index": 1,
+                "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य टारगेट रनटाइम क्या होगा?",
+                "options": [
+                  "(Recommended) Node.js / TypeScript रनटाइम",
+                  "Python 3.12+ रनटाइम",
+                  "PowerShell / Windows Shell स्क्रिप्ट"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) Node.js / TypeScript रनटाइम",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 2,
+                "question": "[Grill-Me डेमो 2/4] लॉग वर्बोसिटी का स्तर क्या रखना है?",
+                "options": [
+                  "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)",
+                  "स्टैंडर्ड इन्फो लेवल लॉग्स",
+                  "केवल एरर्स और वार्निंग्स"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 3,
+                "question": "[Grill-Me डेमो 3/4] एरर हैंडलिंग और रीट्राई स्ट्रेटेजी क्या होनी चाहिए?",
+                "options": [
+                  "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ",
+                  "एरर आने पर तुरंत एग्जीक्यूशन रोकें (Fail-Fast)",
+                  "एरर को इग्नोर करके अगला स्टेप जारी रखें"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 4,
+                "question": "[Grill-Me डेमो 4/4] पोस्ट-एग्जीक्यूशन क्लीनअप पॉलिसी क्या होगी?",
+                "options": [
+                  "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)",
+                  "लॉग्स और आर्टिफैक्ट्स को डिस्क पर सुरक्षित रखें",
+                  "पूरा एनवायरनमेंट वैसा ही रहने दें (डीबगिंग के लिए)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)",
+                "is_multi_select": false,
+                "is_recommended": true
+              }
+            ],
+            "status": "COMPLETED",
+            "selected_at": "2026-11-04T17:51:07.204631+00:00"
           }
         ]
       }
     }
   },
   "meta": {
-    "timestamp": "2026-11-04T17:50:41.908770+00:00",
+    "timestamp": "2026-11-04T18:12:41.399836+00:00",
     "step": "step_4_reporting",
     "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
     "format_version": "1.0.0"
