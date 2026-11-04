@@ -1564,14 +1564,12 @@ class Step4ReportingEngine:
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: var(--accent-emerald-bg);
-      color: var(--accent-emerald);
-      border: 1px solid var(--accent-emerald-border);
       padding: 4px 12px;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.02em;
+      transition: all 0.25s ease;
     }}
 
     .status-pill::before {{
@@ -1579,14 +1577,81 @@ class Step4ReportingEngine:
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--accent-emerald);
-      box-shadow: 0 0 8px var(--accent-emerald);
+      transition: all 0.25s ease;
+    }}
+
+    .status-pill.status-idle {{
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-muted, #94a3b8);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }}
+
+    .status-pill.status-idle::before {{
+      background: #94a3b8;
+      box-shadow: none;
+      animation: none;
+    }}
+
+    .status-pill.status-active {{
+      background: var(--accent-emerald-bg, rgba(16, 185, 129, 0.12));
+      color: var(--accent-emerald, #10b981);
+      border: 1px solid var(--accent-emerald-border, #059669);
+    }}
+
+    .status-pill.status-active::before {{
+      background: var(--accent-emerald, #10b981);
+      box-shadow: 0 0 8px var(--accent-emerald, #10b981);
       animation: pulse 2s infinite;
     }}
 
     @keyframes pulse {{
       0%, 100% {{ opacity: 1; }}
       50% {{ opacity: 0.4; }}
+    }}
+
+    /* Dynamic Start/Stop Automation Header Button (Dept 04 Aesthetic) */
+    .btn-automation-toggle {{
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 15px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }}
+
+    .btn-automation-toggle.state-stopped {{
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--accent-emerald, #10b981);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }}
+
+    .btn-automation-toggle.state-stopped:hover {{
+      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--accent-emerald, #10b981);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+      transform: translateY(-1px);
+    }}
+
+    .btn-automation-toggle.state-running {{
+      background: rgba(244, 63, 94, 0.12);
+      color: var(--accent-rose, #f43f5e);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      animation: automationPulse 2.5s infinite;
+    }}
+
+    .btn-automation-toggle.state-running:hover {{
+      background: rgba(244, 63, 94, 0.22);
+      border-color: var(--accent-rose, #f43f5e);
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+      transform: translateY(-1px);
+    }}
+
+    @keyframes automationPulse {{
+      0%, 100% {{ box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.25); }}
+      50% {{ box-shadow: 0 0 12px 2px rgba(244, 63, 94, 0.35); }}
     }}
 
     .btn {{
@@ -3600,8 +3665,12 @@ class Step4ReportingEngine:
         </div>
       </div>
       <div class="header-actions">
-        <span class="status-pill">Active Ledger</span>
+        <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Automation Idle</span>
         <span class="auto-refresh-badge" id="auto-refresh-badge" style="display: none;"><span class="spin-icon">🔄</span> Auto-refresh: <strong id="refresh-countdown">10s</strong></span>
+        <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect-Commander Automation">
+          <span class="control-icon" id="control-icon">▶️</span>
+          <span class="control-label" id="control-label">Start Automation</span>
+        </button>
         <button class="btn" id="config-toggle-btn" title="Open Master System &amp; Dashboard Configuration">⚙️ Config</button>
         <button class="btn" id="theme-toggle" title="Toggle Light/Dark Theme">🌓 Theme</button>
         <button class="btn" onclick="location.reload()" title="Refresh Ledger">🔄 Refresh</button>
@@ -4641,6 +4710,56 @@ class Step4ReportingEngine:
       </div>
     </div>
 
+    <!-- Automation 1-Click Execution & Monitor Modal (Dept 04 & 06 Standard) -->
+    <div class="modal-backdrop" id="automation-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="automation-modal-title">
+      <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon">🚀</span>
+            <div>
+              <h2 class="modal-title" id="automation-modal-title">AutoSelect-Commander Automation</h2>
+              <p class="modal-subtitle">Autonomous Two-Factor Background Monitoring &amp; Execution</p>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" id="btn-close-automation-modal" aria-label="Close Automation Dialog">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--accent-emerald); margin-bottom: 6px;">
+              <span>🟢</span>
+              <span>Active Background Monitoring Engaged</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+              AutoSelect-Commander is actively scanning Antigravity chat transcripts. When a pending Grill-Me question appears, it will automatically focus the chat window and select the recommended option.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">
+              1-Click Terminal Execution Commands:
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">python step_9_complete_automation/complete_automation.py</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-cmd" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">.\\complete_automation.bat</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-bat" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">python step_9_complete_automation/complete_automation.py --dry-run</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-dry-run" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" id="btn-close-automation-modal-footer">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Animated Toast Notification Container -->
     <div class="toast-notification" id="toast-notify" role="alert" aria-live="polite"></div>
 
@@ -5039,6 +5158,33 @@ class Step4ReportingEngine:
       let refreshTimer = null;
       let countdownSeconds = 0;
 
+      function startLivePolling(intervalSeconds) {{
+        if (refreshTimer) {{
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }}
+        countdownSeconds = intervalSeconds;
+        if (autoRefreshBadge) autoRefreshBadge.style.display = 'inline-flex';
+        if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+
+        refreshTimer = setInterval(() => {{
+          countdownSeconds -= 1;
+          if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+          if (countdownSeconds <= 0) {{
+            clearInterval(refreshTimer);
+            location.reload();
+          }}
+        }}, 1000);
+      }}
+
+      function stopLivePolling() {{
+        if (refreshTimer) {{
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }}
+        if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
+      }}
+
       function applyDynamicSettings(cfg) {{
         if (cfg.visualEffects === 'reduced') {{
           document.documentElement.classList.add('reduced-motion');
@@ -5046,28 +5192,130 @@ class Step4ReportingEngine:
           document.documentElement.classList.remove('reduced-motion');
         }}
 
-        if (refreshTimer) {{
-          clearInterval(refreshTimer);
-          refreshTimer = null;
-        }}
-
-        const interval = parseInt(cfg.autoRefresh, 10);
-        if (interval > 0) {{
-          countdownSeconds = interval;
-          if (autoRefreshBadge) autoRefreshBadge.style.display = 'inline-flex';
-          if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
-
-          refreshTimer = setInterval(() => {{
-            countdownSeconds -= 1;
-            if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
-            if (countdownSeconds <= 0) {{
-              clearInterval(refreshTimer);
-              location.reload();
-            }}
-          }}, 1000);
+        const isAutomationRunning = getAutomationRunning();
+        if (isAutomationRunning) {{
+          const configuredRefresh = parseInt(cfg.autoRefresh, 10);
+          const activeInterval = configuredRefresh > 0 ? configuredRefresh : 10;
+          startLivePolling(activeInterval);
         }} else {{
-          if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
+          const interval = parseInt(cfg.autoRefresh, 10);
+          if (interval > 0) {{
+            startLivePolling(interval);
+          }} else {{
+            stopLivePolling();
+          }}
         }}
+      }}
+
+      // ======================================================================
+      // Dynamic Automation Start/Stop Control (AutoSelect-Commander Engine)
+      // ======================================================================
+      const automationToggleBtn = document.getElementById('automation-toggle-btn');
+      const controlIconEl = document.getElementById('control-icon');
+      const controlLabelEl = document.getElementById('control-label');
+      const dashboardStatusPill = document.getElementById('dashboard-status-pill');
+      const automationModal = document.getElementById('automation-modal');
+      const btnCloseAutomationModal = document.getElementById('btn-close-automation-modal');
+      const btnCloseAutomationModalFooter = document.getElementById('btn-close-automation-modal-footer');
+      const btnCopyAutomationCmd = document.getElementById('btn-copy-automation-cmd');
+      const btnCopyAutomationBat = document.getElementById('btn-copy-automation-bat');
+      const btnCopyAutomationDryRun = document.getElementById('btn-copy-automation-dry-run');
+
+      function getAutomationRunning() {{
+        return localStorage.getItem('asc_automation_running') === 'true';
+      }}
+
+      function updateAutomationUI(isRunning, triggerToast = false) {{
+        if (!automationToggleBtn) return;
+
+        if (isRunning) {{
+          automationToggleBtn.classList.remove('state-stopped');
+          automationToggleBtn.classList.add('state-running');
+          if (controlIconEl) controlIconEl.textContent = '⏹️';
+          if (controlLabelEl) controlLabelEl.textContent = 'Stop Automation';
+          automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+
+          if (dashboardStatusPill) {{
+            dashboardStatusPill.className = 'status-pill status-active';
+            dashboardStatusPill.innerHTML = '🟢 Automation Active';
+          }}
+
+          const configuredRefresh = parseInt(currentConfig.autoRefresh, 10);
+          const activeInterval = configuredRefresh > 0 ? configuredRefresh : 10;
+          startLivePolling(activeInterval);
+
+          if (triggerToast) {{
+            showToast('🚀 Automation Started! AutoSelect-Commander is actively monitoring chats.', 'success');
+            openAutomationModal();
+          }}
+        }} else {{
+          automationToggleBtn.classList.remove('state-running');
+          automationToggleBtn.classList.add('state-stopped');
+          if (controlIconEl) controlIconEl.textContent = '▶️';
+          if (controlLabelEl) controlLabelEl.textContent = 'Start Automation';
+          automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+
+          if (dashboardStatusPill) {{
+            dashboardStatusPill.className = 'status-pill status-idle';
+            dashboardStatusPill.innerHTML = '⚪ Automation Idle';
+          }}
+
+          stopLivePolling();
+
+          if (triggerToast) {{
+            showToast('⏹️ Automation Stopped.', 'info');
+          }}
+        }}
+      }}
+
+      function openAutomationModal() {{
+        if (automationModal) {{
+          automationModal.style.display = 'flex';
+          setTimeout(() => automationModal.classList.add('active'), 10);
+        }}
+      }}
+
+      function closeAutomationModal() {{
+        if (automationModal) {{
+          automationModal.classList.remove('active');
+          setTimeout(() => automationModal.style.display = 'none', 250);
+        }}
+      }}
+
+      if (automationToggleBtn) {{
+        automationToggleBtn.addEventListener('click', () => {{
+          const currentlyRunning = getAutomationRunning();
+          const nextState = !currentlyRunning;
+          localStorage.setItem('asc_automation_running', String(nextState));
+          updateAutomationUI(nextState, true);
+        }});
+      }}
+
+      if (btnCloseAutomationModal) {{
+        btnCloseAutomationModal.addEventListener('click', closeAutomationModal);
+      }}
+      if (btnCloseAutomationModalFooter) {{
+        btnCloseAutomationModalFooter.addEventListener('click', closeAutomationModal);
+      }}
+      if (automationModal) {{
+        automationModal.addEventListener('click', (e) => {{
+          if (e.target === automationModal) closeAutomationModal();
+        }});
+      }}
+      if (btnCopyAutomationCmd) {{
+        btnCopyAutomationCmd.addEventListener('click', () => {{
+          copyTextToClipboard('python step_9_complete_automation/complete_automation.py', '📋 Execution command copied to clipboard!');
+        }});
+      }}
+      if (btnCopyAutomationBat) {{
+        btnCopyAutomationBat.addEventListener('click', () => {{
+          copyTextToClipboard('.\\\\complete_automation.bat', '📋 Batch script command copied to clipboard!');
+        }});
+      }}
+      if (btnCopyAutomationDryRun) {{
+        btnCopyAutomationDryRun.addEventListener('click', () => {{
+          copyTextToClipboard('python step_9_complete_automation/complete_automation.py --dry-run', '📋 Dry-run test command copied to clipboard!');
+        }});
       }}
 
       // ======================================================================
@@ -5212,6 +5460,8 @@ class Step4ReportingEngine:
         }});
       }}
 
+      // Initialize dynamic automation control state
+      updateAutomationUI(getAutomationRunning(), false);
       applyDynamicSettings(currentConfig);
 
       // Theme toggle persistence

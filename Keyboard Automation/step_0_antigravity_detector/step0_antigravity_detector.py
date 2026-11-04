@@ -165,6 +165,11 @@ def parse_args():
         help="Perform a single detection check, print clean dashboard box, and exit immediately"
     )
     parser.add_argument(
+        "--dry-run",
+        action="store_true",
+        help="Perform a single dry-run detection check and exit immediately without looping"
+    )
+    parser.add_argument(
         "--interval",
         type=float,
         default=None,
@@ -245,7 +250,7 @@ def main():
     )
     actual_interval = detector.poll_interval
 
-    if args.once:
+    if args.once or args.dry_run:
         result = detector.detect()
 
         if args.json:
@@ -255,12 +260,12 @@ def main():
             display_dashboard(
                 result,
                 chat_stats=result.chat_stats,
-                wipe_screen=True,
+                wipe_screen=(not args.dry_run),
                 poll_interval=actual_interval,
             )
 
-        exit_code = 0 if result.is_detected else 1
-        if pause_enabled:
+        exit_code = 0 if (result.is_detected or result.has_pending_grill_me) else 1
+        if pause_enabled and not args.dry_run:
             wait_for_user()
         sys.exit(exit_code)
 

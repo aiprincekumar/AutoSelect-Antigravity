@@ -197,6 +197,18 @@ class PendingGrillMeChat:
         return asdict(self)
 
 
+def get_convo_latest_mtime(convo_dir: Path) -> float:
+    """Return the latest mtime among transcripts and the conversation directory itself."""
+    logs = convo_dir / ".system_generated" / "logs"
+    candidates = [
+        logs / "transcript_full.jsonl",
+        logs / "transcript.jsonl",
+        convo_dir
+    ]
+    mtimes = [f.stat().st_mtime for f in candidates if f.exists()]
+    return max(mtimes) if mtimes else 0.0
+
+
 # ============================================================================
 # Transcript Scanning Engine
 # ============================================================================
@@ -252,18 +264,16 @@ class GrillMeDetector:
             logger.error("Failed to list brain directory: %s", e)
             return []
 
-        # Sort entries by most recently modified
-        entries.sort(key=lambda p: p.stat().st_mtime, reverse=True)
+        # Sort entries by most recently active conversation
+        entries.sort(key=get_convo_latest_mtime, reverse=True)
 
         for convo_dir in entries:
-            # Check active_hours window if configured
-            if self.active_hours > 0:
-                try:
-                    age_hours = (time.time() - convo_dir.stat().st_mtime) / 3600.0
-                    if age_hours > self.active_hours:
-                        continue
-                except Exception:
-                    pass
+            latest_mtime = get_convo_latest_mtime(convo_dir)
+            age_hours = (time.time() - latest_mtime) / 3600.0 if latest_mtime > 0 else 999999.0
+
+            # Preliminary age check: if older than max(active_hours, 72.0), skip
+            if self.active_hours > 0 and age_hours > max(self.active_hours, 72.0):
+                continue
 
             cid = convo_dir.name
             logs_dir = convo_dir / ".system_generated" / "logs"
@@ -277,7 +287,9 @@ class GrillMeDetector:
             try:
                 chat = self._parse_conversation_transcript(cid, transcript_path)
                 if chat:
-                    pending_chats.append(chat)
+                    # If conversation has an UNANSWERED ask_question, do NOT discard if age_hours <= max(active_hours, 72.0) or active_hours <= 0
+                    if self.active_hours <= 0 or age_hours <= max(self.active_hours, 72.0):
+                        pending_chats.append(chat)
             except Exception as e:
                 logger.debug("Error parsing transcript for %s: %s", cid, e)
 

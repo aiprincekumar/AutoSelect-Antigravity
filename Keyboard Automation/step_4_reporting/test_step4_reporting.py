@@ -1323,5 +1323,32 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertEqual(kb_timing["inter_question_delay_s"], 0.5)
         self.assertEqual(kb_timing["round_completion_pause_s"], 1.0)
 
+    def test_28_dynamic_automation_start_stop_control(self):
+        """Verify dynamic Start/Stop automation toggle button, modal drawer, and JS logic."""
+        history = AutomationHistory(total_pipeline_runs=1, total_questions_answered=1, total_runtime_seconds=5.0, total_unique_chats=1)
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Header Button & Status Pill
+        self.assertIn('id="automation-toggle-btn"', content)
+        self.assertIn('btn-automation-toggle', content)
+        self.assertIn('id="control-icon"', content)
+        self.assertIn('id="control-label"', content)
+        self.assertIn('id="dashboard-status-pill"', content)
+
+        # 2. Automation Modal & 1-Click Execution Drawer
+        self.assertIn('id="automation-modal"', content)
+        self.assertIn('AutoSelect-Commander Automation', content)
+        self.assertIn('id="btn-copy-automation-cmd"', content)
+        self.assertIn('id="btn-copy-automation-bat"', content)
+        self.assertIn('id="btn-copy-automation-dry-run"', content)
+
+        # 3. Dynamic JavaScript State Machine
+        self.assertIn('asc_automation_running', content)
+        self.assertIn('updateAutomationUI', content)
+        self.assertIn('startLivePolling', content)
+        self.assertIn('stopLivePolling', content)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

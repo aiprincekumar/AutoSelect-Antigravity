@@ -119,14 +119,12 @@
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      background: var(--accent-emerald-bg);
-      color: var(--accent-emerald);
-      border: 1px solid var(--accent-emerald-border);
       padding: 4px 12px;
       border-radius: 9999px;
       font-size: 0.75rem;
       font-weight: 600;
       letter-spacing: 0.02em;
+      transition: all 0.25s ease;
     }
 
     .status-pill::before {
@@ -134,14 +132,81 @@
       width: 8px;
       height: 8px;
       border-radius: 50%;
-      background: var(--accent-emerald);
-      box-shadow: 0 0 8px var(--accent-emerald);
+      transition: all 0.25s ease;
+    }
+
+    .status-pill.status-idle {
+      background: rgba(148, 163, 184, 0.12);
+      color: var(--text-muted, #94a3b8);
+      border: 1px solid rgba(148, 163, 184, 0.3);
+    }
+
+    .status-pill.status-idle::before {
+      background: #94a3b8;
+      box-shadow: none;
+      animation: none;
+    }
+
+    .status-pill.status-active {
+      background: var(--accent-emerald-bg, rgba(16, 185, 129, 0.12));
+      color: var(--accent-emerald, #10b981);
+      border: 1px solid var(--accent-emerald-border, #059669);
+    }
+
+    .status-pill.status-active::before {
+      background: var(--accent-emerald, #10b981);
+      box-shadow: 0 0 8px var(--accent-emerald, #10b981);
       animation: pulse 2s infinite;
     }
 
     @keyframes pulse {
       0%, 100% { opacity: 1; }
       50% { opacity: 0.4; }
+    }
+
+    /* Dynamic Start/Stop Automation Header Button (Dept 04 Aesthetic) */
+    .btn-automation-toggle {
+      font-weight: 600;
+      border-radius: var(--radius-md);
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      padding: 8px 15px;
+      font-size: 0.85rem;
+      cursor: pointer;
+    }
+
+    .btn-automation-toggle.state-stopped {
+      background: rgba(16, 185, 129, 0.12);
+      color: var(--accent-emerald, #10b981);
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }
+
+    .btn-automation-toggle.state-stopped:hover {
+      background: rgba(16, 185, 129, 0.22);
+      border-color: var(--accent-emerald, #10b981);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.3);
+      transform: translateY(-1px);
+    }
+
+    .btn-automation-toggle.state-running {
+      background: rgba(244, 63, 94, 0.12);
+      color: var(--accent-rose, #f43f5e);
+      border: 1px solid rgba(244, 63, 94, 0.4);
+      animation: automationPulse 2.5s infinite;
+    }
+
+    .btn-automation-toggle.state-running:hover {
+      background: rgba(244, 63, 94, 0.22);
+      border-color: var(--accent-rose, #f43f5e);
+      box-shadow: 0 0 14px rgba(244, 63, 94, 0.35);
+      transform: translateY(-1px);
+    }
+
+    @keyframes automationPulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(244, 63, 94, 0.25); }
+      50% { box-shadow: 0 0 12px 2px rgba(244, 63, 94, 0.35); }
     }
 
     .btn {
@@ -2155,8 +2220,12 @@
         </div>
       </div>
       <div class="header-actions">
-        <span class="status-pill">Active Ledger</span>
+        <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Automation Idle</span>
         <span class="auto-refresh-badge" id="auto-refresh-badge" style="display: none;"><span class="spin-icon">🔄</span> Auto-refresh: <strong id="refresh-countdown">10s</strong></span>
+        <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect-Commander Automation">
+          <span class="control-icon" id="control-icon">▶️</span>
+          <span class="control-label" id="control-label">Start Automation</span>
+        </button>
         <button class="btn" id="config-toggle-btn" title="Open Master System &amp; Dashboard Configuration">⚙️ Config</button>
         <button class="btn" id="theme-toggle" title="Toggle Light/Dark Theme">🌓 Theme</button>
         <button class="btn" onclick="location.reload()" title="Refresh Ledger">🔄 Refresh</button>
@@ -2177,7 +2246,7 @@
       <button class="tab-btn" id="tab-btn-questions" role="tab" aria-selected="false" aria-controls="tab-questions" data-tab="questions">
         <span class="tab-icon">💬</span>
         <span class="tab-label">Questions</span>
-        <span class="tab-badge" id="tab-questions-badge">4</span>
+        <span class="tab-badge" id="tab-questions-badge">12</span>
       </button>
       <button class="tab-btn" id="tab-btn-config" role="tab" aria-selected="false" aria-controls="tab-config" data-tab="config">
         <span class="tab-icon">⚙️</span>
@@ -2198,7 +2267,7 @@
         </div>
         <div class="filter-header-actions">
           <div class="filter-stats-badge" id="filter-stats-badge">
-            Showing <span id="filter-count">1</span> of <span id="filter-total">1</span> runs
+            Showing <span id="filter-count">3</span> of <span id="filter-total">3</span> runs
           </div>
           <button type="button" class="collapse-toggle-btn" id="filter-collapse-btn" aria-expanded="true" aria-controls="filter-toolbar-body" title="Collapse/Expand Filters">
             <span class="collapse-icon">▾</span>
@@ -2287,7 +2356,7 @@
             <span class="metric-title">Total Pipeline Runs</span>
             <span class="metric-icon">🚀</span>
           </div>
-          <div class="metric-value">1</div>
+          <div class="metric-value">3</div>
           <div class="metric-subtitle">Completed Runs</div>
         </div>
 
@@ -2297,7 +2366,7 @@
             <span class="metric-title">Questions Answered</span>
             <span class="metric-icon">💬</span>
           </div>
-          <div class="metric-value">4</div>
+          <div class="metric-value">12</div>
           <div class="metric-subtitle">Grill-Me Resolved</div>
         </div>
 
@@ -2307,8 +2376,8 @@
             <span class="metric-title">Cumulative Runtime</span>
             <span class="metric-icon">⏱️</span>
           </div>
-          <div class="metric-value">14.3s</div>
-          <div class="metric-subtitle">14.3s Total Active</div>
+          <div class="metric-value">2m 40s</div>
+          <div class="metric-subtitle">160.1s Total Active</div>
         </div>
 
         <!-- 4. Unique Chats Automated -->
@@ -2328,7 +2397,7 @@
             <span class="metric-title">Mean Run Latency</span>
             <span class="metric-icon">⚡</span>
           </div>
-          <div class="metric-value">14.3s</div>
+          <div class="metric-value">53.4s</div>
           <div class="metric-subtitle">Avg Seconds / Run</div>
         </div>
 
@@ -2348,7 +2417,7 @@
             <span class="metric-title">Questions per Chat</span>
             <span class="metric-icon">📑</span>
           </div>
-          <div class="metric-value">4.0 <span class="metric-unit">Qs/chat</span></div>
+          <div class="metric-value">12.0 <span class="metric-unit">Qs/chat</span></div>
           <div class="metric-subtitle">Avg Questions / Chat</div>
         </div>
 
@@ -2358,7 +2427,7 @@
             <span class="metric-title">Execution Speed</span>
             <span class="metric-icon">🏎️</span>
           </div>
-          <div class="metric-value">3.6s <span class="metric-unit">s/Q</span></div>
+          <div class="metric-value">13.3s <span class="metric-unit">s/Q</span></div>
           <div class="metric-subtitle">Sec / Question Resolved</div>
         </div>
       </div>
@@ -2525,24 +2594,32 @@
   <line x1="55.0" y1="190.0" x2="585.0" y2="190.0" stroke="var(--border-subtle)" stroke-width="1" />
   <text x="47.0" y="193.0" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">0.0s</text>
   <line x1="55.0" y1="152.5" x2="585.0" y2="152.5" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="155.5" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">4.5s</text>
+  <text x="47.0" y="155.5" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">43.5s</text>
   <line x1="55.0" y1="115.0" x2="585.0" y2="115.0" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="118.0" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">8.9s</text>
+  <text x="47.0" y="118.0" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">87.0s</text>
   <line x1="55.0" y1="77.5" x2="585.0" y2="77.5" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="80.5" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">13.4s</text>
+  <text x="47.0" y="80.5" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">130.6s</text>
   <line x1="55.0" y1="40.0" x2="585.0" y2="40.0" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="43.0" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">17.9s</text>
+  <text x="47.0" y="43.0" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">174.1s</text>
   <text x="593.0" y="193.0" font-size="9" font-family="var(--font-mono)" fill="#34d399" text-anchor="start">0 Qs</text>
   <text x="593.0" y="155.5" font-size="9" font-family="var(--font-mono)" fill="#34d399" text-anchor="start">1 Qs</text>
   <text x="593.0" y="118.0" font-size="9" font-family="var(--font-mono)" fill="#34d399" text-anchor="start">2 Qs</text>
   <text x="593.0" y="80.5" font-size="9" font-family="var(--font-mono)" fill="#34d399" text-anchor="start">3 Qs</text>
   <text x="593.0" y="43.0" font-size="9" font-family="var(--font-mono)" fill="#34d399" text-anchor="start">4 Qs</text>
-  <rect x="312.0" y="62.5" width="16.0" height="127.5" rx="2" fill="url(#velBarGrad)" opacity="0.85"><title>run_20261104_061022: 4 Questions</title></rect>
+  <rect x="47.0" y="62.5" width="16.0" height="127.5" rx="2" fill="url(#velBarGrad)" opacity="0.85"><title>run_20261104_061022: 4 Questions</title></rect>
+  <text x="55.0" y="58.5" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">4Q</text>
+  <rect x="312.0" y="62.5" width="16.0" height="127.5" rx="2" fill="url(#velBarGrad)" opacity="0.85"><title>run_20261104_230944: 4 Questions</title></rect>
   <text x="320.0" y="58.5" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">4Q</text>
-  <polygon points="320.0,190.0 320.0,70.0 320.0,190.0" fill="url(#velAreaGrad)" />
-  <path d="M 320.0 70.0" fill="none" stroke="url(#velDurGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
-  <circle cx="320.0" cy="70.0" r="4" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2"><title>run_20261104_061022: 14.32s latency</title></circle>
-  <text x="320.0" y="206.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R1</text>
+  <rect x="577.0" y="62.5" width="16.0" height="127.5" rx="2" fill="url(#velBarGrad)" opacity="0.85"><title>run_20261104_232041: 4 Questions</title></rect>
+  <text x="585.0" y="58.5" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">4Q</text>
+  <polygon points="55.0,190.0 55.0,177.7 320.0,184.4 585.0,70.0 585.0,190.0" fill="url(#velAreaGrad)" />
+  <path d="M 55.0 177.7 L 320.0 184.4 L 585.0 70.0" fill="none" stroke="url(#velDurGrad)" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" />
+  <circle cx="55.0" cy="177.7" r="4" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2"><title>run_20261104_061022: 14.32s latency</title></circle>
+  <text x="55.0" y="206.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R1</text>
+  <circle cx="320.0" cy="184.4" r="4" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2"><title>run_20261104_230944: 6.50s latency</title></circle>
+  <text x="320.0" y="206.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R2</text>
+  <circle cx="585.0" cy="70.0" r="4" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2"><title>run_20261104_232041: 139.28s latency</title></circle>
+  <text x="585.0" y="206.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R3</text>
 </svg>
           </div>
         </div>
@@ -2569,27 +2646,27 @@
   <!-- Background Arc Track (220 deg) -->
   <circle cx="150.0" cy="120.0" r="72.0" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="16" stroke-linecap="round" stroke-dasharray="276.46 400" transform="rotate(160 150.0 120.0)" />
   <!-- Progress Arc -->
-  <circle cx="150.0" cy="120.0" r="72.0" fill="none" stroke="url(#prodGaugeGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="276.46 400" stroke-dashoffset="227.77" transform="rotate(160 150.0 120.0)" />
+  <circle cx="150.0" cy="120.0" r="72.0" fill="none" stroke="url(#prodGaugeGrad)" stroke-width="16" stroke-linecap="round" stroke-dasharray="276.46 400" stroke-dashoffset="184.35" transform="rotate(160 150.0 120.0)" />
   <!-- Center Readout -->
-  <text x="150.0" y="118.0" font-size="28" font-weight="800" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">1m 45s</text>
+  <text x="150.0" y="118.0" font-size="28" font-weight="800" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">3m 19s</text>
   <text x="150.0" y="138.0" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">MANUAL TIME SAVED</text>
   <!-- Velocity Pill -->
   <rect x="82.0" y="154.0" width="136" height="22" rx="11" fill="rgba(16, 185, 129, 0.15)" stroke="#10b981" stroke-width="1" />
-  <text x="150.0" y="169.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">⚡ 8.4x Faster</text>
+  <text x="150.0" y="169.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="middle">⚡ 2.2x Faster</text>
   <!-- Right Side Summary Statistics -->
   <g transform="translate(260, 45)">
     <text x="0" y="0" font-size="12" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">Productivity ROI</text>
     <line x1="0" y1="10" x2="180" y2="10" stroke="var(--border-subtle)" stroke-width="1" />
     <text x="0" y="32" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Estimated Human Time:</text>
-    <text x="180" y="32" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="end">120.0s</text>
+    <text x="180" y="32" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="end">360.0s</text>
     <text x="0" y="56" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Script Automated Time:</text>
-    <text x="180" y="56" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#06b6d4" text-anchor="end">14.3s</text>
+    <text x="180" y="56" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#06b6d4" text-anchor="end">160.1s</text>
     <text x="0" y="80" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Efficiency Velocity:</text>
-    <text x="180" y="80" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="end">~8.4x</text>
+    <text x="180" y="80" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="end">~2.2x</text>
     <text x="0" y="104" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Standard Baseline:</text>
     <text x="180" y="104" font-size="10" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">30s / question</text>
     <rect x="0" y="122" width="180" height="26" rx="6" fill="var(--bg-surface-elevated)" />
-    <text x="90" y="139" font-size="9.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-secondary)" text-anchor="middle">✓ 4 Questions Automated</text>
+    <text x="90" y="139" font-size="9.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-secondary)" text-anchor="middle">✓ 12 Questions Automated</text>
   </g>
 </svg>
           </div>
@@ -2683,9 +2760,10 @@
     <title>Hour 16:00: 0 run(s)</title>
   </rect>
   <text x="428.0" y="105.0" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle">16h</text>
-  <rect x="442.0" y="45.0" width="20.0" height="44.0" rx="4" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1">
-    <title>Hour 17:00: 0 run(s)</title>
+  <rect x="442.0" y="45.0" width="20.0" height="44.0" rx="4" fill="rgba(99, 102, 241, 0.4)" stroke="rgba(99, 102, 241, 0.6)" stroke-width="1">
+    <title>Hour 17:00: 2 run(s)</title>
   </rect>
+  <text x="452.0" y="71.0" font-size="9" font-weight="700" font-family="var(--font-mono)" fill="#ffffff" text-anchor="middle">2</text>
   <rect x="466.0" y="45.0" width="20.0" height="44.0" rx="4" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1">
     <title>Hour 18:00: 0 run(s)</title>
   </rect>
@@ -2719,7 +2797,7 @@
     <rect x="0" y="0" width="135.0" height="3" rx="1.5" fill="#06b6d4" />
     <text x="12" y="24" font-size="11" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">☀️ Afternoon</text>
     <text x="12" y="40" font-size="8.5" font-family="var(--font-mono)" fill="var(--text-muted)">12:00 - 18:00</text>
-    <text x="123.0" y="48" font-size="18" font-weight="800" font-family="var(--font-mono)" fill="#06b6d4" text-anchor="end">0</text>
+    <text x="123.0" y="48" font-size="18" font-weight="800" font-family="var(--font-mono)" fill="#06b6d4" text-anchor="end">2</text>
     <text x="123.0" y="60" font-size="8" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">runs</text>
   </g>
   <g transform="translate(328.0, 145.0)">
@@ -2772,20 +2850,20 @@
   <g transform="translate(35, 30)">
     <text x="0" y="0" font-size="28" font-weight="800" font-family="var(--font-mono)" fill="#10b981">100.0%</text>
     <text x="0" y="18" font-size="10.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-secondary)">Option 1 Recommended Adherence Rate</text>
-    <text x="390" y="0" font-size="14" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="end">4 Total</text>
+    <text x="390" y="0" font-size="14" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="end">12 Total</text>
     <text x="390" y="18" font-size="9" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">Questions Evaluated</text>
   </g>
   <!-- Stacked Horizontal Progress Bar -->
   <g transform="translate(35, 75)">
     <rect width="390.0" height="20" rx="10" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="1" />
-    <rect x="0.0" y="0" width="390.0" height="20" rx="10" fill="url(#opt1Grad)"><title>Option 1: 4 Qs (100.0%)</title></rect>
+    <rect x="0.0" y="0" width="390.0" height="20" rx="10" fill="url(#opt1Grad)"><title>Option 1: 12 Qs (100.0%)</title></rect>
   </g>
   <g transform="translate(35, 120.0)">
     <rect width="390" height="28" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="0.8" />
     <circle cx="14" cy="14" r="5" fill="#10b981" />
     <text x="28" y="18" font-size="10.5" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">✓ Option 1 (Recommended)</text>
     <text x="210" y="18" font-size="9" font-family="var(--font-family)" fill="var(--text-muted)">Autonomous Selection Priority</text>
-    <text x="375" y="18" font-size="10.5" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="end">4 Qs (100.0%)</text>
+    <text x="375" y="18" font-size="10.5" font-weight="700" font-family="var(--font-mono)" fill="#10b981" text-anchor="end">12 Qs (100.0%)</text>
   </g>
   <g transform="translate(35, 154.0)">
     <rect width="390" height="28" rx="6" fill="var(--bg-surface-elevated)" stroke="var(--border-subtle)" stroke-width="0.8" />
@@ -2843,10 +2921,10 @@
   <line x1="50" y1="160" x2="620" y2="160" stroke="var(--border-subtle)" stroke-width="1" />
   <line x1="50" y1="200" x2="620" y2="200" stroke="var(--border-subtle)" stroke-width="1" />
   <line x1="50" y1="200" x2="620" y2="200" stroke="var(--border-subtle)" stroke-width="1.5" />
-  <rect x="315.0" y="163.0" width="22.0" height="37.0" rx="3" fill="url(#barRunsGrad)"><title>Runs: 1</title></rect>
-  <text x="326.0" y="159.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#818cf8" text-anchor="middle">1</text>
-  <rect x="343.0" y="50.0" width="22.0" height="150.0" rx="3" fill="url(#barQsGrad)"><title>Questions: 4</title></rect>
-  <text x="354.0" y="46.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">4</text>
+  <rect x="315.0" y="163.0" width="22.0" height="37.0" rx="3" fill="url(#barRunsGrad)"><title>Runs: 3</title></rect>
+  <text x="326.0" y="159.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#818cf8" text-anchor="middle">3</text>
+  <rect x="343.0" y="50.0" width="22.0" height="150.0" rx="3" fill="url(#barQsGrad)"><title>Questions: 12</title></rect>
+  <text x="354.0" y="46.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">12</text>
   <text x="340.0" y="222" font-size="10" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">e0645f63..</text>
 </svg>
           </div>
@@ -2867,11 +2945,11 @@
   <!-- Background Donut Track -->
   <circle cx="95.0" cy="115.0" r="62.0" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="20" />
   <circle cx="95.0" cy="115.0" r="62.0" fill="none" stroke="#6366f1" stroke-width="20" stroke-dasharray="389.56 0.00" stroke-dashoffset="-0.00" transform="rotate(-90 95.0 115.0)" />
-  <text x="95.0" y="113.0" font-size="24" font-weight="800" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">4</text>
+  <text x="95.0" y="113.0" font-size="24" font-weight="800" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">12</text>
   <text x="95.0" y="131.0" font-size="8.5" font-weight="700" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="middle" letter-spacing="1">TOTAL QS</text>
   <circle cx="205" cy="41.0" r="5" fill="#6366f1" />
   <text x="218" y="45.0" font-size="11" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">मुझे डेमो के लिए ग्रिड..</text>
-  <text x="218" y="59.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-secondary)">4 Qs • 100.0% share</text>
+  <text x="218" y="59.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-secondary)">12 Qs • 100.0% share</text>
 </svg>
           </div>
         </div>
@@ -2912,20 +2990,26 @@
   <line x1="55.0" y1="180.0" x2="610.0" y2="180.0" stroke="var(--border-subtle)" stroke-width="1" />
   <text x="47.0" y="183.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">0.0s</text>
   <line x1="55.0" y1="143.8" x2="610.0" y2="143.8" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="146.8" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">4.5s</text>
+  <text x="47.0" y="146.8" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">43.5s</text>
   <line x1="55.0" y1="107.5" x2="610.0" y2="107.5" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="110.5" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">8.9s</text>
+  <text x="47.0" y="110.5" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">87.0s</text>
   <line x1="55.0" y1="71.2" x2="610.0" y2="71.2" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="74.2" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">13.4s</text>
+  <text x="47.0" y="74.2" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">130.6s</text>
   <line x1="55.0" y1="35.0" x2="610.0" y2="35.0" stroke="var(--border-subtle)" stroke-width="1" />
-  <text x="47.0" y="38.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">17.9s</text>
-  <polygon points="332.5,180.0 332.5,64.0 332.5,180.0" fill="url(#latencyAreaGrad)" />
-  <path d="M 332.5 64.0" fill="none" stroke="url(#latencyLineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
-  <line x1="55.0" y1="64.0" x2="610.0" y2="64.0" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9" />
-  <text x="610.0" y="58.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#f59e0b" text-anchor="end">Mean: 14.3s</text>
-  <circle cx="332.5" cy="64.0" r="4.5" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2.5"><title>run_20261104_061022: 14.32s (4 Qs)</title></circle>
-  <text x="332.5" y="56.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">14.3s</text>
-  <text x="332.5" y="196.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R1</text>
+  <text x="47.0" y="38.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-muted)" text-anchor="end">174.1s</text>
+  <polygon points="55.0,180.0 55.0,168.1 332.5,174.6 610.0,64.0 610.0,180.0" fill="url(#latencyAreaGrad)" />
+  <path d="M 55.0 168.1 L 332.5 174.6 L 610.0 64.0" fill="none" stroke="url(#latencyLineGrad)" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" />
+  <line x1="55.0" y1="135.6" x2="610.0" y2="135.6" stroke="#f59e0b" stroke-width="1.5" stroke-dasharray="4 3" opacity="0.9" />
+  <text x="610.0" y="129.6" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#f59e0b" text-anchor="end">Mean: 53.4s</text>
+  <circle cx="55.0" cy="168.1" r="4.5" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2.5"><title>run_20261104_061022: 14.32s (4 Qs)</title></circle>
+  <text x="55.0" y="160.1" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">14.3s</text>
+  <text x="55.0" y="196.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R1</text>
+  <circle cx="332.5" cy="174.6" r="4.5" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2.5"><title>run_20261104_230944: 6.50s (4 Qs)</title></circle>
+  <text x="332.5" y="166.6" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">6.5s</text>
+  <text x="332.5" y="196.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R2</text>
+  <circle cx="610.0" cy="64.0" r="4.5" fill="var(--bg-primary)" stroke="#06b6d4" stroke-width="2.5"><title>run_20261104_232041: 139.28s (4 Qs)</title></circle>
+  <text x="610.0" y="56.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">139.3s</text>
+  <text x="610.0" y="196.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R3</text>
 </svg>
         </div>
       </div>
@@ -2940,11 +3024,11 @@
           <span>Total Unique Chats</span>
         </div>
         <div class="stat-pill">
-          <span class="stat-num">1</span>
+          <span class="stat-num">3</span>
           <span>Lifetime Pipeline Runs</span>
         </div>
         <div class="stat-pill">
-          <span class="stat-num">1.0</span>
+          <span class="stat-num">3.0</span>
           <span>Avg Runs / Chat</span>
         </div>
       </div>
@@ -3663,6 +3747,56 @@
       </div>
     </div>
 
+    <!-- Automation 1-Click Execution & Monitor Modal (Dept 04 & 06 Standard) -->
+    <div class="modal-backdrop" id="automation-modal" style="display: none;" role="dialog" aria-modal="true" aria-labelledby="automation-modal-title">
+      <div class="modal-content" style="max-width: 620px;">
+        <div class="modal-header">
+          <div class="modal-title-wrap">
+            <span class="modal-icon">🚀</span>
+            <div>
+              <h2 class="modal-title" id="automation-modal-title">AutoSelect-Commander Automation</h2>
+              <p class="modal-subtitle">Autonomous Two-Factor Background Monitoring &amp; Execution</p>
+            </div>
+          </div>
+          <button type="button" class="modal-close-btn" id="btn-close-automation-modal" aria-label="Close Automation Dialog">&times;</button>
+        </div>
+        <div class="modal-body">
+          <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 14px 16px; margin-bottom: 18px;">
+            <div style="display: flex; align-items: center; gap: 10px; font-weight: 600; color: var(--accent-emerald); margin-bottom: 6px;">
+              <span>🟢</span>
+              <span>Active Background Monitoring Engaged</span>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-secondary); margin: 0; line-height: 1.5;">
+              AutoSelect-Commander is actively scanning Antigravity chat transcripts. When a pending Grill-Me question appears, it will automatically focus the chat window and select the recommended option.
+            </p>
+          </div>
+
+          <div style="margin-bottom: 16px;">
+            <label style="font-size: 0.8rem; font-weight: 600; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.05em; display: block; margin-bottom: 8px;">
+              1-Click Terminal Execution Commands:
+            </label>
+            <div style="display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">python step_9_complete_automation/complete_automation.py</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-cmd" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">.\complete_automation.bat</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-bat" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 10px 14px;">
+                <code style="font-family: var(--font-mono); font-size: 0.82rem; color: var(--accent-indigo);">python step_9_complete_automation/complete_automation.py --dry-run</code>
+                <button type="button" class="btn btn-sm" id="btn-copy-automation-dry-run" style="padding: 4px 10px; font-size: 0.78rem;">📋 Copy</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn" id="btn-close-automation-modal-footer">Close</button>
+        </div>
+      </div>
+    </div>
+
     <!-- Animated Toast Notification Container -->
     <div class="toast-notification" id="toast-notify" role="alert" aria-live="polite"></div>
 
@@ -3670,13 +3804,13 @@
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 22:19:29</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 23:20:41</span></div>
     </footer>
   </div>
 
   <!-- Raw History JSON Store for Zero-Dependency Dynamic Client Render -->
   <script id="history-data" type="application/json">
-{"total_pipeline_runs": 1, "total_questions_answered": 4, "total_runtime_seconds": 14.32, "total_unique_chats": 1, "last_updated": "2026-11-04T00:40:22.570848+00:00", "chats": {"e0645f63-cc82-41f8-8385-2538e9e8f6bf": {"conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf", "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...", "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 4 multiple question at once", "run_count": 1, "total_questions": 4, "last_run_timestamp": "2026-11-04T00:40:22.564563+00:00", "runs": [{"run_id": "run_20261104_061022", "timestamp": "2026-11-04T00:40:22.564563+00:00", "duration_seconds": 14.32, "questions_count": 4, "questions": [{"question_index": 1, "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट रन के दौरान एरर हैंडलिंग रणनीति क्या होनी चाहिए?", "options": ["(Recommended) Fail-Fast: पहले एरर पर तुरंत रोकें और स्टैक ट्रेस रिपोर्ट करें", "Retry-Policy: अधिकतम 3 बार बैकऑफ़ के साथ पुनः प्रयास करें", "Ignore & Continue: एरर को लॉग में दर्ज कर बाकी टेस्ट जारी रखें"], "selected_option_index": 1, "selected_option_text": "(Recommended) Fail-Fast: पहले एरर पर तुरंत रोकें और स्टैक ट्रेस रिपोर्ट करें", "is_multi_select": false, "is_recommended": true}, {"question_index": 2, "question": "[Grill-Me डेमो 2/4] टेस्ट एग्जीक्यूशन का कंकरेंसी (Concurrency) लेवल क्या रखना है?", "options": ["(Recommended) पैरेलल एग्जीक्यूशन (मल्टी-थ्रेड/वर्कर्स के साथ तेज़ रन)", "सीक्वेंशियल एग्जीक्यूशन (एक समय में एक टेस्ट, सुरक्षित और रेस-कंडीशन मुक्त)", "डायनामिक लोड शेड्यूलिंग (सिस्टम CPU/मेमोरी के अनुसार ऑटो-एडजस्ट)"], "selected_option_index": 1, "selected_option_text": "(Recommended) पैरेलल एग्जीक्यूशन (मल्टी-थ्रेड/वर्कर्स के साथ तेज़ रन)", "is_multi_select": false, "is_recommended": true}, {"question_index": 3, "question": "[Grill-Me डेमो 3/4] डेटा और मॉकिंग (Mock Services) का सेटअप क्या होना चाहिए?", "options": ["(Recommended) इन-मेमरी मॉक्स और टेस्ट फिक्सचर्स (फास्ट और पूरी तरह आइसोलेटेड)", "कंटेनराइज्ड टेस्ट डेटाबेस (Docker-based वास्तविक एनवायरनमेंट)", "लाइव सैंडबॉक्स एंडपॉइंट्स"], "selected_option_index": 1, "selected_option_text": "(Recommended) इन-मेमरी मॉक्स और टेस्ट फिक्सचर्स (फास्ट और पूरी तरह आइसोलेटेड)", "is_multi_select": false, "is_recommended": true}, {"question_index": 4, "question": "[Grill-Me डेमो 4/4] टेस्ट निष्पादन के बाद रिसोर्स और आर्टिफ़ैक्ट क्लीनअप की नीति क्या हो?", "options": ["(Recommended) ऑटो-क्लीनअप (टेम्प फाइल्स और डमी प्रोसेस तुरंत साफ़ करें)", "केवल फेलियर पर प्रिजर्व करें (पास होने पर डिलीट, फेल होने पर डिबग हेतु स्टेट सुरक्षित रखें)", "मैनुअल क्लीनअप (सारे आर्टिफ़ैक्ट्स और लॉग्स सुरक्षित रखें)"], "selected_option_index": 1, "selected_option_text": "(Recommended) ऑटो-क्लीनअप (टेम्प फाइल्स और डमी प्रोसेस तुरंत साफ़ करें)", "is_multi_select": false, "is_recommended": true}], "status": "COMPLETED", "selected_at": "2026-11-04T00:40:08.241247+00:00"}]}}}
+{"total_pipeline_runs": 3, "total_questions_answered": 12, "total_runtime_seconds": 160.1, "total_unique_chats": 1, "last_updated": "2026-11-04T17:50:41.908770+00:00", "chats": {"e0645f63-cc82-41f8-8385-2538e9e8f6bf": {"conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf", "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...", "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 4 multiple question at once", "run_count": 3, "total_questions": 12, "last_run_timestamp": "2026-11-04T17:50:41.907662+00:00", "runs": [{"run_id": "run_20261104_061022", "timestamp": "2026-11-04T00:40:22.564563+00:00", "duration_seconds": 14.32, "questions_count": 4, "questions": [{"question_index": 1, "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट रन के दौरान एरर हैंडलिंग रणनीति क्या होनी चाहिए?", "options": ["(Recommended) Fail-Fast: पहले एरर पर तुरंत रोकें और स्टैक ट्रेस रिपोर्ट करें", "Retry-Policy: अधिकतम 3 बार बैकऑफ़ के साथ पुनः प्रयास करें", "Ignore & Continue: एरर को लॉग में दर्ज कर बाकी टेस्ट जारी रखें"], "selected_option_index": 1, "selected_option_text": "(Recommended) Fail-Fast: पहले एरर पर तुरंत रोकें और स्टैक ट्रेस रिपोर्ट करें", "is_multi_select": false, "is_recommended": true}, {"question_index": 2, "question": "[Grill-Me डेमो 2/4] टेस्ट एग्जीक्यूशन का कंकरेंसी (Concurrency) लेवल क्या रखना है?", "options": ["(Recommended) पैरेलल एग्जीक्यूशन (मल्टी-थ्रेड/वर्कर्स के साथ तेज़ रन)", "सीक्वेंशियल एग्जीक्यूशन (एक समय में एक टेस्ट, सुरक्षित और रेस-कंडीशन मुक्त)", "डायनामिक लोड शेड्यूलिंग (सिस्टम CPU/मेमोरी के अनुसार ऑटो-एडजस्ट)"], "selected_option_index": 1, "selected_option_text": "(Recommended) पैरेलल एग्जीक्यूशन (मल्टी-थ्रेड/वर्कर्स के साथ तेज़ रन)", "is_multi_select": false, "is_recommended": true}, {"question_index": 3, "question": "[Grill-Me डेमो 3/4] डेटा और मॉकिंग (Mock Services) का सेटअप क्या होना चाहिए?", "options": ["(Recommended) इन-मेमरी मॉक्स और टेस्ट फिक्सचर्स (फास्ट और पूरी तरह आइसोलेटेड)", "कंटेनराइज्ड टेस्ट डेटाबेस (Docker-based वास्तविक एनवायरनमेंट)", "लाइव सैंडबॉक्स एंडपॉइंट्स"], "selected_option_index": 1, "selected_option_text": "(Recommended) इन-मेमरी मॉक्स और टेस्ट फिक्सचर्स (फास्ट और पूरी तरह आइसोलेटेड)", "is_multi_select": false, "is_recommended": true}, {"question_index": 4, "question": "[Grill-Me डेमो 4/4] टेस्ट निष्पादन के बाद रिसोर्स और आर्टिफ़ैक्ट क्लीनअप की नीति क्या हो?", "options": ["(Recommended) ऑटो-क्लीनअप (टेम्प फाइल्स और डमी प्रोसेस तुरंत साफ़ करें)", "केवल फेलियर पर प्रिजर्व करें (पास होने पर डिलीट, फेल होने पर डिबग हेतु स्टेट सुरक्षित रखें)", "मैनुअल क्लीनअप (सारे आर्टिफ़ैक्ट्स और लॉग्स सुरक्षित रखें)"], "selected_option_index": 1, "selected_option_text": "(Recommended) ऑटो-क्लीनअप (टेम्प फाइल्स और डमी प्रोसेस तुरंत साफ़ करें)", "is_multi_select": false, "is_recommended": true}], "status": "COMPLETED", "selected_at": "2026-11-04T00:40:08.241247+00:00"}, {"run_id": "run_20261104_230944", "timestamp": "2026-11-04T17:39:44.621832+00:00", "duration_seconds": 6.5, "questions_count": 4, "questions": [{"question_index": 1, "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य टारगेट रनटाइम क्या होगा?", "options": ["(Recommended) Node.js / TypeScript रनटाइम", "Python 3.12+ रनटाइम", "PowerShell / Windows Shell स्क्रिप्ट"], "selected_option_index": 1, "selected_option_text": "(Recommended) Node.js / TypeScript रनटाइम", "is_multi_select": false, "is_recommended": true}, {"question_index": 2, "question": "[Grill-Me डेमो 2/4] लॉग वर्बोसिटी का स्तर क्या रखना है?", "options": ["(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)", "स्टैंडर्ड इन्फो लेवल लॉग्स", "केवल एरर्स और वार्निंग्स"], "selected_option_index": 1, "selected_option_text": "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)", "is_multi_select": false, "is_recommended": true}, {"question_index": 3, "question": "[Grill-Me डेमो 3/4] एरर हैंडलिंग और रीट्राई स्ट्रेटेजी क्या होनी चाहिए?", "options": ["(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ", "एरर आने पर तुरंत एग्जीक्यूशन रोकें (Fail-Fast)", "एरर को इग्नोर करके अगला स्टेप जारी रखें"], "selected_option_index": 1, "selected_option_text": "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ", "is_multi_select": false, "is_recommended": true}, {"question_index": 4, "question": "[Grill-Me डेमो 4/4] पोस्ट-एग्जीक्यूशन क्लीनअप पॉलिसी क्या होगी?", "options": ["(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)", "लॉग्स और आर्टिफैक्ट्स को डिस्क पर सुरक्षित रखें", "पूरा एनवायरनमेंट वैसा ही रहने दें (डीबगिंग के लिए)"], "selected_option_index": 1, "selected_option_text": "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)", "is_multi_select": false, "is_recommended": true}], "status": "COMPLETED", "selected_at": "2026-11-04T17:33:58.980865+00:00"}, {"run_id": "run_20261104_232041", "timestamp": "2026-11-04T17:50:41.907662+00:00", "duration_seconds": 139.28, "questions_count": 4, "questions": [{"question_index": 1, "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य टारगेट रनटाइम क्या होगा?", "options": ["(Recommended) Node.js / TypeScript रनटाइम", "Python 3.12+ रनटाइम", "PowerShell / Windows Shell स्क्रिप्ट"], "selected_option_index": 1, "selected_option_text": "(Recommended) Node.js / TypeScript रनटाइम", "is_multi_select": false, "is_recommended": true}, {"question_index": 2, "question": "[Grill-Me डेमो 2/4] लॉग वर्बोसिटी का स्तर क्या रखना है?", "options": ["(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)", "स्टैंडर्ड इन्फो लेवल लॉग्स", "केवल एरर्स और वार्निंग्स"], "selected_option_index": 1, "selected_option_text": "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)", "is_multi_select": false, "is_recommended": true}, {"question_index": 3, "question": "[Grill-Me डेमो 3/4] एरर हैंडलिंग और रीट्राई स्ट्रेटेजी क्या होनी चाहिए?", "options": ["(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ", "एरर आने पर तुरंत एग्जीक्यूशन रोकें (Fail-Fast)", "एरर को इग्नोर करके अगला स्टेप जारी रखें"], "selected_option_index": 1, "selected_option_text": "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ", "is_multi_select": false, "is_recommended": true}, {"question_index": 4, "question": "[Grill-Me डेमो 4/4] पोस्ट-एग्जीक्यूशन क्लीनअप पॉलिसी क्या होगी?", "options": ["(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)", "लॉग्स और आर्टिफैक्ट्स को डिस्क पर सुरक्षित रखें", "पूरा एनवायरनमेंट वैसा ही रहने दें (डीबगिंग के लिए)"], "selected_option_index": 1, "selected_option_text": "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)", "is_multi_select": false, "is_recommended": true}], "status": "COMPLETED", "selected_at": "2026-11-04T17:48:22.627898+00:00"}]}}}
   </script>
 
   <!-- Raw System Runtime Configuration JSON Store -->
@@ -4092,6 +4226,33 @@
       let refreshTimer = null;
       let countdownSeconds = 0;
 
+      function startLivePolling(intervalSeconds) {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }
+        countdownSeconds = intervalSeconds;
+        if (autoRefreshBadge) autoRefreshBadge.style.display = 'inline-flex';
+        if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+
+        refreshTimer = setInterval(() => {
+          countdownSeconds -= 1;
+          if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
+          if (countdownSeconds <= 0) {
+            clearInterval(refreshTimer);
+            location.reload();
+          }
+        }, 1000);
+      }
+
+      function stopLivePolling() {
+        if (refreshTimer) {
+          clearInterval(refreshTimer);
+          refreshTimer = null;
+        }
+        if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
+      }
+
       function applyDynamicSettings(cfg) {
         if (cfg.visualEffects === 'reduced') {
           document.documentElement.classList.add('reduced-motion');
@@ -4099,28 +4260,130 @@
           document.documentElement.classList.remove('reduced-motion');
         }
 
-        if (refreshTimer) {
-          clearInterval(refreshTimer);
-          refreshTimer = null;
-        }
-
-        const interval = parseInt(cfg.autoRefresh, 10);
-        if (interval > 0) {
-          countdownSeconds = interval;
-          if (autoRefreshBadge) autoRefreshBadge.style.display = 'inline-flex';
-          if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
-
-          refreshTimer = setInterval(() => {
-            countdownSeconds -= 1;
-            if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
-            if (countdownSeconds <= 0) {
-              clearInterval(refreshTimer);
-              location.reload();
-            }
-          }, 1000);
+        const isAutomationRunning = getAutomationRunning();
+        if (isAutomationRunning) {
+          const configuredRefresh = parseInt(cfg.autoRefresh, 10);
+          const activeInterval = configuredRefresh > 0 ? configuredRefresh : 10;
+          startLivePolling(activeInterval);
         } else {
-          if (autoRefreshBadge) autoRefreshBadge.style.display = 'none';
+          const interval = parseInt(cfg.autoRefresh, 10);
+          if (interval > 0) {
+            startLivePolling(interval);
+          } else {
+            stopLivePolling();
+          }
         }
+      }
+
+      // ======================================================================
+      // Dynamic Automation Start/Stop Control (AutoSelect-Commander Engine)
+      // ======================================================================
+      const automationToggleBtn = document.getElementById('automation-toggle-btn');
+      const controlIconEl = document.getElementById('control-icon');
+      const controlLabelEl = document.getElementById('control-label');
+      const dashboardStatusPill = document.getElementById('dashboard-status-pill');
+      const automationModal = document.getElementById('automation-modal');
+      const btnCloseAutomationModal = document.getElementById('btn-close-automation-modal');
+      const btnCloseAutomationModalFooter = document.getElementById('btn-close-automation-modal-footer');
+      const btnCopyAutomationCmd = document.getElementById('btn-copy-automation-cmd');
+      const btnCopyAutomationBat = document.getElementById('btn-copy-automation-bat');
+      const btnCopyAutomationDryRun = document.getElementById('btn-copy-automation-dry-run');
+
+      function getAutomationRunning() {
+        return localStorage.getItem('asc_automation_running') === 'true';
+      }
+
+      function updateAutomationUI(isRunning, triggerToast = false) {
+        if (!automationToggleBtn) return;
+
+        if (isRunning) {
+          automationToggleBtn.classList.remove('state-stopped');
+          automationToggleBtn.classList.add('state-running');
+          if (controlIconEl) controlIconEl.textContent = '⏹️';
+          if (controlLabelEl) controlLabelEl.textContent = 'Stop Automation';
+          automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+
+          if (dashboardStatusPill) {
+            dashboardStatusPill.className = 'status-pill status-active';
+            dashboardStatusPill.innerHTML = '🟢 Automation Active';
+          }
+
+          const configuredRefresh = parseInt(currentConfig.autoRefresh, 10);
+          const activeInterval = configuredRefresh > 0 ? configuredRefresh : 10;
+          startLivePolling(activeInterval);
+
+          if (triggerToast) {
+            showToast('🚀 Automation Started! AutoSelect-Commander is actively monitoring chats.', 'success');
+            openAutomationModal();
+          }
+        } else {
+          automationToggleBtn.classList.remove('state-running');
+          automationToggleBtn.classList.add('state-stopped');
+          if (controlIconEl) controlIconEl.textContent = '▶️';
+          if (controlLabelEl) controlLabelEl.textContent = 'Start Automation';
+          automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+
+          if (dashboardStatusPill) {
+            dashboardStatusPill.className = 'status-pill status-idle';
+            dashboardStatusPill.innerHTML = '⚪ Automation Idle';
+          }
+
+          stopLivePolling();
+
+          if (triggerToast) {
+            showToast('⏹️ Automation Stopped.', 'info');
+          }
+        }
+      }
+
+      function openAutomationModal() {
+        if (automationModal) {
+          automationModal.style.display = 'flex';
+          setTimeout(() => automationModal.classList.add('active'), 10);
+        }
+      }
+
+      function closeAutomationModal() {
+        if (automationModal) {
+          automationModal.classList.remove('active');
+          setTimeout(() => automationModal.style.display = 'none', 250);
+        }
+      }
+
+      if (automationToggleBtn) {
+        automationToggleBtn.addEventListener('click', () => {
+          const currentlyRunning = getAutomationRunning();
+          const nextState = !currentlyRunning;
+          localStorage.setItem('asc_automation_running', String(nextState));
+          updateAutomationUI(nextState, true);
+        });
+      }
+
+      if (btnCloseAutomationModal) {
+        btnCloseAutomationModal.addEventListener('click', closeAutomationModal);
+      }
+      if (btnCloseAutomationModalFooter) {
+        btnCloseAutomationModalFooter.addEventListener('click', closeAutomationModal);
+      }
+      if (automationModal) {
+        automationModal.addEventListener('click', (e) => {
+          if (e.target === automationModal) closeAutomationModal();
+        });
+      }
+      if (btnCopyAutomationCmd) {
+        btnCopyAutomationCmd.addEventListener('click', () => {
+          copyTextToClipboard('python step_9_complete_automation/complete_automation.py', '📋 Execution command copied to clipboard!');
+        });
+      }
+      if (btnCopyAutomationBat) {
+        btnCopyAutomationBat.addEventListener('click', () => {
+          copyTextToClipboard('.\\complete_automation.bat', '📋 Batch script command copied to clipboard!');
+        });
+      }
+      if (btnCopyAutomationDryRun) {
+        btnCopyAutomationDryRun.addEventListener('click', () => {
+          copyTextToClipboard('python step_9_complete_automation/complete_automation.py --dry-run', '📋 Dry-run test command copied to clipboard!');
+        });
       }
 
       // ======================================================================
@@ -4265,6 +4528,8 @@
         });
       }
 
+      // Initialize dynamic automation control state
+      updateAutomationUI(getAutomationRunning(), false);
       applyDynamicSettings(currentConfig);
 
       // Theme toggle persistence

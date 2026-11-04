@@ -156,10 +156,58 @@ def resolve_brain_dir(explicit_path: Optional[Union[str, Path]] = None) -> Path:
     return candidates[0]
 
 
+def get_convo_latest_mtime(convo_dir: Path) -> float:
+    """Return the latest mtime among transcripts and the conversation directory itself."""
+    logs = convo_dir / ".system_generated" / "logs"
+    candidates = [
+        logs / "transcript_full.jsonl",
+        logs / "transcript.jsonl",
+        convo_dir
+    ]
+    mtimes = [f.stat().st_mtime for f in candidates if f.exists()]
+    return max(mtimes) if mtimes else 0.0
+
+
+def _scan_brain_chats(
+    brain_dir: Optional[Union[str, Path]] = None,
+    active_hours: float = DEFAULT_ACTIVE_HOURS
+) -> Tuple[List[Path], int]:
+    """
+    Scan Antigravity brain storage, returning valid conversation directories
+    sorted by maximum transcript mtime in descending order, along with active conversation count.
+    """
+    p = resolve_brain_dir(brain_dir)
+    if not p.is_dir():
+        return [], 0
+
+    now = time.time()
+    valid_convos: List[Path] = []
+    active_count = 0
+
+    try:
+        entries = [e for e in p.iterdir() if e.is_dir() and not e.name.startswith(".") and e.name != "tempmediaStorage"]
+    except Exception:
+        entries = []
+
+    for d in entries:
+        t1 = d / ".system_generated" / "logs" / "transcript.jsonl"
+        t2 = d / ".system_generated" / "logs" / "transcript_full.jsonl"
+        if t1.is_file() or t2.is_file() or (d / ".system_generated").is_dir():
+            valid_convos.append(d)
+            latest_m = get_convo_latest_mtime(d)
+            if latest_m > 0 and (now - latest_m) <= (active_hours * 3600.0):
+                active_count += 1
+
+    # Sort valid_convos by maximum transcript mtime descending so newest conversations are evaluated first
+    valid_convos.sort(key=get_convo_latest_mtime, reverse=True)
+    return valid_convos, active_count
+
+
 def _fallback_scan_grill_me(convo_dirs: List[Path]) -> List[str]:
     """Fallback scanner for pending ask_question tool calls if GrillMeDetector is unavailable."""
     pending: List[str] = []
-    for d in convo_dirs:
+    sorted_convos = sorted(convo_dirs, key=get_convo_latest_mtime, reverse=True)
+    for d in sorted_convos:
         cid = d.name
         logs_dir = d / ".system_generated" / "logs"
         full_transcript = logs_dir / "transcript_full.jsonl"
@@ -236,31 +284,14 @@ def get_antigravity_chat_stats(
             "pending_chat_ids": [],
         }
 
-    now = time.time()
-    valid_convos: List[Path] = []
-    active_count = 0
-
-    try:
-        entries = [e for e in p.iterdir() if e.is_dir() and not e.name.startswith(".") and e.name != "tempmediaStorage"]
-    except Exception:
-        entries = []
-
-    for d in entries:
-        t1 = d / ".system_generated" / "logs" / "transcript.jsonl"
-        t2 = d / ".system_generated" / "logs" / "transcript_full.jsonl"
-        if t1.is_file() or t2.is_file() or (d / ".system_generated").is_dir():
-            valid_convos.append(d)
-            mtimes = [f.stat().st_mtime for f in [t1, t2, d] if f.exists()]
-            if mtimes and (now - max(mtimes)) <= (active_hours * 3600.0):
-                active_count += 1
-
+    valid_convos, active_count = _scan_brain_chats(p, active_hours=active_hours)
     total_count = len(valid_convos)
     inactive_count = max(0, total_count - active_count)
 
     pending_ids: List[str] = []
     try:
         if GrillMeDetector is not None:
-            detector = GrillMeDetector(str(p))
+            detector = GrillMeDetector(str(p), active_hours=active_hours)
             pending_chats = detector.scan_transcripts()
             pending_ids = [c.conversation_id for c in pending_chats]
         else:

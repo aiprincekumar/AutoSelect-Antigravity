@@ -285,5 +285,42 @@ class TestDashboardFormatting(unittest.TestCase):
         self.assertTrue(callable(step0_test_alias.main))
 
 
+    def test_get_convo_latest_mtime_and_scan_brain_chats(self):
+        """Verify get_convo_latest_mtime and _scan_brain_chats properly detect transcript timestamp."""
+        from antigravity_detector_core import get_convo_latest_mtime, _scan_brain_chats
+        import tempfile
+        import time
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            tmppath = Path(tmpdir)
+            convo1 = tmppath / "convo1"
+            convo1.mkdir()
+            logs1 = convo1 / ".system_generated" / "logs"
+            logs1.mkdir(parents=True)
+            t1 = logs1 / "transcript.jsonl"
+            t1.write_text("{}", encoding="utf-8")
+
+            # Mtime of transcript is > 0
+            mtime = get_convo_latest_mtime(convo1)
+            self.assertGreater(mtime, 0.0)
+
+            # _scan_brain_chats finds it
+            convos, active = _scan_brain_chats(tmppath, active_hours=12.0)
+            self.assertEqual(len(convos), 1)
+            self.assertEqual(convos[0].resolve(), convo1.resolve())
+            self.assertEqual(active, 1)
+
+    def test_dry_run_argparse_support(self):
+        """Verify that step0_antigravity_detector argument parser supports --dry-run."""
+        from step0_antigravity_detector import parse_args
+        import sys
+        old_argv = sys.argv
+        try:
+            sys.argv = ["step0_antigravity_detector.py", "--dry-run"]
+            args = parse_args()
+            self.assertTrue(args.dry_run)
+        finally:
+            sys.argv = old_argv
+
 if __name__ == "__main__":
     unittest.main()
