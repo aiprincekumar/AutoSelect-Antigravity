@@ -8,6 +8,21 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
+### Dedicated "Mode Switch" Tab UI Refinement (`dashboard.html` & `step4_reporting.py`)
+- **Status:** Completed & Grade A+ Certified (88/88 Total Tests Passed, Zero Gitleaks Findings)
+- **Local Commits:** Pending local micro-commit.
+- **Architectural Enhancements:**
+  - **Global Banner Elimination:** The mode banner was completely removed from below `<nav class="tab-nav">`, freeing up vertical real estate so Overview, Chats, Questions, and Config tabs render cleanly with zero header clutter.
+  - **Dedicated Tab Navigation:** Introduced 4th tab `tab-btn-modes` ("🎛️ Mode Switch") with responsive badge `tab-modes-badge` displaying active mode state ("Prod" / "Test").
+  - **Comprehensive Mode Control Panel (`tab-modes`):** Hosts the complete interactive mode lifecycle suite:
+    - Hero header with Hindi guidance ("मोड स्विच एवं कार्यप्रणाली").
+    - Dedicated process control button (`modes-automation-toggle-btn`) and live status pill (`modes-status-pill`) synchronized with global header controls.
+    - Segmented switcher bar (`banner-mode-test-btn` & `banner-mode-prod-btn`).
+    - Two interactive mode cards (`banner-card-test` & `banner-card-prod`) detailing Single-Run Auto-Stop vs Continuous Autonomous Loop.
+    - Operational Parameters Comparison Table contrasting execution cycles, stop conditions, polling intervals (10s vs 300s), target scopes, and config persistence.
+  - **Full Two-Way Reactive Synchronization:** Seamlessly synchronized with Config tab mode pills, hidden inputs, live JSON preview, and localStorage tab state persistence.
+  - **Automated QA Verification:** Added `test_30_mode_switch_dedicated_tab_and_no_global_banner` to `step_4_reporting/test_step4_reporting.py`, bringing suite to 88/88 passing tests.
+
 ### Test Mode (Single-Run Auto-Stop) vs Production Mode (Continuous Autonomous Loop) & Unified UI Sync
 - **Status:** Completed & Grade A+ Certified (87/87 Total Tests Passed, Zero Gitleaks Findings)
 - **Local Commits:** `4e59704` (automation controller auto-stop & server mode persistence), `251e82b` (dashboard banner, mode switcher & config callout synchronization).
@@ -88,3 +103,4 @@
 | 7 | Workspace Root | Monolithic legacy script `activating_grill_me.py` and legacy `config.json` cluttered root | Relocate legacy files to `archive/legacy_monolith/` with dedicated documentation | Clean, minimal root layout; 100% architectural clarity | Cleanup | filesystem verification |
 | 8 | `step_9_complete_automation/` & `prompts/` | Folder `Complete Automation` was alphabetically disordered; `prompts/` was missing Step 4, Step 9, master memory, and had stale Step 0 specs | Rename to `step_9_complete_automation`, exclude from self-recursion, update all step prompts, create `pipeline_master_memory.md`, and overhaul `prompts/README.md` | Predictable directory ordering, zero confusion, 100% zero-drift documentation | Phase 9 | unittest (44/44 pass) |
 | 9 | `step_9_complete_automation/` & `step_4_reporting/` | User requested Test Mode to stop automatically on task completion (Single-Run Auto-Stop) while Production Mode continuously loops until manual stop, with full visual synchronization in Dashboard | Implement test mode auto-stop exit in complete_automation.py, PID lifecycle in dashboard_server.py, mode lifecycle banner below tab-nav, and two-way sync across Config pills and banner | 87/87 tests passed, 0 gitleaks leaks, Grade A+ certified, zero-flakiness auto-stop | Phase 9 | unittest (87/87 pass) |
+| 10 | `step_4_reporting/dashboard.html` & `step_4_reporting/step4_reporting.py` | Global banner occupied excessive vertical real estate on every tab (Overview, Chats, Questions, Config) | Relocate mode controls into dedicated 'Mode Switch' tab (`tab-btn-modes` / `tab-modes`) with lifecycle comparison table, direct start/stop button, and badge | Clean viewport on all tabs, zero clutter, 100% synchronized controls across navbar badge, mode cards, server API & config tab; 88/88 tests passed | Refactor / UI | unittest (88/88 pass), gitleaks (0 leaks) |
