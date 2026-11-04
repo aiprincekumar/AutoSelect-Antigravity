@@ -763,6 +763,151 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("3 Qs", pop_topic)
         self.assertIn("100.0% share", pop_topic)
 
+    def test_17_filter_toolbar_row_inversion_and_extended_presets(self):
+        """Verify the Filter Toolbar row inversion ('Up वाला Down, Down वाला Up') and 7 rich presets."""
+        history = AutomationHistory(
+            total_pipeline_runs=3,
+            total_questions_answered=5,
+            total_runtime_seconds=18.0,
+            total_unique_chats=1,
+            chats={
+                "chat_preset_test": {
+                    "conversation_id": "chat_preset_test",
+                    "topic_summary": "Filter Presets Test",
+                    "run_count": 3,
+                    "total_questions": 5,
+                    "runs": []
+                }
+            }
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Verify Row Inversion: .filter-presets-row appears BEFORE .filter-controls-row
+        pos_presets_row = content.find('class="filter-presets-row"')
+        pos_controls_row = content.find('class="filter-controls-row"')
+        self.assertNotEqual(pos_presets_row, -1, "filter-presets-row must exist")
+        self.assertNotEqual(pos_controls_row, -1, "filter-controls-row must exist")
+        self.assertLess(
+            pos_presets_row,
+            pos_controls_row,
+            "filter-presets-row (Quick Presets Bar) must be placed on top before filter-controls-row"
+        )
+
+        # 2. Verify all 7 rich preset buttons with exact labels & data attributes
+        presets_expected = [
+            ('data-preset="all"', 'All Time'),
+            ('data-preset="today"', 'Today'),
+            ('data-preset="yesterday"', 'Yesterday'),
+            ('data-preset="7d"', 'Last 7 Days'),
+            ('data-preset="30d"', 'Last 30 Days'),
+            ('data-preset="week"', 'This Week'),
+            ('data-preset="month"', 'This Month'),
+        ]
+        for attr, label in presets_expected:
+            self.assertIn(attr, content, f"Missing preset attribute {attr}")
+            self.assertIn(label, content, f"Missing preset label {label}")
+
+        # 3. Verify Filter Toolbar Header has Status Badge AND Collapse Button
+        self.assertIn('id="filter-stats-badge"', content)
+        self.assertIn('id="filter-collapse-btn"', content)
+        self.assertIn('id="filter-toolbar-body"', content)
+
+        # 4. Verify Granular Custom Controls in Row 2
+        self.assertIn('id="filter-date-from"', content)
+        self.assertIn('id="filter-date-to"', content)
+        self.assertIn('id="filter-chat"', content)
+        self.assertIn('id="filter-complexity"', content)
+        self.assertIn('id="filter-speed"', content)
+        self.assertIn('id="filter-reset-btn"', content)
+
+        # 5. Verify JavaScript date math logic for all 7 presets
+        self.assertIn("preset === 'yesterday'", content)
+        self.assertIn("preset === '30d'", content)
+        self.assertIn("preset === 'week'", content)
+        self.assertIn("preset === 'month'", content)
+        self.assertIn("function formatDate", content)
+
+    def test_18_collapsible_sections_and_accordion_architecture(self):
+        """Verify collapsible sections across the dashboard (Toolbar, Architecture, Charts, Chats, Questions)."""
+        history = AutomationHistory(
+            total_pipeline_runs=2,
+            total_questions_answered=3,
+            total_runtime_seconds=12.0,
+            total_unique_chats=1,
+            chats={
+                "chat_accordion_test": {
+                    "conversation_id": "chat_accordion_test",
+                    "topic_summary": "Accordion Architecture Test",
+                    "run_count": 2,
+                    "total_questions": 3,
+                    "runs": [
+                        {
+                            "run_id": "run_acc_01",
+                            "timestamp": "2026-11-04T06:00:00Z",
+                            "duration_seconds": 5.0,
+                            "questions_count": 1,
+                            "questions": [
+                                {
+                                    "question_index": 1,
+                                    "question": "Accordion collapsible verified?",
+                                    "options": ["(Recommended) Yes", "No"],
+                                    "selected_option_index": 1,
+                                    "selected_option_text": "(Recommended) Yes",
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Verify Filter Toolbar Collapsible
+        self.assertIn('id="filter-collapse-btn"', content)
+        self.assertIn('aria-controls="filter-toolbar-body"', content)
+
+        # 2. Verify Pipeline Architecture Diagram Card Collapsible
+        self.assertIn('id="card-architecture"', content)
+        self.assertIn('data-target="architecture-body"', content)
+        self.assertIn('id="architecture-body"', content)
+        self.assertIn('card-collapsible-body', content)
+
+        # 3. Verify Overview Charts Collapsible Cards
+        self.assertIn('id="chart-card-distribution"', content)
+        self.assertIn('data-target="chart-body-distribution"', content)
+        self.assertIn('id="chart-body-distribution"', content)
+
+        self.assertIn('id="chart-card-topic"', content)
+        self.assertIn('data-target="chart-body-topic"', content)
+        self.assertIn('id="chart-body-topic"', content)
+
+        self.assertIn('id="chart-card-latency"', content)
+        self.assertIn('data-target="chart-body-latency"', content)
+        self.assertIn('id="chart-body-latency"', content)
+
+        # 4. Verify Chats Tab Collapsible Table Section
+        self.assertIn('id="chats-breakdown-section"', content)
+        self.assertIn('data-target="chats-table-container"', content)
+        self.assertIn('id="chats-table-container"', content)
+
+        # 5. Verify Questions Tab Global Controls (Expand All / Collapse All)
+        self.assertIn('id="btn-expand-all-questions"', content)
+        self.assertIn('id="btn-collapse-all-questions"', content)
+        self.assertIn("Expand All", content)
+        self.assertIn("Collapse All", content)
+
+        # 6. Verify CSS & JS Collapsible / Accordion Mechanics
+        self.assertIn(".collapsible-header", content)
+        self.assertIn(".collapse-icon", content)
+        self.assertIn(".collapsed", content)
+        self.assertIn("btnExpandAll.addEventListener", content)
+        self.assertIn("btnCollapseAll.addEventListener", content)
+        self.assertIn("collapsible-header[data-target]", content)
+
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)

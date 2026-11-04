@@ -399,7 +399,7 @@
       padding-bottom: 10px;
       border-bottom: 1px solid var(--border-subtle);
       flex-wrap: wrap;
-      gap: 8px;
+      gap: 10px;
     }
 
     .filter-toolbar-title {
@@ -411,6 +411,12 @@
       color: var(--text-primary);
     }
 
+    .filter-header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
     .filter-stats-badge {
       font-size: 0.82rem;
       font-family: var(--font-mono);
@@ -419,6 +425,69 @@
       padding: 4px 12px;
       border-radius: 9999px;
       font-weight: 600;
+    }
+
+    /* Filter Toolbar Body & Inverted Rows (Top Row Presets, Bottom Row Inputs) */
+    .filter-toolbar-body {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .filter-presets-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      padding: 10px 14px;
+      background: var(--bg-surface-elevated);
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }
+
+    .presets-label {
+      font-size: 0.78rem;
+      font-weight: 700;
+      color: var(--text-secondary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+    }
+
+    .filter-presets {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .preset-btn {
+      background: var(--bg-surface);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-sm);
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+      white-space: nowrap;
+    }
+
+    .preset-btn:hover {
+      color: var(--text-primary);
+      background: var(--bg-surface-highlight);
+      border-color: var(--accent-indigo);
+    }
+
+    .preset-btn.active {
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border-color: var(--accent-indigo);
+      box-shadow: 0 2px 8px var(--accent-indigo-glow);
     }
 
     .filter-controls-row {
@@ -480,35 +549,6 @@
       box-shadow: 0 0 0 2px var(--accent-indigo-glow);
     }
 
-    .filter-presets {
-      display: flex;
-      gap: 6px;
-      margin-top: 4px;
-    }
-
-    .preset-btn {
-      background: var(--bg-surface-elevated);
-      color: var(--text-secondary);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-sm);
-      padding: 4px 10px;
-      font-size: 0.75rem;
-      font-weight: 600;
-      cursor: pointer;
-      transition: var(--transition);
-    }
-
-    .preset-btn:hover {
-      color: var(--text-primary);
-      background: var(--bg-surface-highlight);
-    }
-
-    .preset-btn.active {
-      background: var(--accent-indigo);
-      color: #ffffff;
-      border-color: var(--accent-indigo);
-    }
-
     .btn-reset {
       background: var(--bg-surface-elevated);
       color: var(--text-secondary);
@@ -529,6 +569,130 @@
       color: var(--accent-rose);
       border-color: var(--accent-rose);
       background: var(--bg-surface-highlight);
+    }
+
+    /* Collapsible Accordion & Interactive Animations (Department 04 & 05 Standards) */
+    .collapse-icon {
+      display: inline-block;
+      font-size: 0.85rem;
+      line-height: 1;
+      transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      color: var(--text-secondary);
+      user-select: none;
+      flex-shrink: 0;
+    }
+
+    .collapsible-header {
+      cursor: pointer;
+      user-select: none;
+      transition: background-color 0.2s ease, border-color 0.2s ease;
+    }
+
+    .collapsible-header:hover {
+      background-color: var(--bg-surface-highlight) !important;
+    }
+
+    .collapsible-header:focus-visible {
+      outline: 2px solid var(--accent-indigo);
+      outline-offset: 2px;
+    }
+
+    .collapse-btn {
+      background: transparent;
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      border-radius: var(--radius-sm);
+      width: 28px;
+      height: 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: var(--transition);
+      flex-shrink: 0;
+    }
+
+    .collapse-btn:hover {
+      background: var(--bg-surface-highlight);
+      color: var(--text-primary);
+      border-color: var(--accent-indigo);
+    }
+
+    .collapse-toggle-btn {
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      border-radius: var(--radius-md);
+      padding: 5px 12px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      cursor: pointer;
+      transition: var(--transition);
+      user-select: none;
+    }
+
+    .collapse-toggle-btn:hover {
+      background: var(--bg-surface-highlight);
+      color: var(--text-primary);
+      border-color: var(--accent-indigo);
+    }
+
+    /* Collapsed state transforms chevron indicator */
+    .collapsed .collapse-icon,
+    [aria-expanded="false"] .collapse-icon,
+    .collapsed > .collapse-icon {
+      transform: rotate(-90deg);
+    }
+
+    .card-collapsible-body,
+    .filter-toolbar-body,
+    .chat-card-body,
+    .run-body,
+    .options-list {
+      transition: max-height 0.35s cubic-bezier(0.16, 1, 0.3, 1),
+                  opacity 0.25s ease,
+                  padding 0.25s ease,
+                  margin 0.25s ease;
+      overflow: hidden;
+    }
+
+    .card-collapsible-body.collapsed,
+    .filter-toolbar-body.collapsed,
+    .chat-card-body.collapsed,
+    .run-body.collapsed,
+    .options-list.collapsed {
+      max-height: 0 !important;
+      opacity: 0 !important;
+      padding-top: 0 !important;
+      padding-bottom: 0 !important;
+      margin-top: 0 !important;
+      margin-bottom: 0 !important;
+      border: none !important;
+      pointer-events: none;
+    }
+
+    .card-header.collapsible-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 4px 6px;
+      border-radius: var(--radius-sm);
+    }
+
+    .accordion-global-controls {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      flex-shrink: 0;
+    }
+
+    .btn-sm {
+      padding: 6px 12px;
+      font-size: 0.8rem;
+      border-radius: var(--radius-sm);
     }
 
     /* Architecture Diagram Card */
@@ -724,7 +888,7 @@
       font-size: 0.82rem;
     }
 
-    /* Question & Option Cards */
+    /* Question & Option Cards (Deep Collapsible Hierarchy) */
     .chat-card {
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -734,9 +898,9 @@
       box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
     }
 
-    .chat-card-header {
+    .chat-card-header.collapsible-header {
       background: var(--bg-surface-elevated);
-      padding: 16px 20px;
+      padding: 14px 20px;
       border-bottom: 1px solid var(--border-subtle);
       display: flex;
       justify-content: space-between;
@@ -762,7 +926,7 @@
     }
 
     .run-block {
-      padding: 20px;
+      padding: 16px 20px;
       border-bottom: 1px dashed var(--border-subtle);
     }
 
@@ -770,34 +934,59 @@
       border-bottom: none;
     }
 
-    .run-header {
+    .run-header.collapsible-header {
       display: flex;
       justify-content: space-between;
-      margin-bottom: 14px;
+      align-items: center;
+      padding: 8px 12px;
+      background: var(--bg-surface-elevated);
+      border-radius: var(--radius-md);
       font-size: 0.82rem;
       color: var(--text-muted);
       font-family: var(--font-mono);
+      margin-bottom: 12px;
+      border: 1px solid var(--border-subtle);
+    }
+
+    .run-body {
+      padding-top: 4px;
     }
 
     .question-card {
       background: var(--bg-primary);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
-      padding: 16px;
-      margin-bottom: 14px;
+      padding: 14px;
+      margin-bottom: 12px;
     }
 
     .question-card:last-child {
       margin-bottom: 0;
     }
 
-    .question-prompt {
+    .question-prompt.collapsible-header {
       font-weight: 600;
-      font-size: 0.95rem;
-      margin-bottom: 12px;
+      font-size: 0.92rem;
       display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 6px 10px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 10px;
+    }
+
+    .question-prompt-left {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex: 1;
+    }
+
+    .question-prompt-right {
+      display: flex;
+      align-items: center;
       gap: 8px;
-      align-items: flex-start;
     }
 
     .question-num {
@@ -913,71 +1102,89 @@
     <input type="hidden" id="search-box" value="">
     <input type="hidden" id="search-overview" value="">
 
-    <!-- Interactive Multi-Dimensional Filter Toolbar -->
+    <!-- Interactive Multi-Dimensional Filter Toolbar (Inverted Rows & Rich Presets) -->
     <section class="filter-toolbar" aria-label="Filters Toolbar">
       <div class="filter-toolbar-header">
         <div class="filter-toolbar-title">
           <span>🔍</span>
           <span>Interactive Filter Toolbar</span>
         </div>
-        <div class="filter-stats-badge" id="filter-stats-badge">
-          Showing <span id="filter-count">1</span> of <span id="filter-total">1</span> runs
+        <div class="filter-header-actions">
+          <div class="filter-stats-badge" id="filter-stats-badge">
+            Showing <span id="filter-count">1</span> of <span id="filter-total">1</span> runs
+          </div>
+          <button type="button" class="collapse-toggle-btn" id="filter-collapse-btn" aria-expanded="true" aria-controls="filter-toolbar-body" title="Collapse/Expand Filters">
+            <span class="collapse-icon">▾</span>
+            <span class="collapse-label">Collapse</span>
+          </button>
         </div>
       </div>
 
-      <div class="filter-controls-row">
-        <!-- Date Range Filter -->
-        <div class="filter-control-group filter-date-group">
-          <label class="filter-label" for="filter-date-from">Date Range</label>
-          <div class="filter-date-inputs">
-            <input type="date" id="filter-date-from" class="filter-input-date" title="Filter From Date">
-            <span class="filter-date-sep">to</span>
-            <input type="date" id="filter-date-to" class="filter-input-date" title="Filter To Date">
-          </div>
+      <div class="filter-toolbar-body" id="filter-toolbar-body">
+        <!-- Row 1 (Top): Quick Presets Bar (Up वाला Down, Down वाला Up) -->
+        <div class="filter-presets-row">
+          <span class="presets-label">⚡ Quick Presets:</span>
           <div class="filter-presets">
-            <button type="button" class="preset-btn active" data-preset="all">All</button>
+            <button type="button" class="preset-btn active" data-preset="all">All Time</button>
             <button type="button" class="preset-btn" data-preset="today">Today</button>
+            <button type="button" class="preset-btn" data-preset="yesterday">Yesterday</button>
             <button type="button" class="preset-btn" data-preset="7d">Last 7 Days</button>
+            <button type="button" class="preset-btn" data-preset="30d">Last 30 Days</button>
+            <button type="button" class="preset-btn" data-preset="week">This Week</button>
+            <button type="button" class="preset-btn" data-preset="month">This Month</button>
           </div>
         </div>
 
-        <!-- Chat Filter Dropdown -->
-        <div class="filter-control-group">
-          <label class="filter-label" for="filter-chat">Conversation</label>
-          <select id="filter-chat" class="filter-select">
-            <option value="all">All Conversations (1)</option>
-            <option value="e0645f63-cc82-41f8-8385-2538e9e8f6bf">मुझे डेमो के लिए ग्रिड मी ऑप्शन .. (e0645f63..)</option>
-          </select>
-        </div>
+        <!-- Row 2 (Bottom): Granular Custom Controls -->
+        <div class="filter-controls-row">
+          <!-- Date Range Filter -->
+          <div class="filter-control-group filter-date-group">
+            <label class="filter-label" for="filter-date-from">Date Range</label>
+            <div class="filter-date-inputs">
+              <input type="date" id="filter-date-from" class="filter-input-date" title="Filter From Date">
+              <span class="filter-date-sep">to</span>
+              <input type="date" id="filter-date-to" class="filter-input-date" title="Filter To Date">
+            </div>
+          </div>
 
-        <!-- Complexity Filter Dropdown -->
-        <div class="filter-control-group">
-          <label class="filter-label" for="filter-complexity">Complexity</label>
-          <select id="filter-complexity" class="filter-select">
-            <option value="all">All Runs</option>
-            <option value="single">Single-Question (1)</option>
-            <option value="multi">Multi-Question (2+)</option>
-          </select>
-        </div>
+          <!-- Chat Filter Dropdown -->
+          <div class="filter-control-group">
+            <label class="filter-label" for="filter-chat">Conversation</label>
+            <select id="filter-chat" class="filter-select">
+              <option value="all">All Conversations (1)</option>
+              <option value="e0645f63-cc82-41f8-8385-2538e9e8f6bf">मुझे डेमो के लिए ग्रिड मी ऑप्शन .. (e0645f63..)</option>
+            </select>
+          </div>
 
-        <!-- Speed Filter Dropdown -->
-        <div class="filter-control-group">
-          <label class="filter-label" for="filter-speed">Speed / Latency</label>
-          <select id="filter-speed" class="filter-select">
-            <option value="all">All Durations</option>
-            <option value="fast">Fast (&lt; 3s)</option>
-            <option value="moderate">Moderate (3s - 8s)</option>
-            <option value="heavy">Heavy (&gt; 8s)</option>
-          </select>
-        </div>
+          <!-- Complexity Filter Dropdown -->
+          <div class="filter-control-group">
+            <label class="filter-label" for="filter-complexity">Complexity</label>
+            <select id="filter-complexity" class="filter-select">
+              <option value="all">All Runs</option>
+              <option value="single">Single-Question (1)</option>
+              <option value="multi">Multi-Question (2+)</option>
+            </select>
+          </div>
 
-        <!-- Reset Button -->
-        <div class="filter-control-group filter-actions-group">
-          <label class="filter-label">&nbsp;</label>
-          <button type="button" class="btn btn-reset" id="filter-reset-btn" title="Reset all filters">
-            <span>🔄</span>
-            <span>Reset Filters</span>
-          </button>
+          <!-- Speed Filter Dropdown -->
+          <div class="filter-control-group">
+            <label class="filter-label" for="filter-speed">Speed / Latency</label>
+            <select id="filter-speed" class="filter-select">
+              <option value="all">All Durations</option>
+              <option value="fast">Fast (&lt; 3s)</option>
+              <option value="moderate">Moderate (3s - 8s)</option>
+              <option value="heavy">Heavy (&gt; 8s)</option>
+            </select>
+          </div>
+
+          <!-- Reset Button -->
+          <div class="filter-control-group filter-actions-group">
+            <label class="filter-label">&nbsp;</label>
+            <button type="button" class="btn btn-reset" id="filter-reset-btn" title="Reset all filters">
+              <span>🔄</span>
+              <span>Reset Filters</span>
+            </button>
+          </div>
         </div>
       </div>
     </section>
@@ -1069,10 +1276,19 @@
         </div>
       </div>
 
-      <!-- Pipeline Execution Architecture Diagram (Pure Vector SVG) -->
-      <div class="architecture-card">
-        <div class="card-title">🚀 Pipeline Execution Architecture (Step 0 → Step 4)</div>
-        <svg viewBox="0 0 1000 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">
+      <!-- Pipeline Execution Architecture Diagram (Pure Vector SVG & Collapsible) -->
+      <div class="architecture-card" id="card-architecture">
+        <div class="card-header collapsible-header" data-target="architecture-body" role="button" tabindex="0" aria-expanded="true" title="Toggle Architecture Diagram">
+          <div class="card-title" style="margin-bottom: 0;">
+            <span class="collapse-icon">▾</span>
+            <span>🚀 Pipeline Execution Architecture (Step 0 → Step 4)</span>
+          </div>
+          <button type="button" class="collapse-btn" aria-label="Toggle Architecture Diagram">
+            <span class="collapse-icon">▾</span>
+          </button>
+        </div>
+        <div class="card-collapsible-body" id="architecture-body" style="margin-top: 16px;">
+          <svg viewBox="0 0 1000 110" width="100%" height="110" xmlns="http://www.w3.org/2000/svg" style="display:block; overflow:visible;">
   <defs>
     <marker id="pipeline-arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
       <path d="M 0 1.5 L 8 5 L 0 8.5 z" fill="#6366f1" />
@@ -1127,13 +1343,23 @@
     <text x="10" y="66" font-size="10" font-family="var(--font-family)" fill="var(--text-secondary)">Visual Telemetry</text>
   </g>
 </svg>
+        </div>
       </div>
 
       <!-- Interactive Dynamic SVG Charts Grid -->
       <div class="charts-grid-two">
-        <div class="chart-card">
-          <div class="card-title">📊 Chat Automation & Questions Distribution</div>
-          <svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+        <div class="chart-card" id="chart-card-distribution">
+          <div class="card-header collapsible-header" data-target="chart-body-distribution" role="button" tabindex="0" aria-expanded="true" title="Toggle Distribution Chart">
+            <div class="card-title" style="margin-bottom: 0;">
+              <span class="collapse-icon">▾</span>
+              <span>📊 Chat Automation & Questions Distribution</span>
+            </div>
+            <button type="button" class="collapse-btn" aria-label="Toggle Distribution Chart">
+              <span class="collapse-icon">▾</span>
+            </button>
+          </div>
+          <div class="card-collapsible-body" id="chart-body-distribution" style="margin-top: 16px;">
+            <svg viewBox="0 0 640 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
   <defs>
     <linearGradient id="barRunsGrad" x1="0%" y1="0%" x2="0%" y2="100%">
       <stop offset="0%" stop-color="#818cf8" />
@@ -1163,10 +1389,20 @@
   <text x="354.0" y="46.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="#34d399" text-anchor="middle">4</text>
   <text x="340.0" y="222" font-size="10" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">e0645f63..</text>
 </svg>
+          </div>
         </div>
-        <div class="chart-card">
-          <div class="card-title">🥧 Chat Workload & Topic Share</div>
-          <svg viewBox="0 0 460 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+        <div class="chart-card" id="chart-card-topic">
+          <div class="card-header collapsible-header" data-target="chart-body-topic" role="button" tabindex="0" aria-expanded="true" title="Toggle Topic Share Chart">
+            <div class="card-title" style="margin-bottom: 0;">
+              <span class="collapse-icon">▾</span>
+              <span>🥧 Chat Workload & Topic Share</span>
+            </div>
+            <button type="button" class="collapse-btn" aria-label="Toggle Topic Share Chart">
+              <span class="collapse-icon">▾</span>
+            </button>
+          </div>
+          <div class="card-collapsible-body" id="chart-body-topic" style="margin-top: 16px;">
+            <svg viewBox="0 0 460 240" width="100%" height="240" xmlns="http://www.w3.org/2000/svg" style="display:block;">
   <!-- Background Donut Track -->
   <circle cx="95.0" cy="115.0" r="62.0" fill="none" stroke="var(--bg-surface-elevated)" stroke-width="20" />
   <circle cx="95.0" cy="115.0" r="62.0" fill="none" stroke="#6366f1" stroke-width="20" stroke-dasharray="389.56 0.00" stroke-dashoffset="-0.00" transform="rotate(-90 95.0 115.0)" />
@@ -1176,13 +1412,23 @@
   <text x="218" y="45.0" font-size="11" font-weight="700" font-family="var(--font-family)" fill="var(--text-primary)">मुझे डेमो के लिए ग्रिड..</text>
   <text x="218" y="59.0" font-size="9.5" font-family="var(--font-mono)" fill="var(--text-secondary)">4 Qs • 100.0% share</text>
 </svg>
+          </div>
         </div>
       </div>
 
       <!-- Wide Run Latency & Performance Trend Chart -->
-      <div class="chart-card chart-card-wide">
-        <div class="card-title">⚡ Run Latency & Performance Trend</div>
-        <svg viewBox="0 0 640 220" width="100%" height="220" xmlns="http://www.w3.org/2000/svg" style="display:block;">
+      <div class="chart-card chart-card-wide" id="chart-card-latency">
+        <div class="card-header collapsible-header" data-target="chart-body-latency" role="button" tabindex="0" aria-expanded="true" title="Toggle Latency Trend Chart">
+          <div class="card-title" style="margin-bottom: 0;">
+            <span class="collapse-icon">▾</span>
+            <span>⚡ Run Latency & Performance Trend</span>
+          </div>
+          <button type="button" class="collapse-btn" aria-label="Toggle Latency Trend Chart">
+            <span class="collapse-icon">▾</span>
+          </button>
+        </div>
+        <div class="card-collapsible-body" id="chart-body-latency" style="margin-top: 16px;">
+          <svg viewBox="0 0 640 220" width="100%" height="220" xmlns="http://www.w3.org/2000/svg" style="display:block;">
   <defs>
     <linearGradient id="latencyLineGrad" x1="0%" y1="0%" x2="100%" y2="0%">
       <stop offset="0%" stop-color="#06b6d4" />
@@ -1220,6 +1466,7 @@
   <text x="332.5" y="56.0" font-size="10" font-weight="700" font-family="var(--font-mono)" fill="var(--text-primary)" text-anchor="middle">14.3s</text>
   <text x="332.5" y="196.0" font-size="9.5" font-weight="600" font-family="var(--font-mono)" fill="var(--text-secondary)" text-anchor="middle">R1</text>
 </svg>
+        </div>
       </div>
     </main>
 
@@ -1246,31 +1493,47 @@
         <input type="text" id="search-chats" class="search-input" placeholder="🔍 Search chats by Conversation ID or topic summary...">
       </div>
 
-      <!-- Chat-wise Automation Summary Table -->
-      <div class="section-title">📊 Chat-wise Automation Breakdown</div>
-      <div class="table-container">
-        <table id="summary-table">
-          <thead>
-            <tr>
-              <th>Conversation ID</th>
-              <th>Topic Summary</th>
-              <th>Runs Count</th>
-              <th>Questions Answered</th>
-              <th>Last Automated</th>
-            </tr>
-          </thead>
-          <tbody id="summary-tbody">
-            <!-- Dynamically populated by client JS -->
-          </tbody>
-        </table>
+      <!-- Chat-wise Automation Summary Table (Collapsible) -->
+      <div class="section-collapsible" id="chats-breakdown-section">
+        <div class="section-header collapsible-header" data-target="chats-table-container" role="button" tabindex="0" aria-expanded="true" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 6px 10px; border-radius: var(--radius-sm);" title="Toggle Chat Breakdown Table">
+          <div class="section-title" style="margin-bottom: 0;">
+            <span class="collapse-icon">▾</span>
+            <span>📊 Chat-wise Automation Breakdown</span>
+          </div>
+          <button type="button" class="collapse-btn" aria-label="Toggle Chat Breakdown Table">
+            <span class="collapse-icon">▾</span>
+          </button>
+        </div>
+        <div class="card-collapsible-body" id="chats-table-container">
+          <div class="table-container">
+            <table id="summary-table">
+              <thead>
+                <tr>
+                  <th>Conversation ID</th>
+                  <th>Topic Summary</th>
+                  <th>Runs Count</th>
+                  <th>Questions Answered</th>
+                  <th>Last Automated</th>
+                </tr>
+              </thead>
+              <tbody id="summary-tbody">
+                <!-- Dynamically populated by client JS -->
+              </tbody>
+            </table>
+          </div>
+        </div>
       </div>
     </main>
 
     <!-- Tab 3: Questions Panel (All Questions & Answers Ledger & Dedicated Search) -->
     <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
-      <!-- Dedicated Search Controls for Questions -->
+      <!-- Dedicated Search Controls & Global Accordion Buttons -->
       <div class="controls-bar">
         <input type="text" id="search-questions" class="search-input" placeholder="🔍 Search questions, options, topics, or conversation IDs...">
+        <div class="accordion-global-controls">
+          <button type="button" class="btn btn-sm" id="btn-expand-all-questions" title="Expand all chats, runs, and questions">📂 Expand All</button>
+          <button type="button" class="btn btn-sm" id="btn-collapse-all-questions" title="Collapse all chats, runs, and questions">📁 Collapse All</button>
+        </div>
       </div>
 
       <!-- Detailed Questions & Answers Ledger -->
@@ -1284,7 +1547,7 @@
     <footer>
       <div>Generated by AutoSelect-Commander (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 07:36:26</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-04 08:16:38</span></div>
     </footer>
   </div>
 
@@ -1444,6 +1707,14 @@
         }
       }
 
+      // Date formatting helper (local time)
+      function formatDate(d) {
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      }
+
       // Render Tab 3: Detailed Questions & Answers
       function renderQuestions() {
         if (!detailsContainer) return;
@@ -1494,10 +1765,16 @@
                 });
 
                 qHtml += `
-                  <div class="question-card">
-                    <div class="question-prompt">
-                      <span class="question-num">Q${q.question_index || (qIdx + 1)}</span>
-                      <span>${escapeHtml(q.question)}</span>
+                  <div class="question-card" data-question-num="${q.question_index || (qIdx + 1)}">
+                    <div class="question-prompt collapsible-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand options">
+                      <div class="question-prompt-left">
+                        <span class="collapse-icon">▾</span>
+                        <span class="question-num">Q${q.question_index || (qIdx + 1)}</span>
+                        <span>${escapeHtml(q.question)}</span>
+                      </div>
+                      <div class="question-prompt-right">
+                        <span class="badge-count" style="font-size: 0.72rem;">${(q.options || []).length} options</span>
+                      </div>
                     </div>
                     <div class="options-list">
                       ${optionsHtml}
@@ -1507,12 +1784,22 @@
               });
 
               runsHtml += `
-                <div class="run-block">
-                  <div class="run-header">
-                    <span>⚡ Run #${rIdx + 1} (${escapeHtml(run.run_id || 'N/A')})</span>
-                    <span>Duration: ${dur} | ${runDate}</span>
+                <div class="run-block" data-run-id="${escapeHtml(run.run_id || '')}">
+                  <div class="run-header collapsible-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand run questions">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span class="collapse-icon">▾</span>
+                      <span style="font-weight: 700; color: var(--text-primary);">⚡ Run #${rIdx + 1} (${escapeHtml(run.run_id || 'N/A')})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <span>Duration: ${dur} | ${runDate}</span>
+                      <button type="button" class="collapse-btn" aria-label="Toggle Run">
+                        <span class="collapse-icon">▾</span>
+                      </button>
+                    </div>
                   </div>
-                  ${qHtml}
+                  <div class="run-body">
+                    ${qHtml}
+                  </div>
                 </div>
               `;
             });
@@ -1520,14 +1807,18 @@
             const totalFilteredQs = matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0);
 
             card.innerHTML = `
-              <div class="chat-card-header">
+              <div class="chat-card-header collapsible-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand conversation runs">
                 <div class="chat-card-title">
+                  <span class="collapse-icon">▾</span>
                   <span class="chat-id-tag">${escapeHtml(cid)}</span>
                   <span>${escapeHtml(topic)}</span>
                 </div>
                 <div class="chat-card-meta">
                   <span class="badge-count">${matchingRuns.length} run(s)</span>
                   <span class="badge-count">${totalFilteredQs} question(s)</span>
+                  <button type="button" class="collapse-btn" aria-label="Toggle Chat">
+                    <span class="collapse-icon">▾</span>
+                  </button>
                 </div>
               </div>
               <div class="chat-card-body">
@@ -1580,25 +1871,48 @@
           .replace(/'/g, '&#039;');
       }
 
-      // Preset button handlers
+      // Preset button handlers (7 options: all, today, yesterday, 7d, 30d, week, month)
       presetBtns.forEach(btn => {
         btn.addEventListener('click', () => {
           presetBtns.forEach(b => b.classList.remove('active'));
           btn.classList.add('active');
           const preset = btn.getAttribute('data-preset');
+          const now = new Date();
 
           if (preset === 'all') {
             if (filterDateFrom) filterDateFrom.value = '';
             if (filterDateTo) filterDateTo.value = '';
           } else if (preset === 'today') {
-            const today = new Date().toISOString().split('T')[0];
-            if (filterDateFrom) filterDateFrom.value = today;
-            if (filterDateTo) filterDateTo.value = today;
+            const todayStr = formatDate(now);
+            if (filterDateFrom) filterDateFrom.value = todayStr;
+            if (filterDateTo) filterDateTo.value = todayStr;
+          } else if (preset === 'yesterday') {
+            const y = new Date(now);
+            y.setDate(y.getDate() - 1);
+            const yStr = formatDate(y);
+            if (filterDateFrom) filterDateFrom.value = yStr;
+            if (filterDateTo) filterDateTo.value = yStr;
           } else if (preset === '7d') {
-            const now = new Date();
-            const past = new Date(now.getTime() - 6 * 24 * 60 * 60 * 1000);
-            if (filterDateFrom) filterDateFrom.value = past.toISOString().split('T')[0];
-            if (filterDateTo) filterDateTo.value = now.toISOString().split('T')[0];
+            const past = new Date(now);
+            past.setDate(past.getDate() - 6);
+            if (filterDateFrom) filterDateFrom.value = formatDate(past);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          } else if (preset === '30d') {
+            const past = new Date(now);
+            past.setDate(past.getDate() - 29);
+            if (filterDateFrom) filterDateFrom.value = formatDate(past);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          } else if (preset === 'week') {
+            const day = now.getDay();
+            const diffToMonday = (day === 0 ? -6 : 1) - day;
+            const monday = new Date(now);
+            monday.setDate(now.getDate() + diffToMonday);
+            if (filterDateFrom) filterDateFrom.value = formatDate(monday);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          } else if (preset === 'month') {
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            if (filterDateFrom) filterDateFrom.value = formatDate(firstDay);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
           }
 
           applyFilters();
@@ -1653,6 +1967,130 @@
         searchBoxFallback.addEventListener('input', () => {
           renderChats();
           renderQuestions();
+        });
+      }
+
+      // Filter Toolbar Collapse / Expand Button
+      const filterCollapseBtn = document.getElementById('filter-collapse-btn');
+      const filterToolbarBody = document.getElementById('filter-toolbar-body');
+      if (filterCollapseBtn && filterToolbarBody) {
+        filterCollapseBtn.addEventListener('click', () => {
+          const isCollapsed = filterToolbarBody.classList.toggle('collapsed');
+          filterCollapseBtn.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+          const icon = filterCollapseBtn.querySelector('.collapse-icon');
+          const label = filterCollapseBtn.querySelector('.collapse-label');
+          if (icon) icon.textContent = isCollapsed ? '▸' : '▾';
+          if (label) label.textContent = isCollapsed ? 'Expand' : 'Collapse';
+        });
+      }
+
+      // Collapsible Card Headers with data-target (Architecture Diagram, Charts, Chats Table)
+      document.querySelectorAll('.collapsible-header[data-target]').forEach(header => {
+        const targetId = header.getAttribute('data-target');
+        const body = document.getElementById(targetId);
+        if (body) {
+          const toggle = (e) => {
+            if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
+            const isCollapsed = body.classList.toggle('collapsed');
+            header.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+            const icons = header.querySelectorAll('.collapse-icon');
+            icons.forEach(ic => ic.textContent = isCollapsed ? '▸' : '▾');
+          };
+          header.addEventListener('click', toggle);
+          header.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' || e.key === ' ') {
+              e.preventDefault();
+              toggle(e);
+            }
+          });
+        }
+      });
+
+      // Questions Tab - Deep Collapsible Accordion Delegated Handler
+      if (detailsContainer) {
+        detailsContainer.addEventListener('click', (e) => {
+          // 1. Question Card prompt click
+          const qHeader = e.target.closest('.question-prompt.collapsible-header');
+          if (qHeader) {
+            const qCard = qHeader.closest('.question-card');
+            const optList = qCard ? qCard.querySelector('.options-list') : null;
+            if (optList) {
+              const isCollapsed = optList.classList.toggle('collapsed');
+              qHeader.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+              const icon = qHeader.querySelector('.collapse-icon');
+              if (icon) icon.textContent = isCollapsed ? '▸' : '▾';
+            }
+            return;
+          }
+
+          // 2. Run Header click
+          const runHeader = e.target.closest('.run-header.collapsible-header');
+          if (runHeader) {
+            const runBlock = runHeader.closest('.run-block');
+            const runBody = runBlock ? runBlock.querySelector('.run-body') : null;
+            if (runBody) {
+              const isCollapsed = runBody.classList.toggle('collapsed');
+              runHeader.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+              const icons = runHeader.querySelectorAll('.collapse-icon');
+              icons.forEach(ic => ic.textContent = isCollapsed ? '▸' : '▾');
+            }
+            return;
+          }
+
+          // 3. Chat Card Header click
+          const chatHeader = e.target.closest('.chat-card-header.collapsible-header');
+          if (chatHeader) {
+            const chatCard = chatHeader.closest('.chat-card');
+            const chatBody = chatCard ? chatCard.querySelector('.chat-card-body') : null;
+            if (chatBody) {
+              const isCollapsed = chatBody.classList.toggle('collapsed');
+              chatHeader.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
+              const icons = chatHeader.querySelectorAll('.collapse-icon');
+              icons.forEach(ic => ic.textContent = isCollapsed ? '▸' : '▾');
+            }
+            return;
+          }
+        });
+
+        // Keyboard navigation for questions accordion
+        detailsContainer.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            const header = e.target.closest('.collapsible-header');
+            if (header) {
+              e.preventDefault();
+              header.click();
+            }
+          }
+        });
+      }
+
+      // Questions Global Expand All / Collapse All
+      const btnExpandAll = document.getElementById('btn-expand-all-questions');
+      const btnCollapseAll = document.getElementById('btn-collapse-all-questions');
+
+      if (btnExpandAll) {
+        btnExpandAll.addEventListener('click', () => {
+          if (!detailsContainer) return;
+          detailsContainer.querySelectorAll('.chat-card-body, .run-body, .options-list').forEach(el => {
+            el.classList.remove('collapsed');
+          });
+          detailsContainer.querySelectorAll('.collapsible-header').forEach(hdr => {
+            hdr.setAttribute('aria-expanded', 'true');
+            hdr.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');
+          });
+        });
+      }
+
+      if (btnCollapseAll) {
+        btnCollapseAll.addEventListener('click', () => {
+          if (!detailsContainer) return;
+          detailsContainer.querySelectorAll('.chat-card-body, .run-body, .options-list').forEach(el => {
+            el.classList.add('collapsed');
+          });
+          detailsContainer.querySelectorAll('.collapsible-header').forEach(hdr => {
+            hdr.setAttribute('aria-expanded', 'false');
+            hdr.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▸');
+          });
         });
       }
 
