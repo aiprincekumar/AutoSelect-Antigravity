@@ -670,6 +670,11 @@ def parse_args():
         default=None,
         help="Path to target_chat.json state file"
     )
+    parser.add_argument(
+        "--no-pause",
+        action="store_true",
+        help="Batch script compatibility flag to suppress pause prompt"
+    )
     return parser.parse_args()
 
 
