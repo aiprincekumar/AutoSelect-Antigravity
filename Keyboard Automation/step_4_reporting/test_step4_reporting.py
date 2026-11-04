@@ -1356,5 +1356,112 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn('startLivePolling', content)
         self.assertIn('stopLivePolling', content)
 
+    def test_29_accordion_single_expansion_and_default_collapsed_behavior(self):
+        """Verify default-collapsed state and mutual-exclusion accordion mechanics across dashboard."""
+        history = AutomationHistory(
+            total_pipeline_runs=2,
+            total_questions_answered=3,
+            total_runtime_seconds=12.0,
+            total_unique_chats=1,
+            chats={
+                "chat_accordion_test": {
+                    "conversation_id": "chat_accordion_test",
+                    "topic_summary": "Accordion Single Expansion Test",
+                    "run_count": 2,
+                    "total_questions": 3,
+                    "runs": [
+                        {
+                            "run_id": "run_acc_01",
+                            "timestamp": "2026-11-04T06:00:00Z",
+                            "duration_seconds": 5.0,
+                            "questions_count": 1,
+                            "questions": [
+                                {
+                                    "question_index": 1,
+                                    "question": "Mutual exclusion accordion test?",
+                                    "options": ["(Recommended) Yes", "No"],
+                                    "selected_option_index": 1,
+                                    "selected_option_text": "(Recommended) Yes",
+                                }
+                            ]
+                        }
+                    ]
+                }
+            }
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Overview Tab: All 8 collapsible cards must be default-collapsed
+        overview_cards = [
+            ("architecture-body", "card-architecture"),
+            ("chart-body-velocity", "chart-card-velocity"),
+            ("chart-body-productivity", "chart-card-productivity"),
+            ("chart-body-heatmap", "chart-card-heatmap"),
+            ("chart-body-option-breakdown", "chart-card-option-breakdown"),
+            ("chart-body-distribution", "chart-card-distribution"),
+            ("chart-body-topic", "chart-card-topic"),
+            ("chart-body-latency", "chart-card-latency"),
+        ]
+        for body_id, card_id in overview_cards:
+            self.assertIn(f'data-target="{body_id}" role="button" tabindex="0" aria-expanded="false"', content)
+            self.assertIn(f'class="card-collapsible-body collapsed" id="{body_id}"', content)
+
+        # 2. Chats Tab: Table section must be default-collapsed
+        self.assertIn('data-target="chats-table-container" role="button" tabindex="0" aria-expanded="false"', content)
+        self.assertIn('class="card-collapsible-body collapsed" id="chats-table-container"', content)
+
+        # 3. Config Tab: Section cards and all 10 subgroups must be default-collapsed
+        self.assertIn('id="header-runtime-config" role="button" tabindex="0" aria-expanded="false"', content)
+        self.assertIn('id="body-runtime-config"', content)
+        self.assertIn('class="config-section-body collapsible-card-body collapsed" id="body-runtime-config"', content)
+
+        self.assertIn('id="header-dashboard-config" role="button" tabindex="0" aria-expanded="false"', content)
+        self.assertIn('class="config-section-body collapsible-card-body collapsed" id="body-dashboard-config"', content)
+
+        subgroups = [
+            "subbody-runtime-mode",
+            "subbody-runtime-steps",
+            "subbody-runtime-timing",
+            "subbody-runtime-governance",
+            "subbody-runtime-logging",
+            "subbody-runtime-actions",
+            "subbody-dash-timers",
+            "subbody-dash-visual",
+            "subbody-dash-audio",
+            "subbody-dash-data",
+        ]
+        for sub_id in subgroups:
+            self.assertIn(f'aria-expanded="false" aria-controls="{sub_id}"', content)
+            self.assertIn(f'class="config-subgroup-body collapsed" id="{sub_id}"', content)
+
+        # 4. Filter Toolbar: Must remain separate and independent (exempt from mutual exclusion)
+        self.assertIn('id="filter-collapse-btn"', content)
+        self.assertIn('aria-controls="filter-toolbar-body"', content)
+        self.assertIn('id="filter-toolbar-body"', content)
+
+        # 5. Global Expand All / Collapse All controls must exist and remain functional
+        self.assertIn('id="btn-expand-all-questions"', content)
+        self.assertIn('id="btn-collapse-all-questions"', content)
+        self.assertIn('id="btn-expand-all-config"', content)
+        self.assertIn('id="btn-collapse-all-config"', content)
+
+        # 6. Questions Tab dynamic rendering templates must specify collapsed state
+        self.assertIn('class="question-prompt collapsible-header" role="button" tabindex="0" aria-expanded="false"', content)
+        self.assertIn('class="options-list collapsed"', content)
+        self.assertIn('class="run-header collapsible-header" role="button" tabindex="0" aria-expanded="false"', content)
+        self.assertIn('class="run-body collapsed"', content)
+        self.assertIn('class="chat-card-header collapsible-header" role="button" tabindex="0" aria-expanded="false"', content)
+        self.assertIn('class="chat-card-body collapsed"', content)
+
+        # 7. JavaScript mutual exclusion routines must be embedded in page script
+        self.assertIn("collapsible-card-header", content)
+        self.assertIn("config-subgroup-header", content)
+        self.assertIn("otherHeader !== header", content)
+        self.assertIn("otherCard !== qCard", content)
+        self.assertIn("otherRun !== runBlock", content)
+        self.assertIn("otherChat !== chatCard", content)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

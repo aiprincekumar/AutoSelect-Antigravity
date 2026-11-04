@@ -2986,6 +2986,10 @@ class Step4ReportingEngine:
       background: rgba(255, 255, 255, 0.02);
     }}
 
+    .collapsible-card-header[aria-expanded="false"] {{
+      margin-bottom: 0;
+    }}
+
     .collapsible-card-header:focus-visible,
     .config-subgroup-header:focus-visible {{
       outline: 2px solid var(--accent-indigo);
@@ -3905,7 +3909,7 @@ class Step4ReportingEngine:
 
       <!-- Pipeline Execution & System Topology Diagram (Pure Vector SVG & Collapsible) -->
       <div class="architecture-card" id="card-architecture">
-        <div class="card-header collapsible-header" data-target="architecture-body" role="button" tabindex="0" aria-expanded="true" title="Toggle Architecture Diagram">
+        <div class="card-header collapsible-header" data-target="architecture-body" role="button" tabindex="0" aria-expanded="false" title="Toggle Architecture Diagram">
           <div class="card-title" style="margin-bottom: 0;">
             <span class="collapse-icon">▾</span>
             <span>🚀 System Component Topology & Health Architecture (Step 0 → Step 4)</span>
@@ -3914,7 +3918,7 @@ class Step4ReportingEngine:
             <span class="collapse-icon">▾</span>
           </button>
         </div>
-        <div class="card-collapsible-body" id="architecture-body" style="margin-top: 16px;">
+        <div class="card-collapsible-body collapsed" id="architecture-body" style="margin-top: 16px;">
           {topology_svg}
         </div>
       </div>
@@ -3922,7 +3926,7 @@ class Step4ReportingEngine:
       <!-- Row 1 of Charts: Dual-Axis Velocity Timeline & Productivity Gauge -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-velocity">
-          <div class="card-header collapsible-header" data-target="chart-body-velocity" role="button" tabindex="0" aria-expanded="true" title="Toggle Velocity Timeline Chart">
+          <div class="card-header collapsible-header" data-target="chart-body-velocity" role="button" tabindex="0" aria-expanded="false" title="Toggle Velocity Timeline Chart">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>⚡ Dual-Axis Execution & Question Velocity Timeline</span>
@@ -3931,13 +3935,13 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body" id="chart-body-velocity" style="margin-top: 16px;">
+          <div class="card-collapsible-body collapsed" id="chart-body-velocity" style="margin-top: 16px;">
             {velocity_svg}
           </div>
         </div>
 
         <div class="chart-card" id="chart-card-productivity">
-          <div class="card-header collapsible-header" data-target="chart-body-productivity" role="button" tabindex="0" aria-expanded="true" title="Toggle Productivity Gauge">
+          <div class="card-header collapsible-header" data-target="chart-body-productivity" role="button" tabindex="0" aria-expanded="false" title="Toggle Productivity Gauge">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🏎️ Developer Productivity & Time Saved Gauge</span>
@@ -3946,7 +3950,7 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body" id="chart-body-productivity" style="margin-top: 16px;">
+          <div class="card-collapsible-body collapsed" id="chart-body-productivity" style="margin-top: 16px;">
             {productivity_svg}
           </div>
         </div>
@@ -3955,7 +3959,7 @@ class Step4ReportingEngine:
       <!-- Row 2 of Charts: Hourly Heatmap & Option Selection Breakdown -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-heatmap">
-          <div class="card-header collapsible-header" data-target="chart-body-heatmap" role="button" tabindex="0" aria-expanded="true" title="Toggle Activity Heatmap">
+          <div class="card-header collapsible-header" data-target="chart-body-heatmap" role="button" tabindex="0" aria-expanded="false" title="Toggle Activity Heatmap">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🕒 Hourly Activity & Time-of-Day Heatmap</span>
@@ -3964,13 +3968,13 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body" id="chart-body-heatmap" style="margin-top: 16px;">
+          <div class="card-collapsible-body collapsed" id="chart-body-heatmap" style="margin-top: 16px;">
             {heatmap_svg}
           </div>
         </div>
 
         <div class="chart-card" id="chart-card-option-breakdown">
-          <div class="card-header collapsible-header" data-target="chart-body-option-breakdown" role="button" tabindex="0" aria-expanded="true" title="Toggle Option Selection Breakdown">
+          <div class="card-header collapsible-header" data-target="chart-body-option-breakdown" role="button" tabindex="0" aria-expanded="false" title="Toggle Option Selection Breakdown">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🎯 Option Selection Distribution & Recommendation Adherence</span>
@@ -3979,7 +3983,7 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body" id="chart-body-option-breakdown" style="margin-top: 16px;">
+          <div class="card-collapsible-body collapsed" id="chart-body-option-breakdown" style="margin-top: 16px;">
             {option_breakdown_svg}
           </div>
         </div>
@@ -3988,7 +3992,7 @@ class Step4ReportingEngine:
       <!-- Row 3 of Charts: Chat Distribution & Topic Share -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-distribution">
-          <div class="card-header collapsible-header" data-target="chart-body-distribution" role="button" tabindex="0" aria-expanded="true" title="Toggle Distribution Chart">
+          <div class="card-header collapsible-header" data-target="chart-body-distribution" role="button" tabindex="0" aria-expanded="false" title="Toggle Distribution Chart">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>📊 Chat Automation & Questions Distribution</span>
@@ -3997,13 +4001,13 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body" id="chart-body-distribution" style="margin-top: 16px;">
+          <div class="card-collapsible-body collapsed" id="chart-body-distribution" style="margin-top: 16px;">
             {distribution_svg}
           </div>
         </div>
 
         <div class="chart-card" id="chart-card-topic">
-          <div class="card-header collapsible-header" data-target="chart-body-topic" role="button" tabindex="0" aria-expanded="true" title="Toggle Topic Share Chart">
+          <div class="card-header collapsible-header" data-target="chart-body-topic" role="button" tabindex="0" aria-expanded="false" title="Toggle Topic Share Chart">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🥧 Chat Workload & Topic Share</span>
@@ -4012,7 +4016,7 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body" id="chart-body-topic" style="margin-top: 16px;">
+          <div class="card-collapsible-body collapsed" id="chart-body-topic" style="margin-top: 16px;">
             {topic_share_svg}
           </div>
         </div>
@@ -4020,7 +4024,7 @@ class Step4ReportingEngine:
 
       <!-- Row 4: Wide Run Latency & Performance Trend Chart -->
       <div class="chart-card chart-card-wide" id="chart-card-latency">
-        <div class="card-header collapsible-header" data-target="chart-body-latency" role="button" tabindex="0" aria-expanded="true" title="Toggle Latency Trend Chart">
+        <div class="card-header collapsible-header" data-target="chart-body-latency" role="button" tabindex="0" aria-expanded="false" title="Toggle Latency Trend Chart">
           <div class="card-title" style="margin-bottom: 0;">
             <span class="collapse-icon">▾</span>
             <span>⚡ Run Latency & Performance Trend</span>
@@ -4029,7 +4033,7 @@ class Step4ReportingEngine:
             <span class="collapse-icon">▾</span>
           </button>
         </div>
-        <div class="card-collapsible-body" id="chart-body-latency" style="margin-top: 16px;">
+        <div class="card-collapsible-body collapsed" id="chart-body-latency" style="margin-top: 16px;">
           {latency_trend_svg}
         </div>
       </div>
@@ -4060,7 +4064,7 @@ class Step4ReportingEngine:
 
       <!-- Chat-wise Automation Summary Table (Collapsible) -->
       <div class="section-collapsible" id="chats-breakdown-section">
-        <div class="section-header collapsible-header" data-target="chats-table-container" role="button" tabindex="0" aria-expanded="true" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 6px 10px; border-radius: var(--radius-sm);" title="Toggle Chat Breakdown Table">
+        <div class="section-header collapsible-header" data-target="chats-table-container" role="button" tabindex="0" aria-expanded="false" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; padding: 6px 10px; border-radius: var(--radius-sm);" title="Toggle Chat Breakdown Table">
           <div class="section-title" style="margin-bottom: 0;">
             <span class="collapse-icon">▾</span>
             <span>📊 Chat-wise Automation Breakdown</span>
@@ -4069,7 +4073,7 @@ class Step4ReportingEngine:
             <span class="collapse-icon">▾</span>
           </button>
         </div>
-        <div class="card-collapsible-body" id="chats-table-container">
+        <div class="card-collapsible-body collapsed" id="chats-table-container">
           <div class="table-container">
             <table id="summary-table">
               <thead>
@@ -4134,7 +4138,7 @@ class Step4ReportingEngine:
 
         <!-- Section 1: System Runtime Configuration (step_9_complete_automation/config.json) -->
         <div class="config-section-card collapsible-card" id="runtime-config-section">
-          <div class="config-section-header collapsible-card-header" id="header-runtime-config" role="button" tabindex="0" aria-expanded="true" aria-controls="body-runtime-config">
+          <div class="config-section-header collapsible-card-header" id="header-runtime-config" role="button" tabindex="0" aria-expanded="false" aria-controls="body-runtime-config">
             <div class="config-section-title-wrap">
               <span class="config-section-icon">⚡</span>
               <div>
@@ -4151,17 +4155,17 @@ class Step4ReportingEngine:
             </div>
           </div>
 
-          <div class="config-section-body collapsible-card-body" id="body-runtime-config">
+          <div class="config-section-body collapsible-card-body collapsed" id="body-runtime-config">
             <!-- 1. Execution Mode & Environment -->
             <div class="config-card-subgroup accordion-group" id="acc-runtime-mode">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-mode">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-runtime-mode">
                 <div class="config-subgroup-title">
                   <span>🛡️</span>
                   <span>Execution Mode &amp; Environment</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-runtime-mode">
+              <div class="config-subgroup-body collapsed" id="subbody-runtime-mode">
                 <p class="config-subgroup-desc">Select whether the automation pipeline runs in full autonomous Production mode (polling every 300s) or fast Test mode (10s intervals).</p>
                 
                 <div class="mode-pill-selector" role="radiogroup" aria-label="Operating Mode">
@@ -4192,14 +4196,14 @@ class Step4ReportingEngine:
 
             <!-- 2. Pipeline Steps Toggles (Enabled Steps) -->
             <div class="config-card-subgroup accordion-group" id="acc-runtime-steps">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-steps">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-runtime-steps">
                 <div class="config-subgroup-title">
                   <span>🔄</span>
                   <span>Pipeline Steps Toggles</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-runtime-steps">
+              <div class="config-subgroup-body collapsed" id="subbody-runtime-steps">
                 <p class="config-subgroup-desc">Toggle individual execution steps. Disabled steps are cleanly bypassed during execution with zero side-effects.</p>
 
                 <div class="steps-toggle-grid">
@@ -4268,14 +4272,14 @@ class Step4ReportingEngine:
 
             <!-- 3. Timing & Delays Engine -->
             <div class="config-card-subgroup accordion-group" id="acc-runtime-timing">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-timing">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-runtime-timing">
                 <div class="config-subgroup-title">
                   <span>⏱️</span>
                   <span>Timing &amp; Delays Engine</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-runtime-timing">
+              <div class="config-subgroup-body collapsed" id="subbody-runtime-timing">
                 <p class="config-subgroup-desc">Configure sleep intervals, inter-step settle buffers, and user activity detection pauses.</p>
 
                 <div class="timing-inputs-grid">
@@ -4392,14 +4396,14 @@ class Step4ReportingEngine:
 
             <!-- 4. AntiGravity Governance Rules -->
             <div class="config-card-subgroup accordion-group" id="acc-runtime-governance">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-governance">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-runtime-governance">
                 <div class="config-subgroup-title">
                   <span>🛡️</span>
                   <span>AntiGravity Governance Rules</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-runtime-governance">
+              <div class="config-subgroup-body collapsed" id="subbody-runtime-governance">
                 <p class="config-subgroup-desc">Define targeting policies and threshold safety parameters.</p>
 
                 <div class="governance-grid">
@@ -4430,14 +4434,14 @@ class Step4ReportingEngine:
 
             <!-- 5. Logging & Telemetry Engine -->
             <div class="config-card-subgroup accordion-group" id="acc-runtime-logging">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-logging">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-runtime-logging">
                 <div class="config-subgroup-title">
                   <span>📝</span>
                   <span>Logging &amp; Telemetry Engine</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-runtime-logging">
+              <div class="config-subgroup-body collapsed" id="subbody-runtime-logging">
                 <p class="config-subgroup-desc">Configure daemon logging output file and console verbosity standard.</p>
 
                 <div class="logging-grid">
@@ -4465,14 +4469,14 @@ class Step4ReportingEngine:
 
             <!-- 6. Action Controls & 1-Click CLI Apply -->
             <div class="config-card-subgroup actions-subgroup accordion-group" id="acc-runtime-actions">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-runtime-actions">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-runtime-actions">
                 <div class="config-subgroup-title">
                   <span>⚡</span>
                   <span>Action Controls &amp; 1-Click CLI Apply</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-runtime-actions">
+              <div class="config-subgroup-body collapsed" id="subbody-runtime-actions">
                 <p class="config-subgroup-desc">Apply settings, copy the 1-click PowerShell/Python CLI command to update config.json directly, or download the configuration.</p>
 
                 <div class="runtime-action-buttons">
@@ -4514,7 +4518,7 @@ class Step4ReportingEngine:
 
         <!-- Section 2: Dashboard UI Configuration -->
         <div class="config-section-card collapsible-card" id="dashboard-config-section">
-          <div class="config-section-header collapsible-card-header" id="header-dashboard-config" role="button" tabindex="0" aria-expanded="true" aria-controls="body-dashboard-config">
+          <div class="config-section-header collapsible-card-header" id="header-dashboard-config" role="button" tabindex="0" aria-expanded="false" aria-controls="body-dashboard-config">
             <div class="config-section-title-wrap">
               <span class="config-section-icon">🎨</span>
               <div>
@@ -4531,17 +4535,17 @@ class Step4ReportingEngine:
             </div>
           </div>
 
-          <div class="config-section-body collapsible-card-body" id="body-dashboard-config">
+          <div class="config-section-body collapsible-card-body collapsed" id="body-dashboard-config">
             <!-- 1. Auto-Refresh & Inactivity Timers -->
             <div class="config-card-subgroup accordion-group" id="acc-dash-timers">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-timers">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-dash-timers">
                 <div class="config-subgroup-title">
                   <span>⏱️</span>
                   <span>Auto-Refresh &amp; Inactivity Timers</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-dash-timers">
+              <div class="config-subgroup-body collapsed" id="subbody-dash-timers">
                 <p class="config-subgroup-desc">Configure client-side polling intervals and auto-launch countdown timers.</p>
 
                 <div class="dashboard-config-grid">
@@ -4579,14 +4583,14 @@ class Step4ReportingEngine:
 
             <!-- 2. Visual Theme & Motion Modes -->
             <div class="config-card-subgroup accordion-group" id="acc-dash-visual">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-visual">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-dash-visual">
                 <div class="config-subgroup-title">
                   <span>🎭</span>
                   <span>Visual Theme &amp; Motion Modes</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-dash-visual">
+              <div class="config-subgroup-body collapsed" id="subbody-dash-visual">
                 <p class="config-subgroup-desc">Tune animation speeds, hardware-accelerated SVG motion, and question choice selection behaviors.</p>
 
                 <div class="dashboard-config-grid">
@@ -4620,14 +4624,14 @@ class Step4ReportingEngine:
 
             <!-- 3. Audio Alerts & Synthesizer Chime -->
             <div class="config-card-subgroup accordion-group" id="acc-dash-audio">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-audio">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-dash-audio">
                 <div class="config-subgroup-title">
                   <span>🔔</span>
                   <span>Audio Alerts &amp; Synthesizer Chime</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-dash-audio">
+              <div class="config-subgroup-body collapsed" id="subbody-dash-audio">
                 <p class="config-subgroup-desc">Web Audio harmonic chime cues and run completion acoustic alerts.</p>
 
                 <div class="dashboard-config-grid">
@@ -4654,14 +4658,14 @@ class Step4ReportingEngine:
 
             <!-- 4. Default Tab & Data Backups -->
             <div class="config-card-subgroup accordion-group" id="acc-dash-data">
-              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="true" aria-controls="subbody-dash-data">
+              <div class="config-subgroup-header" role="button" tabindex="0" aria-expanded="false" aria-controls="subbody-dash-data">
                 <div class="config-subgroup-title">
                   <span>💾</span>
                   <span>Default Tab &amp; Data Backups</span>
                 </div>
                 <span class="subaccordion-chevron" aria-hidden="true">▾</span>
               </div>
-              <div class="config-subgroup-body" id="subbody-dash-data">
+              <div class="config-subgroup-body collapsed" id="subbody-dash-data">
                 <p class="config-subgroup-desc">Select initial view and manage export/reset operations for local telemetry storage.</p>
 
                 <div class="dashboard-config-grid">
@@ -5373,8 +5377,28 @@ class Step4ReportingEngine:
 
       function toggleHeader(header) {{
         if (!header) return;
-        const currentlyExpanded = header.getAttribute('aria-expanded') === 'true';
-        setElementCollapsed(header, currentlyExpanded);
+        const isCurrentlyExpanded = header.getAttribute('aria-expanded') === 'true';
+        if (isCurrentlyExpanded) {{
+          setElementCollapsed(header, true);
+        }} else {{
+          // Mutual exclusion: collapse any sibling or other open item in same group
+          if (header.classList.contains('collapsible-card-header')) {{
+            const container = header.closest('.config-panel-container') || document;
+            container.querySelectorAll('.collapsible-card-header').forEach(other => {{
+              if (other !== header) {{
+                setElementCollapsed(other, true);
+              }}
+            }});
+          }} else if (header.classList.contains('config-subgroup-header')) {{
+            const parentBody = header.closest('.config-section-body') || header.closest('.collapsible-card') || document;
+            parentBody.querySelectorAll('.config-subgroup-header').forEach(other => {{
+              if (other !== header) {{
+                setElementCollapsed(other, true);
+              }}
+            }});
+          }}
+          setElementCollapsed(header, false);
+        }}
       }}
 
       const allCollapsibleHeaders = document.querySelectorAll('.collapsible-card-header, .config-subgroup-header');
@@ -5681,7 +5705,7 @@ class Step4ReportingEngine:
 
                 qHtml += `
                   <div class="question-card" data-question-num="${{q.question_index || (qIdx + 1)}}">
-                    <div class="question-prompt collapsible-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand options">
+                    <div class="question-prompt collapsible-header" role="button" tabindex="0" aria-expanded="false" title="Click to collapse/expand options">
                       <div class="question-prompt-left">
                         <span class="collapse-icon">▾</span>
                         <span class="question-num">Q${{q.question_index || (qIdx + 1)}}</span>
@@ -5691,7 +5715,7 @@ class Step4ReportingEngine:
                         <span class="badge-count" style="font-size: 0.72rem;">${{(q.options || []).length}} options</span>
                       </div>
                     </div>
-                    <div class="options-list">
+                    <div class="options-list collapsed">
                       ${{optionsHtml}}
                     </div>
                   </div>
@@ -5700,7 +5724,7 @@ class Step4ReportingEngine:
 
               runsHtml += `
                 <div class="run-block" data-run-id="${{escapeHtml(run.run_id || '')}}">
-                  <div class="run-header collapsible-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand run questions">
+                  <div class="run-header collapsible-header" role="button" tabindex="0" aria-expanded="false" title="Click to collapse/expand run questions">
                     <div style="display: flex; align-items: center; gap: 8px;">
                       <span class="collapse-icon">▾</span>
                       <span style="font-weight: 700; color: var(--text-primary);">⚡ Run #${{rIdx + 1}} (${{escapeHtml(run.run_id || 'N/A')}})</span>
@@ -5712,7 +5736,7 @@ class Step4ReportingEngine:
                       </button>
                     </div>
                   </div>
-                  <div class="run-body">
+                  <div class="run-body collapsed">
                     ${{qHtml}}
                   </div>
                 </div>
@@ -5722,7 +5746,7 @@ class Step4ReportingEngine:
             const totalFilteredQs = matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0);
 
             card.innerHTML = `
-              <div class="chat-card-header collapsible-header" role="button" tabindex="0" aria-expanded="true" title="Click to collapse/expand conversation runs">
+              <div class="chat-card-header collapsible-header" role="button" tabindex="0" aria-expanded="false" title="Click to collapse/expand conversation runs">
                 <div class="chat-card-title">
                   <span class="collapse-icon">▾</span>
                   <span class="chat-id-tag">${{escapeHtml(cid)}}</span>
@@ -5736,7 +5760,7 @@ class Step4ReportingEngine:
                   </button>
                 </div>
               </div>
-              <div class="chat-card-body">
+              <div class="chat-card-body collapsed">
                 ${{runsHtml}}
               </div>
             `;
@@ -5906,10 +5930,29 @@ class Step4ReportingEngine:
         if (body) {{
           const toggle = (e) => {{
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
-            const isCollapsed = body.classList.toggle('collapsed');
-            header.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-            const icons = header.querySelectorAll('.collapse-icon');
-            icons.forEach(ic => ic.textContent = isCollapsed ? '▸' : '▾');
+            const willExpand = body.classList.contains('collapsed');
+            if (willExpand) {{
+              // Mutual exclusion: collapse any other open collapsible card in the same tab panel
+              const container = header.closest('.tab-panel') || document;
+              container.querySelectorAll('.collapsible-header[data-target]').forEach(otherHeader => {{
+                if (otherHeader !== header) {{
+                  const otherTargetId = otherHeader.getAttribute('data-target');
+                  const otherBody = document.getElementById(otherTargetId);
+                  if (otherBody) {{
+                    otherBody.classList.add('collapsed');
+                    otherHeader.setAttribute('aria-expanded', 'false');
+                    otherHeader.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');
+                  }}
+                }}
+              }});
+              body.classList.remove('collapsed');
+              header.setAttribute('aria-expanded', 'true');
+              header.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');
+            }} else {{
+              body.classList.add('collapsed');
+              header.setAttribute('aria-expanded', 'false');
+              header.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');
+            }}
           }};
           header.addEventListener('click', toggle);
           header.addEventListener('keydown', (e) => {{
@@ -5930,10 +5973,26 @@ class Step4ReportingEngine:
             const qCard = qHeader.closest('.question-card');
             const optList = qCard ? qCard.querySelector('.options-list') : null;
             if (optList) {{
-              const isCollapsed = optList.classList.toggle('collapsed');
-              qHeader.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-              const icon = qHeader.querySelector('.collapse-icon');
-              if (icon) icon.textContent = isCollapsed ? '▸' : '▾';
+              const willExpand = optList.classList.contains('collapsed');
+              if (willExpand) {{
+                // Mutual exclusion: collapse sibling question cards inside the same run-body
+                const parentRun = qCard.closest('.run-body') || detailsContainer;
+                parentRun.querySelectorAll('.question-card').forEach(otherCard => {{
+                  if (otherCard !== qCard) {{
+                    const otherOpt = otherCard.querySelector('.options-list');
+                    const otherHdr = otherCard.querySelector('.question-prompt.collapsible-header');
+                    if (otherOpt) otherOpt.classList.add('collapsed');
+                    if (otherHdr) {{
+                      otherHdr.setAttribute('aria-expanded', 'false');
+                    }}
+                  }}
+                }});
+                optList.classList.remove('collapsed');
+                qHeader.setAttribute('aria-expanded', 'true');
+              }} else {{
+                optList.classList.add('collapsed');
+                qHeader.setAttribute('aria-expanded', 'false');
+              }}
             }}
             return;
           }}
@@ -5944,10 +6003,26 @@ class Step4ReportingEngine:
             const runBlock = runHeader.closest('.run-block');
             const runBody = runBlock ? runBlock.querySelector('.run-body') : null;
             if (runBody) {{
-              const isCollapsed = runBody.classList.toggle('collapsed');
-              runHeader.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-              const icons = runHeader.querySelectorAll('.collapse-icon');
-              icons.forEach(ic => ic.textContent = isCollapsed ? '▸' : '▾');
+              const willExpand = runBody.classList.contains('collapsed');
+              if (willExpand) {{
+                // Mutual exclusion: collapse sibling run blocks inside the same chat-card-body
+                const parentChat = runBlock.closest('.chat-card-body') || detailsContainer;
+                parentChat.querySelectorAll('.run-block').forEach(otherRun => {{
+                  if (otherRun !== runBlock) {{
+                    const otherRunBody = otherRun.querySelector('.run-body');
+                    const otherRunHdr = otherRun.querySelector('.run-header.collapsible-header');
+                    if (otherRunBody) otherRunBody.classList.add('collapsed');
+                    if (otherRunHdr) {{
+                      otherRunHdr.setAttribute('aria-expanded', 'false');
+                    }}
+                  }}
+                }});
+                runBody.classList.remove('collapsed');
+                runHeader.setAttribute('aria-expanded', 'true');
+              }} else {{
+                runBody.classList.add('collapsed');
+                runHeader.setAttribute('aria-expanded', 'false');
+              }}
             }}
             return;
           }}
@@ -5958,10 +6033,25 @@ class Step4ReportingEngine:
             const chatCard = chatHeader.closest('.chat-card');
             const chatBody = chatCard ? chatCard.querySelector('.chat-card-body') : null;
             if (chatBody) {{
-              const isCollapsed = chatBody.classList.toggle('collapsed');
-              chatHeader.setAttribute('aria-expanded', isCollapsed ? 'false' : 'true');
-              const icons = chatHeader.querySelectorAll('.collapse-icon');
-              icons.forEach(ic => ic.textContent = isCollapsed ? '▸' : '▾');
+              const willExpand = chatBody.classList.contains('collapsed');
+              if (willExpand) {{
+                // Mutual exclusion: collapse sibling chat cards inside details container
+                detailsContainer.querySelectorAll('.chat-card').forEach(otherChat => {{
+                  if (otherChat !== chatCard) {{
+                    const otherChatBody = otherChat.querySelector('.chat-card-body');
+                    const otherChatHdr = otherChat.querySelector('.chat-card-header.collapsible-header');
+                    if (otherChatBody) otherChatBody.classList.add('collapsed');
+                    if (otherChatHdr) {{
+                      otherChatHdr.setAttribute('aria-expanded', 'false');
+                    }}
+                  }}
+                }});
+                chatBody.classList.remove('collapsed');
+                chatHeader.setAttribute('aria-expanded', 'true');
+              }} else {{
+                chatBody.classList.add('collapsed');
+                chatHeader.setAttribute('aria-expanded', 'false');
+              }}
             }}
             return;
           }}
