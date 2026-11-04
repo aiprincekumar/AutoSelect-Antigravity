@@ -1418,6 +1418,8 @@ class Step4ReportingEngine:
         banner_test_active_class = mode_test_active_class
         card_prod_active_class = "active-mode-card" if cfg_mode_val == "production" else ""
         card_test_active_class = "active-mode-card" if cfg_mode_val == "test" else ""
+        tab_modes_badge_text = "Test" if cfg_mode_val == "test" else "Prod"
+        tab_modes_badge_class = "tab-badge-test" if cfg_mode_val == "test" else "tab-badge-prod"
 
         enabled_steps = runtime_cfg.get("enabled_steps", {})
         step1_checked = "checked" if enabled_steps.get("step1_find_and_focus", True) else ""
@@ -1755,6 +1757,32 @@ class Step4ReportingEngine:
     .tab-btn:not(.active) .tab-badge {{
       background: var(--bg-surface-highlight);
       color: var(--text-secondary);
+    }}
+
+    .tab-badge.tab-badge-test,
+    .tab-btn:not(.active) .tab-badge.tab-badge-test {{
+      background: rgba(245, 158, 11, 0.16);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.35);
+    }}
+
+    .tab-badge.tab-badge-prod,
+    .tab-btn:not(.active) .tab-badge.tab-badge-prod {{
+      background: rgba(16, 185, 129, 0.16);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.35);
+    }}
+
+    .tab-btn.active .tab-badge.tab-badge-test {{
+      background: #f59e0b;
+      color: #0f172a;
+      border-color: #fbbf24;
+    }}
+
+    .tab-btn.active .tab-badge.tab-badge-prod {{
+      background: #10b981;
+      color: #0f172a;
+      border-color: #34d399;
     }}
 
     /* ==========================================================================
@@ -2113,6 +2141,234 @@ class Step4ReportingEngine:
         width: 100%;
         justify-content: space-between;
       }}
+      .modes-hero-header {{
+        flex-direction: column;
+        align-items: flex-start;
+      }}
+      .modes-hero-actions {{
+        width: 100%;
+        justify-content: flex-start;
+      }}
+      .modes-switcher-bar {{
+        flex-direction: column;
+        align-items: flex-start;
+      }}
+      .modes-segmented-group {{
+        width: 100%;
+        display: flex;
+        justify-content: stretch;
+      }}
+      .modes-segmented-group .banner-mode-btn {{
+        flex: 1;
+        justify-content: center;
+      }}
+    }}
+
+    /* Mode Switch Dedicated Tab Styles (Dept 04 & 05 Standards) */
+    .modes-panel-container {{
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+    }}
+
+    .modes-hero-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-top: 3px solid var(--accent-indigo);
+      border-radius: var(--radius-lg);
+      padding: 24px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12);
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }}
+
+    .modes-hero-card:hover {{
+      border-top-color: #818cf8;
+      box-shadow: 0 6px 24px rgba(99, 102, 241, 0.15);
+    }}
+
+    .modes-hero-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      padding-bottom: 18px;
+      border-bottom: 1px solid var(--border-subtle);
+    }}
+
+    .modes-title-group {{
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }}
+
+    .modes-hero-icon {{
+      font-size: 2rem;
+      line-height: 1;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 48px;
+      height: 48px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }}
+
+    .modes-hero-title {{
+      font-size: 1.22rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      letter-spacing: -0.015em;
+      margin: 0;
+    }}
+
+    .modes-hero-subtitle {{
+      font-size: 0.88rem;
+      color: var(--text-secondary);
+      margin: 4px 0 0 0;
+      line-height: 1.45;
+    }}
+
+    .modes-hero-actions {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+
+    .modes-process-control-group {{
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg-surface-elevated);
+      padding: 6px 12px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }}
+
+    .modes-switcher-bar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 14px;
+      background: var(--bg-surface-elevated);
+      padding: 12px 18px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }}
+
+    .modes-switcher-label {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.84rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }}
+
+    .modes-switcher-label .switcher-dot {{
+      color: var(--accent-indigo);
+      font-size: 0.9rem;
+    }}
+
+    .modes-segmented-group {{
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--bg-surface);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+    }}
+
+    /* Comparison Card & Table */
+    .modes-comparison-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 22px 24px;
+      box-shadow: 0 4px 16px rgba(0, 0, 0, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 16px;
+    }}
+
+    .modes-comparison-header {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+    }}
+
+    .modes-comparison-title-wrap {{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+
+    .comparison-icon {{
+      font-size: 1.4rem;
+      line-height: 1;
+    }}
+
+    .comparison-title {{
+      font-size: 1.05rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }}
+
+    .comparison-subtitle {{
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin: 3px 0 0 0;
+    }}
+
+    .modes-comparison-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.86rem;
+      text-align: left;
+    }}
+
+    .modes-comparison-table th {{
+      background: var(--bg-surface-elevated);
+      color: var(--text-primary);
+      font-weight: 700;
+      padding: 11px 14px;
+      border-bottom: 1.5px solid var(--border-subtle);
+      font-size: 0.82rem;
+      text-transform: uppercase;
+      letter-spacing: 0.03em;
+    }}
+
+    .modes-comparison-table td {{
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }}
+
+    .modes-comparison-table tr:hover td {{
+      background: var(--bg-surface-highlight);
+    }}
+
+    .modes-comparison-table td code {{
+      font-family: var(--font-mono);
+      font-size: 0.8rem;
+      background: var(--bg-surface-elevated);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
     }}
 
     /* Tab Panels */
@@ -4085,88 +4341,16 @@ class Step4ReportingEngine:
         <span class="tab-label">Questions</span>
         <span class="tab-badge" id="tab-questions-badge">{total_questions}</span>
       </button>
+      <button class="tab-btn" id="tab-btn-modes" role="tab" aria-selected="false" aria-controls="tab-modes" data-tab="modes">
+        <span class="tab-icon">🎛️</span>
+        <span class="tab-label">Mode Switch</span>
+        <span class="tab-badge {tab_modes_badge_class}" id="tab-modes-badge">{tab_modes_badge_text}</span>
+      </button>
       <button class="tab-btn" id="tab-btn-config" role="tab" aria-selected="false" aria-controls="tab-config" data-tab="config">
         <span class="tab-icon">⚙️</span>
         <span class="tab-label">Config</span>
       </button>
     </nav>
-
-    <!-- Horizontal Mode Lifecycle Banner (Execution Mode Rules & Single-Run Auto-Stop Standard) -->
-    <section class="mode-lifecycle-banner" id="mode-lifecycle-banner" aria-label="Execution Mode Lifecycle">
-      <div class="mode-lifecycle-header">
-        <div class="mode-lifecycle-title-group">
-          <span class="title-icon">⚡</span>
-          <span class="title-main">Execution Mode Lifecycle</span>
-          <span class="title-sep">•</span>
-          <span class="title-sub">रन मोड कार्यप्रणाली एवं स्टॉप नियम</span>
-        </div>
-        <div class="banner-mode-controls">
-          <span class="banner-controls-label">Mode Switcher:</span>
-          <div class="banner-mode-switcher" role="radiogroup" aria-label="Active Execution Mode Switcher">
-            <button type="button" class="banner-mode-btn {banner_test_active_class}" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
-              <span>🧪 Test Mode</span>
-              <span class="banner-mode-indicator">Auto-Stop</span>
-            </button>
-            <button type="button" class="banner-mode-btn {banner_prod_active_class}" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
-              <span>🛡️ Production</span>
-              <span class="banner-mode-indicator">Loop</span>
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <div class="mode-lifecycle-grid">
-        <!-- 1. Test Mode Card -->
-        <div class="lifecycle-card card-test {card_test_active_class}" id="banner-card-test" role="button" tabindex="0" title="Click to select Test Mode">
-          <div class="lifecycle-card-top">
-            <div class="lifecycle-card-title">
-              <span class="card-icon">🧪</span>
-              <div class="card-title-text">
-                <strong>Test Mode</strong>
-                <span class="card-title-hindi">(टेस्ट रन - One-Time Run &amp; Auto-Stop)</span>
-              </div>
-            </div>
-            <span class="lifecycle-card-badge badge-test-mode">
-              <span>●</span>
-              <span>Single-Run • Auto-Stops on Task Complete</span>
-            </span>
-          </div>
-          <p class="lifecycle-card-desc">
-            जब <strong>Test Run</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह सिर्फ <strong>1 बार (Single Cycle)</strong> चलेगा और टास्क/पाइपलाइन कम्प्लीट होते ही प्रोसेस अपने आप <strong>Stop</strong> हो जाएगा।
-          </p>
-          <div class="lifecycle-card-features">
-            <span class="lifecycle-feature-tag">⚡ 1 Single Cycle Execution</span>
-            <span class="lifecycle-feature-tag">🛑 Auto-Exits on Task Completion</span>
-            <span class="lifecycle-feature-tag">🔬 Safe Verification &amp; Dry-Runs</span>
-          </div>
-        </div>
-
-        <!-- 2. Production Mode Card -->
-        <div class="lifecycle-card card-production {card_prod_active_class}" id="banner-card-prod" role="button" tabindex="0" title="Click to select Production Mode">
-          <div class="lifecycle-card-top">
-            <div class="lifecycle-card-title">
-              <span class="card-icon">🛡️</span>
-              <div class="card-title-text">
-                <strong>Production Mode</strong>
-                <span class="card-title-hindi">(प्रोडक्शन लेवल - Continuous Autonomous Loop)</span>
-              </div>
-            </div>
-            <span class="lifecycle-card-badge badge-prod-mode">
-              <span>●</span>
-              <span>Continuous Loop • Runs Until Manual Stop</span>
-            </span>
-          </div>
-          <p class="lifecycle-card-desc">
-            जब <strong>Production Level</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह बैकग्राउंड में अनवरत <strong>(Continuous Loop - 300s चक्र)</strong> चलता रहेगा जब तक कि आप मैन्युअली <strong>Stop</strong> बटन न दबाएँ।
-          </p>
-          <div class="lifecycle-card-features">
-            <span class="lifecycle-feature-tag">🔄 Continuous 300s Polling Loop</span>
-            <span class="lifecycle-feature-tag">♾️ Runs Indefinitely in Background</span>
-            <span class="lifecycle-feature-tag">👤 Manual User Stop Required</span>
-          </div>
-        </div>
-      </div>
-    </section>
 
     <!-- Legacy Search Box Compatibility Hook (Hidden) -->
     <input type="hidden" id="search-box" value="">
@@ -4551,7 +4735,164 @@ class Step4ReportingEngine:
       </div>
     </main>
 
-    <!-- Tab 4: Config Panel (Always the Last Tab - System Runtime & Dashboard Configuration) -->
+    <!-- Tab 4: Mode Switch Panel (Dedicated Execution Mode Control & Lifecycle Standard) -->
+    <main id="tab-modes" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-modes">
+      <div class="modes-panel-container">
+        <!-- Header & Mode Switch Control Section -->
+        <div class="modes-hero-card">
+          <div class="modes-hero-header">
+            <div class="modes-title-group">
+              <span class="modes-hero-icon">🎛️</span>
+              <div>
+                <h2 class="modes-hero-title">Execution Mode Control &amp; Lifecycle Standard</h2>
+                <p class="modes-hero-subtitle">मोड स्विच एवं कार्यप्रणाली • Select between Test Mode (single-run auto-stop) and Production Mode (continuous autonomous loop).</p>
+              </div>
+            </div>
+            <div class="modes-hero-actions">
+              <div class="modes-process-control-group">
+                <span class="status-pill status-idle" id="modes-status-pill">⚪ Automation Inactive</span>
+                <button type="button" class="btn btn-automation-toggle state-stopped" id="modes-automation-toggle-btn" title="Toggle AutoSelect-Commander Automation directly from Mode Switch">
+                  <span class="control-icon" id="modes-control-icon">▶️</span>
+                  <span class="control-label" id="modes-control-label">Start</span>
+                </button>
+              </div>
+            </div>
+          </div>
+
+          <!-- Segmented Mode Switcher -->
+          <div class="modes-switcher-bar">
+            <div class="modes-switcher-label">
+              <span class="switcher-dot">●</span>
+              <span>Active Operating Mode:</span>
+            </div>
+            <div class="banner-mode-switcher modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
+              <button type="button" class="banner-mode-btn {banner_test_active_class}" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+                <span>🧪 Test Mode</span>
+                <span class="banner-mode-indicator">Auto-Stop</span>
+              </button>
+              <button type="button" class="banner-mode-btn {banner_prod_active_class}" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+                <span>🛡️ Production</span>
+                <span class="banner-mode-indicator">Continuous Loop</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Two Rich Interactive Mode Cards -->
+          <div class="mode-lifecycle-grid">
+            <!-- 1. Test Mode Card -->
+            <div class="lifecycle-card card-test {card_test_active_class}" id="banner-card-test" role="button" tabindex="0" title="Click to select Test Mode">
+              <div class="lifecycle-card-top">
+                <div class="lifecycle-card-title">
+                  <span class="card-icon">🧪</span>
+                  <div class="card-title-text">
+                    <strong>Test Mode</strong>
+                    <span class="card-title-hindi">(टेस्ट रन - Single-Run &amp; Auto-Stop)</span>
+                  </div>
+                </div>
+                <span class="lifecycle-card-badge badge-test-mode">
+                  <span>●</span>
+                  <span>Single-Run • Auto-Stops on Task Complete</span>
+                </span>
+              </div>
+              <p class="lifecycle-card-desc">
+                जब <strong>Test Run</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह सिर्फ <strong>1 बार (Single Cycle)</strong> चलेगा और टास्क/पाइपलाइन कम्प्लीट होते ही प्रोसेस अपने आप <strong>Stop</strong> हो जाएगा।
+              </p>
+              <div class="lifecycle-card-features">
+                <span class="lifecycle-feature-tag">⚡ 1 Single Cycle Execution</span>
+                <span class="lifecycle-feature-tag">🛑 Auto-Exits on Task Completion</span>
+                <span class="lifecycle-feature-tag">🔬 Safe Verification &amp; Dry-Runs</span>
+                <span class="lifecycle-feature-tag">⏱️ Fast 10.0s Poll Cycle</span>
+              </div>
+            </div>
+
+            <!-- 2. Production Mode Card -->
+            <div class="lifecycle-card card-production {card_prod_active_class}" id="banner-card-prod" role="button" tabindex="0" title="Click to select Production Mode">
+              <div class="lifecycle-card-top">
+                <div class="lifecycle-card-title">
+                  <span class="card-icon">🛡️</span>
+                  <div class="card-title-text">
+                    <strong>Production Mode</strong>
+                    <span class="card-title-hindi">(प्रोडक्शन लेवल - Continuous Autonomous Loop)</span>
+                  </div>
+                </div>
+                <span class="lifecycle-card-badge badge-prod-mode">
+                  <span>●</span>
+                  <span>Continuous Loop • Runs Until Manual Stop</span>
+                </span>
+              </div>
+              <p class="lifecycle-card-desc">
+                जब <strong>Production Level</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह बैकग्राउंड में अनवरत <strong>(Continuous Loop - 300s चक्र)</strong> चलता रहेगा जब तक कि आप मैन्युअली <strong>Stop</strong> बटन न दबाएँ।
+              </p>
+              <div class="lifecycle-card-features">
+                <span class="lifecycle-feature-tag">🔄 Continuous 300s Polling Loop</span>
+                <span class="lifecycle-feature-tag">♾️ Runs Indefinitely in Background</span>
+                <span class="lifecycle-feature-tag">👤 Manual User Stop Required</span>
+                <span class="lifecycle-feature-tag">🚀 Full Autonomous Multi-Step Pipeline</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Lifecycle Comparison Table Card -->
+        <div class="modes-comparison-card">
+          <div class="modes-comparison-header">
+            <div class="modes-comparison-title-wrap">
+              <span class="comparison-icon">⚖️</span>
+              <div>
+                <h3 class="comparison-title">Operational Lifecycle &amp; Parameters Comparison</h3>
+                <p class="comparison-subtitle">विस्तृत कार्यप्रणाली तुलना • Comprehensive breakdown of runtime parameters, stop conditions, and resource allocation</p>
+              </div>
+            </div>
+          </div>
+          <div class="table-container">
+            <table class="modes-comparison-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 180px;">Operational Parameter / आयाम</th>
+                  <th>🧪 Test Mode (टेस्ट रन)</th>
+                  <th>🛡️ Production Mode (प्रोडक्शन मोड)</th>
+                  <th style="min-width: 140px;">Department Standard</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Execution Cycle / निष्पादन आवृत्ति</strong></td>
+                  <td><span class="lifecycle-card-badge badge-test-mode">Single Cycle (1 Run Only)</span></td>
+                  <td><span class="lifecycle-card-badge badge-prod-mode">Continuous Autonomous Loop</span></td>
+                  <td>Dept 06 &amp; Dept 12</td>
+                </tr>
+                <tr>
+                  <td><strong>Stop Condition / स्टॉप नियम</strong></td>
+                  <td><strong>Automatic Auto-Stop</strong> — Chat/Question processing complete होते ही process खुद सुरक्षित exit हो जाता है</td>
+                  <td><strong>Manual Stop Only</strong> — User जब तक Stop बटन नहीं दबाता, तब तक 300s loop अनवरत चलता रहता है</td>
+                  <td>Rule 26 Zero-Hang</td>
+                </tr>
+                <tr>
+                  <td><strong>Step 0 Polling Interval / पोलिंग अंतराल</strong></td>
+                  <td><code>10.0s</code> (त्वरित परीक्षण एवं डिबग चक्र)</td>
+                  <td><code>300.0s</code> (5 मिनट का स्थिर प्रोडक्शन अंतराल)</td>
+                  <td>Dept 14 Telemetry</td>
+                </tr>
+                <tr>
+                  <td><strong>Target Scope / लक्षित उपयोग</strong></td>
+                  <td>Local verification, step testing, single question verification</td>
+                  <td>24/7 autonomous monitoring &amp; unattended execution</td>
+                  <td>Dept 08 QA Gates</td>
+                </tr>
+                <tr>
+                  <td><strong>Config Persistence / डेटा सिंक</strong></td>
+                  <td>Direct persistence to <code>step_9_complete_automation/config.json</code></td>
+                  <td>Direct persistence to <code>step_9_complete_automation/config.json</code></td>
+                  <td>Universal Rule 15 &amp; 23</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Tab 5: Config Panel (Always the Last Tab - System Runtime & Dashboard Configuration) -->
     <main id="tab-config" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-config">
       <div class="config-panel-container">
         <!-- Global Expand / Collapse All Controls -->
@@ -5147,6 +5488,7 @@ class Step4ReportingEngine:
                       <option value="overview">Overview (KPIs &amp; Visual Charts)</option>
                       <option value="chats">Chats (Conversations Breakdown)</option>
                       <option value="questions">Questions (Detailed Q&amp;A Ledger)</option>
+                      <option value="modes">Mode Switch (Execution Mode &amp; Lifecycle)</option>
                       <option value="config">Config (Master System &amp; Dashboard Settings)</option>
                     </select>
                   </div>
@@ -5466,7 +5808,15 @@ class Step4ReportingEngine:
         if (cfgModeTestBtn) cfgModeTestBtn.classList.toggle('active', targetMode === 'test');
         if (cfgModeProdBtn) cfgModeProdBtn.classList.toggle('active', targetMode === 'production');
 
-        // 5. Update Current Config Object and Live JSON Preview
+        // 5. Update Tab Badge for Mode Switch tab
+        const tabModesBadge = document.getElementById('tab-modes-badge');
+        if (tabModesBadge) {{
+          tabModesBadge.textContent = (targetMode === 'test') ? 'Test' : 'Prod';
+          tabModesBadge.classList.toggle('tab-badge-test', targetMode === 'test');
+          tabModesBadge.classList.toggle('tab-badge-prod', targetMode === 'production');
+        }}
+
+        // 6. Update Current Config Object and Live JSON Preview
         if (typeof currentConfig !== 'undefined' && currentConfig) currentConfig.mode = targetMode;
         if (updateConfig && typeof updateRuntimeJsonPreview === 'function') {{
           updateRuntimeJsonPreview();
@@ -5862,18 +6212,36 @@ class Step4ReportingEngine:
       }}
 
       function updateAutomationUI(isRunning, triggerToast = false) {{
-        if (!automationToggleBtn) return;
+        const modesAutomationToggleBtn = document.getElementById('modes-automation-toggle-btn');
+        const modesControlIconEl = document.getElementById('modes-control-icon');
+        const modesControlLabelEl = document.getElementById('modes-control-label');
+        const modesStatusPill = document.getElementById('modes-status-pill');
 
         if (isRunning) {{
-          automationToggleBtn.classList.remove('state-stopped');
-          automationToggleBtn.classList.add('state-running');
-          if (controlIconEl) controlIconEl.textContent = '⏹️';
-          if (controlLabelEl) controlLabelEl.textContent = 'Stop';
-          automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+          if (automationToggleBtn) {{
+            automationToggleBtn.classList.remove('state-stopped');
+            automationToggleBtn.classList.add('state-running');
+            if (controlIconEl) controlIconEl.textContent = '⏹️';
+            if (controlLabelEl) controlLabelEl.textContent = 'Stop';
+            automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+          }}
+
+          if (modesAutomationToggleBtn) {{
+            modesAutomationToggleBtn.classList.remove('state-stopped');
+            modesAutomationToggleBtn.classList.add('state-running');
+            if (modesControlIconEl) modesControlIconEl.textContent = '⏹️';
+            if (modesControlLabelEl) modesControlLabelEl.textContent = 'Stop';
+            modesAutomationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+          }}
 
           if (dashboardStatusPill) {{
             dashboardStatusPill.className = 'status-pill status-active';
             dashboardStatusPill.innerHTML = '🟢 Active';
+          }}
+
+          if (modesStatusPill) {{
+            modesStatusPill.className = 'status-pill status-active';
+            modesStatusPill.innerHTML = '🟢 Active';
           }}
 
           startProcessStatusPolling(3000);
@@ -5882,15 +6250,30 @@ class Step4ReportingEngine:
             showToast('🚀 Automation Started! AutoSelect-Commander is actively monitoring chats.', 'success');
           }}
         }} else {{
-          automationToggleBtn.classList.remove('state-running');
-          automationToggleBtn.classList.add('state-stopped');
-          if (controlIconEl) controlIconEl.textContent = '▶️';
-          if (controlLabelEl) controlLabelEl.textContent = 'Start';
-          automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+          if (automationToggleBtn) {{
+            automationToggleBtn.classList.remove('state-running');
+            automationToggleBtn.classList.add('state-stopped');
+            if (controlIconEl) controlIconEl.textContent = '▶️';
+            if (controlLabelEl) controlLabelEl.textContent = 'Start';
+            automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+          }}
+
+          if (modesAutomationToggleBtn) {{
+            modesAutomationToggleBtn.classList.remove('state-running');
+            modesAutomationToggleBtn.classList.add('state-stopped');
+            if (modesControlIconEl) modesControlIconEl.textContent = '▶️';
+            if (modesControlLabelEl) modesControlLabelEl.textContent = 'Start';
+            modesAutomationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+          }}
 
           if (dashboardStatusPill) {{
             dashboardStatusPill.className = 'status-pill status-idle';
             dashboardStatusPill.innerHTML = '⚪ Inactive';
+          }}
+
+          if (modesStatusPill) {{
+            modesStatusPill.className = 'status-pill status-idle';
+            modesStatusPill.innerHTML = '⚪ Inactive';
           }}
 
           stopProcessStatusPolling();
@@ -5915,12 +6298,22 @@ class Step4ReportingEngine:
         }}
       }}
 
+      const modesAutomationToggleBtn = document.getElementById('modes-automation-toggle-btn');
+      if (modesAutomationToggleBtn && automationToggleBtn) {{
+        modesAutomationToggleBtn.addEventListener('click', () => {{
+          automationToggleBtn.click();
+        }});
+      }}
+
       if (automationToggleBtn) {{
         automationToggleBtn.addEventListener('click', async () => {{
           const currentlyRunning = isAutomationActive || getAutomationRunning();
 
           automationToggleBtn.disabled = true;
+          if (modesAutomationToggleBtn) modesAutomationToggleBtn.disabled = true;
           if (controlLabelEl) controlLabelEl.textContent = currentlyRunning ? 'Stopping...' : 'Starting...';
+          const modesControlLabelEl = document.getElementById('modes-control-label');
+          if (modesControlLabelEl) modesControlLabelEl.textContent = currentlyRunning ? 'Stopping...' : 'Starting...';
 
           if (currentlyRunning) {{
             userInitiatedStop = true;
@@ -5973,6 +6366,7 @@ class Step4ReportingEngine:
             updateAutomationUI(false, false);
           }} finally {{
             automationToggleBtn.disabled = false;
+            if (modesAutomationToggleBtn) modesAutomationToggleBtn.disabled = false;
           }}
         }});
       }}
@@ -6195,7 +6589,7 @@ class Step4ReportingEngine:
       // Horizontal Tab switching logic with localStorage persistence
       const tabBtns = document.querySelectorAll('.tab-btn');
       const tabPanels = document.querySelectorAll('.tab-panel');
-      const validTabs = ['overview', 'chats', 'questions', 'config'];
+      const validTabs = ['overview', 'chats', 'questions', 'modes', 'config'];
       const savedTab = localStorage.getItem('asc_dashboard_tab') || currentConfig.defaultTab || 'overview';
 
       function switchTab(tabId) {{

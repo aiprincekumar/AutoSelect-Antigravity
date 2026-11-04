@@ -1463,5 +1463,65 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("otherRun !== runBlock", content)
         self.assertIn("otherChat !== chatCard", content)
 
+    def test_30_mode_switch_dedicated_tab_and_no_global_banner(self):
+        """Verify Mode Switch dedicated tab, no global banner outside tabs, and interactive controls."""
+        history = AutomationHistory(total_pipeline_runs=1, total_questions_answered=1, total_runtime_seconds=5.0, total_unique_chats=1)
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Tab navigation bar contains all 5 tabs in strict order: Overview < Chats < Questions < Modes < Config
+        idx_overview = content.find('id="tab-btn-overview"')
+        idx_chats = content.find('id="tab-btn-chats"')
+        idx_questions = content.find('id="tab-btn-questions"')
+        idx_modes = content.find('id="tab-btn-modes"')
+        idx_config = content.find('id="tab-btn-config"')
+
+        self.assertNotEqual(idx_overview, -1, "tab-btn-overview not found")
+        self.assertNotEqual(idx_chats, -1, "tab-btn-chats not found")
+        self.assertNotEqual(idx_questions, -1, "tab-btn-questions not found")
+        self.assertNotEqual(idx_modes, -1, "tab-btn-modes not found")
+        self.assertNotEqual(idx_config, -1, "tab-btn-config not found")
+
+        self.assertTrue(idx_overview < idx_chats < idx_questions < idx_modes < idx_config, "Tabs are not in strict 5-tab order")
+
+        # 2. Tab button attributes for Mode Switch
+        self.assertIn('data-tab="modes"', content)
+        self.assertIn('aria-controls="tab-modes"', content)
+        self.assertIn('id="tab-modes-badge"', content)
+        self.assertIn('🎛️', content)
+        self.assertIn('Mode Switch', content)
+
+        # 3. Dedicated Tab Panel for Modes
+        self.assertIn('id="tab-modes"', content)
+        self.assertIn('class="tab-panel"', content)
+        self.assertIn('aria-labelledby="tab-btn-modes"', content)
+        self.assertIn('Execution Mode Control &amp; Lifecycle Standard', content)
+        self.assertIn('मोड स्विच एवं कार्यप्रणाली', content)
+
+        # 4. Mode Switcher & Rich Mode Cards inside Mode Switch Tab
+        self.assertIn('id="banner-mode-test-btn"', content)
+        self.assertIn('id="banner-mode-prod-btn"', content)
+        self.assertIn('id="banner-card-test"', content)
+        self.assertIn('id="banner-card-prod"', content)
+
+        # 5. Quick Process Control inside Mode Switch Tab
+        self.assertIn('id="modes-automation-toggle-btn"', content)
+        self.assertIn('id="modes-status-pill"', content)
+
+        # 6. Operational Parameters Comparison Table
+        self.assertIn('modes-comparison-table', content)
+        self.assertIn('Operational Lifecycle &amp; Parameters Comparison', content)
+
+        # 7. Global banner is REMOVED from outside the tab panels
+        nav_end = content.find('</nav>')
+        first_main = content.find('<main')
+        between_nav_and_main = content[nav_end:first_main]
+        self.assertNotIn('mode-lifecycle-banner', between_nav_and_main, "Global banner should not appear outside tab panels")
+
+        # 8. JavaScript tab registration includes 'modes'
+        self.assertIn("'modes'", content)
+        self.assertIn("modesAutomationToggleBtn", content)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
