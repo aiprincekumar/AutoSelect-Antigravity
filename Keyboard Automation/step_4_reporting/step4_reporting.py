@@ -4532,7 +4532,7 @@ class Step4ReportingEngine:
 
       <!-- Pipeline Execution & System Topology Diagram (Pure Vector SVG & Collapsible) -->
       <div class="architecture-card" id="card-architecture">
-        <div class="card-header collapsible-header" data-target="architecture-body" role="button" tabindex="0" aria-expanded="false" title="Toggle Architecture Diagram">
+        <div class="card-header collapsible-header" data-target="architecture-body" role="button" tabindex="0" aria-expanded="true" title="Toggle Architecture Diagram">
           <div class="card-title" style="margin-bottom: 0;">
             <span class="collapse-icon">▾</span>
             <span>🚀 System Component Topology & Health Architecture (Step 0 → Step 4)</span>
@@ -4541,7 +4541,7 @@ class Step4ReportingEngine:
             <span class="collapse-icon">▾</span>
           </button>
         </div>
-        <div class="card-collapsible-body collapsed" id="architecture-body" style="margin-top: 16px;">
+        <div class="card-collapsible-body" id="architecture-body" style="margin-top: 16px;">
           {topology_svg}
         </div>
       </div>
@@ -4549,7 +4549,7 @@ class Step4ReportingEngine:
       <!-- Row 1 of Charts: Dual-Axis Velocity Timeline & Productivity Gauge -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-velocity">
-          <div class="card-header collapsible-header" data-target="chart-body-velocity" role="button" tabindex="0" aria-expanded="false" title="Toggle Velocity Timeline Chart">
+          <div class="card-header collapsible-header" data-target="chart-body-velocity" role="button" tabindex="0" aria-expanded="true" title="Toggle Velocity Timeline Chart">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>⚡ Dual-Axis Execution & Question Velocity Timeline</span>
@@ -4558,13 +4558,13 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body collapsed" id="chart-body-velocity" style="margin-top: 16px;">
+          <div class="card-collapsible-body" id="chart-body-velocity" style="margin-top: 16px;">
             {velocity_svg}
           </div>
         </div>
 
         <div class="chart-card" id="chart-card-productivity">
-          <div class="card-header collapsible-header" data-target="chart-body-productivity" role="button" tabindex="0" aria-expanded="false" title="Toggle Productivity Gauge">
+          <div class="card-header collapsible-header" data-target="chart-body-productivity" role="button" tabindex="0" aria-expanded="true" title="Toggle Productivity Gauge">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🏎️ Developer Productivity & Time Saved Gauge</span>
@@ -4573,7 +4573,7 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body collapsed" id="chart-body-productivity" style="margin-top: 16px;">
+          <div class="card-collapsible-body" id="chart-body-productivity" style="margin-top: 16px;">
             {productivity_svg}
           </div>
         </div>
@@ -4582,7 +4582,7 @@ class Step4ReportingEngine:
       <!-- Row 2 of Charts: Hourly Heatmap & Option Selection Breakdown -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-heatmap">
-          <div class="card-header collapsible-header" data-target="chart-body-heatmap" role="button" tabindex="0" aria-expanded="false" title="Toggle Activity Heatmap">
+          <div class="card-header collapsible-header" data-target="chart-body-heatmap" role="button" tabindex="0" aria-expanded="true" title="Toggle Activity Heatmap">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🕒 Hourly Activity & Time-of-Day Heatmap</span>
@@ -4591,13 +4591,13 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body collapsed" id="chart-body-heatmap" style="margin-top: 16px;">
+          <div class="card-collapsible-body" id="chart-body-heatmap" style="margin-top: 16px;">
             {heatmap_svg}
           </div>
         </div>
 
         <div class="chart-card" id="chart-card-option-breakdown">
-          <div class="card-header collapsible-header" data-target="chart-body-option-breakdown" role="button" tabindex="0" aria-expanded="false" title="Toggle Option Selection Breakdown">
+          <div class="card-header collapsible-header" data-target="chart-body-option-breakdown" role="button" tabindex="0" aria-expanded="true" title="Toggle Option Selection Breakdown">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🎯 Option Selection Distribution & Recommendation Adherence</span>
@@ -4606,7 +4606,7 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body collapsed" id="chart-body-option-breakdown" style="margin-top: 16px;">
+          <div class="card-collapsible-body" id="chart-body-option-breakdown" style="margin-top: 16px;">
             {option_breakdown_svg}
           </div>
         </div>
@@ -4615,7 +4615,7 @@ class Step4ReportingEngine:
       <!-- Row 3 of Charts: Chat Distribution & Topic Share -->
       <div class="charts-grid-two">
         <div class="chart-card" id="chart-card-distribution">
-          <div class="card-header collapsible-header" data-target="chart-body-distribution" role="button" tabindex="0" aria-expanded="false" title="Toggle Distribution Chart">
+          <div class="card-header collapsible-header" data-target="chart-body-distribution" role="button" tabindex="0" aria-expanded="true" title="Toggle Distribution Chart">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>📊 Chat Automation & Questions Distribution</span>
@@ -4624,13 +4624,13 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body collapsed" id="chart-body-distribution" style="margin-top: 16px;">
+          <div class="card-collapsible-body" id="chart-body-distribution" style="margin-top: 16px;">
             {distribution_svg}
           </div>
         </div>
 
         <div class="chart-card" id="chart-card-topic">
-          <div class="card-header collapsible-header" data-target="chart-body-topic" role="button" tabindex="0" aria-expanded="false" title="Toggle Topic Share Chart">
+          <div class="card-header collapsible-header" data-target="chart-body-topic" role="button" tabindex="0" aria-expanded="true" title="Toggle Topic Share Chart">
             <div class="card-title" style="margin-bottom: 0;">
               <span class="collapse-icon">▾</span>
               <span>🥧 Chat Workload & Topic Share</span>
@@ -4639,7 +4639,7 @@ class Step4ReportingEngine:
               <span class="collapse-icon">▾</span>
             </button>
           </div>
-          <div class="card-collapsible-body collapsed" id="chart-body-topic" style="margin-top: 16px;">
+          <div class="card-collapsible-body" id="chart-body-topic" style="margin-top: 16px;">
             {topic_share_svg}
           </div>
         </div>
@@ -4647,7 +4647,7 @@ class Step4ReportingEngine:
 
       <!-- Row 4: Wide Run Latency & Performance Trend Chart -->
       <div class="chart-card chart-card-wide" id="chart-card-latency">
-        <div class="card-header collapsible-header" data-target="chart-body-latency" role="button" tabindex="0" aria-expanded="false" title="Toggle Latency Trend Chart">
+        <div class="card-header collapsible-header" data-target="chart-body-latency" role="button" tabindex="0" aria-expanded="true" title="Toggle Latency Trend Chart">
           <div class="card-title" style="margin-bottom: 0;">
             <span class="collapse-icon">▾</span>
             <span>⚡ Run Latency & Performance Trend</span>
@@ -4656,7 +4656,7 @@ class Step4ReportingEngine:
             <span class="collapse-icon">▾</span>
           </button>
         </div>
-        <div class="card-collapsible-body collapsed" id="chart-body-latency" style="margin-top: 16px;">
+        <div class="card-collapsible-body" id="chart-body-latency" style="margin-top: 16px;">
           {latency_trend_svg}
         </div>
       </div>
@@ -6987,19 +6987,22 @@ class Step4ReportingEngine:
             if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'OPTION') return;
             const willExpand = body.classList.contains('collapsed');
             if (willExpand) {{
-              // Mutual exclusion: collapse any other open collapsible card in the same tab panel
-              const container = header.closest('.tab-panel') || document;
-              container.querySelectorAll('.collapsible-header[data-target]').forEach(otherHeader => {{
-                if (otherHeader !== header) {{
-                  const otherTargetId = otherHeader.getAttribute('data-target');
-                  const otherBody = document.getElementById(otherTargetId);
-                  if (otherBody) {{
-                    otherBody.classList.add('collapsed');
-                    otherHeader.setAttribute('aria-expanded', 'false');
-                    otherHeader.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');
+              // Mutual exclusion: collapse any other open collapsible card in the same tab panel (disabled for overview tab)
+              const isOverview = !!header.closest('#tab-overview');
+              if (!isOverview) {{
+                const container = header.closest('.tab-panel') || document;
+                container.querySelectorAll('.collapsible-header[data-target]').forEach(otherHeader => {{
+                  if (otherHeader !== header) {{
+                    const otherTargetId = otherHeader.getAttribute('data-target');
+                    const otherBody = document.getElementById(otherTargetId);
+                    if (otherBody) {{
+                      otherBody.classList.add('collapsed');
+                      otherHeader.setAttribute('aria-expanded', 'false');
+                      otherHeader.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');
+                    }}
                   }}
-                }}
-              }});
+                }});
+              }}
               body.classList.remove('collapsed');
               header.setAttribute('aria-expanded', 'true');
               header.querySelectorAll('.collapse-icon').forEach(ic => ic.textContent = '▾');

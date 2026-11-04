@@ -11,3 +11,4 @@ env/
 
 # Logs & temp files
 *.log
+.automation_process.json

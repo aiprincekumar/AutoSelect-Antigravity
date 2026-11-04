@@ -4,106 +4,109 @@
     "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
     "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...",
     "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 4 multiple question at once",
-    "selected_at": "2026-11-04T17:51:07.204631+00:00",
-    "status": "READY_FOR_GUI_SELECTION",
+    "selected_at": "2026-11-04T20:58:16.529648+00:00",
+    "status": "SUCCESS_SELECTED",
     "questions_count": 4,
     "total_questions_count": 4,
     "is_multi_question": true,
     "questions": [
       {
         "question_index": 1,
-        "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य टारगेट रनटाइम क्या होगा?",
+        "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट रन के दौरान एरर हैंडलिंग की रणनीति क्या रखनी है?",
         "options": [
-          "(Recommended) Node.js / TypeScript रनटाइम",
-          "Python 3.12+ रनटाइम",
-          "PowerShell / Windows Shell स्क्रिप्ट"
+          "(Recommended) फ़ेल-फ़ास्ट (पहले एरर पर निष्पादन रोकें और रूट कॉज़ रिपोर्ट करें)",
+          "कंटीन्यू ऑन एरर (सारे टेस्ट चलाएं और अंत में समेकित रिपोर्ट दें)",
+          "ऑटो-रीट्राई (असफल स्टेप्स को अधिकतम 3 बार पुनः प्रयास करें)"
         ],
         "is_multi_select": false,
         "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) Node.js / TypeScript रनटाइम"
+        "recommended_option_text": "(Recommended) फ़ेल-फ़ास्ट (पहले एरर पर निष्पादन रोकें और रूट कॉज़ रिपोर्ट करें)"
       },
       {
         "question_index": 2,
-        "question": "[Grill-Me डेमो 2/4] लॉग वर्बोसिटी का स्तर क्या रखना है?",
+        "question": "[Grill-Me डेमो 2/4] टेस्ट डेटा का स्रोत (Data Source) क्या होना चाहिए?",
         "options": [
-          "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)",
-          "स्टैंडर्ड इन्फो लेवल लॉग्स",
-          "केवल एरर्स और वार्निंग्स"
+          "(Recommended) ऑटो-जनरेटेड मॉक/फिक्सचर डेटा (आइसोलेटेड और सुरक्षित)",
+          "लोकल टेस्ट डेटा फाइल्स (JSON/YAML आधारित)",
+          "लाइव API / डेटाबेस सैंडबॉक्स डेटा"
         ],
         "is_multi_select": false,
         "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)"
+        "recommended_option_text": "(Recommended) ऑटो-जनरेटेड मॉक/फिक्सचर डेटा (आइसोलेटेड और सुरक्षित)"
       },
       {
         "question_index": 3,
-        "question": "[Grill-Me डेमो 3/4] एरर हैंडलिंग और रीट्राई स्ट्रेटेजी क्या होनी चाहिए?",
+        "question": "[Grill-Me डेमो 3/4] टेस्ट एक्जीक्यूशन का कॉनकरेंसी मॉडल क्या होना चाहिए?",
         "options": [
-          "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ",
-          "एरर आने पर तुरंत एग्जीक्यूशन रोकें (Fail-Fast)",
-          "एरर को इग्नोर करके अगला स्टेप जारी रखें"
+          "(Recommended) पैरेलल बैच निष्पादन (फास्ट परफॉर्मेंस और टाइम सेविंग)",
+          "सीक्वेंशियल निष्पादन (एक समय में एक टेस्ट, सटीक ट्रेसिंग के लिए)",
+          "कस्टम कॉनकरेंसी लिमिट (अधिकतम 2 थ्रेड्स)"
         ],
         "is_multi_select": false,
         "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ"
+        "recommended_option_text": "(Recommended) पैरेलल बैच निष्पादन (फास्ट परफॉर्मेंस और टाइम सेविंग)"
       },
       {
         "question_index": 4,
-        "question": "[Grill-Me डेमो 4/4] पोस्ट-एग्जीक्यूशन क्लीनअप पॉलिसी क्या होगी?",
+        "question": "[Grill-Me डेमो 4/4] टेस्ट पूर्ण होने के बाद वर्कस्पेस क्लीनअप पॉलिसी क्या होनी चाहिए?",
         "options": [
-          "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)",
-          "लॉग्स और आर्टिफैक्ट्स को डिस्क पर सुरक्षित रखें",
-          "पूरा एनवायरनमेंट वैसा ही रहने दें (डीबगिंग के लिए)"
+          "(Recommended) ऑटो-क्लीनअप (टेम्परेरी फाइल्स को सुरक्षित हटाना, केवल लॉग्स सहेजना)",
+          "आर्टिफैक्ट्स और लॉग्स को बैकअप डायरेक्टरी में स्थायी रूप से स्टोर करना",
+          "मैनुअल क्लीनअप (सभी इंटरमीडिएट स्टेट्स और फाइल्स को सुरक्षित छोड़ना)"
         ],
         "is_multi_select": false,
         "recommended_option_index": 1,
-        "recommended_option_text": "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)"
+        "recommended_option_text": "(Recommended) ऑटो-क्लीनअप (टेम्परेरी फाइल्स को सुरक्षित हटाना, केवल लॉग्स सहेजना)"
       }
     ],
     "selections": [
       {
         "question_index": 1,
-        "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट का मुख्य टारगेट रनटाइम क्या होगा?",
+        "question": "[Grill-Me डेमो 1/4] स्क्रिप्ट रन के दौरान एरर हैंडलिंग की रणनीति क्या रखनी है?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) Node.js / TypeScript रनटाइम",
+        "selected_option_text": "(Recommended) फ़ेल-फ़ास्ट (पहले एरर पर निष्पादन रोकें और रूट कॉज़ रिपोर्ट करें)",
         "is_multi_select": false,
         "total_options": 3,
         "is_recommended": true
       },
       {
         "question_index": 2,
-        "question": "[Grill-Me डेमो 2/4] लॉग वर्बोसिटी का स्तर क्या रखना है?",
+        "question": "[Grill-Me डेमो 2/4] टेस्ट डेटा का स्रोत (Data Source) क्या होना चाहिए?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) डिटेल्ड डीबग लॉग्स (टाइमस्टैम्प और ट्रेस के साथ)",
+        "selected_option_text": "(Recommended) ऑटो-जनरेटेड मॉक/फिक्सचर डेटा (आइसोलेटेड और सुरक्षित)",
         "is_multi_select": false,
         "total_options": 3,
         "is_recommended": true
       },
       {
         "question_index": 3,
-        "question": "[Grill-Me डेमो 3/4] एरर हैंडलिंग और रीट्राई स्ट्रेटेजी क्या होनी चाहिए?",
+        "question": "[Grill-Me डेमो 3/4] टेस्ट एक्जीक्यूशन का कॉनकरेंसी मॉडल क्या होना चाहिए?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) 3 बार ऑटो-रीट्राई विथ बैकऑफ",
+        "selected_option_text": "(Recommended) पैरेलल बैच निष्पादन (फास्ट परफॉर्मेंस और टाइम सेविंग)",
         "is_multi_select": false,
         "total_options": 3,
         "is_recommended": true
       },
       {
         "question_index": 4,
-        "question": "[Grill-Me डेमो 4/4] पोस्ट-एग्जीक्यूशन क्लीनअप पॉलिसी क्या होगी?",
+        "question": "[Grill-Me डेमो 4/4] टेस्ट पूर्ण होने के बाद वर्कस्पेस क्लीनअप पॉलिसी क्या होनी चाहिए?",
         "selected_option_index": 1,
-        "selected_option_text": "(Recommended) ऑटोमैटिक क्लीनअप (अस्थायी फाइलें और कैश तुरंत हटाएं)",
+        "selected_option_text": "(Recommended) ऑटो-क्लीनअप (टेम्परेरी फाइल्स को सुरक्षित हटाना, केवल लॉग्स सहेजना)",
         "is_multi_select": false,
         "total_options": 3,
         "is_recommended": true
       }
     ],
     "window_hwnd": 328338,
-    "window_title": "Project Path Update And H...",
+    "window_title": "Dashboard Test Vs Product...",
     "window_focused": true,
-    "dry_run": true
+    "dry_run": false,
+    "gui_chat_selected": true,
+    "gui_selection_method": "cdp_dom_click",
+    "gui_selected_at": "2026-11-04T20:58:19.091370+00:00"
   },
   "meta": {
-    "timestamp": "2026-11-04T17:51:07.204631+00:00",
-    "generator": "step1_find_and_focus.py (Dept 06 Architecture)"
+    "timestamp": "2026-11-04T20:58:19.091370+00:00",
+    "generator": "step2_gui_chat_select.py (Dept 06 Architecture)"
   }
 }

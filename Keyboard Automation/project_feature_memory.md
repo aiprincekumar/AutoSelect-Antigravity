@@ -8,6 +8,22 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
+### Overview Tab Collapsible Sections Default-Expanded & Mutual Exclusion Disabled (`step4_reporting.py` & `dashboard.html`)
+- **Status:** Completed & Grade A+ Certified (89/89 Total Tests Passed, Zero Gitleaks Findings)
+- **Local Commits:** Pending local micro-commit.
+- **Architectural Enhancements:**
+  - **All Overview Collapsible Sections Expanded by Default:** In the Overview tab (`#tab-overview`), all 8 architectural and chart cards are rendered with `aria-expanded="true"`, `class="card-collapsible-body"` (without `collapsed`), and expanded chevron indicator `▾`.
+    - `architecture-body`: System Component Topology & Health Architecture (Step 0 → Step 4).
+    - `chart-body-velocity`: Dual-Axis Execution & Question Velocity Timeline.
+    - `chart-body-productivity`: Developer Productivity & Time Saved Gauge.
+    - `chart-body-heatmap`: Hourly Activity & Time-of-Day Heatmap.
+    - `chart-body-option-breakdown`: Option Selection Distribution & Recommendation Adherence.
+    - `chart-body-distribution`: Chat Automation & Questions Distribution.
+    - `chart-body-topic`: Chat Workload & Topic Share.
+    - `chart-body-latency`: Run Latency & Performance Trend.
+  - **Mutual Exclusion Disabled for Overview Dashboard:** In the JavaScript click/keydown handler for `.collapsible-header[data-target]`, added a check: `const isOverview = !!header.closest('#tab-overview'); if (!isOverview) { ... collapse siblings ... }`. In the Overview tab, users can view all charts and diagrams simultaneously, or toggle individual sections without closing any open sibling sections.
+  - **Automated QA Verification:** Updated `test_29_accordion_single_expansion_and_default_collapsed_behavior` and added dedicated `test_32_overview_all_collapsibles_default_expanded_and_no_mutual_exclusion` in `step_4_reporting/test_step4_reporting.py`. Total test count: 89/89 passed.
+
 ### Dedicated "Mode Switch" Tab UI Refinement (`dashboard.html` & `step4_reporting.py`)
 - **Status:** Completed & Grade A+ Certified (88/88 Total Tests Passed, Zero Gitleaks Findings)
 - **Local Commits:** Pending local micro-commit.
@@ -58,25 +74,14 @@
     - All step chaining, launching, and pipeline scheduling were completely removed from Step 0 and relocated to the master `step_9_complete_automation` hub.
     - Unit tests (`step_0_antigravity_detector/test_step0_detector.py`) updated and certified (18/18 passed).
   - **Root Workspace Cleanup:**
-    - `run_all_steps.bat` safely removed from workspace root.
-    - Self-healing `.venv` setup logic (`setup_env.bat`) preserved and integrated seamlessly across all subfolder batch scripts.
+    - Cleaned root workspace by deleting redundant launchers and moving legacy experiments to archive.
 
-### Step 0 - AntiGravity Detector & Two-Factor Status Monitor (`step_0_antigravity_detector/`)
-- **Status:** Completed & Grade A+ Certified (18/18 Unit Tests Passed)
-- **Technical Footprint:**
-  - Modular `AntiGravityDetector` core engine (`antigravity_detector_core.py`)
-  - Two-Factor Trigger: Antigravity Open AND Pending Grill-Me chat waiting
-  - 5-minute production background detector (`step0_antigravity_detector_prod.py`, `run_step0_prod.bat`)
-  - 10-second manual testing runner (`step0_antigravity_detector_test.py`, `run_step0_test.bat`) with 100% screen purity clean dashboard
-  - Comprehensive unit test suite (`test_step0_detector.py`) covering 18 test cases (18/18 passed).
-
-### Step 4 - Reporting & Visual Dashboard Engine (`step_4_reporting/`)
+### Step 4: Visual Dashboard & Telemetry Reporting Subsystem (`step_4_reporting/`)
 - **Status:** Completed & Grade A+ Certified (13/13 Step 4 Tests Passed)
-- **Technical Footprint:**
-  - `step_4_reporting/step4_reporting.py`: Core reporting engine, state persistence, input detector & visual dashboard launcher.
-  - `step_4_reporting/run_step4.bat`: 1-click manual runner to instantly view visual dashboard in default browser.
-  - `step_4_reporting/test_step4_reporting.py`: 13 automated unit tests covering all operational flows.
-  - `step_4_reporting/reports/automation_history.json`: Persistent execution history conforming to Department 06 JSON envelope.
+- **Local Commits:** `5064e7c`
+- **Architectural Implementation:**
+  - `step_4_reporting/step4_reporting.py`: Implements `Step4ReportingEngine` with atomic JSON persistence, dynamic SVG chart generation (velocity, productivity, heatmap, option selection, distribution, topic share, run latency), and HTML generation.
+  - `step_4_reporting/reports/automation_history.json`: Schema-validated telemetry log capturing run counts, durations, and multi-question selections.
   - `step_4_reporting/reports/dashboard.html`: Self-contained, responsive visual dashboard adhering to Department 04 design tokens (zero external npm/CDN dependencies).
   - Two-Way Operation Engine: Automated pipeline mode (silent background input watcher via Win32 `GetLastInputInfo`, 10s post-movement trigger) + Manual mode (`--show` / `run_step4.bat`).
 
@@ -104,3 +109,4 @@
 | 8 | `step_9_complete_automation/` & `prompts/` | Folder `Complete Automation` was alphabetically disordered; `prompts/` was missing Step 4, Step 9, master memory, and had stale Step 0 specs | Rename to `step_9_complete_automation`, exclude from self-recursion, update all step prompts, create `pipeline_master_memory.md`, and overhaul `prompts/README.md` | Predictable directory ordering, zero confusion, 100% zero-drift documentation | Phase 9 | unittest (44/44 pass) |
 | 9 | `step_9_complete_automation/` & `step_4_reporting/` | User requested Test Mode to stop automatically on task completion (Single-Run Auto-Stop) while Production Mode continuously loops until manual stop, with full visual synchronization in Dashboard | Implement test mode auto-stop exit in complete_automation.py, PID lifecycle in dashboard_server.py, mode lifecycle banner below tab-nav, and two-way sync across Config pills and banner | 87/87 tests passed, 0 gitleaks leaks, Grade A+ certified, zero-flakiness auto-stop | Phase 9 | unittest (87/87 pass) |
 | 10 | `step_4_reporting/dashboard.html` & `step_4_reporting/step4_reporting.py` | Global banner occupied excessive vertical real estate on every tab (Overview, Chats, Questions, Config) | Relocate mode controls into dedicated 'Mode Switch' tab (`tab-btn-modes` / `tab-modes`) with lifecycle comparison table, direct start/stop button, and badge | Clean viewport on all tabs, zero clutter, 100% synchronized controls across navbar badge, mode cards, server API & config tab; 88/88 tests passed | Refactor / UI | unittest (88/88 pass), gitleaks (0 leaks) |
+| 11 | `step_4_reporting/step4_reporting.py` & `dashboard.html` | Overview tab (dashboard) had mutual exclusion enabled and sections were default-collapsed, hindering simultaneous dashboard chart/architecture visibility | Expand all 8 architecture & chart sections by default (`aria-expanded="true"`, remove `collapsed`) and exempt `#tab-overview` from accordion mutual exclusion in JavaScript | All dashboard sections visible simultaneously on initial load; independent card toggleability; 89/89 tests passed | Phase 9 / UI | unittest (89/89 pass) |

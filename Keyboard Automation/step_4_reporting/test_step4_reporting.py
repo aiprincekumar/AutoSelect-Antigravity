@@ -1393,7 +1393,7 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertTrue(html_path.is_file())
         content = html_path.read_text(encoding="utf-8")
 
-        # 1. Overview Tab: All 8 collapsible cards must be default-collapsed
+        # 1. Overview Tab: All 8 collapsible cards must be default-expanded (mutual exclusion disabled)
         overview_cards = [
             ("architecture-body", "card-architecture"),
             ("chart-body-velocity", "chart-card-velocity"),
@@ -1405,8 +1405,9 @@ class TestStep4Reporting(unittest.TestCase):
             ("chart-body-latency", "chart-card-latency"),
         ]
         for body_id, card_id in overview_cards:
-            self.assertIn(f'data-target="{body_id}" role="button" tabindex="0" aria-expanded="false"', content)
-            self.assertIn(f'class="card-collapsible-body collapsed" id="{body_id}"', content)
+            self.assertIn(f'data-target="{body_id}" role="button" tabindex="0" aria-expanded="true"', content)
+            self.assertIn(f'class="card-collapsible-body" id="{body_id}"', content)
+            self.assertNotIn(f'class="card-collapsible-body collapsed" id="{body_id}"', content)
 
         # 2. Chats Tab: Table section must be default-collapsed
         self.assertIn('data-target="chats-table-container" role="button" tabindex="0" aria-expanded="false"', content)
@@ -1459,6 +1460,7 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("collapsible-card-header", content)
         self.assertIn("config-subgroup-header", content)
         self.assertIn("otherHeader !== header", content)
+        self.assertIn("header.closest('#tab-overview')", content)
         self.assertIn("otherCard !== qCard", content)
         self.assertIn("otherRun !== runBlock", content)
         self.assertIn("otherChat !== chatCard", content)
@@ -1522,6 +1524,53 @@ class TestStep4Reporting(unittest.TestCase):
         # 8. JavaScript tab registration includes 'modes'
         self.assertIn("'modes'", content)
         self.assertIn("modesAutomationToggleBtn", content)
+
+
+    def test_32_overview_all_collapsibles_default_expanded_and_no_mutual_exclusion(self):
+        """Verify Overview tab sections are all expanded by default and mutual exclusion is disabled."""
+        history = AutomationHistory(
+            total_pipeline_runs=1,
+            total_questions_answered=1,
+            total_runtime_seconds=5.0,
+            total_unique_chats=1
+        )
+        html_path = self.engine.generate_html_dashboard(history)
+        self.assertTrue(html_path.is_file())
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Verify all 8 architecture and chart cards in Overview are EXPANDED BY DEFAULT
+        overview_sections = [
+            "architecture-body",
+            "chart-body-velocity",
+            "chart-body-productivity",
+            "chart-body-heatmap",
+            "chart-body-option-breakdown",
+            "chart-body-distribution",
+            "chart-body-topic",
+            "chart-body-latency",
+        ]
+        for target_id in overview_sections:
+            # Header has aria-expanded="true"
+            self.assertIn(
+                f'data-target="{target_id}" role="button" tabindex="0" aria-expanded="true"',
+                content,
+                f"Section header {target_id} must have aria-expanded='true'"
+            )
+            # Body does NOT have 'collapsed' class
+            self.assertIn(
+                f'class="card-collapsible-body" id="{target_id}"',
+                content,
+                f"Section body {target_id} must not have collapsed class"
+            )
+            self.assertNotIn(
+                f'class="card-collapsible-body collapsed" id="{target_id}"',
+                content,
+                f"Section body {target_id} should not be collapsed"
+            )
+
+        # 2. Verify mutual exclusion exemption logic in script for #tab-overview
+        self.assertIn("const isOverview = !!header.closest('#tab-overview');", content)
+        self.assertIn("if (!isOverview) {", content)
 
 if __name__ == "__main__":
     unittest.main(verbosity=2)
