@@ -1085,5 +1085,161 @@ class TestStep4Reporting(unittest.TestCase):
             self.assertIn(f'data-target="{target_id}"', content, f"Missing data-target: {target_id}")
             self.assertIn(f'id="{target_id}"', content, f"Missing collapsible body ID: {target_id}")
 
+
+    def test_22_config_tab_navigation_and_order(self):
+        """Verify the 4th tab (Config) is present, correctly ordered as the LAST tab, and wired to navigation."""
+        history = AutomationHistory(total_pipeline_runs=1, total_questions_answered=1, total_runtime_seconds=5.0, total_unique_chats=1)
+        html_path = self.engine.generate_html_dashboard(history)
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Tab navigation bar contains all 4 tabs in strict order
+        idx_overview = content.find('id="tab-btn-overview"')
+        idx_chats = content.find('id="tab-btn-chats"')
+        idx_questions = content.find('id="tab-btn-questions"')
+        idx_config = content.find('id="tab-btn-config"')
+
+        self.assertNotEqual(idx_overview, -1, "tab-btn-overview not found")
+        self.assertNotEqual(idx_chats, -1, "tab-btn-chats not found")
+        self.assertNotEqual(idx_questions, -1, "tab-btn-questions not found")
+        self.assertNotEqual(idx_config, -1, "tab-btn-config not found")
+
+        # Strict order verification: Overview < Chats < Questions < Config (ALWAYS the last tab)
+        self.assertTrue(idx_overview < idx_chats < idx_questions < idx_config, "Tabs are not in strict order with Config as last tab")
+
+        # 2. Config tab button attributes
+        self.assertIn('data-tab="config"', content)
+        self.assertIn('⚙️', content)
+        self.assertIn('aria-controls="tab-config"', content)
+
+        # 3. Main tab panel for Config
+        self.assertIn('id="tab-config"', content)
+        self.assertIn('class="tab-panel"', content)
+        self.assertIn('aria-labelledby="tab-btn-config"', content)
+
+        # 4. JavaScript tab registration includes 'config' and switches via header button
+        self.assertIn("'config'", content)
+        self.assertIn("configToggleBtn.addEventListener('click', () => switchTab('config'))", content)
+
+    def test_23_system_runtime_configuration_section(self):
+        """Verify Section 1 (System Runtime Configuration) UI controls, live values, and CLI generator."""
+        history = AutomationHistory(total_pipeline_runs=1, total_questions_answered=1, total_runtime_seconds=5.0, total_unique_chats=1)
+        html_path = self.engine.generate_html_dashboard(history)
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Section Header & Badges
+        self.assertIn('id="runtime-config-section"', content)
+        self.assertIn('System Runtime Configuration', content)
+        self.assertIn('step_9_complete_automation/config.json', content)
+
+        # 2. Execution Mode Pills
+        self.assertIn('id="cfg-mode-prod-btn"', content)
+        self.assertIn('id="cfg-mode-test-btn"', content)
+        self.assertIn('id="cfg-runtime-mode"', content)
+        self.assertIn('Production Mode', content)
+        self.assertIn('Test Mode', content)
+
+        # 3. Pipeline Steps Toggles
+        self.assertIn('id="cfg-step1-enabled"', content)
+        self.assertIn('id="cfg-step2-enabled"', content)
+        self.assertIn('id="cfg-step3-enabled"', content)
+        self.assertIn('id="cfg-step4-enabled"', content)
+        self.assertIn('Find &amp; Focus Target Window', content)
+        self.assertIn('GUI Chat Select &amp; Focus', content)
+        self.assertIn('Keyboard Recommendation Selector', content)
+        self.assertIn('Visual Reporting &amp; Telemetry', content)
+
+        # 4. Timing & Delays Engine Inputs
+        self.assertIn('id="cfg-timing-prod-poll"', content)
+        self.assertIn('id="cfg-timing-test-poll"', content)
+        self.assertIn('id="cfg-timing-settle"', content)
+        self.assertIn('id="cfg-timing-activity-delay"', content)
+
+        # 5. AntiGravity Governance Rules
+        self.assertIn('id="cfg-antigravity-require-grillme"', content)
+        self.assertIn('id="cfg-antigravity-active-hours"', content)
+
+        # 6. Logging & Telemetry
+        self.assertIn('id="cfg-logging-verbose"', content)
+        self.assertIn('id="cfg-logging-file"', content)
+
+        # 7. Action Buttons & CLI Command Generator
+        self.assertIn('id="btn-save-runtime-cfg"', content)
+        self.assertIn('id="btn-copy-cli-cmd"', content)
+        self.assertIn('id="btn-download-runtime-cfg"', content)
+        self.assertIn('id="btn-toggle-json-preview"', content)
+        self.assertIn('id="btn-reset-runtime-cfg"', content)
+
+        # 8. Live Preview Drawer & Script Data Store
+        self.assertIn('id="runtime-json-drawer"', content)
+        self.assertIn('id="runtime-json-preview"', content)
+        self.assertIn('id="runtime-config-data"', content)
+
+        # 9. Client JS Functions
+        self.assertIn('function buildRuntimeConfigFromForm', content)
+        self.assertIn('function updateRuntimeJsonPreview', content)
+        self.assertIn('function copyTextToClipboard', content)
+
+    def test_24_dashboard_ui_configuration_section(self):
+        """Verify Section 2 (Dashboard UI Configuration) presentation, sound test, and landing tab options."""
+        history = AutomationHistory(total_pipeline_runs=1, total_questions_answered=1, total_runtime_seconds=5.0, total_unique_chats=1)
+        html_path = self.engine.generate_html_dashboard(history)
+        content = html_path.read_text(encoding="utf-8")
+
+        # 1. Section Header
+        self.assertIn('id="dashboard-config-section"', content)
+        self.assertIn('Dashboard UI Configuration', content)
+
+        # 2. Form Controls & Selects
+        self.assertIn('id="cfg-auto-refresh"', content)
+        self.assertIn('id="cfg-activity-delay"', content)
+        self.assertIn('id="cfg-default-tab"', content)
+        self.assertIn('id="cfg-selection-policy"', content)
+        self.assertIn('id="cfg-visual-effects"', content)
+        self.assertIn('id="cfg-sound-notify"', content)
+
+        # 3. Dedicated Sound Chime Test Button
+        self.assertIn('id="btn-test-chime"', content)
+        self.assertIn('Test Chime', content)
+
+        # 4. Default Landing Tab includes Config
+        self.assertIn('<option value="config">Config (Master System &amp; Dashboard Settings)</option>', content)
+
+        # 5. Data Actions & Save
+        self.assertIn('id="cfg-export-btn"', content)
+        self.assertIn('id="cfg-reset-btn"', content)
+        self.assertIn('id="config-save-btn"', content)
+        self.assertIn('id="cfg-status-badge"', content)
+
+    def test_25_engine_runtime_config_methods(self):
+        """Verify Python engine methods for discovering, loading, and saving runtime config."""
+        # 1. Path discovery
+        cfg_path = self.engine.get_runtime_config_path()
+        self.assertIsInstance(cfg_path, Path)
+        self.assertEqual(cfg_path.name, "config.json")
+
+        # 2. Default loading
+        cfg = self.engine.load_runtime_config()
+        self.assertIn("mode", cfg)
+        self.assertIn("timing", cfg)
+        self.assertIn("enabled_steps", cfg)
+        self.assertIn("antigravity", cfg)
+        self.assertIn("logging", cfg)
+        self.assertIn("step0_poll_interval_prod_seconds", cfg["timing"])
+        self.assertIn("step1_find_and_focus", cfg["enabled_steps"])
+
+        # 3. Save to custom file
+        temp_dest = self.test_dir / "custom_config.json"
+        cfg["mode"] = "test"
+        cfg["timing"]["step0_poll_interval_test_seconds"] = 5.0
+        success = self.engine.save_runtime_config(cfg, target_path=temp_dest)
+        self.assertTrue(success)
+        self.assertTrue(temp_dest.is_file())
+
+        # 4. Verify persisted contents
+        with open(temp_dest, "r", encoding="utf-8") as f:
+            loaded_back = json.load(f)
+        self.assertEqual(loaded_back["mode"], "test")
+        self.assertEqual(loaded_back["timing"]["step0_poll_interval_test_seconds"], 5.0)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
