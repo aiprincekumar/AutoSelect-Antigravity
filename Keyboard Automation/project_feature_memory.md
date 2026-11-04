@@ -10,7 +10,7 @@
 
 ### Overview Tab Collapsible Sections Default-Expanded & Mutual Exclusion Disabled (`step4_reporting.py` & `dashboard.html`)
 - **Status:** Completed & Grade A+ Certified (89/89 Total Tests Passed, Zero Gitleaks Findings)
-- **Local Commits:** Pending local micro-commit.
+- **Local Commits:** `00fd91c` (feat: expand overview sections by default & disable mutual exclusion)
 - **Architectural Enhancements:**
   - **All Overview Collapsible Sections Expanded by Default:** In the Overview tab (`#tab-overview`), all 8 architectural and chart cards are rendered with `aria-expanded="true"`, `class="card-collapsible-body"` (without `collapsed`), and expanded chevron indicator `▾`.
     - `architecture-body`: System Component Topology & Health Architecture (Step 0 → Step 4).
