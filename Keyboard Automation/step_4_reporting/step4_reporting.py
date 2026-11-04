@@ -4813,6 +4813,13 @@ class Step4ReportingEngine:
 
   <script>
     (function() {{
+      const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
+        ? window.location.origin
+        : 'http://127.0.0.1:8501';
+
+      let statusPollTimer = null;
+      let isAutomationActive = false;
+
       const rawData = JSON.parse(document.getElementById('history-data').textContent);
       const chats = rawData.chats || {{}};
       const searchChats = document.getElementById('search-chats');
@@ -5010,11 +5017,33 @@ class Step4ReportingEngine:
       }}
 
       if (btnSaveRuntimeCfg) {{
-        btnSaveRuntimeCfg.addEventListener('click', () => {{
+        btnSaveRuntimeCfg.addEventListener('click', async () => {{
           const cfgObj = buildRuntimeConfigFromForm();
           localStorage.setItem('asc_runtime_config', JSON.stringify(cfgObj));
           updateRuntimeJsonPreview();
-          showToast('✓ Runtime config staged! Use [Copy CLI Command] or [Download] to persist to config.json', 'success');
+
+          try {{
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 3000);
+            const resp = await fetch(API_BASE + '/api/config/save', {{
+              method: 'POST',
+              headers: {{ 'Content-Type': 'application/json' }},
+              body: JSON.stringify(cfgObj),
+              signal: controller.signal
+            }});
+            clearTimeout(tid);
+
+            if (resp.ok) {{
+              const res = await resp.json();
+              if (res.success) {{
+                showToast('💾 Runtime configuration saved directly to config.json on disk!', 'success');
+                return;
+              }}
+            }}
+          }} catch (e) {{
+            // Server offline
+          }}
+          showToast('✓ Runtime config staged! Use [Copy CLI Command] or start dashboard server to persist to config.json', 'success');
         }});
       }}
 
@@ -5205,6 +5234,9 @@ class Step4ReportingEngine:
           if (refreshCountdownEl) refreshCountdownEl.textContent = countdownSeconds + 's';
           if (countdownSeconds <= 0) {{
             clearInterval(refreshTimer);
+            try {{
+              sessionStorage.setItem('asc_scroll_y', String(window.scrollY));
+            }} catch (e) {{}}
             location.reload();
           }}
         }}, 1000);
@@ -5227,18 +5259,12 @@ class Step4ReportingEngine:
           document.documentElement.classList.remove('reduced-motion');
         }}
 
-        const isAutomationRunning = getAutomationRunning();
-        if (isAutomationRunning) {{
-          const configuredRefresh = parseInt(cfg.autoRefresh, 10);
-          const activeInterval = configuredRefresh > 0 ? configuredRefresh : 10;
-          startLivePolling(activeInterval);
+        // Full page reload timer ONLY if explicitly enabled by user (> 0)
+        const configuredRefresh = parseInt(cfg.autoRefresh, 10);
+        if (configuredRefresh > 0) {{
+          startLivePolling(configuredRefresh);
         }} else {{
-          const interval = parseInt(cfg.autoRefresh, 10);
-          if (interval > 0) {{
-            startLivePolling(interval);
-          }} else {{
-            stopLivePolling();
-          }}
+          stopLivePolling();
         }}
       }}
 
@@ -5260,6 +5286,43 @@ class Step4ReportingEngine:
         return localStorage.getItem('asc_automation_running') === 'true';
       }}
 
+      async function checkProcessStatus() {{
+        try {{
+          const controller = new AbortController();
+          const tid = setTimeout(() => controller.abort(), 2000);
+          const resp = await fetch(API_BASE + '/api/automation/status', {{
+            method: 'GET',
+            signal: controller.signal
+          }});
+          clearTimeout(tid);
+          if (resp.ok) {{
+            const res = await resp.json();
+            if (res.success && res.data) {{
+              const running = !!res.data.running;
+              isAutomationActive = running;
+              localStorage.setItem('asc_automation_running', String(running));
+              updateAutomationUI(running, false);
+              return running;
+            }}
+          }}
+        }} catch (e) {{
+          // Server offline
+        }}
+        return false;
+      }}
+
+      function startProcessStatusPolling(intervalMs = 3000) {{
+        if (statusPollTimer) clearInterval(statusPollTimer);
+        statusPollTimer = setInterval(checkProcessStatus, intervalMs);
+      }}
+
+      function stopProcessStatusPolling() {{
+        if (statusPollTimer) {{
+          clearInterval(statusPollTimer);
+          statusPollTimer = null;
+        }}
+      }}
+
       function updateAutomationUI(isRunning, triggerToast = false) {{
         if (!automationToggleBtn) return;
 
@@ -5275,13 +5338,10 @@ class Step4ReportingEngine:
             dashboardStatusPill.innerHTML = '🟢 Active';
           }}
 
-          const configuredRefresh = parseInt(currentConfig.autoRefresh, 10);
-          const activeInterval = configuredRefresh > 0 ? configuredRefresh : 10;
-          startLivePolling(activeInterval);
+          startProcessStatusPolling(3000);
 
           if (triggerToast) {{
             showToast('🚀 Automation Started! AutoSelect-Commander is actively monitoring chats.', 'success');
-            openAutomationModal();
           }}
         }} else {{
           automationToggleBtn.classList.remove('state-running');
@@ -5295,7 +5355,7 @@ class Step4ReportingEngine:
             dashboardStatusPill.innerHTML = '⚪ Inactive';
           }}
 
-          stopLivePolling();
+          stopProcessStatusPolling();
 
           if (triggerToast) {{
             showToast('⏹️ Automation Stopped.', 'info');
@@ -5318,11 +5378,54 @@ class Step4ReportingEngine:
       }}
 
       if (automationToggleBtn) {{
-        automationToggleBtn.addEventListener('click', () => {{
-          const currentlyRunning = getAutomationRunning();
-          const nextState = !currentlyRunning;
-          localStorage.setItem('asc_automation_running', String(nextState));
-          updateAutomationUI(nextState, true);
+        automationToggleBtn.addEventListener('click', async () => {{
+          const currentlyRunning = isAutomationActive || getAutomationRunning();
+
+          automationToggleBtn.disabled = true;
+          if (controlLabelEl) controlLabelEl.textContent = currentlyRunning ? 'Stopping...' : 'Starting...';
+
+          try {{
+            const endpoint = API_BASE + (currentlyRunning ? '/api/automation/stop' : '/api/automation/start');
+            const payload = currentlyRunning ? {{}} : {{ mode: (currentConfig && currentConfig.mode) || 'production' }};
+
+            const controller = new AbortController();
+            const tid = setTimeout(() => controller.abort(), 6000);
+
+            const resp = await fetch(endpoint, {{
+              method: 'POST',
+              headers: {{ 'Content-Type': 'application/json' }},
+              body: JSON.stringify(payload),
+              signal: controller.signal
+            }});
+            clearTimeout(tid);
+
+            if (resp.ok) {{
+              const res = await resp.json();
+              if (res.success && res.data) {{
+                const isNowRunning = !!res.data.running;
+                isAutomationActive = isNowRunning;
+                localStorage.setItem('asc_automation_running', String(isNowRunning));
+                updateAutomationUI(isNowRunning, true);
+                return;
+              }} else {{
+                showToast(`❌ Action failed: ${{res.error?.message || 'Server error'}}`, 'error');
+              }}
+            }} else {{
+              throw new Error(`HTTP ${{resp.status}}`);
+            }}
+          }} catch (err) {{
+            showToast(
+              `⚠️ Local Control Server not reachable at ${{API_BASE}}. Run 'python step_4_reporting/dashboard_server.py' or 'run_dashboard.bat' to start the server.`,
+              'error',
+              7000
+            );
+            openAutomationModal();
+            isAutomationActive = false;
+            localStorage.setItem('asc_automation_running', 'false');
+            updateAutomationUI(false, false);
+          }} finally {{
+            automationToggleBtn.disabled = false;
+          }}
         }});
       }}
 
@@ -5344,7 +5447,7 @@ class Step4ReportingEngine:
       }}
       if (btnCopyAutomationBat) {{
         btnCopyAutomationBat.addEventListener('click', () => {{
-          copyTextToClipboard('.\\\\complete_automation.bat', '📋 Batch script command copied to clipboard!');
+          copyTextToClipboard('.\\complete_automation.bat', '📋 Batch script command copied to clipboard!');
         }});
       }}
       if (btnCopyAutomationDryRun) {{
@@ -5517,6 +5620,16 @@ class Step4ReportingEngine:
       // Initialize dynamic automation control state
       updateAutomationUI(getAutomationRunning(), false);
       applyDynamicSettings(currentConfig);
+      checkProcessStatus();
+
+      // Seamlessly restore scroll position if reloaded
+      try {{
+        const savedScroll = sessionStorage.getItem('asc_scroll_y');
+        if (savedScroll) {{
+          window.scrollTo({{ top: parseInt(savedScroll, 10), behavior: 'instant' }});
+          sessionStorage.removeItem('asc_scroll_y');
+        }}
+      }} catch (e) {{}}
 
       // Theme toggle persistence
       const savedTheme = localStorage.getItem('asc_dashboard_theme') || 'dark';
@@ -6119,13 +6232,23 @@ class Step4ReportingEngine:
     # Open Dashboard in Browser
     # ========================================================================
 
-    def open_dashboard(self) -> bool:
-        """Launch dashboard.html in the default web browser."""
+    def open_dashboard(self, port: int = 8501) -> bool:
+        """Launch dashboard in web browser. Connects to local server if active, else falls back to file:// URI."""
         if not self.dashboard_file.is_file():
             self.generate_html_dashboard()
 
+        server_running = False
         try:
-            url = self.dashboard_file.resolve().as_uri()
+            import socket
+            with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+                s.settimeout(0.2)
+                if s.connect_ex(("127.0.0.1", port)) == 0:
+                    server_running = True
+        except Exception:
+            server_running = False
+
+        try:
+            url = f"http://127.0.0.1:{port}/" if server_running else self.dashboard_file.resolve().as_uri()
             webbrowser.open_new_tab(url)
             return True
         except Exception:

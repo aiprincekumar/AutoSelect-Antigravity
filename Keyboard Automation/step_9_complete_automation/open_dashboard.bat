@@ -34,12 +34,22 @@ if not exist "%ROOT_DIR%.venv\Scripts\python.exe" (
 
 set "PYTHON_EXE=%ROOT_DIR%.venv\Scripts\python.exe"
 
+set "SERVER_SCRIPT=%ROOT_DIR%step_4_reporting\dashboard_server.py"
+
 echo ============================================================================
-echo   VISUAL REPORTING DASHBOARD - 1-CLICK LAUNCHER
+echo   VISUAL REPORTING DASHBOARD & CONTROL SERVER - 1-CLICK LAUNCHER
 echo ============================================================================
-echo   Dashboard Path : %DASHBOARD_FILE%
+echo   Server Script  : %SERVER_SCRIPT%
+echo   Local Port     : http://127.0.0.1:8501/
+echo   Dashboard File : %DASHBOARD_FILE%
 echo ============================================================================
 echo.
+
+if exist "%SERVER_SCRIPT%" (
+    echo [*] Starting local control server and launching dashboard in browser...
+    "%PYTHON_EXE%" "%SERVER_SCRIPT%" %*
+    exit /b 0
+)
 
 if exist "%DASHBOARD_FILE%" (
     echo [*] Opening existing visual dashboard in default browser...
