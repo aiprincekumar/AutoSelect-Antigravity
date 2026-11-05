@@ -19,7 +19,13 @@ set "SCRIPT_DIR=%~dp0"
 set "ROOT_DIR=%SCRIPT_DIR%..\"
 cd /d "%SCRIPT_DIR%"
 
-set "DASHBOARD_FILE=%ROOT_DIR%step_4_reporting\reports\dashboard.html"
+set "DASHBOARD_FILE=%ROOT_DIR%step_4_reporting\Modern and Interactive Dashboard\dashboard.html"
+if not exist "%DASHBOARD_FILE%" (
+    set "DASHBOARD_FILE=%ROOT_DIR%step_4_reporting\reports\modern_dashboard.html"
+)
+if not exist "%DASHBOARD_FILE%" (
+    set "DASHBOARD_FILE=%ROOT_DIR%step_4_reporting\reports\dashboard.html"
+)
 set "STEP4_SCRIPT=%ROOT_DIR%step_4_reporting\step4_reporting.py"
 set "SERVER_SCRIPT=%ROOT_DIR%step_4_reporting\dashboard_server.py"
 set "VBS_LAUNCHER=%ROOT_DIR%start_dashboard_background.vbs"

@@ -1722,6 +1722,18 @@ class Step4ReportingEngine:
       gap: 6px;
     }}
 
+    .btn-modern-switch {{
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.2), rgba(168, 85, 247, 0.2));
+      border: 1px solid rgba(99, 102, 241, 0.5);
+      color: #c7d2fe;
+      font-weight: 600;
+    }}
+    .btn-modern-switch:hover {{
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(168, 85, 247, 0.35));
+      border-color: #818cf8;
+      box-shadow: 0 0 12px rgba(99, 102, 241, 0.4);
+    }}
+
     .btn:hover {{
       background: var(--bg-surface-highlight);
       border-color: var(--accent-indigo);
@@ -4359,6 +4371,10 @@ class Step4ReportingEngine:
           <span class="spin-icon">🔄</span>
           <span>Refresh</span>
           <span class="auto-refresh-tag" id="auto-refresh-tag" style="display: none;">(<span id="refresh-countdown">10s</span>)</span>
+        </button>
+        <button class="btn btn-modern-switch" id="btn-switch-modern" onclick="window.location.href = window.location.protocol.startsWith('http') ? '/' : '../Modern and Interactive Dashboard/dashboard.html'" title="Switch to Modern & Interactive Dashboard">
+          <span>✨</span>
+          <span>Modern View</span>
         </button>
       </div>
     </header>
@@ -7307,6 +7323,20 @@ class Step4ReportingEngine:
             if simple_f.parent.is_dir():
                 with open(simple_f, "w", encoding="utf-8") as f:
                     f.write(html_content)
+
+            # Also ensure Modern and Interactive Dashboard is kept synchronized
+            try:
+                mod_path = self.reports_dir.parent / "Modern and Interactive Dashboard" / "generate_modern_dashboard.py"
+                if mod_path.is_file():
+                    import importlib.util
+                    spec = importlib.util.spec_from_file_location("modern_dash_gen", str(mod_path))
+                    if spec and spec.loader:
+                        m_mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(m_mod)
+                        if hasattr(m_mod, "generate_modern_dashboard"):
+                            m_mod.generate_modern_dashboard(workspace_dir=self.workspace_dir)
+            except Exception:
+                pass
         except Exception as e:
             logging.getLogger("Step4Reporting").error("Failed to write dashboard HTML: %s", e)
 
@@ -7332,7 +7362,13 @@ class Step4ReportingEngine:
             server_running = False
 
         try:
-            url = f"http://127.0.0.1:{port}/" if server_running else self.dashboard_file.resolve().as_uri()
+            target_f = self.reports_dir.parent / "Modern and Interactive Dashboard" / "dashboard.html"
+            if not target_f.is_file():
+                target_f = self.reports_dir / "modern_dashboard.html"
+            if not target_f.is_file():
+                target_f = self.dashboard_file
+
+            url = f"http://127.0.0.1:{port}/" if server_running else target_f.resolve().as_uri()
             webbrowser.open_new_tab(url)
             return True
         except Exception:
