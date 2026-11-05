@@ -258,18 +258,27 @@ class AntigravityLifecycleSentinel:
         cmd = [str(self.python_exe), str(self.server_script), "--port", str(self.port)]
 
         creation_flags = 0
+        startupinfo = None
         if sys.platform == "win32":
             creation_flags = subprocess.CREATE_NO_WINDOW
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0  # SW_HIDE
 
         server_log_path = self.workspace_dir / "server_debug.log"
         try:
             log_f = open(server_log_path, "a", encoding="utf-8")
+            popen_kwargs = {
+                "cwd": str(self.workspace_dir),
+                "creationflags": creation_flags,
+                "stdout": log_f,
+                "stderr": log_f,
+            }
+            if startupinfo is not None:
+                popen_kwargs["startupinfo"] = startupinfo
             subprocess.Popen(
                 cmd,
-                cwd=str(self.workspace_dir),
-                creationflags=creation_flags,
-                stdout=log_f,
-                stderr=log_f,
+                **popen_kwargs,
             )
         except Exception as e:
             logger.error(f"Failed to spawn dashboard_server: {e}")

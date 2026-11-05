@@ -552,16 +552,26 @@ class CompleteAutomationController:
 
             self.logger.info("Executing Step %d (%s)...", step.step_index, step.name)
 
+            run_kwargs: Dict[str, Any] = {
+                "cwd": str(self.workspace_dir),
+                "stdout": subprocess.PIPE if capture_output else None,
+                "stderr": subprocess.PIPE if capture_output else None,
+                "text": True,
+                "encoding": "utf-8",
+                "errors": "replace",
+                "shell": False,
+            }
+            if sys.platform == "win32":
+                run_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = 0  # SW_HIDE
+                run_kwargs["startupinfo"] = startupinfo
+
             try:
                 proc = subprocess.run(
                     cmd,
-                    cwd=str(self.workspace_dir),
-                    stdout=subprocess.PIPE if capture_output else None,
-                    stderr=subprocess.PIPE if capture_output else None,
-                    text=True,
-                    encoding="utf-8",
-                    errors="replace",
-                    shell=False,
+                    **run_kwargs,
                 )
             except Exception as e:
                 err = f"Execution exception running Step {step.step_index} ({step.name}): {e}"

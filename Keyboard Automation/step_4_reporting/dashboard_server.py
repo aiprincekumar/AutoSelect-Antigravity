@@ -156,10 +156,16 @@ class AutomationProcessManager:
         self._recover_state()
 
     def _resolve_python_exe(self) -> Path:
-        """Locate the dedicated .venv python.exe or fall back to sys.executable."""
+        """Locate the dedicated .venv pythonw.exe (prefer windowless) or python.exe or fall back to sys.executable."""
+        venv_pyw = self.workspace_dir / ".venv" / "Scripts" / "pythonw.exe"
+        if venv_pyw.is_file():
+            return venv_pyw
         venv_py = self.workspace_dir / ".venv" / "Scripts" / "python.exe"
         if venv_py.is_file():
             return venv_py
+        pyw = Path(sys.executable).with_name("pythonw.exe")
+        if pyw.is_file():
+            return pyw
         return Path(sys.executable)
 
     def _cleanup_pid_file(self) -> None:
@@ -306,16 +312,26 @@ class AutomationProcessManager:
             log_fp.flush()
 
             creationflags = 0
+            startupinfo = None
             if sys.platform == "win32":
-                creationflags = subprocess.CREATE_NEW_PROCESS_GROUP
+                creationflags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+                startupinfo = subprocess.STARTUPINFO()
+                startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+                startupinfo.wShowWindow = 0  # SW_HIDE
 
             try:
+                popen_kwargs = {
+                    "cwd": str(self.workspace_dir),
+                    "stdout": log_fp,
+                    "stderr": subprocess.STDOUT,
+                    "creationflags": creationflags,
+                }
+                if startupinfo is not None:
+                    popen_kwargs["startupinfo"] = startupinfo
+
                 self.proc = subprocess.Popen(
                     cmd,
-                    cwd=str(self.workspace_dir),
-                    stdout=log_fp,
-                    stderr=subprocess.STDOUT,
-                    creationflags=creationflags,
+                    **popen_kwargs,
                 )
             finally:
                 log_fp.close()

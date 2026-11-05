@@ -1613,5 +1613,29 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertTrue((repo_root / "start_dashboard_background.vbs").is_file())
         self.assertTrue((repo_root / "README.md").is_file())
 
+    def test_52_spawn_background_watcher_windowless(self):
+        """Verify spawn_background_watcher passes CREATE_NO_WINDOW and startupinfo to ensure zero window popup."""
+        with patch("subprocess.Popen") as mock_popen:
+            success = self.engine.spawn_background_watcher(delay_seconds=5.0, poll_interval=0.2, timeout=60.0)
+            self.assertTrue(success)
+            self.assertTrue(mock_popen.called)
+            args, kwargs = mock_popen.call_args
+
+            cmd = args[0]
+            self.assertIn("--watch-worker", cmd)
+            self.assertIn("--delay", cmd)
+            self.assertIn("5.0", cmd)
+            self.assertIn("--poll-interval", cmd)
+            self.assertIn("0.2", cmd)
+            self.assertIn("--timeout", cmd)
+            self.assertIn("60.0", cmd)
+
+            if sys.platform == "win32":
+                import subprocess
+                self.assertTrue(kwargs.get("creationflags") & subprocess.CREATE_NO_WINDOW)
+                startupinfo = kwargs.get("startupinfo")
+                self.assertIsNotNone(startupinfo)
+                self.assertEqual(startupinfo.wShowWindow, 0)
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)

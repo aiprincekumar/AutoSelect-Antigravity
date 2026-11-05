@@ -62,6 +62,7 @@ from core_engine.config_manager import (
     get_window_focus_delay,
     get_dom_click_settle_delay,
     get_step4_poll_interval,
+    get_step4_timeout,
     get_keyboard_timing,
     get_step_timing,
     apply_logging_config,
@@ -7351,7 +7352,8 @@ class Step4ReportingEngine:
         cfg = self.load_runtime_config()
         eff_delay = delay_seconds if delay_seconds is not None else get_user_activity_delay(cfg)
         eff_poll = poll_interval if poll_interval is not None else get_step4_poll_interval(cfg)
-        detected = watch_for_user_input(timeout=timeout, poll_interval=eff_poll)
+        eff_timeout = timeout if timeout is not None else get_step4_timeout(cfg)
+        detected = watch_for_user_input(timeout=eff_timeout, poll_interval=eff_poll)
         if detected:
             if eff_delay > 0:
                 time.sleep(eff_delay)
@@ -7363,17 +7365,31 @@ class Step4ReportingEngine:
         self,
         delay_seconds: Optional[float] = None,
         poll_interval: Optional[float] = None,
+        timeout: Optional[float] = None,
     ) -> bool:
         """
-        Spawn a completely detached background worker process that monitors for user input
-        and opens the dashboard after configured delay. Allows the main pipeline to complete
-        without blocking.
+        Spawn a completely detached, windowless background worker process that monitors
+        for user input and opens the dashboard after configured delay. Allows the main
+        pipeline to complete without blocking and guarantees 100% zero window or terminal appearance.
         """
+        # Prefer pythonw.exe on Windows for 100% windowless execution
         python_exe = sys.executable
+        if IS_WINDOWS:
+            candidates = [
+                self.workspace_dir / ".venv" / "Scripts" / "pythonw.exe",
+                Path(sys.executable).with_name("pythonw.exe"),
+                Path(sys.executable).parent / "pythonw.exe",
+            ]
+            for c in candidates:
+                if c.is_file():
+                    python_exe = str(c)
+                    break
+
         script_path = self._this_dir / "step4_reporting.py"
         cfg = self.load_runtime_config()
         eff_delay = delay_seconds if delay_seconds is not None else get_user_activity_delay(cfg)
         eff_poll = poll_interval if poll_interval is not None else get_step4_poll_interval(cfg)
+        eff_timeout = timeout if timeout is not None else get_step4_timeout(cfg)
 
         cmd = [
             str(python_exe),
@@ -7384,22 +7400,32 @@ class Step4ReportingEngine:
             "--reports-dir", str(self.reports_dir),
             "--history-file", str(self.history_file),
         ]
+        if eff_timeout is not None:
+            cmd.extend(["--timeout", str(eff_timeout)])
 
         creation_flags = 0
+        startupinfo = None
         if IS_WINDOWS:
-            # DETACHED_PROCESS (0x00000008) + CREATE_NEW_PROCESS_GROUP (0x00000200)
-            creation_flags = 0x00000008 | 0x00000200
+            # CREATE_NO_WINDOW (0x08000000) guarantees no console window or terminal frame is ever shown
+            # CREATE_NEW_PROCESS_GROUP (0x00000200) ensures signal isolation
+            creation_flags = subprocess.CREATE_NO_WINDOW | subprocess.CREATE_NEW_PROCESS_GROUP
+            startupinfo = subprocess.STARTUPINFO()
+            startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
+            startupinfo.wShowWindow = 0  # SW_HIDE
 
         try:
-            subprocess.Popen(
-                cmd,
-                cwd=str(self.workspace_dir),
-                creationflags=creation_flags,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                close_fds=True,
-                shell=False,
-            )
+            popen_kwargs = {
+                "cwd": str(self.workspace_dir),
+                "creationflags": creation_flags,
+                "stdout": subprocess.DEVNULL,
+                "stderr": subprocess.DEVNULL,
+                "close_fds": True,
+                "shell": False,
+            }
+            if startupinfo is not None:
+                popen_kwargs["startupinfo"] = startupinfo
+
+            subprocess.Popen(cmd, **popen_kwargs)
             return True
         except Exception:
             return False
@@ -7540,7 +7566,11 @@ def main() -> int:
     # Default Automated Pipeline Mode:
     # Spawn background watcher so calling pipeline exits cleanly, while watcher waits
     # for physical user input + delay to show dashboard without terminal clutter!
-    engine.spawn_background_watcher(delay_seconds=args.delay, poll_interval=args.poll_interval)
+    engine.spawn_background_watcher(
+        delay_seconds=args.delay,
+        poll_interval=args.poll_interval,
+        timeout=args.timeout,
+    )
     return 0
 
 

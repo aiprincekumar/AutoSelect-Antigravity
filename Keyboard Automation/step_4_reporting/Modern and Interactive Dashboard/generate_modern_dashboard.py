@@ -1350,6 +1350,354 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
+       Mode Switch Tab • Ultra-Modern Interactive Lifecycle Standard
+       ======================================================================== */
+    .modes-panel-container {{
+      display: flex;
+      flex-direction: column;
+      gap: 22px;
+      width: 100%;
+    }}
+
+    .modes-hero-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 24px 28px;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+    }}
+
+    .modes-hero-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+      margin-bottom: 22px;
+      padding-bottom: 16px;
+      border-bottom: 1px solid var(--border-subtle);
+    }}
+
+    .modes-title-group {{
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }}
+
+    .modes-hero-icon {{
+      font-size: 2rem;
+      background: rgba(99, 102, 241, 0.15);
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      width: 50px;
+      height: 50px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: var(--radius-lg);
+    }}
+
+    .modes-hero-title {{
+      font-size: 1.15rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin: 0 0 4px 0;
+      letter-spacing: -0.01em;
+    }}
+
+    .modes-hero-subtitle {{
+      font-size: 0.82rem;
+      color: var(--text-secondary);
+      margin: 0;
+      line-height: 1.4;
+    }}
+
+    .modes-hero-actions {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+
+    .modes-switcher-bar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 10px 18px;
+      margin-bottom: 22px;
+    }}
+
+    .modes-switcher-label {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+    }}
+
+    .modes-segmented-group {{
+      display: inline-flex;
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 4px;
+      gap: 6px;
+    }}
+
+    .banner-mode-btn {{
+      padding: 8px 16px;
+      font-size: 0.82rem;
+      font-weight: 700;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      background: transparent;
+      color: var(--text-secondary);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: var(--transition);
+    }}
+
+    .banner-mode-btn:hover {{
+      color: var(--text-primary);
+      background: var(--bg-surface-highlight);
+    }}
+
+    .banner-mode-btn.active[data-mode="production"] {{
+      background: #059669;
+      color: #ffffff;
+      border-color: #10b981;
+      box-shadow: 0 0 16px rgba(16, 185, 129, 0.4);
+    }}
+
+    .banner-mode-btn.active[data-mode="test"] {{
+      background: #d97706;
+      color: #ffffff;
+      border-color: #f59e0b;
+      box-shadow: 0 0 16px rgba(245, 158, 11, 0.4);
+    }}
+
+    .banner-mode-indicator {{
+      font-size: 0.68rem;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(255, 255, 255, 0.22);
+      font-family: var(--font-mono);
+      font-weight: 700;
+    }}
+
+    .mode-lifecycle-grid {{
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 20px;
+    }}
+
+    @media (max-width: 900px) {{
+      .mode-lifecycle-grid {{
+        grid-template-columns: 1fr;
+      }}
+    }}
+
+    .lifecycle-card {{
+      background: var(--bg-surface-elevated);
+      border: 2px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px 24px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 16px;
+      cursor: pointer;
+      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+      position: relative;
+    }}
+
+    .lifecycle-card:hover {{
+      border-color: var(--border-hover);
+      background: var(--bg-surface-highlight);
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-lg);
+    }}
+
+    .lifecycle-card.card-production.active-mode-card {{
+      border-color: #10b981;
+      background: linear-gradient(180deg, rgba(16, 185, 129, 0.1) 0%, var(--bg-surface-elevated) 100%);
+      box-shadow: 0 0 28px rgba(16, 185, 129, 0.22);
+    }}
+
+    .lifecycle-card.card-test.active-mode-card {{
+      border-color: #f59e0b;
+      background: linear-gradient(180deg, rgba(245, 158, 11, 0.1) 0%, var(--bg-surface-elevated) 100%);
+      box-shadow: 0 0 28px rgba(245, 158, 11, 0.22);
+    }}
+
+    .lifecycle-card-top {{
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+    }}
+
+    .lifecycle-card-title {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+
+    .lifecycle-card-title .card-icon {{
+      font-size: 1.5rem;
+    }}
+
+    .lifecycle-card-title strong {{
+      font-size: 1.05rem;
+      color: var(--text-primary);
+      display: block;
+    }}
+
+    .card-title-hindi {{
+      font-size: 0.76rem;
+      color: var(--text-muted);
+      font-weight: 500;
+    }}
+
+    .lifecycle-card-badge {{
+      font-size: 0.72rem;
+      font-weight: 700;
+      padding: 3px 10px;
+      border-radius: 9999px;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+    }}
+
+    .badge-prod-mode {{
+      background: rgba(16, 185, 129, 0.18);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.4);
+    }}
+
+    .badge-test-mode {{
+      background: rgba(245, 158, 11, 0.18);
+      color: #fbbf24;
+      border: 1px solid rgba(245, 158, 11, 0.4);
+    }}
+
+    .lifecycle-card-desc {{
+      font-size: 0.84rem;
+      color: var(--text-secondary);
+      line-height: 1.5;
+      margin: 0;
+    }}
+
+    .lifecycle-card-features {{
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+    }}
+
+    .lifecycle-feature-tag {{
+      font-size: 0.74rem;
+      font-weight: 600;
+      padding: 4px 10px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-primary);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+    }}
+
+    .lifecycle-card-btn {{
+      width: 100%;
+      padding: 10px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      border-radius: var(--radius-md);
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+      border: 1px solid transparent;
+      transition: var(--transition);
+    }}
+
+    .modes-comparison-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-xl);
+      padding: 22px 26px;
+      box-shadow: var(--shadow-sm);
+    }}
+
+    .modes-comparison-header {{
+      margin-bottom: 16px;
+      padding-bottom: 12px;
+      border-bottom: 1px solid var(--border-subtle);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }}
+
+    .comparison-icon {{
+      font-size: 1.5rem;
+    }}
+
+    .comparison-title {{
+      font-size: 1rem;
+      font-weight: 800;
+      color: var(--text-primary);
+      margin: 0 0 2px 0;
+    }}
+
+    .comparison-subtitle {{
+      font-size: 0.78rem;
+      color: var(--text-muted);
+      margin: 0;
+    }}
+
+    .modes-comparison-table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.82rem;
+    }}
+
+    .modes-comparison-table th {{
+      text-align: left;
+      padding: 10px 14px;
+      color: var(--text-secondary);
+      font-weight: 700;
+      border-bottom: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+    }}
+
+    .modes-comparison-table td {{
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--border-subtle);
+      vertical-align: middle;
+      color: var(--text-secondary);
+    }}
+
+    .modes-comparison-table tr:last-child td {{
+      border-bottom: none;
+    }}
+
+    .modes-comparison-table code {{
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      color: var(--accent-cyan);
+      background: var(--bg-surface-elevated);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+    }}
+
+    /* ========================================================================
        Configuration Tab & Dual Sub-Tabs (System vs Dashboard Config)
        ======================================================================== */
     .config-subnav {{
@@ -2143,91 +2491,162 @@ def build_modern_dashboard_html(
       </div>
     </main>
 
-    <!-- TAB 4: MODE SWITCH -->
+    <!-- TAB 4: MODE SWITCH (ULTRA-MODERN INTERACTIVE LIFECYCLE STANDARD) -->
     <main id="tab-modes" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-modes">
-      <div class="mode-cards-container">
-        <div class="mode-card {'active-mode' if is_prod else ''}" id="mode-card-prod">
-          <div>
-            <div class="mode-card-header">
-              <span class="mode-title">⚡ Production Mode</span>
-              {'<span class="mode-active-pill">CURRENT ACTIVE</span>' if is_prod else ''}
+      <div class="modes-panel-container">
+        <!-- Hero Header & Execution Controller Card -->
+        <div class="modes-hero-card">
+          <div class="modes-hero-header">
+            <div class="modes-title-group">
+              <span class="modes-hero-icon">🎛️</span>
+              <div>
+                <h2 class="modes-hero-title">Execution Mode Control &amp; Lifecycle Standard</h2>
+                <p class="modes-hero-subtitle">मोड स्विच एवं कार्यप्रणाली • Select between Test Mode (single-run auto-stop) and Production Mode (continuous autonomous loop).</p>
+              </div>
             </div>
-            <p style="font-size: 0.82rem; color: var(--text-muted);">
-              Strict human-like execution cadence, safety sentinels, 10-second user inactivity verification, and continuous monitoring loop.
-            </p>
-            <ul class="mode-features-list">
-              <li><span>🛡️</span> 10.0s User Inactivity Settle Delay</li>
-              <li><span>⏱️</span> 1.0s Process Polling Interval</li>
-              <li><span>⌨️</span> Human-mimicking keystroke hold delays (80ms hold / 100ms post)</li>
-              <li><span>🔒</span> Full Win32 Foreground Focus Verification</li>
-            </ul>
+            <div class="modes-hero-actions">
+              <span class="status-pill status-idle" id="modes-status-pill">⚪ Automation Inactive</span>
+              <button type="button" class="btn btn-automation state-stopped" id="modes-automation-toggle-btn" title="Toggle AutoSelect-Commander Automation directly from Mode Switch">
+                <span id="modes-control-icon">▶️</span>
+                <span id="modes-control-label">Start Automation</span>
+              </button>
+            </div>
           </div>
-          <button class="btn btn-automation" id="btn-set-prod" style="width: 100%; justify-content: center;">
-            {'✓ Active in Production' if is_prod else 'Switch to Production Mode'}
-          </button>
+
+          <!-- Segmented Pill Mode Switcher Bar -->
+          <div class="modes-switcher-bar">
+            <div class="modes-switcher-label">
+              <span style="color: {'#10b981' if is_prod else '#f59e0b'};">●</span>
+              <span>Active Operating Mode: <strong>{'PRODUCTION (उत्पादन मोड)' if is_prod else 'TEST (परीक्षण मोड)'}</strong></span>
+            </div>
+            <div class="modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
+              <button type="button" class="banner-mode-btn {'active' if is_prod else ''}" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+                <span>🛡️ Production</span>
+                <span class="banner-mode-indicator">Continuous Loop</span>
+              </button>
+              <button type="button" class="banner-mode-btn {'active' if not is_prod else ''}" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+                <span>🧪 Test Mode</span>
+                <span class="banner-mode-indicator">Auto-Stop</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Two Rich Interactive Mode Cards -->
+          <div class="mode-lifecycle-grid">
+            <!-- 1. Production Mode Card -->
+            <div class="lifecycle-card card-production {'active-mode-card' if is_prod else ''}" id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
+              <div class="lifecycle-card-top">
+                <div class="lifecycle-card-title">
+                  <span class="card-icon">🛡️</span>
+                  <div>
+                    <strong>Production Mode</strong>
+                    <span class="card-title-hindi">(प्रोडक्शन लेवल - Continuous Autonomous Loop)</span>
+                  </div>
+                </div>
+                <span class="lifecycle-card-badge badge-prod-mode">
+                  <span>●</span>
+                  <span>{'CURRENT ACTIVE' if is_prod else 'Continuous Loop'}</span>
+                </span>
+              </div>
+              <p class="lifecycle-card-desc">
+                जब <strong>Production Level</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह बैकग्राउंड में अनवरत <strong>(Continuous Loop - 300s चक्र)</strong> चलता रहेगा जब तक कि आप मैन्युअली <strong>Stop</strong> बटन न दबाएँ।
+              </p>
+              <div class="lifecycle-card-features">
+                <span class="lifecycle-feature-tag">🔄 Continuous 300s Polling Loop</span>
+                <span class="lifecycle-feature-tag">♾️ Runs Indefinitely in Background</span>
+                <span class="lifecycle-feature-tag">👤 Manual User Stop Required</span>
+                <span class="lifecycle-feature-tag">🚀 Full Multi-Step Hardware Automation</span>
+              </div>
+              <button type="button" class="lifecycle-card-btn {'btn-automation' if is_prod else 'btn'}" id="btn-set-prod">
+                {'✓ Active in Production' if is_prod else '⚡ Switch to Production Mode'}
+              </button>
+            </div>
+
+            <!-- 2. Test Mode Card -->
+            <div class="lifecycle-card card-test {'active-mode-card' if not is_prod else ''}" id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
+              <div class="lifecycle-card-top">
+                <div class="lifecycle-card-title">
+                  <span class="card-icon">🧪</span>
+                  <div>
+                    <strong>Test Mode</strong>
+                    <span class="card-title-hindi">(टेस्ट रन - Single-Run &amp; Auto-Stop)</span>
+                  </div>
+                </div>
+                <span class="lifecycle-card-badge badge-test-mode">
+                  <span>●</span>
+                  <span>{'CURRENT ACTIVE' if not is_prod else 'Single-Run Auto-Stop'}</span>
+                </span>
+              </div>
+              <p class="lifecycle-card-desc">
+                जब <strong>Test Run</strong> सिलेक्ट करके स्टार्ट करते हैं, तो यह सिर्फ <strong>1 बार (Single Cycle)</strong> चलेगा और टास्क/पाइपलाइन कम्प्लीट होते ही प्रोसेस अपने आप <strong>Stop</strong> हो जाएगा।
+              </p>
+              <div class="lifecycle-card-features">
+                <span class="lifecycle-feature-tag">⚡ 1 Single Cycle Execution</span>
+                <span class="lifecycle-feature-tag">🛑 Auto-Exits on Task Completion</span>
+                <span class="lifecycle-feature-tag">🔬 Safe Verification &amp; Dry-Runs</span>
+                <span class="lifecycle-feature-tag">⏱️ Fast 10.0s Poll Cycle</span>
+              </div>
+              <button type="button" class="lifecycle-card-btn {'btn' if is_prod else 'btn-automation'}" id="btn-set-test" style="{'background: rgba(245,158,11,0.18); color: #fbbf24; border-color: rgba(245,158,11,0.4);' if is_prod else 'background: #d97706; color: #ffffff;'}">
+                {'✓ Active in Test Mode' if not is_prod else '⚡ Switch to Test Mode'}
+              </button>
+            </div>
+          </div>
         </div>
 
-        <div class="mode-card {'active-mode' if not is_prod else ''}" id="mode-card-test">
-          <div>
-            <div class="mode-card-header">
-              <span class="mode-title">🧪 Test Mode</span>
-              {'<span class="mode-active-pill">CURRENT ACTIVE</span>' if not is_prod else ''}
+        <!-- Operational Lifecycle & Parameter Comparison Table -->
+        <div class="modes-comparison-card">
+          <div class="modes-comparison-header">
+            <span class="comparison-icon">⚖️</span>
+            <div>
+              <h3 class="comparison-title">Operational Lifecycle &amp; Parameters Comparison</h3>
+              <p class="comparison-subtitle">विस्तृत कार्यप्रणाली तुलना • Comprehensive breakdown of runtime parameters, stop conditions, and resource allocation</p>
             </div>
-            <p style="font-size: 0.82rem; color: var(--text-muted);">
-              High-speed development mode with minimal delays, fast 0.1s polling, single-run execution, and instant simulation.
-            </p>
-            <ul class="mode-features-list">
-              <li><span>⚡</span> 0.5s Fast Settle Delay</li>
-              <li><span>⏱️</span> 0.1s High-Frequency Polling</li>
-              <li><span>⏩</span> Zero keystroke delay simulation</li>
-              <li><span>🧪</span> Single-cycle auto-stop verification</li>
-            </ul>
           </div>
-          <button class="btn" id="btn-set-test" style="width: 100%; justify-content: center; background: rgba(168,85,247,0.18); color: #c084fc; border-color: rgba(168,85,247,0.4);">
-            {'✓ Active in Test Mode' if not is_prod else 'Switch to Test Mode'}
-          </button>
+          <div class="table-container">
+            <table class="modes-comparison-table diff-table">
+              <thead>
+                <tr>
+                  <th style="min-width: 180px;">Operational Parameter / आयाम</th>
+                  <th>🛡️ Production Mode (प्रोडक्शन मोड)</th>
+                  <th>🧪 Test Mode (टेस्ट रन)</th>
+                  <th style="min-width: 140px;">Department Standard</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr>
+                  <td><strong>Execution Cycle / निष्पादन आवृत्ति</strong></td>
+                  <td><span class="lifecycle-card-badge badge-prod-mode">Continuous Autonomous Loop</span></td>
+                  <td><span class="lifecycle-card-badge badge-test-mode">Single Cycle (1 Run Only)</span></td>
+                  <td>Dept 06 &amp; Dept 12</td>
+                </tr>
+                <tr>
+                  <td><strong>Stop Condition / स्टॉप नियम</strong></td>
+                  <td><strong>Manual Stop Only</strong> — User जब तक Stop बटन नहीं दबाता, तब तक 300s loop अनवरत चलता रहता है</td>
+                  <td><strong>Automatic Auto-Stop</strong> — Chat/Question processing complete होते ही process खुद सुरक्षित exit हो जाता है</td>
+                  <td>Rule 26 Zero-Hang</td>
+                </tr>
+                <tr>
+                  <td><strong>Step 0 Polling Interval / पोलिंग अंतराल</strong></td>
+                  <td><code>300.0s</code> (5 मिनट का स्थिर प्रोडक्शन अंतराल)</td>
+                  <td><code>10.0s</code> (त्वरित परीक्षण एवं डिबग चक्र)</td>
+                  <td>Dept 14 Telemetry</td>
+                </tr>
+                <tr>
+                  <td><strong>Target Scope / लक्षित उपयोग</strong></td>
+                  <td>24/7 autonomous monitoring &amp; unattended execution</td>
+                  <td>Local verification, step testing, single question verification</td>
+                  <td>Dept 08 QA Gates</td>
+                </tr>
+                <tr>
+                  <td><strong>Config Persistence / डेटा सिंक</strong></td>
+                  <td>Direct persistence to <code>step_9_complete_automation/config.json</code></td>
+                  <td>Direct persistence to <code>step_9_complete_automation/config.json</code></td>
+                  <td>Universal Rule 15 &amp; 23</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
         </div>
-      </div>
-
-      <div class="diff-table-card">
-        <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 4px;">Parameter Difference Matrix</h3>
-        <p style="font-size: 0.78rem; color: var(--text-muted);">Comparison of execution parameters between Production and Test modes.</p>
-        <table class="diff-table">
-          <thead>
-            <tr>
-              <th>Configuration Parameter</th>
-              <th>⚡ Production Mode</th>
-              <th>🧪 Test Mode</th>
-              <th>Safety Impact</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>User Inactivity Delay</td>
-              <td><code>10.0s</code> (Strict User32 Check)</td>
-              <td><code>0.5s</code> (Instant Execution)</td>
-              <td>Prevents accidental input clashes while human is typing</td>
-            </tr>
-            <tr>
-              <td>Engine Polling Interval</td>
-              <td><code>1.0s</code> (CPU Efficient)</td>
-              <td><code>0.1s</code> (High-Speed Loop)</td>
-              <td>Balances background CPU consumption</td>
-            </tr>
-            <tr>
-              <td>DOM Element Settle Delay</td>
-              <td><code>1.5s</code> (Reliable Rendering)</td>
-              <td><code>0.2s</code> (Fast Simulation)</td>
-              <td>Guarantees UIA accessibility tree stabilization</td>
-            </tr>
-            <tr>
-              <td>Step 3 Inter-Key Delay</td>
-              <td><code>80ms</code> (Human Cadence)</td>
-              <td><code>5ms</code> (Machine Instant)</td>
-              <td>Simulates genuine human keyboard entry</td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </main>
 
@@ -3393,6 +3812,33 @@ def build_modern_dashboard_html(
           controlIcon.textContent = running ? '⏹️' : '▶️';
           controlLabel.textContent = running ? 'Stop Automation' : 'Start Automation';
         }}
+        const modesToggleBtn = document.getElementById('modes-automation-toggle-btn');
+        const modesCtrlIcon = document.getElementById('modes-control-icon');
+        const modesCtrlLabel = document.getElementById('modes-control-label');
+        const modesStatusPill = document.getElementById('modes-status-pill');
+
+        if (modesToggleBtn) {{
+          modesToggleBtn.classList.toggle('state-running', running);
+          modesToggleBtn.classList.toggle('state-stopped', !running);
+          if (modesCtrlIcon) modesCtrlIcon.textContent = running ? '⏹️' : '▶️';
+          if (modesCtrlLabel) modesCtrlLabel.textContent = running ? 'Stop Automation' : 'Start Automation';
+        }}
+
+        if (modesStatusPill) {{
+          if (running) {{
+            if (isPaused) {{
+              modesStatusPill.className = 'status-pill status-paused';
+              modesStatusPill.textContent = '🟡 Paused (User Active)';
+            }} else {{
+              modesStatusPill.className = 'status-pill status-active';
+              modesStatusPill.textContent = '🟢 Active (Autonomous)';
+            }}
+          }} else {{
+            modesStatusPill.className = 'status-pill status-idle';
+            modesStatusPill.textContent = '⚪ Automation Inactive';
+          }}
+        }}
+
         if (statusPill && statusText) {{
           if (running) {{
             if (isPaused) {{
@@ -3514,10 +3960,18 @@ def build_modern_dashboard_html(
         }});
       }}
 
-      // Mode Switch Controls
+      // Mode Switch Controls (Ultra-Modern Interactive Lifecycle Standard)
       const btnSetProd = document.getElementById('btn-set-prod');
       const btnSetTest = document.getElementById('btn-set-test');
+      const cardProd = document.getElementById('mode-card-prod') || document.getElementById('banner-card-prod');
+      const cardTest = document.getElementById('mode-card-test') || document.getElementById('banner-card-test');
+      const bannerBtnProd = document.getElementById('banner-mode-prod-btn');
+      const bannerBtnTest = document.getElementById('banner-mode-test-btn');
+      const modesToggleBtn = document.getElementById('modes-automation-toggle-btn');
+
       function switchMode(newMode) {{
+        playChime('copy');
+        showToast(`⚡ Switching to ${{newMode.toUpperCase()}} Mode...`);
         fetch(API_BASE + '/api/config/save', {{
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
@@ -3525,13 +3979,24 @@ def build_modern_dashboard_html(
         }})
         .then(res => res.json())
         .then(d => {{
-          showToast(`⚡ Switched to ${{newMode.toUpperCase()}} mode!`);
-          setTimeout(() => location.reload(), 600);
+          showToast(`✅ Successfully activated ${{newMode.toUpperCase()}} Mode!`);
+          setTimeout(() => location.reload(), 500);
         }})
-        .catch(() => showToast('Error saving mode configuration.'));
+        .catch(() => showToast('❌ Error saving mode configuration to server.'));
       }}
-      if (btnSetProd) btnSetProd.addEventListener('click', () => switchMode('production'));
-      if (btnSetTest) btnSetTest.addEventListener('click', () => switchMode('test'));
+
+      if (btnSetProd) btnSetProd.addEventListener('click', (e) => {{ e.stopPropagation(); switchMode('production'); }});
+      if (btnSetTest) btnSetTest.addEventListener('click', (e) => {{ e.stopPropagation(); switchMode('test'); }});
+      if (cardProd) cardProd.addEventListener('click', () => switchMode('production'));
+      if (cardTest) cardTest.addEventListener('click', () => switchMode('test'));
+      if (bannerBtnProd) bannerBtnProd.addEventListener('click', () => switchMode('production'));
+      if (bannerBtnTest) bannerBtnTest.addEventListener('click', () => switchMode('test'));
+
+      if (modesToggleBtn) {{
+        modesToggleBtn.addEventListener('click', () => {{
+          if (toggleBtn) toggleBtn.click();
+        }});
+      }}
 
       // Config Form Handling & JSON Drawer
       const btnToggleJson = document.getElementById('btn-toggle-json-drawer');

@@ -256,6 +256,18 @@ def get_step4_poll_interval(config_data: Optional[Dict[str, Any]] = None) -> flo
     return float(cfg.get("timing", {}).get("step4_poll_interval_seconds", 0.1))
 
 
+def get_step4_timeout(config_data: Optional[Dict[str, Any]] = None) -> Optional[float]:
+    """Returns Step 4 user activity watcher timeout in seconds (default: None)."""
+    cfg = config_data if config_data is not None else load_runtime_config()
+    val = cfg.get("timing", {}).get("step4_timeout_seconds", cfg.get("timing", {}).get("step4_max_wait_seconds", None))
+    if val is not None:
+        try:
+            return float(val)
+        except (ValueError, TypeError):
+            pass
+    return None
+
+
 def get_keyboard_timing(config_data: Optional[Dict[str, Any]] = None) -> Dict[str, float]:
     """
     Returns Step 3 keyboard automation timing dictionary:
