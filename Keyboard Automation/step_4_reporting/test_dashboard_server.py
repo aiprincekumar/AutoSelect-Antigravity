@@ -31,6 +31,7 @@ import json
 import time
 import shutil
 import tempfile
+import random
 import unittest
 import urllib.request
 import urllib.error
@@ -87,7 +88,7 @@ class TestDashboardServer(unittest.TestCase):
 
         # Initialize manager and server
         self.manager = AutomationProcessManager(workspace_dir=self.workspace_dir)
-        self.port = find_available_port("127.0.0.1", start_port=18501)
+        self.port = find_available_port("127.0.0.1", start_port=random.randint(18600, 25000))
         self.server = DashboardServer(host="127.0.0.1", port=self.port, workspace_dir=self.workspace_dir)
         self.server.manager = self.manager
         self.server.start(open_browser=False, in_thread=True)

@@ -1455,7 +1455,7 @@ class Step4ReportingEngine:
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoSelect-Commander • Telemetry & Reporting Dashboard</title>
+  <title>AutoSelect Antigravity Dashboard</title>
   <style>
     :root {{
       --bg-primary: #0b0f17;
@@ -4343,14 +4343,14 @@ class Step4ReportingEngine:
       <div class="header-left">
         <div class="logo-badge">⚡</div>
         <div class="header-titles">
-          <h1>AutoSelect-Commander • Telemetry Dashboard</h1>
+          <h1>AutoSelect Antigravity Dashboard</h1>
           <p>Real-Time Step 1-3 Execution Ledger & Grill-Me Option Reporting</p>
         </div>
       </div>
       <div class="header-actions">
         <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Control Server active on port 8501">🟢 Server Online</span>
         <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Inactive</span>
-        <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect-Commander Automation">
+        <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect Antigravity Automation">
           <span class="control-icon" id="control-icon">▶️</span>
           <span class="control-label" id="control-label">Start</span>
         </button>
@@ -4789,7 +4789,7 @@ class Step4ReportingEngine:
             <div class="modes-hero-actions">
               <div class="modes-process-control-group">
                 <span class="status-pill status-idle" id="modes-status-pill">⚪ Automation Inactive</span>
-                <button type="button" class="btn btn-automation-toggle state-stopped" id="modes-automation-toggle-btn" title="Toggle AutoSelect-Commander Automation directly from Mode Switch">
+                <button type="button" class="btn btn-automation-toggle state-stopped" id="modes-automation-toggle-btn" title="Toggle AutoSelect Antigravity Automation directly from Mode Switch">
                   <span class="control-icon" id="modes-control-icon">▶️</span>
                   <span class="control-label" id="modes-control-label">Start</span>
                 </button>

@@ -1,11 +1,11 @@
 {
   "success": true,
   "data": {
-    "total_pipeline_runs": 8,
-    "total_questions_answered": 23,
-    "total_runtime_seconds": 215.9,
+    "total_pipeline_runs": 9,
+    "total_questions_answered": 24,
+    "total_runtime_seconds": 226.24,
     "total_unique_chats": 3,
-    "last_updated": "2026-11-05T01:19:16.355842+00:00",
+    "last_updated": "2026-11-05T01:40:48.678993+00:00",
     "chats": {
       "e0645f63-cc82-41f8-8385-2538e9e8f6bf": {
         "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
@@ -362,10 +362,10 @@
       "43229a5d-a7e5-4754-bddd-439fb28c4a01": {
         "conversation_id": "43229a5d-a7e5-4754-bddd-439fb28c4a01",
         "topic_summary": "अब तुम्हें ये देखना है कि डैशबोर्ड में जो UI and UX है उसको किस तरह से और भी बेह...",
-        "last_user_prompt": "यह सभी सेटिंग और सभी विंडोज जो क्लासिक मोड में हैं, वो मॉडर्न मोड में आ गया है। यानी कि सब कुछ बढ़िया से ऐड हो गया है, फ...",
-        "run_count": 2,
-        "total_questions": 2,
-        "last_run_timestamp": "2026-11-05T01:19:16.355842+00:00",
+        "last_user_prompt": "mode switch ka ui and ux dono hi kharb hai usko sahi karo",
+        "run_count": 3,
+        "total_questions": 3,
+        "last_run_timestamp": "2026-11-05T01:40:48.678993+00:00",
         "runs": [
           {
             "run_id": "run_20261105_054338",
@@ -410,13 +410,35 @@
             ],
             "status": "COMPLETED",
             "selected_at": "2026-11-05T01:19:06.019538+00:00"
+          },
+          {
+            "run_id": "run_20261105_071048",
+            "timestamp": "2026-11-05T01:40:48.678993+00:00",
+            "duration_seconds": 10.34,
+            "questions_count": 1,
+            "questions": [
+              {
+                "question_index": 1,
+                "question": "क्या आप इस नए Mode Switch UI/UX ओवरहॉल को GitHub ऑनलाइन रिपॉजिटरी पर पुश करना चाहते हैं?",
+                "options": [
+                  "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+                  "नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+                "is_multi_select": false,
+                "is_recommended": true
+              }
+            ],
+            "status": "COMPLETED",
+            "selected_at": "2026-11-05T01:40:38.336994+00:00"
           }
         ]
       }
     }
   },
   "meta": {
-    "timestamp": "2026-11-05T01:19:16.355842+00:00",
+    "timestamp": "2026-11-05T01:40:48.678993+00:00",
     "step": "step_4_reporting",
     "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
     "format_version": "1.0.0"
