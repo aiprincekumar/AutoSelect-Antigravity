@@ -3,25 +3,52 @@
 """
 Modern and Interactive Dashboard Generator (generate_modern_dashboard.py)
 ========================================================================
-Subsystem: Modern and Interactive Dashboard Engine
+Subsystem: Modern and Interactive Dashboard Engine (V2 - Complete Feature Parity + UI/UX Overhaul)
 Part of: AutoSelect-Commander Telemetry & Execution Reporting Suite
 Department: Department 04 (UI/UX Design System) & Department 05 (Frontend Engineering)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
-Features:
-  1. Next-Gen Visual Hierarchy: 2 North Star KPI Hero Cards + 6 Secondary Metrics with count-up animations.
-  2. Distinct Header Architecture: Grouped System Health Cluster & Action Control Cluster.
-  3. Live Pulse Ticker Strip: Real-time execution status and heartbeat pulse below header.
-  4. Slide-Up Live Console Logs Drawer: Real-time `/api/logs/tail` polling with syntax coloring and keyboard shortcut [L].
-  5. Context-Aware Filter Toolbar: Automatically visible on Overview/Chats, hidden on Mode Switch/Config.
-  6. Active Dismissible Filter Chips: Quick chips with 1-click removal for active presets.
-  7. Interactive Floating SVG Tooltips: Real-time floating data inspect cards for all 7 charts on hover.
-  8. Questions Tab Supercharging: 1-Click "Copy Q&A" with emerald toast, distinct Selected vs Recommended badging.
-  9. Mode Switch Visual Diff: Side-by-side Production vs Test cards with instant parameter comparison.
- 10. Config Tab Ergonomics: Live settings search input & floating "Unsaved Changes" dock.
- 11. Built-in Web Audio API Synthesizer: Futuristic Chimes for Start, Stop, and Copy (0 external sound files, muteable).
- 12. Keyboard Shortcuts HUD Modal: 1-5 tabs, [/] search, [L] logs, [T] theme, [M] mute, [?] shortcuts help.
- 13. Bidirectional Switcher: 1-Click toggle between Modern & Interactive and Simple & Classic dashboards.
+Highlights & Full Feature Set:
+  1. Complete Classic Filter Parity:
+     - Full Presets: All Time, Today, Yesterday, Last 7 Days, Last 30 Days, This Week, This Month.
+     - Date Range pickers (From Date, To Date).
+     - Conversation selector dropdown (with dynamic topic & short ID options).
+     - Complexity filter dropdown (All, Single Question, Multi-Question).
+     - Speed / Latency filter dropdown (All, Fast <3s, Moderate 3-8s, Heavy >8s).
+     - Filter Reset button.
+     - Active Dismissible Chips for 1-click filter clearing.
+  2. Tab-Contextual Keyboard Shortcut [/]:
+     - When on 'Chats' tab: pressing [/] focuses #search-chats.
+     - When on 'Questions' tab: pressing [/] focuses #search-questions.
+     - When on 'Config' tab: pressing [/] focuses #search-config.
+     - Auto-selects text on focus.
+  3. Chats Tab (Complete Feature Parity):
+     - Summary Stats Strip (Unique Chats, Lifetime Runs, Avg Runs/Chat).
+     - Dedicated Search Input (#search-chats).
+     - Full Chats Breakdown Table with Conversation ID, Topic Summary, Runs Count, Questions Answered, Last Automated.
+  4. Questions Tab (Hierarchical & Actionable):
+     - Organized by Conversation Card ➔ Run Block ➔ Question Prompt ➔ Option List.
+     - 1-Click "Copy Q&A" on every question card with emerald toast notification.
+     - Global Expand All / Collapse All buttons.
+     - Clear Selected vs Recommended badge differentiation.
+  5. Next-Gen Visual Hierarchy:
+     - 2 North Star KPI Hero Cards with 2.5rem display font, vibrant gradients, and count-up animations.
+     - 6 Secondary Operational Metrics.
+     - 5-Step Pipeline Topology vector SVG with animated bus.
+     - 7 Analytics SVG Charts with interactive floating tooltips on hover.
+  6. Dual Header Clusters:
+     - System Health Cluster (Server Bridge Online, Engine State, Mode Badge).
+     - Action Control Cluster (Start/Stop, Logs Drawer, Theme, Sound Chimes, Refresh, Classic Switch, Shortcuts).
+  7. Slide-Up Live Console Logs Drawer:
+     - Real-time stream from /api/logs/tail (2.5s polling).
+     - Syntax coloring, auto-scroll toggle, clear, close [Esc] or [L].
+  8. Mode Switch & Config Tabs:
+     - Side-by-side Production vs Test cards & Parameter Diff Matrix.
+     - Live settings search input & floating Unsaved Changes dock.
+  9. Web Audio API Synthesizer:
+     - Futuristic chimes on Start, Stop, Copy (muteable via [M] or header button).
+ 10. Bidirectional Switcher:
+     - 1-Click toggle between Modern & Interactive and Simple & Classic dashboards.
 """
 
 from __future__ import annotations
@@ -63,11 +90,24 @@ def build_modern_dashboard_html(
     avg_density = (total_questions / total_runs) if total_runs > 0 else 0.0
     avg_depth = (total_questions / total_chats) if total_chats > 0 else 0.0
     avg_speed = (total_seconds / total_questions) if total_questions > 0 else 0.0
+    avg_runs_per_chat = (total_runs / total_chats) if total_chats > 0 else 0.0
 
     # Format runtime string
     mins = int(total_seconds // 60)
     secs = int(total_seconds % 60)
     runtime_formatted = f"{mins}m {secs}s" if mins > 0 else f"{secs}s"
+
+    # Build conversation dropdown options for filter-chat
+    chat_options = []
+    for cid, chat in hist.chats.items():
+        if isinstance(chat, dict):
+            topic = chat.get("topic_summary") or "Untitled Conversation"
+        else:
+            topic = getattr(chat, "topic_summary", "") or "Untitled Conversation"
+        trunc_topic = topic[:40] + ".." if len(topic) > 40 else topic
+        short_cid = cid[:8] + ".." if len(cid) > 8 else cid
+        chat_options.append(f'<option value="{cid}">{trunc_topic} ({short_cid})</option>')
+    chat_options_html = "\n              ".join(chat_options)
 
     # Load runtime config
     cfg_path = ws / "step_9_complete_automation" / "config.json"
@@ -105,7 +145,6 @@ def build_modern_dashboard_html(
     history_json_str = json.dumps(hist.to_dict(), ensure_ascii=False)
     runtime_config_json_str = json.dumps(runtime_cfg, indent=2, ensure_ascii=False)
 
-    # HTML Template
     return f"""<!DOCTYPE html>
 <html lang="en" data-theme="dark">
 <head>
@@ -114,25 +153,25 @@ def build_modern_dashboard_html(
   <title>AutoSelect-Commander • Modern & Interactive Dashboard</title>
   <style>
     :root {{
-      --bg-primary: #070a11;
+      --bg-primary: #07090f;
       --bg-surface: #0e1422;
       --bg-surface-elevated: #151d30;
-      --bg-surface-highlight: #1f2b45;
-      --bg-surface-glass: rgba(14, 20, 34, 0.82);
+      --bg-surface-highlight: #1e2942;
+      --bg-surface-glass: rgba(14, 20, 34, 0.85);
       --border-subtle: rgba(255, 255, 255, 0.08);
       --border-accent: rgba(99, 102, 241, 0.4);
-      --border-hover: rgba(255, 255, 255, 0.16);
+      --border-hover: rgba(255, 255, 255, 0.18);
       --text-primary: #f8fafc;
       --text-secondary: #94a3b8;
       --text-muted: #64748b;
       --accent-indigo: #6366f1;
-      --accent-indigo-glow: rgba(99, 102, 241, 0.3);
+      --accent-indigo-glow: rgba(99, 102, 241, 0.35);
       --accent-emerald: #10b981;
       --accent-emerald-bg: rgba(16, 185, 129, 0.12);
       --accent-emerald-border: #059669;
-      --accent-emerald-glow: rgba(16, 185, 129, 0.3);
+      --accent-emerald-glow: rgba(16, 185, 129, 0.35);
       --accent-cyan: #06b6d4;
-      --accent-cyan-glow: rgba(6, 182, 212, 0.3);
+      --accent-cyan-glow: rgba(6, 182, 212, 0.35);
       --accent-purple: #a855f7;
       --accent-amber: #f59e0b;
       --accent-rose: #f43f5e;
@@ -142,11 +181,9 @@ def build_modern_dashboard_html(
       --radius-md: 10px;
       --radius-lg: 14px;
       --radius-xl: 18px;
-      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.2);
-      --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.3);
-      --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.45);
-      --shadow-glow-indigo: 0 0 24px var(--accent-indigo-glow);
-      --shadow-glow-emerald: 0 0 24px var(--accent-emerald-glow);
+      --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.25);
+      --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.35);
+      --shadow-lg: 0 12px 36px rgba(0, 0, 0, 0.5);
       --transition: all 0.22s cubic-bezier(0.16, 1, 0.3, 1);
     }}
 
@@ -155,10 +192,10 @@ def build_modern_dashboard_html(
       --bg-surface: #ffffff;
       --bg-surface-elevated: #f1f5f9;
       --bg-surface-highlight: #e2e8f0;
-      --bg-surface-glass: rgba(255, 255, 255, 0.88);
+      --bg-surface-glass: rgba(255, 255, 255, 0.9);
       --border-subtle: rgba(0, 0, 0, 0.08);
       --border-accent: rgba(99, 102, 241, 0.3);
-      --border-hover: rgba(0, 0, 0, 0.16);
+      --border-hover: rgba(0, 0, 0, 0.18);
       --text-primary: #0f172a;
       --text-secondary: #475569;
       --text-muted: #94a3b8;
@@ -180,14 +217,14 @@ def build_modern_dashboard_html(
       color: var(--text-primary);
       font-family: var(--font-family);
       line-height: 1.5;
-      padding: 20px 20px 60px;
+      padding: 18px 20px 60px;
       -webkit-font-smoothing: antialiased;
       transition: background-color 0.25s ease, color 0.25s ease;
       min-height: 100vh;
     }}
 
     .container {{
-      max-width: 1320px;
+      max-width: 1340px;
       margin: 0 auto;
     }}
 
@@ -265,11 +302,10 @@ def build_modern_dashboard_html(
     .header-right {{
       display: flex;
       align-items: center;
-      gap: 12px;
+      gap: 10px;
       flex-wrap: wrap;
     }}
 
-    /* Cluster 1: System Health Indicators */
     .health-cluster {{
       display: flex;
       align-items: center;
@@ -354,7 +390,6 @@ def build_modern_dashboard_html(
       50% {{ transform: scale(1.4); opacity: 0.6; }}
     }}
 
-    /* Cluster 2: Action Controls */
     .action-cluster {{
       display: flex;
       align-items: center;
@@ -422,9 +457,6 @@ def build_modern_dashboard_html(
       color: #a5b4fc;
     }}
 
-    .btn-log-drawer {{
-      position: relative;
-    }}
     .log-unread-badge {{
       background: var(--accent-indigo);
       color: #ffffff;
@@ -546,13 +578,13 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Context-Aware Filter Toolbar & Active Dismiss Chips
+       Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity + Modern Chips)
        ======================================================================== */
     .filter-toolbar {{
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 14px 18px;
+      padding: 16px 20px;
       margin-bottom: 20px;
       box-shadow: var(--shadow-sm);
       transition: var(--transition);
@@ -569,17 +601,28 @@ def build_modern_dashboard_html(
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.88rem;
+      font-size: 0.9rem;
       font-weight: 700;
       color: var(--text-primary);
     }}
 
+    .filter-stats-badge {{
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      background: var(--bg-surface-elevated);
+      padding: 4px 10px;
+      border-radius: 9999px;
+      border: 1px solid var(--border-subtle);
+    }}
+
+    /* Row 1: Quick Presets Bar */
     .filter-presets-row {{
       display: flex;
       align-items: center;
       gap: 8px;
       flex-wrap: wrap;
-      margin-bottom: 12px;
+      margin-bottom: 14px;
     }}
 
     .presets-label {{
@@ -595,7 +638,7 @@ def build_modern_dashboard_html(
     }}
 
     .preset-btn {{
-      padding: 4px 11px;
+      padding: 4px 12px;
       font-size: 0.75rem;
       font-weight: 600;
       border-radius: 9999px;
@@ -618,19 +661,85 @@ def build_modern_dashboard_html(
       box-shadow: 0 0 10px var(--accent-indigo-glow);
     }}
 
-    /* Active Filter Dismiss Chips */
+    /* Row 2: Granular Controls Row */
+    .filter-controls-row {{
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 12px;
+      align-items: flex-end;
+      margin-bottom: 12px;
+    }}
+
+    .filter-control-group {{
+      display: flex;
+      flex-direction: column;
+      gap: 5px;
+    }}
+
+    .filter-label {{
+      font-size: 0.72rem;
+      font-weight: 700;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }}
+
+    .filter-select,
+    .filter-input-date {{
+      width: 100%;
+      padding: 8px 12px;
+      border-radius: var(--radius-md);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      font-size: 0.8rem;
+      font-family: inherit;
+      outline: none;
+      transition: var(--transition);
+    }}
+
+    .filter-select:focus,
+    .filter-input-date:focus {{
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 10px var(--accent-indigo-glow);
+    }}
+
+    .filter-date-inputs {{
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }}
+
+    .filter-date-sep {{
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }}
+
+    .btn-reset-filter {{
+      background: rgba(244, 63, 94, 0.12);
+      color: var(--accent-rose);
+      border: 1px solid rgba(244, 63, 94, 0.35);
+      padding: 8px 14px;
+      height: 38px;
+    }}
+    .btn-reset-filter:hover {{
+      background: rgba(244, 63, 94, 0.22);
+      border-color: rgba(244, 63, 94, 0.5);
+    }}
+
+    /* Active Dismissible Chips Row */
     .active-chips-row {{
       display: flex;
       align-items: center;
       gap: 6px;
       flex-wrap: wrap;
-      padding-top: 8px;
+      padding-top: 10px;
       border-top: 1px dashed var(--border-subtle);
     }}
 
     .active-chips-label {{
       font-size: 0.72rem;
-      font-weight: 600;
+      font-weight: 700;
       color: var(--text-muted);
       text-transform: uppercase;
       letter-spacing: 0.04em;
@@ -640,7 +749,7 @@ def build_modern_dashboard_html(
       display: inline-flex;
       align-items: center;
       gap: 5px;
-      padding: 2px 8px;
+      padding: 2px 9px;
       border-radius: 9999px;
       font-size: 0.72rem;
       font-weight: 600;
@@ -653,7 +762,6 @@ def build_modern_dashboard_html(
       cursor: pointer;
       font-weight: 700;
       opacity: 0.7;
-      transition: opacity 0.15s;
     }}
     .filter-chip-remove:hover {{
       opacity: 1;
@@ -661,14 +769,14 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Overview Tab: 8 KPIs with Visual Hierarchy (North Star Hero Cards)
+       Tab Panels & General Containers
        ======================================================================== */
     .tab-panel {{
       display: none;
     }}
     .tab-panel.active {{
       display: block;
-      animation: fadeIn 0.25s ease-in-out;
+      animation: fadeIn 0.22s ease-in-out;
     }}
 
     @keyframes fadeIn {{
@@ -676,7 +784,9 @@ def build_modern_dashboard_html(
       to {{ opacity: 1; transform: translateY(0); }}
     }}
 
-    /* Row 1: Two High-Priority North Star Hero Cards */
+    /* ========================================================================
+       Overview Tab: 8 KPIs with Visual Hierarchy (North Star Hero Cards)
+       ======================================================================== */
     .hero-kpis-grid {{
       display: grid;
       grid-template-columns: repeat(2, 1fr);
@@ -751,7 +861,6 @@ def build_modern_dashboard_html(
       border: 1px solid var(--border-subtle);
     }}
 
-    /* Row 2: Six Secondary Operational Metrics */
     .secondary-kpis-grid {{
       display: grid;
       grid-template-columns: repeat(6, 1fr);
@@ -820,7 +929,7 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Charts & Visual Analytics Cards
+       Charts & Topology Cards
        ======================================================================== */
     .charts-grid {{
       display: grid;
@@ -892,7 +1001,7 @@ def build_modern_dashboard_html(
       overflow: hidden;
     }}
 
-    /* Interactive Floating SVG Tooltip */
+    /* Floating SVG Tooltip */
     #chart-floating-tooltip {{
       position: fixed;
       pointer-events: none;
@@ -906,32 +1015,57 @@ def build_modern_dashboard_html(
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
       z-index: 1000;
       display: none;
-      transition: opacity 0.15s ease, transform 0.1s ease;
       line-height: 1.4;
       white-space: nowrap;
     }}
 
     /* ========================================================================
-       Questions Tab (Supercharged Q&A Ledger)
+       Chats Tab (Stats Strip, Dedicated Search, Breakdown Table)
        ======================================================================== */
-    .questions-controls-bar {{
+    .stats-strip {{
       display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
+      gap: 14px;
       margin-bottom: 16px;
       flex-wrap: wrap;
+    }}
+
+    .stat-pill {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 18px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      font-size: 0.84rem;
+      font-weight: 600;
+      color: var(--text-secondary);
+      box-shadow: var(--shadow-sm);
+    }}
+
+    .stat-num {{
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent-indigo);
+      font-family: var(--font-mono);
+    }}
+
+    .controls-bar {{
+      margin-bottom: 16px;
+      display: flex;
+      gap: 12px;
+      align-items: center;
     }}
 
     .search-input-wrap {{
       position: relative;
       flex: 1;
-      max-width: 450px;
+      max-width: 600px;
     }}
 
     .search-input {{
       width: 100%;
-      padding: 9px 14px 9px 36px;
+      padding: 10px 14px 10px 38px;
       border-radius: var(--radius-md);
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -943,7 +1077,7 @@ def build_modern_dashboard_html(
 
     .search-input:focus {{
       border-color: var(--accent-indigo);
-      box-shadow: 0 0 12px var(--accent-indigo-glow);
+      box-shadow: 0 0 14px var(--accent-indigo-glow);
     }}
 
     .search-icon-pos {{
@@ -952,60 +1086,200 @@ def build_modern_dashboard_html(
       top: 50%;
       transform: translateY(-50%);
       color: var(--text-muted);
-      font-size: 0.85rem;
+      font-size: 0.9rem;
       pointer-events: none;
+    }}
+
+    .search-shortcut-hint {{
+      position: absolute;
+      right: 12px;
+      top: 50%;
+      transform: translateY(-50%);
+      font-size: 0.72rem;
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-muted);
+      font-family: var(--font-mono);
+      pointer-events: none;
+    }}
+
+    .table-container {{
+      overflow-x: auto;
+      border-radius: var(--radius-md);
+    }}
+
+    table {{
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.84rem;
+    }}
+
+    th, td {{
+      padding: 12px 16px;
+      text-align: left;
+      border-bottom: 1px solid var(--border-subtle);
+    }}
+
+    th {{
+      background: var(--bg-surface-elevated);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      font-size: 0.72rem;
+      font-weight: 700;
+      letter-spacing: 0.04em;
+    }}
+
+    tr:hover td {{
+      background: var(--bg-surface-elevated);
+    }}
+
+    .chat-id-tag {{
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: rgba(99, 102, 241, 0.12);
+      color: #818cf8;
+      border: 1px solid rgba(99, 102, 241, 0.28);
+    }}
+
+    .badge-count {{
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: 700;
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+    }}
+
+    /* ========================================================================
+       Questions Tab (Deep Hierarchical Q&A Tree)
+       ======================================================================== */
+    .chat-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
+      overflow: hidden;
+      transition: var(--transition);
+    }}
+
+    .chat-card:hover {{
+      border-color: var(--border-hover);
+    }}
+
+    .chat-card-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 18px;
+      background: var(--bg-surface-elevated);
+      cursor: pointer;
+      user-select: none;
+    }}
+
+    .chat-card-title {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      font-size: 0.92rem;
+      font-weight: 700;
+    }}
+
+    .chat-card-meta {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    .chat-card-body {{
+      padding: 16px 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }}
+
+    .chat-card-body.collapsed {{
+      display: none;
+    }}
+
+    .run-block {{
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      overflow: hidden;
+    }}
+
+    .run-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      background: var(--bg-surface-highlight);
+      cursor: pointer;
+      font-size: 0.82rem;
+      user-select: none;
+    }}
+
+    .run-body {{
+      padding: 12px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }}
+
+    .run-body.collapsed {{
+      display: none;
     }}
 
     .question-card {{
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 16px 20px;
-      margin-bottom: 14px;
-      box-shadow: var(--shadow-sm);
-      transition: var(--transition);
+      border-radius: var(--radius-md);
+      overflow: hidden;
     }}
 
-    .question-card:hover {{
-      border-color: var(--border-hover);
-    }}
-
-    .q-card-header {{
+    .question-prompt {{
       display: flex;
       justify-content: space-between;
-      align-items: flex-start;
-      margin-bottom: 12px;
-      gap: 12px;
-    }}
-
-    .q-title-wrap {{
-      display: flex;
-      flex-direction: column;
-      gap: 4px;
-    }}
-
-    .q-index-badge {{
-      font-size: 0.72rem;
-      font-weight: 700;
-      color: #818cf8;
-      text-transform: uppercase;
-      letter-spacing: 0.04em;
-    }}
-
-    .q-title {{
-      font-size: 0.96rem;
+      align-items: center;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-size: 0.85rem;
       font-weight: 600;
-      color: var(--text-primary);
+      gap: 10px;
+      user-select: none;
     }}
 
-    .q-actions {{
+    .question-prompt-left {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex: 1;
+    }}
+
+    .question-num {{
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #818cf8;
+      background: rgba(99, 102, 241, 0.15);
+      padding: 2px 6px;
+      border-radius: var(--radius-sm);
+    }}
+
+    .question-prompt-right {{
       display: flex;
       align-items: center;
       gap: 8px;
     }}
 
     .btn-copy-qa {{
-      padding: 4px 9px;
+      padding: 3px 8px;
       font-size: 0.72rem;
       border-radius: var(--radius-sm);
       background: var(--bg-surface-elevated);
@@ -1020,51 +1294,39 @@ def build_modern_dashboard_html(
       border-color: var(--accent-indigo);
     }}
 
-    .q-options-list {{
+    .options-list {{
+      padding: 10px 14px;
       display: flex;
       flex-direction: column;
-      gap: 8px;
-      margin-top: 10px;
+      gap: 6px;
+      background: var(--bg-primary);
+      border-top: 1px solid var(--border-subtle);
     }}
 
-    .q-option-item {{
+    .options-list.collapsed {{
+      display: none;
+    }}
+
+    .option-item {{
       display: flex;
-      align-items: center;
       justify-content: space-between;
-      padding: 10px 14px;
-      border-radius: var(--radius-md);
-      background: var(--bg-surface-elevated);
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
-      font-size: 0.83rem;
-      transition: var(--transition);
+      font-size: 0.82rem;
     }}
 
-    .q-option-item.is-selected {{
+    .option-item.selected {{
       background: var(--accent-emerald-bg);
       border-color: var(--accent-emerald-border);
       color: #f8fafc;
     }}
 
-    .q-option-badges {{
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }}
-
-    .badge-selected {{
+    .option-badge {{
       background: #10b981;
       color: #ffffff;
-      font-size: 0.68rem;
-      font-weight: 700;
-      padding: 2px 7px;
-      border-radius: 9999px;
-      letter-spacing: 0.02em;
-    }}
-
-    .badge-recommended {{
-      background: rgba(6, 182, 212, 0.18);
-      color: #22d3ee;
-      border: 1px solid rgba(6, 182, 212, 0.4);
       font-size: 0.68rem;
       font-weight: 700;
       padding: 2px 7px;
@@ -1072,7 +1334,7 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Mode Switch Tab: Interactive Visual Diff Cards
+       Mode Switch Tab
        ======================================================================== */
     .mode-cards-container {{
       display: grid;
@@ -1143,7 +1405,6 @@ def build_modern_dashboard_html(
       gap: 8px;
     }}
 
-    /* Diff Comparison Table */
     .diff-table-card {{
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -1152,34 +1413,9 @@ def build_modern_dashboard_html(
       box-shadow: var(--shadow-sm);
     }}
 
-    .diff-table {{
-      width: 100%;
-      border-collapse: collapse;
-      font-size: 0.82rem;
-      margin-top: 12px;
-    }}
-
-    .diff-table th,
-    .diff-table td {{
-      padding: 10px 14px;
-      text-align: left;
-      border-bottom: 1px solid var(--border-subtle);
-    }}
-
-    .diff-table th {{
-      color: var(--text-muted);
-      text-transform: uppercase;
-      font-size: 0.72rem;
-      font-weight: 700;
-    }}
-
     /* ========================================================================
-       Config Tab: Live Search & Floating Unsaved Dock
+       Config Tab
        ======================================================================== */
-    .config-search-bar {{
-      margin-bottom: 16px;
-    }}
-
     .config-group-card {{
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
@@ -1289,12 +1525,6 @@ def build_modern_dashboard_html(
       font-weight: 600;
     }}
 
-    .logs-drawer-controls {{
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }}
-
     .logs-terminal-body {{
       flex: 1;
       padding: 12px 18px;
@@ -1335,7 +1565,7 @@ def build_modern_dashboard_html(
       to {{ transform: translateY(0); opacity: 1; }}
     }}
 
-    /* Keyboard Shortcuts Modal Backdrop */
+    /* Keyboard Shortcuts Modal */
     .modal-backdrop {{
       position: fixed;
       top: 0; left: 0; right: 0; bottom: 0;
@@ -1416,7 +1646,7 @@ def build_modern_dashboard_html(
             <span id="control-icon">▶️</span>
             <span id="control-label">Start Automation</span>
           </button>
-          <button class="btn btn-log-drawer" id="btn-toggle-logs" title="Toggle Live Console Logs Stream (L)">
+          <button class="btn" id="btn-toggle-logs" title="Toggle Live Console Logs Stream (L)">
             <span>📟</span>
             <span>Logs</span>
             <span class="log-unread-badge" id="log-count-badge">0</span>
@@ -1442,7 +1672,7 @@ def build_modern_dashboard_html(
     <div class="live-ticker-strip">
       <div class="ticker-left">
         <span class="ticker-beacon"><span class="beacon-dot"></span> LIVE TELEMETRY</span>
-        <span class="ticker-msg" id="ticker-status-msg">Complete Automation Daemon Ready • Last Run: {avg_latency:.1f}s • 21 Questions Resolved</span>
+        <span class="ticker-msg" id="ticker-status-msg">Complete Automation Daemon Ready • Last Run: {avg_latency:.1f}s • {total_questions} Questions Resolved</span>
       </div>
       <div class="ticker-clock" id="live-clock">--:--:--</div>
     </div>
@@ -1474,30 +1704,84 @@ def build_modern_dashboard_html(
       </button>
     </nav>
 
-    <!-- Context-Aware Filter Toolbar (Shown on Overview & Chats) -->
+    <!-- Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity + Modern Dismiss Chips) -->
     <section class="filter-toolbar" id="contextual-filter-toolbar" aria-label="Filters Toolbar">
       <div class="filter-toolbar-header">
         <div class="filter-toolbar-title">
           <span>🔍</span>
-          <span>Contextual Data Filters & Quick Presets</span>
+          <span>Interactive Multi-Dimensional Filter Toolbar</span>
         </div>
-        <div style="font-size: 0.78rem; color: var(--text-muted);">
-          Showing <span id="filter-count" style="font-weight: 700; color: var(--text-primary);">{total_runs}</span> of {total_runs} runs
+        <div class="filter-stats-badge" id="filter-stats-badge">
+          Showing <span id="filter-count" style="font-weight: 700; color: var(--text-primary);">{total_runs}</span> of <span id="filter-total">{total_runs}</span> runs
         </div>
       </div>
 
+      <!-- Row 1: Quick Presets Bar -->
       <div class="filter-presets-row">
         <span class="presets-label">⚡ Quick Presets:</span>
         <div class="filter-presets">
           <button type="button" class="preset-btn active" data-preset="all">All Time</button>
           <button type="button" class="preset-btn" data-preset="today">Today</button>
           <button type="button" class="preset-btn" data-preset="yesterday">Yesterday</button>
-          <button type="button" class="preset-btn" data-preset="week">Last 7 Days</button>
-          <button type="button" class="preset-btn" data-preset="fast">Fast Runs (&lt;20s)</button>
-          <button type="button" class="preset-btn" data-preset="deep">Deep Runs (&gt;40s)</button>
+          <button type="button" class="preset-btn" data-preset="7d">Last 7 Days</button>
+          <button type="button" class="preset-btn" data-preset="30d">Last 30 Days</button>
+          <button type="button" class="preset-btn" data-preset="week">This Week</button>
+          <button type="button" class="preset-btn" data-preset="month">This Month</button>
         </div>
       </div>
 
+      <!-- Row 2: Granular Custom Filter Controls (Classic 100% Parity) -->
+      <div class="filter-controls-row">
+        <!-- Date Range Filter -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-date-from">Date Range</label>
+          <div class="filter-date-inputs">
+            <input type="date" id="filter-date-from" class="filter-input-date" title="Filter From Date">
+            <span class="filter-date-sep">to</span>
+            <input type="date" id="filter-date-to" class="filter-input-date" title="Filter To Date">
+          </div>
+        </div>
+
+        <!-- Conversation Selector Dropdown -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-chat">Conversation</label>
+          <select id="filter-chat" class="filter-select">
+            <option value="all">All Conversations ({total_chats})</option>
+            {chat_options_html}
+          </select>
+        </div>
+
+        <!-- Complexity Filter Dropdown -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-complexity">Complexity</label>
+          <select id="filter-complexity" class="filter-select">
+            <option value="all">All Runs</option>
+            <option value="single">Single Question Runs</option>
+            <option value="multi">Multi-Question Runs (&gt;= 2)</option>
+          </select>
+        </div>
+
+        <!-- Speed / Latency Filter Dropdown -->
+        <div class="filter-control-group">
+          <label class="filter-label" for="filter-speed">Speed / Latency</label>
+          <select id="filter-speed" class="filter-select">
+            <option value="all">All Speeds</option>
+            <option value="fast">Fast (&lt; 3s)</option>
+            <option value="moderate">Moderate (3s - 8s)</option>
+            <option value="heavy">Heavy (&gt; 8s)</option>
+          </select>
+        </div>
+
+        <!-- Reset Button -->
+        <div class="filter-control-group">
+          <label class="filter-label">&nbsp;</label>
+          <button type="button" class="btn btn-reset-filter" id="filter-reset-btn" title="Reset all filters to default">
+            <span>✕ Reset</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Active Dismissible Chips Row -->
       <div class="active-chips-row" id="active-chips-container">
         <span class="active-chips-label">Active:</span>
         <span class="filter-chip" id="chip-preset">Preset: All Time</span>
@@ -1686,46 +1970,70 @@ def build_modern_dashboard_html(
       </div>
     </main>
 
-    <!-- TAB 2: CHATS -->
+    <!-- TAB 2: CHATS (Complete Feature Parity & Dedicated Search) -->
     <main id="tab-chats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-chats">
-      <div class="questions-controls-bar">
-        <div class="search-input-wrap">
-          <span class="search-icon-pos">🔍</span>
-          <input type="text" class="search-input" id="search-chats" placeholder="Search conversations by ID or topic...">
+      <!-- Chat Summary Stats Strip -->
+      <div class="stats-strip">
+        <div class="stat-pill">
+          <span class="stat-num">{total_chats}</span>
+          <span>Total Unique Chats</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">{total_runs}</span>
+          <span>Lifetime Pipeline Runs</span>
+        </div>
+        <div class="stat-pill">
+          <span class="stat-num">{avg_runs_per_chat:.1f}</span>
+          <span>Avg Runs / Chat</span>
         </div>
       </div>
-      <div class="chart-card chart-card-wide" id="chats-table-container">
-        <table class="diff-table" id="chats-table">
-          <thead>
-            <tr>
-              <th>Session / Conversation ID</th>
-              <th>Topic Summary</th>
-              <th>Runs</th>
-              <th>Questions</th>
-              <th>Last Run</th>
-            </tr>
-          </thead>
-          <tbody id="chats-tbody">
-            <!-- Rendered dynamically by JavaScript -->
-          </tbody>
-        </table>
+
+      <!-- Dedicated Search Controls for Chats -->
+      <div class="controls-bar">
+        <div class="search-input-wrap">
+          <span class="search-icon-pos">🔍</span>
+          <input type="text" id="search-chats" class="search-input" placeholder="Search chats by Conversation ID or topic summary...">
+          <span class="search-shortcut-hint">Press [/]</span>
+        </div>
+      </div>
+
+      <!-- Chat Breakdown Table -->
+      <div class="chart-card chart-card-wide" id="chats-breakdown-section">
+        <div class="table-container">
+          <table id="summary-table">
+            <thead>
+              <tr>
+                <th>Conversation ID</th>
+                <th>Topic Summary</th>
+                <th>Runs Count</th>
+                <th>Questions Answered</th>
+                <th>Last Automated</th>
+              </tr>
+            </thead>
+            <tbody id="summary-tbody">
+              <!-- Dynamically populated by client JS -->
+            </tbody>
+          </table>
+        </div>
       </div>
     </main>
 
-    <!-- TAB 3: QUESTIONS -->
+    <!-- TAB 3: QUESTIONS (Hierarchical Tree with Expand/Collapse & Copy) -->
     <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
-      <div class="questions-controls-bar">
+      <div class="controls-bar" style="justify-content: space-between; flex-wrap: wrap;">
         <div class="search-input-wrap">
           <span class="search-icon-pos">🔍</span>
-          <input type="text" class="search-input" id="search-questions" placeholder="Search question text, prompt, or options...">
+          <input type="text" id="search-questions" class="search-input" placeholder="Search questions, options, topics, or conversation IDs...">
+          <span class="search-shortcut-hint">Press [/]</span>
         </div>
         <div style="display: flex; gap: 8px;">
-          <button class="btn" id="btn-expand-all-q">Expand All</button>
-          <button class="btn" id="btn-collapse-all-q">Collapse All</button>
+          <button type="button" class="btn" id="btn-expand-all-questions">▾ Expand All</button>
+          <button type="button" class="btn" id="btn-collapse-all-questions">▸ Collapse All</button>
         </div>
       </div>
-      <div id="questions-list-container">
-        <!-- Rendered dynamically by JavaScript -->
+
+      <div id="details-container">
+        <!-- Dynamically populated by client JS -->
       </div>
     </main>
 
@@ -1820,10 +2128,11 @@ def build_modern_dashboard_html(
 
     <!-- TAB 5: CONFIG -->
     <main id="tab-config" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-config">
-      <div class="config-search-bar">
+      <div class="controls-bar">
         <div class="search-input-wrap">
           <span class="search-icon-pos">🔍</span>
           <input type="text" class="search-input" id="search-config" placeholder="Filter settings by keyword (timing, delay, poll, step)...">
+          <span class="search-shortcut-hint">Press [/]</span>
         </div>
       </div>
 
@@ -1880,7 +2189,7 @@ def build_modern_dashboard_html(
           <span>Live Console Logs (complete_automation.log)</span>
           <span style="font-size: 0.7rem; padding: 2px 6px; border-radius: 9999px; background: rgba(16,185,129,0.2); color: #34d399;">STREAMING</span>
         </div>
-        <div class="logs-drawer-controls">
+        <div style="display: flex; align-items: center; gap: 8px;">
           <button class="btn" id="btn-toggle-autoscroll" style="padding: 3px 8px; font-size: 0.72rem;">Auto-Scroll: ON</button>
           <button class="btn" id="btn-clear-logs" style="padding: 3px 8px; font-size: 0.72rem;">Clear</button>
           <button class="btn" id="btn-close-logs" style="padding: 3px 8px; font-size: 0.72rem;">✕ Close (Esc)</button>
@@ -1913,7 +2222,7 @@ def build_modern_dashboard_html(
         <div class="shortcut-row"><span>Switch to Questions</span><span class="shortcut-key">3</span></div>
         <div class="shortcut-row"><span>Switch to Mode Switch</span><span class="shortcut-key">4</span></div>
         <div class="shortcut-row"><span>Switch to Config</span><span class="shortcut-key">5</span></div>
-        <div class="shortcut-row"><span>Focus Search Input</span><span class="shortcut-key">/</span></div>
+        <div class="shortcut-row"><span>Focus Search Input (Active Tab)</span><span class="shortcut-key">/</span></div>
         <div class="shortcut-row"><span>Toggle Live Logs Drawer</span><span class="shortcut-key">L</span></div>
         <div class="shortcut-row"><span>Toggle Theme (Dark/Light)</span><span class="shortcut-key">T</span></div>
         <div class="shortcut-row"><span>Toggle Sound Chimes</span><span class="shortcut-key">M</span></div>
@@ -1933,7 +2242,7 @@ def build_modern_dashboard_html(
 {runtime_config_json_str}
   </script>
 
-  <!-- Modern Interactive JavaScript Subsystem -->
+  <!-- Complete Modern & Interactive JavaScript Subsystem -->
   <script>
     (function() {{
       const API_BASE = (window.location.protocol === 'http:' || window.location.protocol === 'https:')
@@ -1949,6 +2258,36 @@ def build_modern_dashboard_html(
       let logLines = 0;
       let audioMuted = localStorage.getItem('asc_audio_muted') === 'true';
       let autoScrollLogs = true;
+      let currentActiveTab = localStorage.getItem('asc_dashboard_tab') || 'overview';
+
+      // Elements
+      const summaryTbody = document.getElementById('summary-tbody');
+      const detailsContainer = document.getElementById('details-container');
+      const searchChats = document.getElementById('search-chats');
+      const searchQuestions = document.getElementById('search-questions');
+      const searchConfig = document.getElementById('search-config');
+
+      // Filter Toolbar Elements
+      const filterDateFrom = document.getElementById('filter-date-from');
+      const filterDateTo = document.getElementById('filter-date-to');
+      const filterChat = document.getElementById('filter-chat');
+      const filterComplexity = document.getElementById('filter-complexity');
+      const filterSpeed = document.getElementById('filter-speed');
+      const filterResetBtn = document.getElementById('filter-reset-btn');
+      const filterCountEl = document.getElementById('filter-count');
+      const filterTotalEl = document.getElementById('filter-total');
+      const activeChipsContainer = document.getElementById('active-chips-container');
+      const presetBtns = document.querySelectorAll('.preset-btn');
+
+      function escapeHtml(str) {{
+        if (!str) return '';
+        return String(str)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;')
+          .replace(/'/g, '&#039;');
+      }}
 
       // Toast notification helper
       function showToast(msg) {{
@@ -2030,6 +2369,9 @@ def build_modern_dashboard_html(
       const contextualFilters = document.getElementById('contextual-filter-toolbar');
 
       function switchTab(targetTab) {{
+        currentActiveTab = targetTab;
+        localStorage.setItem('asc_dashboard_tab', targetTab);
+
         tabs.forEach(t => {{
           const active = t.getAttribute('data-tab') === targetTab;
           t.classList.toggle('active', active);
@@ -2042,13 +2384,14 @@ def build_modern_dashboard_html(
 
         // Show filters on overview & chats, hide on modes & config
         if (contextualFilters) {{
-          contextualFilters.style.display = (targetTab === 'overview' || targetTab === 'chats') ? 'block' : 'none';
+          contextualFilters.style.display = (targetTab === 'overview' || targetTab === 'chats' || targetTab === 'questions') ? 'block' : 'none';
         }}
       }}
 
       tabs.forEach(btn => {{
         btn.addEventListener('click', () => switchTab(btn.getAttribute('data-tab')));
       }});
+      switchTab(currentActiveTab);
 
       // Collapsible Card Headers
       document.querySelectorAll('.collapsible-header').forEach(header => {{
@@ -2086,66 +2429,301 @@ def build_modern_dashboard_html(
         }}
       }});
 
-      // Render Chats Table
-      const chatsTbody = document.getElementById('chats-tbody');
-      if (chatsTbody) {{
-        let chatHtml = '';
-        Object.values(chats).forEach(c => {{
-          const lastTs = c.last_run_timestamp ? c.last_run_timestamp.split('T')[0] : 'N/A';
-          chatHtml += `<tr>
-            <td><code style="color:#818cf8;">${{c.conversation_id}}</code></td>
-            <td>${{c.topic_summary || 'Conversation Summary'}}</td>
-            <td><strong>${{c.run_count || 0}}</strong></td>
-            <td><strong>${{c.total_questions || 0}}</strong></td>
-            <td style="color:var(--text-muted);">${{lastTs}}</td>
-          </tr>`;
-        }});
-        chatsTbody.innerHTML = chatHtml || '<tr><td colspan="5" style="text-align:center;">No conversation records found.</td></tr>';
+      // ======================================================================
+      // Multi-Dimensional Filtering Logic (100% Classic Parity)
+      // ======================================================================
+      function formatDate(d) {{
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
+        return `${{year}}-${{month}}-${{day}}`;
       }}
 
-      // Render Questions Cards
-      const qContainer = document.getElementById('questions-list-container');
-      if (qContainer) {{
-        let qHtml = '';
-        let qTotal = 0;
-        Object.values(chats).forEach(c => {{
-          (c.runs || []).forEach(r => {{
-            (r.questions || []).forEach(q => {{
-              qTotal++;
-              const selectedIdx = q.selected_option_index || 1;
-              let optsHtml = '';
-              (q.options || []).forEach((opt, idx) => {{
-                const optNum = idx + 1;
-                const isSel = optNum === selectedIdx;
-                const isRec = opt.includes('(Recommended)');
-                optsHtml += `<div class="q-option-item ${{isSel ? 'is-selected' : ''}}">
-                  <span>${{optNum}}. ${{opt}}</span>
-                  <div class="q-option-badges">
-                    ${{isSel ? '<span class="badge-selected">✓ Selected</span>' : ''}}
-                    ${{isRec ? '<span class="badge-recommended">⭐ Recommended</span>' : ''}}
+      function runMatchesFilters(cid, chat, run) {{
+        const fromVal = filterDateFrom ? filterDateFrom.value : '';
+        const toVal = filterDateTo ? filterDateTo.value : '';
+        const selChat = filterChat ? filterChat.value : 'all';
+        const selComplexity = filterComplexity ? filterComplexity.value : 'all';
+        const selSpeed = filterSpeed ? filterSpeed.value : 'all';
+
+        // 1. Conversation filter
+        if (selChat !== 'all' && cid !== selChat) {{
+          return false;
+        }}
+
+        // 2. Date range filter
+        if (run && run.timestamp) {{
+          const runDateStr = run.timestamp.split('T')[0];
+          if (fromVal && runDateStr < fromVal) return false;
+          if (toVal && runDateStr > toVal) return false;
+        }}
+
+        // 3. Complexity filter
+        if (run) {{
+          const qCount = run.questions_count !== undefined ? run.questions_count : (run.questions ? run.questions.length : 0);
+          if (selComplexity === 'single' && qCount !== 1) return false;
+          if (selComplexity === 'multi' && qCount < 2) return false;
+        }}
+
+        // 4. Latency / Speed filter
+        if (run) {{
+          const dur = typeof run.duration_seconds === 'number' ? run.duration_seconds : 0.0;
+          if (selSpeed === 'fast' && dur >= 3.0) return false;
+          if (selSpeed === 'moderate' && (dur < 3.0 || dur > 8.0)) return false;
+          if (selSpeed === 'heavy' && dur <= 8.0) return false;
+        }}
+
+        return true;
+      }}
+
+      function updateActiveChips() {{
+        if (!activeChipsContainer) return;
+        let chipsHtml = '<span class="active-chips-label">Active:</span>';
+
+        // Preset chip
+        const activePresetBtn = document.querySelector('.preset-btn.active');
+        const presetVal = activePresetBtn ? activePresetBtn.getAttribute('data-preset') : 'all';
+        chipsHtml += `<span class="filter-chip">⚡ ${{activePresetBtn ? activePresetBtn.textContent : 'All Time'}}</span>`;
+
+        // Date chip
+        if (filterDateFrom && filterDateFrom.value && filterDateTo && filterDateTo.value) {{
+          chipsHtml += `<span class="filter-chip">📅 ${{filterDateFrom.value}} to ${{filterDateTo.value}} <span class="filter-chip-remove" onclick="clearDateFilter()">✕</span></span>`;
+        }}
+
+        // Chat chip
+        if (filterChat && filterChat.value !== 'all') {{
+          const selOpt = filterChat.options[filterChat.selectedIndex];
+          chipsHtml += `<span class="filter-chip">📂 ${{selOpt ? selOpt.textContent.slice(0, 25) : 'Chat'}} <span class="filter-chip-remove" onclick="clearChatFilter()">✕</span></span>`;
+        }}
+
+        // Complexity chip
+        if (filterComplexity && filterComplexity.value !== 'all') {{
+          chipsHtml += `<span class="filter-chip">🎯 ${{filterComplexity.value === 'single' ? 'Single Q' : 'Multi Q'}} <span class="filter-chip-remove" onclick="clearComplexityFilter()">✕</span></span>`;
+        }}
+
+        // Speed chip
+        if (filterSpeed && filterSpeed.value !== 'all') {{
+          chipsHtml += `<span class="filter-chip">⚡ ${{filterSpeed.value}} <span class="filter-chip-remove" onclick="clearSpeedFilter()">✕</span></span>`;
+        }}
+
+        activeChipsContainer.innerHTML = chipsHtml;
+      }}
+
+      window.clearDateFilter = function() {{
+        if (filterDateFrom) filterDateFrom.value = '';
+        if (filterDateTo) filterDateTo.value = '';
+        applyFilters();
+      }};
+      window.clearChatFilter = function() {{
+        if (filterChat) filterChat.value = 'all';
+        applyFilters();
+      }};
+      window.clearComplexityFilter = function() {{
+        if (filterComplexity) filterComplexity.value = 'all';
+        applyFilters();
+      }};
+      window.clearSpeedFilter = function() {{
+        if (filterSpeed) filterSpeed.value = 'all';
+        applyFilters();
+      }};
+
+      // Render Chats Table
+      function renderChats() {{
+        if (!summaryTbody) return;
+        const searchVal = (searchChats ? searchChats.value : '').toLowerCase().trim();
+        const chatEntries = Object.entries(chats);
+        summaryTbody.innerHTML = '';
+        let tableRows = 0;
+
+        for (const [cid, chat] of chatEntries) {{
+          const topic = chat.topic_summary || 'Untitled Conversation';
+          const prompt = chat.last_user_prompt || '';
+          const runs = chat.runs || [];
+
+          // Text match
+          const textMatch = !searchVal ||
+            cid.toLowerCase().includes(searchVal) ||
+            topic.toLowerCase().includes(searchVal) ||
+            prompt.toLowerCase().includes(searchVal);
+
+          if (!textMatch) continue;
+
+          // Check if any run matches active multidimensional filters
+          const matchingRuns = runs.filter(run => runMatchesFilters(cid, chat, run));
+          const chatFilterMatch = runs.length > 0 ? (matchingRuns.length > 0) : (filterChat ? filterChat.value === 'all' || filterChat.value === cid : true);
+
+          if (chatFilterMatch) {{
+            tableRows++;
+            const displayRunCount = runs.length > 0 ? matchingRuns.length : (chat.run_count || 0);
+            const displayQsCount = runs.length > 0 ? matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0) : (chat.total_questions || 0);
+
+            const tr = document.createElement('tr');
+            tr.innerHTML = `
+              <td><span class="chat-id-tag">${{escapeHtml(cid)}}</span></td>
+              <td><strong>${{escapeHtml(topic)}}</strong></td>
+              <td><span class="badge-count">${{displayRunCount}}</span></td>
+              <td><span class="badge-count">${{displayQsCount}}</span></td>
+              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">${{chat.last_run_timestamp ? new Date(chat.last_run_timestamp).toLocaleString() : 'N/A'}}</td>
+            `;
+            summaryTbody.appendChild(tr);
+          }}
+        }}
+
+        if (tableRows === 0) {{
+          summaryTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">No matching chat records found.</td></tr>`;
+        }}
+      }}
+
+      // Render Questions Cards (Deep Hierarchical Structure)
+      function renderQuestions() {{
+        if (!detailsContainer) return;
+        const searchVal = (searchQuestions ? searchQuestions.value : '').toLowerCase().trim();
+        const chatEntries = Object.entries(chats);
+        detailsContainer.innerHTML = '';
+        let cardsCount = 0;
+
+        for (const [cid, chat] of chatEntries) {{
+          const topic = chat.topic_summary || 'Untitled Conversation';
+          const runs = chat.runs || [];
+
+          const matchingRuns = runs.filter(run => {{
+            if (!runMatchesFilters(cid, chat, run)) return false;
+            if (!searchVal) return true;
+            if (cid.toLowerCase().includes(searchVal) || topic.toLowerCase().includes(searchVal)) return true;
+            return (run.questions || []).some(q =>
+              (q.question || '').toLowerCase().includes(searchVal) ||
+              (q.options || []).some(opt => opt.toLowerCase().includes(searchVal))
+            );
+          }});
+
+          if (matchingRuns.length > 0) {{
+            cardsCount++;
+            const card = document.createElement('div');
+            card.className = 'chat-card';
+
+            let runsHtml = '';
+            matchingRuns.forEach((run, rIdx) => {{
+              const runDate = run.timestamp ? new Date(run.timestamp).toLocaleString() : 'N/A';
+              const dur = run.duration_seconds ? run.duration_seconds.toFixed(1) + 's' : 'N/A';
+              const questions = run.questions || [];
+
+              let qHtml = '';
+              questions.forEach((q, qIdx) => {{
+                let optionsHtml = '';
+                (q.options || []).forEach((opt, optIdx) => {{
+                  const isSelected = (optIdx + 1 === q.selected_option_index) ||
+                                     (q.selected_option_text && opt.trim() === q.selected_option_text.trim());
+                  const isRec = opt.includes('(Recommended)');
+                  optionsHtml += `
+                    <div class="option-item ${{isSelected ? 'selected' : ''}}">
+                      <span><strong>${{optIdx + 1}}.</strong> ${{escapeHtml(opt)}}</span>
+                      <div style="display:flex; gap:6px;">
+                        ${{isSelected ? '<span class="option-badge">✓ Selected</span>' : ''}}
+                        ${{isRec ? '<span style="font-size:0.68rem; padding:2px 7px; border-radius:9999px; background:rgba(6,182,212,0.18); color:#22d3ee; border:1px solid rgba(6,182,212,0.4);">⭐ Recommended</span>' : ''}}
+                      </div>
+                    </div>
+                  `;
+                }});
+
+                qHtml += `
+                  <div class="question-card" data-question-num="${{q.question_index || (qIdx + 1)}}">
+                    <div class="question-prompt" onclick="toggleQuestionPrompt(this)">
+                      <div class="question-prompt-left">
+                        <span class="collapse-icon">▾</span>
+                        <span class="question-num">Q${{q.question_index || (qIdx + 1)}}</span>
+                        <span>${{escapeHtml(q.question)}}</span>
+                      </div>
+                      <div class="question-prompt-right">
+                        <button class="btn-copy-qa" onclick="event.stopPropagation(); copyQACard(this)" data-q="${{encodeURIComponent(q.question || '')}}" data-ans="${{encodeURIComponent(q.selected_option_text || '')}}">
+                          📋 Copy Q&A
+                        </button>
+                        <span class="badge-count" style="font-size: 0.72rem;">${{(q.options || []).length}} options</span>
+                      </div>
+                    </div>
+                    <div class="options-list">
+                      ${{optionsHtml}}
+                    </div>
                   </div>
-                </div>`;
+                `;
               }});
 
-              qHtml += `<div class="question-card" data-q-text="${{(q.question || '').toLowerCase()}}">
-                <div class="q-card-header">
-                  <div class="q-title-wrap">
-                    <span class="q-index-badge">Question #${{qTotal}} • Session: ${{c.conversation_id.slice(0,8)}}...</span>
-                    <div class="q-title">${{q.question || 'Question Text'}}</div>
+              runsHtml += `
+                <div class="run-block" data-run-id="${{escapeHtml(run.run_id || '')}}">
+                  <div class="run-header" onclick="toggleRunHeader(this)">
+                    <div style="display: flex; align-items: center; gap: 8px;">
+                      <span class="collapse-icon">▾</span>
+                      <span style="font-weight: 700; color: var(--text-primary);">⚡ Run #${{rIdx + 1}} (${{escapeHtml(run.run_id || 'N/A')}})</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 12px;">
+                      <span>Duration: ${{dur}} | ${{runDate}}</span>
+                    </div>
                   </div>
-                  <div class="q-actions">
-                    <button class="btn-copy-qa" onclick="copyQACard(this)" data-q="${{encodeURIComponent(q.question || '')}}" data-ans="${{encodeURIComponent(q.selected_option_text || '')}}">
-                      📋 Copy Q&A
-                    </button>
+                  <div class="run-body">
+                    ${{qHtml}}
                   </div>
                 </div>
-                <div class="q-options-list">${{optsHtml}}</div>
-              </div>`;
+              `;
             }});
-          }});
-        }});
-        qContainer.innerHTML = qHtml || '<div style="padding:20px; text-align:center;">No question details available.</div>';
+
+            const totalFilteredQs = matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0);
+
+            card.innerHTML = `
+              <div class="chat-card-header" onclick="toggleChatHeader(this)">
+                <div class="chat-card-title">
+                  <span class="collapse-icon">▾</span>
+                  <span class="chat-id-tag">${{escapeHtml(cid)}}</span>
+                  <span>${{escapeHtml(topic)}}</span>
+                </div>
+                <div class="chat-card-meta">
+                  <span class="badge-count">${{matchingRuns.length}} run(s)</span>
+                  <span class="badge-count">${{totalFilteredQs}} question(s)</span>
+                </div>
+              </div>
+              <div class="chat-card-body">
+                ${{runsHtml}}
+              </div>
+            `;
+            detailsContainer.appendChild(card);
+          }}
+        }}
+
+        if (cardsCount === 0) {{
+          detailsContainer.innerHTML = `
+            <div style="text-align:center; padding: 40px; color: var(--text-muted);">
+              <div style="font-size: 2rem; margin-bottom: 8px;">📭</div>
+              <div style="font-weight: 700; font-size: 1.1rem; color: var(--text-primary); margin-bottom: 4px;">No Questions Found</div>
+              <div>No questions match your filter criteria or search query.</div>
+            </div>
+          `;
+        }}
       }}
+
+      window.toggleChatHeader = function(hdr) {{
+        const body = hdr.nextElementSibling;
+        if (body) {{
+          const isCollapsed = body.classList.toggle('collapsed');
+          const ic = hdr.querySelector('.collapse-icon');
+          if (ic) ic.textContent = isCollapsed ? '▸' : '▾';
+        }}
+      }};
+
+      window.toggleRunHeader = function(hdr) {{
+        const body = hdr.nextElementSibling;
+        if (body) {{
+          const isCollapsed = body.classList.toggle('collapsed');
+          const ic = hdr.querySelector('.collapse-icon');
+          if (ic) ic.textContent = isCollapsed ? '▸' : '▾';
+        }}
+      }};
+
+      window.toggleQuestionPrompt = function(hdr) {{
+        const body = hdr.nextElementSibling;
+        if (body) {{
+          const isCollapsed = body.classList.toggle('collapsed');
+          const ic = hdr.querySelector('.collapse-icon');
+          if (ic) ic.textContent = isCollapsed ? '▸' : '▾';
+        }}
+      }};
 
       // 1-Click Copy Q&A
       window.copyQACard = function(btn) {{
@@ -2158,19 +2736,176 @@ def build_modern_dashboard_html(
         }});
       }};
 
-      // Questions Search Input Filter
-      const searchQ = document.getElementById('search-questions');
-      if (searchQ) {{
-        searchQ.addEventListener('input', (e) => {{
-          const val = e.target.value.toLowerCase().trim();
-          document.querySelectorAll('.question-card').forEach(card => {{
-            const t = card.getAttribute('data-q-text') || '';
-            card.style.display = t.includes(val) ? 'block' : 'none';
+      // Expand All / Collapse All Questions
+      const btnExpandAllQ = document.getElementById('btn-expand-all-questions');
+      const btnCollapseAllQ = document.getElementById('btn-collapse-all-questions');
+
+      if (btnExpandAllQ) {{
+        btnExpandAllQ.addEventListener('click', () => {{
+          if (!detailsContainer) return;
+          detailsContainer.querySelectorAll('.chat-card-body, .run-body, .options-list').forEach(el => {{
+            el.classList.remove('collapsed');
+          }});
+          detailsContainer.querySelectorAll('.collapse-icon').forEach(ic => {{
+            ic.textContent = '▾';
           }});
         }});
       }}
 
-      // Live Logs Drawer Toggling & Polling
+      if (btnCollapseAllQ) {{
+        btnCollapseAllQ.addEventListener('click', () => {{
+          if (!detailsContainer) return;
+          detailsContainer.querySelectorAll('.chat-card-body, .run-body, .options-list').forEach(el => {{
+            el.classList.add('collapsed');
+          }});
+          detailsContainer.querySelectorAll('.collapse-icon').forEach(ic => {{
+            ic.textContent = '▸';
+          }});
+        }});
+      }}
+
+      function applyFilters() {{
+        let totalRunsCount = 0;
+        let matchingRunsCount = 0;
+
+        for (const [cid, chat] of Object.entries(chats)) {{
+          const runs = chat.runs || [];
+          totalRunsCount += runs.length;
+          runs.forEach(run => {{
+            if (runMatchesFilters(cid, chat, run)) {{
+              matchingRunsCount++;
+            }}
+          }});
+        }}
+
+        if (filterCountEl) filterCountEl.textContent = matchingRunsCount;
+        if (filterTotalEl) filterTotalEl.textContent = totalRunsCount;
+
+        updateActiveChips();
+        renderChats();
+        renderQuestions();
+      }}
+
+      // Preset button handlers
+      presetBtns.forEach(btn => {{
+        btn.addEventListener('click', () => {{
+          presetBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+
+          const preset = btn.getAttribute('data-preset');
+          const now = new Date();
+
+          if (preset === 'all') {{
+            if (filterDateFrom) filterDateFrom.value = '';
+            if (filterDateTo) filterDateTo.value = '';
+          }} else if (preset === 'today') {{
+            const todayStr = formatDate(now);
+            if (filterDateFrom) filterDateFrom.value = todayStr;
+            if (filterDateTo) filterDateTo.value = todayStr;
+          }} else if (preset === 'yesterday') {{
+            const y = new Date(now.getTime() - 24 * 3600 * 1000);
+            const yStr = formatDate(y);
+            if (filterDateFrom) filterDateFrom.value = yStr;
+            if (filterDateTo) filterDateTo.value = yStr;
+          }} else if (preset === '7d') {{
+            const past7 = new Date(now.getTime() - 7 * 24 * 3600 * 1000);
+            if (filterDateFrom) filterDateFrom.value = formatDate(past7);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          }} else if (preset === '30d') {{
+            const past30 = new Date(now.getTime() - 30 * 24 * 3600 * 1000);
+            if (filterDateFrom) filterDateFrom.value = formatDate(past30);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          }} else if (preset === 'week') {{
+            const dayOfWeek = (now.getDay() + 6) % 7; // Monday as 0
+            const mon = new Date(now.getTime() - dayOfWeek * 24 * 3600 * 1000);
+            if (filterDateFrom) filterDateFrom.value = formatDate(mon);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          }} else if (preset === 'month') {{
+            const firstDay = new Date(now.getFullYear(), now.getMonth(), 1);
+            if (filterDateFrom) filterDateFrom.value = formatDate(firstDay);
+            if (filterDateTo) filterDateTo.value = formatDate(now);
+          }}
+
+          applyFilters();
+        }});
+      }});
+
+      // Event listeners for filter controls
+      if (filterDateFrom) filterDateFrom.addEventListener('change', applyFilters);
+      if (filterDateTo) filterDateTo.addEventListener('change', applyFilters);
+      if (filterChat) filterChat.addEventListener('change', applyFilters);
+      if (filterComplexity) filterComplexity.addEventListener('change', applyFilters);
+      if (filterSpeed) filterSpeed.addEventListener('change', applyFilters);
+
+      if (filterResetBtn) {{
+        filterResetBtn.addEventListener('click', () => {{
+          if (filterDateFrom) filterDateFrom.value = '';
+          if (filterDateTo) filterDateTo.value = '';
+          if (filterChat) filterChat.value = 'all';
+          if (filterComplexity) filterComplexity.value = 'all';
+          if (filterSpeed) filterSpeed.value = 'all';
+          presetBtns.forEach(b => b.classList.remove('active'));
+          const allBtn = document.querySelector('.preset-btn[data-preset="all"]');
+          if (allBtn) allBtn.classList.add('active');
+          applyFilters();
+          showToast('Filters reset to default.');
+        }});
+      }}
+
+      // Real-time Search input listeners
+      if (searchChats) searchChats.addEventListener('input', renderChats);
+      if (searchQuestions) searchQuestions.addEventListener('input', renderQuestions);
+
+      // ======================================================================
+      // Tab-Contextual Keyboard Shortcut [/] Fix
+      // ======================================================================
+      window.addEventListener('keydown', (e) => {{
+        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
+
+        if (e.key === '1') switchTab('overview');
+        else if (e.key === '2') switchTab('chats');
+        else if (e.key === '3') switchTab('questions');
+        else if (e.key === '4') switchTab('modes');
+        else if (e.key === '5') switchTab('config');
+        else if (e.key === '/') {{
+          e.preventDefault();
+          let targetInput = null;
+          if (currentActiveTab === 'chats') {{
+            targetInput = searchChats;
+          }} else if (currentActiveTab === 'questions') {{
+            targetInput = searchQuestions;
+          }} else if (currentActiveTab === 'config') {{
+            targetInput = searchConfig;
+          }} else {{
+            // On Overview, switch to chats or focus chats search
+            switchTab('chats');
+            targetInput = searchChats;
+          }}
+          if (targetInput) {{
+            targetInput.focus();
+            targetInput.select();
+          }}
+        }}
+        else if (e.key.toLowerCase() === 'l') {{
+          e.preventDefault();
+          toggleLogs();
+        }}
+        else if (e.key.toLowerCase() === 't') {{
+          if (themeToggle) themeToggle.click();
+        }}
+        else if (e.key.toLowerCase() === 'm') {{
+          if (btnAudio) btnAudio.click();
+        }}
+        else if (e.key === '?') {{
+          if (shortcutsModal) shortcutsModal.classList.toggle('open');
+        }}
+        else if (e.key === 'Escape') {{
+          if (shortcutsModal) shortcutsModal.classList.remove('open');
+          if (logsOpen) toggleLogs(false);
+        }}
+      }});
+
+      // Live Logs Drawer
       const logsDrawer = document.getElementById('logs-drawer');
       const btnToggleLogs = document.getElementById('btn-toggle-logs');
       const btnCloseLogs = document.getElementById('btn-close-logs');
@@ -2272,7 +3007,6 @@ def build_modern_dashboard_html(
         }});
       }}
 
-      // Process Status Polling
       function pollServerStatus() {{
         fetch(API_BASE + '/api/automation/status')
           .then(res => res.json())
@@ -2346,45 +3080,13 @@ def build_modern_dashboard_html(
         }});
       }}
 
-      // Keyboard Shortcuts Modal & Global Key Listeners
+      // Keyboard Shortcuts Modal
       const shortcutsModal = document.getElementById('shortcuts-modal');
       const btnHelp = document.getElementById('btn-help-shortcuts');
       const btnCloseModal = document.getElementById('btn-close-modal');
 
       if (btnHelp) btnHelp.addEventListener('click', () => shortcutsModal.classList.add('open'));
       if (btnCloseModal) btnCloseModal.addEventListener('click', () => shortcutsModal.classList.remove('open'));
-
-      window.addEventListener('keydown', (e) => {{
-        if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
-
-        if (e.key === '1') switchTab('overview');
-        else if (e.key === '2') switchTab('chats');
-        else if (e.key === '3') switchTab('questions');
-        else if (e.key === '4') switchTab('modes');
-        else if (e.key === '5') switchTab('config');
-        else if (e.key === '/') {{
-          e.preventDefault();
-          const s = document.getElementById('search-questions') || document.getElementById('search-chats');
-          if (s) s.focus();
-        }}
-        else if (e.key.toLowerCase() === 'l') {{
-          e.preventDefault();
-          toggleLogs();
-        }}
-        else if (e.key.toLowerCase() === 't') {{
-          if (themeToggle) themeToggle.click();
-        }}
-        else if (e.key.toLowerCase() === 'm') {{
-          if (btnAudio) btnAudio.click();
-        }}
-        else if (e.key === '?') {{
-          if (shortcutsModal) shortcutsModal.classList.toggle('open');
-        }}
-        else if (e.key === 'Escape') {{
-          if (shortcutsModal) shortcutsModal.classList.remove('open');
-          if (logsOpen) toggleLogs(false);
-        }}
-      }});
 
       // Auto-refresh countdown
       let count = 10;
@@ -2396,6 +3098,9 @@ def build_modern_dashboard_html(
           count = 10;
         }}
       }}, 1000);
+
+      // Initialize
+      applyFilters();
 
     }})();
   </script>

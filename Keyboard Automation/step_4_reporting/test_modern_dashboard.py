@@ -85,33 +85,46 @@ class TestModernDashboardSuite(unittest.TestCase):
         self.assertIn("card-runs", content, "Must have runs hero card.")
         self.assertIn("counter-value", content, "Must have number counter animation hook.")
 
-        # 5. Context-Aware Filter Toolbar & Active Chips
-        self.assertIn('id="contextual-filter-toolbar"', content, "Must have contextual filter toolbar.")
+        # 5. Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity)
+        self.assertIn('id="filter-date-from"', content, "Must have date from picker.")
+        self.assertIn('id="filter-date-to"', content, "Must have date to picker.")
+        self.assertIn('id="filter-chat"', content, "Must have conversation filter dropdown.")
+        self.assertIn('id="filter-complexity"', content, "Must have complexity filter dropdown.")
+        self.assertIn('id="filter-speed"', content, "Must have speed filter dropdown.")
+        self.assertIn('id="filter-reset-btn"', content, "Must have reset filters button.")
         self.assertIn("active-chips-row", content, "Must have active filter dismiss chips.")
 
-        # 6. Interactive Floating SVG Tooltip
+        # 6. Chats Tab Complete Parity
+        self.assertIn("stats-strip", content, "Must have chat summary stats strip.")
+        self.assertIn('id="search-chats"', content, "Must have dedicated search-chats input.")
+        self.assertIn('id="summary-table"', content, "Must have summary-table.")
+        self.assertIn('id="summary-tbody"', content, "Must have summary-tbody for dynamic rendering.")
+
+        # 7. Questions Tab Hierarchical Structure & Global Accordion Buttons
+        self.assertIn('id="details-container"', content, "Must have details-container.")
+        self.assertIn('id="btn-expand-all-questions"', content, "Must have expand all questions button.")
+        self.assertIn('id="btn-collapse-all-questions"', content, "Must have collapse all questions button.")
+        self.assertIn("btn-copy-qa", content, "Must have 1-click copy Q&A button.")
+
+        # 8. Interactive Floating SVG Tooltip
         self.assertIn('id="chart-floating-tooltip"', content, "Must have floating SVG chart tooltip container.")
 
-        # 7. Questions Tab 1-Click Copy Q&A
-        self.assertIn("btn-copy-qa", content, "Must have copy Q&A button.")
-        self.assertIn("badge-selected", content, "Must have selected badge.")
-        self.assertIn("badge-recommended", content, "Must have recommended badge.")
-
-        # 8. Mode Switch Visual Diff
+        # 9. Mode Switch Visual Diff
         self.assertIn('id="mode-card-prod"', content, "Must have production mode card.")
         self.assertIn('id="mode-card-test"', content, "Must have test mode card.")
         self.assertIn("diff-table", content, "Must have diff comparison table.")
 
-        # 9. Config Tab Search & Unsaved Changes Dock
+        # 10. Config Tab Search & Unsaved Changes Dock
         self.assertIn('id="search-config"', content, "Must have config search input.")
         self.assertIn('id="unsaved-changes-dock"', content, "Must have floating unsaved changes dock.")
 
-        # 10. Web Audio API Synthesizer
+        # 11. Web Audio API Synthesizer
         self.assertIn("playChime", content, "Must have Web Audio synthesizer playChime.")
         self.assertIn("AudioContext", content, "Must utilize AudioContext.")
 
-        # 11. Keyboard Shortcuts HUD Modal
+        # 12. Keyboard Shortcuts HUD Modal & Tab-Contextual / Shortcut
         self.assertIn('id="shortcuts-modal"', content, "Must have shortcuts HUD modal.")
+        self.assertIn("targetInput = searchChats", content, "Must focus searchChats when on chats tab with /.")
 
     def test_03_server_routes_classic_and_modern(self):
         """Verify dashboard server serves /classic and /modern endpoints cleanly."""
