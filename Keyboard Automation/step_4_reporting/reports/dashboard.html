@@ -1544,6 +1544,33 @@
       font-size: 0.74rem;
       color: var(--accent-indigo);
     }
+
+    /* Copy Command Button & Filter Collapse Support */
+    .btn-copy-cmd {
+      padding: 4px 10px;
+      font-size: 0.74rem;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
+    }
+    .btn-copy-cmd:hover {
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border-color: var(--accent-indigo);
+    }
+
+    .filter-toolbar.collapsed .filter-presets-row,
+    .filter-toolbar.collapsed .filter-controls-row,
+    .filter-toolbar.collapsed .active-chips-row {
+      display: none;
+    }
+
+    @keyframes spin {
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body>
@@ -1580,6 +1607,10 @@
             <span id="control-icon">▶️</span>
             <span id="control-label">Start Automation</span>
           </button>
+          <button class="btn" id="btn-open-automation-modal" title="1-Click Launch Scripts & Commands (Dept 04 & 06 Standard)" style="background: rgba(16,185,129,0.12); color: #34d399; border-color: rgba(16,185,129,0.35);">
+            <span>🚀</span>
+            <span>Scripts</span>
+          </button>
           <button class="btn btn-classic-switch" id="btn-switch-classic" onclick="window.location.href='classic_dashboard.html'" title="Switch to Simple & Classic Dashboard">
             <span>🏛️</span>
             <span>Classic View</span>
@@ -1593,8 +1624,8 @@
             <span id="audio-icon">🔔</span>
           </button>
           <button class="btn" id="theme-toggle" title="Toggle Dark/Light Theme (T)">🌓</button>
-          <button class="btn" id="btn-header-refresh" onclick="location.reload()" title="Refresh Telemetry Data">
-            <span>🔄</span>
+          <button class="btn" id="btn-header-refresh" title="Synchronous Telemetry Refresh from Disk">
+            <span id="refresh-spin-icon">🔄</span>
             <span id="refresh-countdown">10s</span>
           </button>
           <button class="btn" id="btn-help-shortcuts" title="Keyboard Shortcuts Help (?)">⌨️</button>
@@ -1645,8 +1676,11 @@
           <span>🔍</span>
           <span>Interactive Multi-Dimensional Filter Toolbar</span>
         </div>
-        <div class="filter-stats-badge" id="filter-stats-badge">
-          Showing <span id="filter-count" style="font-weight: 700; color: var(--text-primary);">7</span> of <span id="filter-total">7</span> runs
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <div class="filter-stats-badge" id="filter-stats-badge">
+            Showing <span id="filter-count" style="font-weight: 700; color: var(--text-primary);">7</span> of <span id="filter-total">7</span> runs
+          </div>
+          <button type="button" class="btn" id="filter-collapse-btn" style="padding: 2px 8px; font-size: 0.72rem;" title="Collapse/Expand Filters">▾ Collapse</button>
         </div>
       </div>
 
@@ -2739,7 +2773,69 @@
           </div>
         </div>
 
-        <!-- 4. Formatted JSON Live Preview Drawer -->
+        <!-- 4. Antigravity Window & Session Governance -->
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>🪐</span>
+              <span>Antigravity Window &amp; Session Governance</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Session Age &amp; Active Verification</span>
+          </div>
+          <div class="config-grid-2col">
+            <div class="cfg-field">
+              <div class="toggle-row">
+                <div>
+                  <span class="cfg-label">Require Grill-Me Detection</span>
+                  <div class="cfg-desc">Only act on Antigravity windows with active interactive questionnaire</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="cfg-antigravity-require-grillme" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-antigravity-active-hours">Active Window Max Age (hours)</label>
+              <div class="cfg-desc">Maximum conversation age in hours before skipping stale sessions</div>
+              <input type="number" step="0.5" min="0.5" max="168" class="cfg-input" id="cfg-antigravity-active-hours" value="12">
+            </div>
+          </div>
+        </div>
+
+        <!-- 5. Logging & Telemetry Engine -->
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>📝</span>
+              <span>Logging &amp; Telemetry Engine</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Disk Stream &amp; Verbose Diagnostics</span>
+          </div>
+          <div class="config-grid-2col">
+            <div class="cfg-field">
+              <div class="toggle-row">
+                <div>
+                  <span class="cfg-label">Verbose Debug Logging</span>
+                  <div class="cfg-desc">Stream detailed Win32, UIA element tree and scan code events</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="cfg-logging-verbose" checked>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-logging-file">Active Log File Name</label>
+              <div class="cfg-desc">Target log file path for continuous automation daemon</div>
+              <input type="text" class="cfg-input" id="cfg-logging-file" value="complete_automation.log">
+            </div>
+          </div>
+        </div>
+
+        <!-- 6. Formatted JSON Live Preview Drawer -->
         <div class="config-group-card">
           <div class="config-group-header">
             <div class="config-group-title">
@@ -2818,6 +2914,16 @@
             </div>
 
             <div class="cfg-field">
+              <label class="cfg-label" for="cfg-selection-policy">Option Selection Policy</label>
+              <div class="cfg-desc">Rule used when evaluating interactive question choices</div>
+              <select id="cfg-selection-policy" class="filter-select">
+                <option value="recommended">Recommended Option First (Recommended)</option>
+                <option value="first_available">First Available Choice (Index 1)</option>
+                <option value="highest_confidence">Highest Match Score</option>
+              </select>
+            </div>
+
+            <div class="cfg-field">
               <label class="cfg-label" for="cfg-visual-effects">Visual Animation Effects</label>
               <div class="cfg-desc">Enable smooth 60fps glassmorphism and count-up animations</div>
               <select id="cfg-visual-effects" class="filter-select">
@@ -2834,20 +2940,113 @@
                 <option value="disabled">Muted / Disabled</option>
               </select>
             </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="btn-test-chime">Synthesizer Audition</label>
+              <div class="cfg-desc">Test the real-time browser AudioContext cue</div>
+              <button type="button" class="btn" id="btn-test-chime" style="width: 100%; justify-content: center;">🔔 Test Audio Chime</button>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label">Telemetry History</label>
+              <div class="cfg-desc">Export historical runs JSON dataset</div>
+              <button type="button" class="btn" id="cfg-export-btn" style="width: 100%; justify-content: center;">📥 Export History JSON</button>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label">Preferences Reset</label>
+              <div class="cfg-desc">Clear saved theme, tab and audio preferences</div>
+              <button type="button" class="btn" id="cfg-reset-btn" style="width: 100%; justify-content: center; color: var(--accent-rose);">🔄 Reset Preferences</button>
+            </div>
           </div>
         </div>
       </div>
 
       <!-- Unified Configuration Actions Bar -->
       <div class="config-actions-bar">
-        <div style="display: flex; gap: 8px;">
-          <button type="button" class="btn" id="btn-export-config">📤 Export JSON</button>
+        <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+          <button type="button" class="btn" id="btn-copy-cli-cmd" title="Copy CLI Command to Clipboard">📋 Copy CLI Command</button>
+          <button type="button" class="btn" id="btn-download-runtime-cfg" title="Download config.json directly">📥 Download config.json</button>
+          <button type="button" class="btn" id="btn-export-config" title="Export Configuration JSON">📤 Export JSON</button>
           <button type="button" class="btn" id="btn-reset-config-defaults" style="color: var(--accent-rose);">🔄 Reset to Defaults</button>
         </div>
         <div>
           <button type="button" class="btn btn-automation" id="btn-save-runtime-config">💾 Save Configuration to config.json</button>
         </div>
       </div>
+    </main>
+
+    <!-- 1-Click Automation Execution & Monitor Modal (Classic Parity) -->
+    <div class="modal-backdrop" id="automation-modal" role="dialog" aria-modal="true" aria-labelledby="automation-modal-title">
+      <div class="modal-card" style="max-width: 640px;">
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px;">
+            <span style="font-size: 1.2rem;">🚀</span>
+            <div>
+              <h3 style="font-size: 1rem; font-weight: 700; margin: 0;" id="automation-modal-title">AutoSelect-Commander Automation</h3>
+              <p style="font-size: 0.74rem; color: var(--text-muted); margin: 0;">1-Click Server &amp; Terminal Execution Scripts</p>
+            </div>
+          </div>
+          <button type="button" class="btn" id="btn-close-automation-modal" style="padding: 2px 7px;">✕</button>
+        </div>
+
+        <div style="background: rgba(16, 185, 129, 0.08); border: 1px solid rgba(16, 185, 129, 0.25); border-radius: var(--radius-md); padding: 12px 14px; margin-bottom: 14px;">
+          <div style="display: flex; align-items: center; gap: 8px; font-weight: 600; color: var(--accent-emerald); font-size: 0.82rem; margin-bottom: 4px;">
+            <span>🟢</span>
+            <span>Autonomous Background Monitoring Engine</span>
+          </div>
+          <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
+            AutoSelect-Commander constantly monitors Antigravity chats. When an interactive questionnaire appears, it brings the window to the foreground and autonomously confirms the recommended option.
+          </p>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px; margin-bottom: 16px;">
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">Silent Background Daemon (No Terminal Window)</div>
+              <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-cyan);">wscript start_dashboard_background.vbs</code>
+            </div>
+            <button type="button" class="btn btn-sm btn-copy-cmd" data-cmd="wscript start_dashboard_background.vbs" id="btn-copy-automation-vbs">📋 Copy</button>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">Interactive Local Server &amp; Dashboard</div>
+              <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-cyan);">.\run_dashboard.bat</code>
+            </div>
+            <button type="button" class="btn btn-sm btn-copy-cmd" data-cmd=".\run_dashboard.bat" id="btn-copy-automation-run-bat">📋 Copy</button>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">Direct Python Automation Pipeline</div>
+              <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-cyan);">python step_9_complete_automation/complete_automation.py</code>
+            </div>
+            <button type="button" class="btn btn-sm btn-copy-cmd" data-cmd="python step_9_complete_automation/complete_automation.py" id="btn-copy-automation-cmd">📋 Copy</button>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">One-Shot Batch Automation</div>
+              <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-cyan);">.\run_automation.bat</code>
+            </div>
+            <button type="button" class="btn btn-sm btn-copy-cmd" data-cmd=".\run_automation.bat" id="btn-copy-automation-bat">📋 Copy</button>
+          </div>
+
+          <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-surface-elevated); border: 1px solid var(--border-subtle); border-radius: var(--radius-md); padding: 8px 12px;">
+            <div>
+              <div style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 2px;">Safe Dry-Run Simulation (No Hardware Keystrokes)</div>
+              <code style="font-family: var(--font-mono); font-size: 0.78rem; color: var(--accent-cyan);">python step_9_complete_automation/complete_automation.py --dry-run</code>
+            </div>
+            <button type="button" class="btn btn-sm btn-copy-cmd" data-cmd="python step_9_complete_automation/complete_automation.py --dry-run" id="btn-copy-automation-dry-run">📋 Copy</button>
+          </div>
+        </div>
+
+        <div style="display: flex; justify-content: flex-end;">
+          <button type="button" class="btn" id="btn-close-automation-modal-footer">Close</button>
+        </div>
+      </div>
+    </div>
     </main>
 
     <!-- Slide-Up Live Console Logs Drawer -->
@@ -3758,7 +3957,13 @@
       }
 
       function collectConfigData() {
+        const reqGrill = document.getElementById('cfg-antigravity-require-grillme');
+        const actHrs = document.getElementById('cfg-antigravity-active-hours');
+        const logVerb = document.getElementById('cfg-logging-verbose');
+        const logF = document.getElementById('cfg-logging-file');
+
         return {
+          mode: currentActiveTab === 'modes' ? (document.getElementById('mode-card-prod').classList.contains('active-mode') ? 'production' : 'test') : 'production',
           timing: {
             step0_poll_interval_prod_seconds: parseFloat(document.getElementById('cfg-timing-prod-poll').value) || 1.0,
             step0_poll_interval_test_seconds: parseFloat(document.getElementById('cfg-timing-test-poll').value) || 0.1,
@@ -3780,6 +3985,14 @@
             step2_gui_chat_select: document.getElementById('cfg-step2-enabled').checked,
             step3_keyboard_automation: document.getElementById('cfg-step3-enabled').checked,
             step4_reporting: document.getElementById('cfg-step4-enabled').checked,
+          },
+          antigravity: {
+            require_grill_me: reqGrill ? reqGrill.checked : true,
+            active_hours: actHrs ? (parseFloat(actHrs.value) || 12.0) : 12.0,
+          },
+          logging: {
+            verbose: logVerb ? logVerb.checked : true,
+            log_file: logF ? logF.value.trim() : 'complete_automation.log',
           }
         };
       }
@@ -3793,6 +4006,7 @@
         })
         .then(res => res.json())
         .then(d => {
+          playChime('copy');
           showToast('✅ Configuration successfully saved to config.json!');
           const unsavedDock = document.getElementById('unsaved-changes-dock');
           if (unsavedDock) unsavedDock.classList.remove('visible');
@@ -3806,6 +4020,36 @@
       if (btnSaveRuntimeCfg) btnSaveRuntimeCfg.addEventListener('click', saveConfigChanges);
       if (btnSaveDock) btnSaveDock.addEventListener('click', saveConfigChanges);
 
+      // Copy CLI Command
+      const btnCopyCli = document.getElementById('btn-copy-cli-cmd');
+      if (btnCopyCli) {
+        btnCopyCli.addEventListener('click', () => {
+          const cmd = 'python step_9_complete_automation/complete_automation.py';
+          navigator.clipboard.writeText(cmd).then(() => {
+            playChime('copy');
+            showToast('📋 Copied CLI command to clipboard!');
+          });
+        });
+      }
+
+      // Download config.json directly
+      const btnDownloadCfg = document.getElementById('btn-download-runtime-cfg');
+      if (btnDownloadCfg) {
+        btnDownloadCfg.addEventListener('click', () => {
+          const payload = collectConfigData();
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'config.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          playChime('copy');
+          showToast('📥 Downloaded config.json successfully.');
+        });
+      }
+
+      // Export Configuration JSON
       const btnExportCfg = document.getElementById('btn-export-config');
       if (btnExportCfg) {
         btnExportCfg.addEventListener('click', () => {
@@ -3818,6 +4062,103 @@
           a.click();
           URL.revokeObjectURL(url);
           showToast('📤 Configuration JSON exported.');
+        });
+      }
+
+      // Export History JSON
+      const btnExportHist = document.getElementById('cfg-export-btn');
+      if (btnExportHist) {
+        btnExportHist.addEventListener('click', () => {
+          const blob = new Blob([JSON.stringify(rawData, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'automation_history.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          playChime('copy');
+          showToast('📥 Exported automation_history.json successfully.');
+        });
+      }
+
+      // Reset Dashboard Preferences
+      const btnResetDash = document.getElementById('cfg-reset-btn');
+      if (btnResetDash) {
+        btnResetDash.addEventListener('click', () => {
+          localStorage.removeItem('asc_theme');
+          localStorage.removeItem('asc_dashboard_tab');
+          localStorage.removeItem('asc_audio_muted');
+          showToast('🔄 Dashboard preferences reset to factory defaults.');
+          setTimeout(() => location.reload(), 500);
+        });
+      }
+
+      // Test Audio Chime Audition
+      const btnTestChime = document.getElementById('btn-test-chime');
+      if (btnTestChime) {
+        btnTestChime.addEventListener('click', () => {
+          playChime('start');
+          setTimeout(() => playChime('copy'), 220);
+          showToast('🔔 Web Audio Chime played!');
+        });
+      }
+
+      // Filter Toolbar Collapse / Expand Toggle
+      const filterCollapseBtn = document.getElementById('filter-collapse-btn');
+      const filterToolbar = document.getElementById('contextual-filter-toolbar');
+      if (filterCollapseBtn && filterToolbar) {
+        filterCollapseBtn.addEventListener('click', () => {
+          const isCollapsed = filterToolbar.classList.toggle('collapsed');
+          filterCollapseBtn.textContent = isCollapsed ? '▸ Expand' : '▾ Collapse';
+        });
+      }
+
+      // 1-Click Automation Scripts Modal Controls
+      const automationModal = document.getElementById('automation-modal');
+      const btnOpenAutoModal = document.getElementById('btn-open-automation-modal');
+      const btnCloseAutoModal = document.getElementById('btn-close-automation-modal');
+      const btnCloseAutoFooter = document.getElementById('btn-close-automation-modal-footer');
+
+      if (btnOpenAutoModal && automationModal) {
+        btnOpenAutoModal.addEventListener('click', () => automationModal.classList.add('open'));
+      }
+      if (btnCloseAutoModal && automationModal) {
+        btnCloseAutoModal.addEventListener('click', () => automationModal.classList.remove('open'));
+      }
+      if (btnCloseAutoFooter && automationModal) {
+        btnCloseAutoFooter.addEventListener('click', () => automationModal.classList.remove('open'));
+      }
+
+      // Copy buttons inside automation modal
+      document.querySelectorAll('.btn-copy-cmd').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const cmd = btn.getAttribute('data-cmd') || '';
+          navigator.clipboard.writeText(cmd).then(() => {
+            playChime('copy');
+            showToast('📋 Copied script command to clipboard: ' + cmd);
+          });
+        });
+      });
+
+      // Synchronous Telemetry Refresh via Server API
+      const btnHeaderRefresh = document.getElementById('btn-header-refresh');
+      if (btnHeaderRefresh) {
+        btnHeaderRefresh.addEventListener('click', () => {
+          btnHeaderRefresh.disabled = true;
+          const spinIcon = document.getElementById('refresh-spin-icon');
+          if (spinIcon) spinIcon.style.display = 'inline-block';
+          if (spinIcon) spinIcon.style.animation = 'spin 0.6s linear infinite';
+          showToast('🔄 Synchronizing telemetry from disk and regenerating dashboard...');
+          fetch(API_BASE + '/api/dashboard/refresh', { method: 'POST' })
+            .then(res => res.json())
+            .then(d => {
+              playChime('copy');
+              showToast('✅ Telemetry synchronized! Reloading...');
+              setTimeout(() => location.reload(), 400);
+            })
+            .catch(() => {
+              location.reload();
+            });
         });
       }
 
