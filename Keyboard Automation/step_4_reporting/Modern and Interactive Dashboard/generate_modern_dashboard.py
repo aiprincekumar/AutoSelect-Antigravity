@@ -252,9 +252,7 @@ def build_modern_dashboard_html(
       border-radius: var(--radius-xl);
       margin-bottom: 14px;
       box-shadow: var(--shadow-md);
-      position: sticky;
-      top: 14px;
-      z-index: 100;
+      position: relative;
       gap: 16px;
       flex-wrap: wrap;
     }}
