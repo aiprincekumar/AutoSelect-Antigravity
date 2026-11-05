@@ -566,7 +566,7 @@ class CompleteAutomationController:
                 "errors": "replace",
                 "shell": False,
             }
-            if sys.platform == "win32":
+            if sys.platform == "win32" and self.headless:
                 run_kwargs["creationflags"] = subprocess.CREATE_NO_WINDOW
                 startupinfo = subprocess.STARTUPINFO()
                 startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
@@ -748,18 +748,29 @@ class CompleteAutomationController:
 
                 ok, code, msg, _ = self.execute_pipeline(capture_output=self.headless)
 
-                if self.is_test_mode:
+                if once:
                     if not self.headless:
                         print(f"\n[RESULT] {msg} (Exit Code: {code})")
-                    self.logger.info("Test Mode: Single-run task completed successfully. Automatically stopping automation as configured.")
+                    self.logger.info("Single-run execution completed (Exit Code: %d). Stopping.", code)
                     return code
+
+                if code == EXIT_CODE_NO_PENDING_CHATS:
+                    self.logger.info(
+                        "Step 1 reported no pending chats (Exit Code 10). Waiting for next monitoring interval (%.1fs)...",
+                        interval
+                    )
+                    if not self.headless:
+                        print(f"\n[INFO] {msg}")
+                        print(f"Waiting for next monitoring check in {interval:.1f}s...")
                 else:
-                    self.logger.info("Production Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.")
+                    mode_label = "Test" if self.is_test_mode else "Production"
+                    self.logger.info(
+                        "%s Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.",
+                        mode_label
+                    )
                     if not self.headless:
                         print(f"\n[RESULT] {msg} (Exit Code: {code})")
-                        print("Production Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.")
-                    if once:
-                        return code
+                        print(f"{mode_label} Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.")
 
             if once:
                 return 0 if res.is_detected else 1

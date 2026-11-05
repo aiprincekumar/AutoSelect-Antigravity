@@ -54,7 +54,18 @@ cls
 
 set "BATCH_PAUSE_HANDLED=1"
 
-"%PYTHON_EXE%" "%STEP0_SCRIPT%" %*
+set "HAS_MODE=0"
+if defined CMD_ARGS (
+    for %%A in (%*) do (
+        if "%%~A"=="--mode" set "HAS_MODE=1"
+    )
+)
+
+if "!HAS_MODE!"=="1" (
+    "%PYTHON_EXE%" "%STEP0_SCRIPT%" %*
+) else (
+    "%PYTHON_EXE%" "%STEP0_SCRIPT%" --mode production %*
+)
 set "STEP0_EXIT=%ERRORLEVEL%"
 
 if not "%STEP0_EXIT%"=="0" (

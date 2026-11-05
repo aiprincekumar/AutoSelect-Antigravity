@@ -383,6 +383,7 @@ class AntiGravityDetector:
     def __init__(
         self,
         poll_interval: Optional[float] = None,
+        mode: Optional[str] = None,
         headless: bool = False,
         verbose: Optional[bool] = None,
         log_file_path: Optional[str] = None,
@@ -401,7 +402,11 @@ class AntiGravityDetector:
         """
         # Load unified runtime configuration
         self.config = load_runtime_config(config_path)
-        self.mode = self.config.get("mode", "production")
+        if mode:
+            self.mode = mode
+            self.config["mode"] = mode
+        else:
+            self.mode = self.config.get("mode", "production")
 
         # Determine effective poll interval
         if poll_interval is not None:
