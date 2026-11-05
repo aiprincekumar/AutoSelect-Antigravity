@@ -1523,7 +1523,8 @@ class Step4ReportingEngine:
     }}
 
     .container {{
-      max-width: 1240px;
+      max-width: 1400px;
+      width: 100%;
       margin: 0 auto;
     }}
 
@@ -1574,6 +1575,7 @@ class Step4ReportingEngine:
       align-items: center;
       gap: 8px;
       flex-wrap: nowrap;
+      flex-shrink: 0;
     }}
 
     @media (max-width: 768px) {{
@@ -1690,9 +1692,11 @@ class Step4ReportingEngine:
       display: inline-flex;
       align-items: center;
       gap: 7px;
-      padding: 8px 15px;
+      padding: 7px 13px;
       font-size: 0.85rem;
       cursor: pointer;
+      white-space: nowrap;
+      flex-shrink: 0;
     }}
 
     .btn-automation-toggle.state-stopped {{
@@ -1731,7 +1735,7 @@ class Step4ReportingEngine:
       background: var(--bg-surface-elevated);
       color: var(--text-primary);
       border: 1px solid var(--border-subtle);
-      padding: 8px 14px;
+      padding: 7px 12px;
       border-radius: var(--radius-md);
       font-size: 0.85rem;
       font-weight: 500;
@@ -1740,6 +1744,8 @@ class Step4ReportingEngine:
       display: inline-flex;
       align-items: center;
       gap: 6px;
+      white-space: nowrap;
+      flex-shrink: 0;
     }}
 
     .btn-modern-switch {{
@@ -1747,6 +1753,8 @@ class Step4ReportingEngine:
       border: 1px solid rgba(99, 102, 241, 0.5);
       color: #c7d2fe;
       font-weight: 600;
+      white-space: nowrap;
+      flex-shrink: 0;
     }}
     .btn-modern-switch:hover {{
       background: linear-gradient(135deg, rgba(99, 102, 241, 0.35), rgba(168, 85, 247, 0.35));
@@ -4397,7 +4405,7 @@ class Step4ReportingEngine:
         </button>
         <button class="btn btn-modern-switch" id="btn-switch-modern" onclick="window.location.href = window.location.protocol.startsWith('http') ? '/' : '../Modern and Interactive Dashboard/dashboard.html'" title="Switch to Modern & Interactive Dashboard">
           <span>✨</span>
-          <span>Modern View</span>
+          <span>Modern</span>
         </button>
       </div>
     </header>

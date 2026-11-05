@@ -2385,7 +2385,7 @@ def build_modern_dashboard_html(
           </button>
           <button class="btn btn-classic-switch" id="btn-switch-classic" onclick="window.location.href = window.location.protocol.startsWith('http') ? '/classic' : '../Simple and Classic Dashboard/dashboard.html'" title="Switch to Simple & Classic Dashboard">
             <span>🏛️</span>
-            <span>Classic View</span>
+            <span>Classic</span>
           </button>
           <button class="btn" id="btn-toggle-logs" title="Toggle Live Console Logs Stream (L)">
             <span>📟</span>

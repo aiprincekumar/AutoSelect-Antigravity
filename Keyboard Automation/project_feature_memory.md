@@ -8,6 +8,20 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
+### Classic Mode Switch Button Text Single-Word ("Modern") & Header Flexbox Alignment Overhaul
+- **Status:** Completed & Grade A+ Certified (55/55 Reporting Tests Passed, Zero Gitleaks Findings)
+- **Local Commits:** Pending local micro-commit.
+- **Architectural Enhancements:**
+  - **Single-Word Button Labeling:** Refactored the dashboard mode switcher in Classic mode (`#btn-switch-modern`) from two words (`Modern View`) to a clean, concise single word (`Modern`), eliminating visual wrapping and text overcrowding.
+  - **Single-Word Symmetry:** Updated Modern dashboard mode switcher (`#btn-switch-classic`) from `Classic View` to single-word `Classic`, ensuring symmetrical and clean UI/UX across both interfaces.
+  - **Header Row Flexbox & Alignment Optimization:**
+    - Expanded `.container` `max-width` from `1240px` to `1400px` (`width: 100%`) in Classic mode to match Modern dashboard dimensions and provide comfortable horizontal breathing room.
+    - Added `flex-shrink: 0` to `.header-actions`, `.status-pill`, `.btn`, and `.btn-automation-toggle`.
+    - Enforced `white-space: nowrap` across all header buttons (`.btn`, `.btn-automation-toggle`, `.btn-modern-switch`) so button labels never break across multiple lines on narrower window widths.
+    - Refined `.btn` padding to `7px 12px` and status pills to `6px 12px`, ensuring all 3 status pills and 4 action buttons fit seamlessly in a single horizontal row.
+  - **Full Subsystem Consistency:** Synchronized changes across `step_4_reporting/step4_reporting.py`, `Simple and Classic Dashboard/dashboard.html`, `reports/classic_dashboard.html`, `Modern and Interactive Dashboard/dashboard.html`, and `generate_modern_dashboard.py`.
+
+
 ### Instant Reactive Header Mode Sync (Live / Test) & Polling Race Debounce
 - **Status:** Completed & Grade A+ Certified (55/55 Reporting Tests Passed, 123/123 Total Workspace Tests Passed, Zero Gitleaks Findings)
 - **Local Commits:** Pending local micro-commit.
