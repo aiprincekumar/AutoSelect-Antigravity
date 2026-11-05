@@ -236,6 +236,18 @@
       50% { transform: scale(1.4); opacity: 0.55; }
     }
 
+    .status-pill.status-mode-badge {
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+      font-weight: 700;
+    }
+    .status-pill.status-mode-badge:hover {
+      filter: brightness(1.25);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+    }
+
     .action-cluster {
       display: flex;
       align-items: center;
@@ -2194,7 +2206,7 @@
             <span class="pulse-dot"></span>
             <span id="status-text">⚪ Inactive</span>
           </span>
-          <span class="status-pill" id="header-mode-badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);" title="Operating in Single-Run Test Mode (Auto-Stop on Completion)">
+          <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); cursor: pointer; user-select: none; font-weight: 700;" title="Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE">
             🧪 TEST
           </span>
         </div>
@@ -4725,9 +4737,11 @@
               updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold);
               if (d.mode && typeof d.mode === 'string') {
                 const serverMode = d.mode.trim().toLowerCase();
-                if (serverMode !== currentExecutionMode.toLowerCase()) {
-                  currentExecutionMode = serverMode;
-                  applyExecutionModeUI(currentExecutionMode);
+                if (Date.now() - lastUserModeChangeTime > 4000) {
+                  if (serverMode !== currentExecutionMode.toLowerCase()) {
+                    currentExecutionMode = serverMode;
+                    applyExecutionModeUI(currentExecutionMode);
+                  }
                 }
               }
             }
@@ -4856,6 +4870,7 @@
       const bannerBtnTest = document.getElementById('banner-mode-test-btn');
       const modesToggleBtn = document.getElementById('modes-automation-toggle-btn');
 
+      let lastUserModeChangeTime = 0;
       let currentExecutionMode = localStorage.getItem('asc_execution_mode') || 'test';
 
       function applyExecutionModeUI(mode) {
@@ -4867,11 +4882,11 @@
         // Header Mode Badge Dynamic Sync (Phase 03)
         const headerModeBadge = document.getElementById('header-mode-badge');
         if (headerModeBadge) {
-          headerModeBadge.innerHTML = isTest ? '🧪 TEST' : '⚡ PRODUCTION';
+          headerModeBadge.innerHTML = isTest ? '🧪 TEST' : '⚡ LIVE';
           headerModeBadge.style.background = isTest ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)';
           headerModeBadge.style.color = isTest ? '#fbbf24' : '#34d399';
           headerModeBadge.style.borderColor = isTest ? 'rgba(245, 158, 11, 0.35)' : 'rgba(16, 185, 129, 0.35)';
-          headerModeBadge.title = isTest ? 'Operating in Single-Run Test Mode (Auto-Stop on Completion)' : 'Operating in Continuous Production Mode (Autonomous Loop)';
+          headerModeBadge.title = isTest ? 'Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE' : 'Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST';
         }
 
         // 1. Update Segmented Switcher Buttons
@@ -4925,13 +4940,18 @@
 
       function switchMode(newMode) {
         const isTest = (newMode === 'test');
+        lastUserModeChangeTime = Date.now();
         playChime('copy');
         applyExecutionModeUI(newMode);
-        showToast(isTest ? '🧪 Activated Test Mode (Single-Run & Auto-Stop)' : '🛡️ Activated Production Mode (Continuous Autonomous Loop)');
+        showToast(isTest ? '🧪 Activated Test Mode (Single-Run & Auto-Stop)' : '⚡ Activated Live Mode (Continuous Autonomous Loop)');
 
         // Background server persistence & silent dashboard refresh
-        const payload = collectConfigData();
-        payload.mode = newMode;
+        let payload = { mode: newMode };
+        try {
+          const full = collectConfigData();
+          payload = Object.assign({}, full, { mode: newMode });
+        } catch (_) {}
+
         fetch(API_BASE + '/api/config/save', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -4950,6 +4970,21 @@
       if (cardTest) cardTest.addEventListener('click', () => switchMode('test'));
       if (bannerBtnProd) bannerBtnProd.addEventListener('click', () => switchMode('production'));
       if (bannerBtnTest) bannerBtnTest.addEventListener('click', () => switchMode('test'));
+
+      // Direct Header Mode Badge Click & Keydown to toggle mode
+      const headerModeBadgeEl = document.getElementById('header-mode-badge');
+      if (headerModeBadgeEl) {
+        headerModeBadgeEl.addEventListener('click', () => {
+          const nextMode = (currentExecutionMode === 'test') ? 'production' : 'test';
+          switchMode(nextMode);
+        });
+        headerModeBadgeEl.addEventListener('keydown', (e) => {
+          if (e.key === 'Enter' || e.key === ' ') {
+            e.preventDefault();
+            headerModeBadgeEl.click();
+          }
+        });
+      }
 
       if (modesToggleBtn) {
         modesToggleBtn.addEventListener('click', () => {

@@ -732,7 +732,10 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             ok = core_save_runtime_config(existing_cfg, cfg_path)
             if ok:
                 if "mode" in body and isinstance(body["mode"], str):
-                    mgr.active_mode = str(body["mode"]).strip().lower()
+                    new_mode = str(body["mode"]).strip().lower()
+                    mgr.active_mode = new_mode
+                    if hasattr(DashboardRequestHandler, "server_manager") and DashboardRequestHandler.server_manager:
+                        DashboardRequestHandler.server_manager.active_mode = new_mode
                 logger.info(f"Successfully updated runtime configuration in config.json (mode={mgr.active_mode}).")
                 self.send_json_response({"saved": True, "message": "Configuration successfully saved to config.json on disk.", "mode": mgr.active_mode})
             else:

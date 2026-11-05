@@ -106,12 +106,13 @@ def build_modern_dashboard_html(
             runtime_cfg = {}
 
     current_mode = runtime_cfg.get("mode", "production").lower()
-    is_prod = current_mode == "production"
-    badge_bg = 'rgba(245, 158, 11, 0.15)' if not is_prod else 'rgba(16, 185, 129, 0.15)'
-    badge_color = '#fbbf24' if not is_prod else '#34d399'
-    badge_border = 'rgba(245, 158, 11, 0.35)' if not is_prod else 'rgba(16, 185, 129, 0.35)'
-    badge_icon = '🧪' if not is_prod else '⚡'
-    badge_title = 'Operating in Single-Run Test Mode (Auto-Stop on Completion)' if not is_prod else 'Operating in Continuous Production Mode (Autonomous Loop)'
+    is_prod = (current_mode == "production")
+    badge_bg = 'rgba(16, 185, 129, 0.15)' if is_prod else 'rgba(245, 158, 11, 0.15)'
+    badge_color = '#34d399' if is_prod else '#fbbf24'
+    badge_border = 'rgba(16, 185, 129, 0.35)' if is_prod else 'rgba(245, 158, 11, 0.35)'
+    badge_icon = '⚡' if is_prod else '🧪'
+    badge_text = 'LIVE' if is_prod else 'TEST'
+    badge_title = 'Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST' if is_prod else 'Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE'
 
     # Extract all 12 timing parameters from config.json with safe fallbacks
     timing_cfg = runtime_cfg.get("timing", {})
@@ -395,6 +396,18 @@ def build_modern_dashboard_html(
     @keyframes pulseAnim {{
       0%, 100% {{ transform: scale(1); opacity: 1; }}
       50% {{ transform: scale(1.4); opacity: 0.55; }}
+    }}
+
+    .status-pill.status-mode-badge {{
+      cursor: pointer;
+      user-select: none;
+      transition: var(--transition);
+      font-weight: 700;
+    }}
+    .status-pill.status-mode-badge:hover {{
+      filter: brightness(1.25);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
     }}
 
     .action-cluster {{
@@ -2355,8 +2368,8 @@ def build_modern_dashboard_html(
             <span class="pulse-dot"></span>
             <span id="status-text">⚪ Inactive</span>
           </span>
-          <span class="status-pill" id="header-mode-badge" style="background: {badge_bg}; color: {badge_color}; border: 1px solid {badge_border};" title="{badge_title}">
-            {badge_icon} {current_mode.upper()}
+          <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" style="background: {badge_bg}; color: {badge_color}; border: 1px solid {badge_border}; cursor: pointer; user-select: none; font-weight: 700;" title="{badge_title}">
+            {badge_icon} {badge_text}
           </span>
         </div>
 
@@ -4277,9 +4290,11 @@ def build_modern_dashboard_html(
               updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold);
               if (d.mode && typeof d.mode === 'string') {{
                 const serverMode = d.mode.trim().toLowerCase();
-                if (serverMode !== currentExecutionMode.toLowerCase()) {{
-                  currentExecutionMode = serverMode;
-                  applyExecutionModeUI(currentExecutionMode);
+                if (Date.now() - lastUserModeChangeTime > 4000) {{
+                  if (serverMode !== currentExecutionMode.toLowerCase()) {{
+                    currentExecutionMode = serverMode;
+                    applyExecutionModeUI(currentExecutionMode);
+                  }}
                 }}
               }}
             }}
@@ -4408,6 +4423,7 @@ def build_modern_dashboard_html(
       const bannerBtnTest = document.getElementById('banner-mode-test-btn');
       const modesToggleBtn = document.getElementById('modes-automation-toggle-btn');
 
+      let lastUserModeChangeTime = 0;
       let currentExecutionMode = localStorage.getItem('asc_execution_mode') || '{current_mode}';
 
       function applyExecutionModeUI(mode) {{
@@ -4419,11 +4435,11 @@ def build_modern_dashboard_html(
         // Header Mode Badge Dynamic Sync (Phase 03)
         const headerModeBadge = document.getElementById('header-mode-badge');
         if (headerModeBadge) {{
-          headerModeBadge.innerHTML = isTest ? '🧪 TEST' : '⚡ PRODUCTION';
+          headerModeBadge.innerHTML = isTest ? '🧪 TEST' : '⚡ LIVE';
           headerModeBadge.style.background = isTest ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)';
           headerModeBadge.style.color = isTest ? '#fbbf24' : '#34d399';
           headerModeBadge.style.borderColor = isTest ? 'rgba(245, 158, 11, 0.35)' : 'rgba(16, 185, 129, 0.35)';
-          headerModeBadge.title = isTest ? 'Operating in Single-Run Test Mode (Auto-Stop on Completion)' : 'Operating in Continuous Production Mode (Autonomous Loop)';
+          headerModeBadge.title = isTest ? 'Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE' : 'Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST';
         }}
 
         // 1. Update Segmented Switcher Buttons
@@ -4477,13 +4493,18 @@ def build_modern_dashboard_html(
 
       function switchMode(newMode) {{
         const isTest = (newMode === 'test');
+        lastUserModeChangeTime = Date.now();
         playChime('copy');
         applyExecutionModeUI(newMode);
-        showToast(isTest ? '🧪 Activated Test Mode (Single-Run & Auto-Stop)' : '🛡️ Activated Production Mode (Continuous Autonomous Loop)');
+        showToast(isTest ? '🧪 Activated Test Mode (Single-Run & Auto-Stop)' : '⚡ Activated Live Mode (Continuous Autonomous Loop)');
 
         // Background server persistence & silent dashboard refresh
-        const payload = collectConfigData();
-        payload.mode = newMode;
+        let payload = {{ mode: newMode }};
+        try {{
+          const full = collectConfigData();
+          payload = Object.assign({{}}, full, {{ mode: newMode }});
+        }} catch (_) {{}}
+
         fetch(API_BASE + '/api/config/save', {{
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
@@ -4502,6 +4523,21 @@ def build_modern_dashboard_html(
       if (cardTest) cardTest.addEventListener('click', () => switchMode('test'));
       if (bannerBtnProd) bannerBtnProd.addEventListener('click', () => switchMode('production'));
       if (bannerBtnTest) bannerBtnTest.addEventListener('click', () => switchMode('test'));
+
+      // Direct Header Mode Badge Click & Keydown to toggle mode
+      const headerModeBadgeEl = document.getElementById('header-mode-badge');
+      if (headerModeBadgeEl) {{
+        headerModeBadgeEl.addEventListener('click', () => {{
+          const nextMode = (currentExecutionMode === 'test') ? 'production' : 'test';
+          switchMode(nextMode);
+        }});
+        headerModeBadgeEl.addEventListener('keydown', (e) => {{
+          if (e.key === 'Enter' || e.key === ' ') {{
+            e.preventDefault();
+            headerModeBadgeEl.click();
+          }}
+        }});
+      }}
 
       if (modesToggleBtn) {{
         modesToggleBtn.addEventListener('click', () => {{

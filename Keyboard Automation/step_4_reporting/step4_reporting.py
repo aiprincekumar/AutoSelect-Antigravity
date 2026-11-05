@@ -1414,14 +1414,21 @@ class Step4ReportingEngine:
         runtime_config_json_str = json.dumps(runtime_cfg, indent=2, ensure_ascii=False)
 
         cfg_mode_val = str(runtime_cfg.get("mode", "production")).lower()
-        mode_prod_active_class = "active" if cfg_mode_val == "production" else ""
-        mode_test_active_class = "active" if cfg_mode_val == "test" else ""
+        is_prod = (cfg_mode_val == "production")
+        mode_prod_active_class = "active" if is_prod else ""
+        mode_test_active_class = "active" if not is_prod else ""
         banner_prod_active_class = mode_prod_active_class
         banner_test_active_class = mode_test_active_class
-        card_prod_active_class = "active-mode-card" if cfg_mode_val == "production" else ""
-        card_test_active_class = "active-mode-card" if cfg_mode_val == "test" else ""
-        tab_modes_badge_text = "Test" if cfg_mode_val == "test" else "Prod"
-        tab_modes_badge_class = "tab-badge-test" if cfg_mode_val == "test" else "tab-badge-prod"
+        card_prod_active_class = "active-mode-card" if is_prod else ""
+        card_test_active_class = "active-mode-card" if not is_prod else ""
+        tab_modes_badge_text = "Prod" if is_prod else "Test"
+        tab_modes_badge_class = "tab-badge-prod" if is_prod else "tab-badge-test"
+        header_badge_bg = 'rgba(16, 185, 129, 0.15)' if is_prod else 'rgba(245, 158, 11, 0.15)'
+        header_badge_color = '#34d399' if is_prod else '#fbbf24'
+        header_badge_border = 'rgba(16, 185, 129, 0.35)' if is_prod else 'rgba(245, 158, 11, 0.35)'
+        header_badge_icon = '⚡' if is_prod else '🧪'
+        header_badge_text = 'LIVE' if is_prod else 'TEST'
+        header_badge_title = 'Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST' if is_prod else 'Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE'
 
         enabled_steps = runtime_cfg.get("enabled_steps", {})
         step1_checked = "checked" if enabled_steps.get("step1_find_and_focus", True) else ""
@@ -1650,6 +1657,18 @@ class Step4ReportingEngine:
       background: rgba(239, 68, 68, 0.12);
       color: #ef4444;
       border: 1px solid rgba(239, 68, 68, 0.35);
+    }}
+
+    .status-pill.status-mode-badge {{
+      cursor: pointer;
+      user-select: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      font-weight: 700;
+    }}
+    .status-pill.status-mode-badge:hover {{
+      filter: brightness(1.25);
+      transform: translateY(-1px);
+      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.25);
     }}
 
     .status-pill.status-bridge-offline::before {{
@@ -4363,6 +4382,9 @@ class Step4ReportingEngine:
       <div class="header-actions">
         <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Control Server active on port 8501">🟢 Server Online</span>
         <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Inactive</span>
+        <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" title="{header_badge_title}" style="background: {header_badge_bg}; color: {header_badge_color}; border: 1px solid {header_badge_border}; cursor: pointer; font-weight: 700; user-select: none;">
+          {header_badge_icon} {header_badge_text}
+        </span>
         <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect Antigravity Automation">
           <span class="control-icon" id="control-icon">▶️</span>
           <span class="control-label" id="control-label">Start</span>
@@ -5848,9 +5870,23 @@ class Step4ReportingEngine:
         runtimeJsonPreview.textContent = JSON.stringify(cfgObj, null, 2);
       }}
 
-      // Mode selection synchronization across Banner & Config Tab (Dept 05 Standard)
+      let lastUserModeChangeTime = 0;
+
+      // Mode selection synchronization across Banner, Header & Config Tab (Dept 05 Standard)
       function setExecutionMode(mode, updateConfig = true) {{
         const targetMode = (mode === 'test') ? 'test' : 'production';
+        const isTest = (targetMode === 'test');
+        lastUserModeChangeTime = Date.now();
+
+        // 0. Update Header Mode Badge (Instantly Reflect State)
+        const headerModeBadge = document.getElementById('header-mode-badge');
+        if (headerModeBadge) {{
+          headerModeBadge.innerHTML = isTest ? '🧪 TEST' : '⚡ LIVE';
+          headerModeBadge.style.background = isTest ? 'rgba(245, 158, 11, 0.15)' : 'rgba(16, 185, 129, 0.15)';
+          headerModeBadge.style.color = isTest ? '#fbbf24' : '#34d399';
+          headerModeBadge.style.borderColor = isTest ? 'rgba(245, 158, 11, 0.35)' : 'rgba(16, 185, 129, 0.35)';
+          headerModeBadge.title = isTest ? 'Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE' : 'Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST';
+        }}
 
         // 1. Update hidden form input
         if (cfgRuntimeMode) cfgRuntimeMode.value = targetMode;
@@ -5858,25 +5894,25 @@ class Step4ReportingEngine:
         // 2. Update Banner Mode Buttons
         const bannerTestBtn = document.getElementById('banner-mode-test-btn');
         const bannerProdBtn = document.getElementById('banner-mode-prod-btn');
-        if (bannerTestBtn) bannerTestBtn.classList.toggle('active', targetMode === 'test');
-        if (bannerProdBtn) bannerProdBtn.classList.toggle('active', targetMode === 'production');
+        if (bannerTestBtn) bannerTestBtn.classList.toggle('active', isTest);
+        if (bannerProdBtn) bannerProdBtn.classList.toggle('active', !isTest);
 
         // 3. Update Banner Lifecycle Cards Active Highlight
         const bannerTestCard = document.getElementById('banner-card-test');
         const bannerProdCard = document.getElementById('banner-card-prod');
-        if (bannerTestCard) bannerTestCard.classList.toggle('active-mode-card', targetMode === 'test');
-        if (bannerProdCard) bannerProdCard.classList.toggle('active-mode-card', targetMode === 'production');
+        if (bannerTestCard) bannerTestCard.classList.toggle('active-mode-card', isTest);
+        if (bannerProdCard) bannerProdCard.classList.toggle('active-mode-card', !isTest);
 
         // 4. Update Config Tab Mode Pills
-        if (cfgModeTestBtn) cfgModeTestBtn.classList.toggle('active', targetMode === 'test');
-        if (cfgModeProdBtn) cfgModeProdBtn.classList.toggle('active', targetMode === 'production');
+        if (cfgModeTestBtn) cfgModeTestBtn.classList.toggle('active', isTest);
+        if (cfgModeProdBtn) cfgModeProdBtn.classList.toggle('active', !isTest);
 
         // 5. Update Tab Badge for Mode Switch tab
         const tabModesBadge = document.getElementById('tab-modes-badge');
         if (tabModesBadge) {{
-          tabModesBadge.textContent = (targetMode === 'test') ? 'Test' : 'Prod';
-          tabModesBadge.classList.toggle('tab-badge-test', targetMode === 'test');
-          tabModesBadge.classList.toggle('tab-badge-prod', targetMode === 'production');
+          tabModesBadge.textContent = isTest ? 'Test' : 'Prod';
+          tabModesBadge.classList.toggle('tab-badge-test', isTest);
+          tabModesBadge.classList.toggle('tab-badge-prod', !isTest);
         }}
 
         // 6. Update Current Config Object and Live JSON Preview
@@ -5884,6 +5920,16 @@ class Step4ReportingEngine:
         if (updateConfig && typeof updateRuntimeJsonPreview === 'function') {{
           updateRuntimeJsonPreview();
         }}
+
+        // 7. Persist to LocalStorage and Server API immediately
+        localStorage.setItem('asc_execution_mode', targetMode);
+        localStorage.setItem('asc_automation_last_mode', targetMode);
+
+        fetch(API_BASE + '/api/config/save', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify({{ mode: targetMode }})
+        }}).catch(() => {{}});
       }}
 
       // Banner Mode Buttons & Card Clicks
@@ -5903,6 +5949,24 @@ class Step4ReportingEngine:
       }}
       if (bannerCardProd) {{
         bannerCardProd.addEventListener('click', () => setExecutionMode('production'));
+      }}
+
+      // Header Mode Badge Click & Keydown to toggle mode
+      const headerModeBadgeEl = document.getElementById('header-mode-badge');
+      if (headerModeBadgeEl) {{
+        headerModeBadgeEl.addEventListener('click', () => {{
+          const currentMode = (typeof currentConfig !== 'undefined' && currentConfig && currentConfig.mode) ||
+                              localStorage.getItem('asc_execution_mode') || 'production';
+          const nextMode = (currentMode === 'test') ? 'production' : 'test';
+          setExecutionMode(nextMode);
+          showToast(`Switched mode to ${{nextMode === 'test' ? 'TEST' : 'LIVE'}}!`, 'info');
+        }});
+        headerModeBadgeEl.addEventListener('keydown', (e) => {{
+          if (e.key === 'Enter' || e.key === ' ') {{
+            e.preventDefault();
+            headerModeBadgeEl.click();
+          }}
+        }});
       }}
 
       // Keyboard accessibility for interactive banner cards
@@ -6299,6 +6363,15 @@ class Step4ReportingEngine:
               const wasRunning = isAutomationActive || getAutomationRunning();
               const recordedMode = localStorage.getItem('asc_automation_last_mode') || res.data.mode || (cfgRuntimeMode ? cfgRuntimeMode.value : 'production');
 
+              if (res.data.mode && typeof res.data.mode === 'string') {{
+                const serverMode = res.data.mode.trim().toLowerCase();
+                if (Date.now() - lastUserModeChangeTime > 4000) {{
+                  const localMode = (cfgRuntimeMode ? cfgRuntimeMode.value : (currentConfig ? currentConfig.mode : '')) || 'production';
+                  if (serverMode !== localMode.toLowerCase()) {{
+                    setExecutionMode(serverMode, false);
+                  }}
+                }}
+              }}
               if (running) {{
                 if (res.data.mode) {{
                   localStorage.setItem('asc_automation_last_mode', res.data.mode);
