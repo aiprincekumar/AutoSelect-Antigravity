@@ -528,24 +528,26 @@ def build_modern_dashboard_html(
     .tab-nav {{
       display: flex;
       gap: 6px;
-      background: var(--bg-surface);
+      background: rgba(14, 20, 34, 0.75);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 5px;
-      margin-bottom: 18px;
-      box-shadow: var(--shadow-sm);
+      padding: 6px;
+      margin-bottom: 22px;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.25);
       overflow-x: auto;
     }}
 
     .tab-btn {{
       display: inline-flex;
       align-items: center;
-      gap: 7px;
-      padding: 9px 18px;
-      border: none;
+      gap: 8px;
+      padding: 10px 20px;
+      border: 1px solid transparent;
       background: transparent;
       color: var(--text-secondary);
-      font-size: 0.85rem;
+      font-size: 0.88rem;
       font-weight: 600;
       border-radius: var(--radius-md);
       cursor: pointer;
@@ -556,12 +558,14 @@ def build_modern_dashboard_html(
     .tab-btn:hover {{
       color: var(--text-primary);
       background: var(--bg-surface-elevated);
+      border-color: var(--border-subtle);
     }}
 
     .tab-btn.active {{
-      background: var(--accent-indigo);
+      background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
       color: #ffffff;
-      box-shadow: 0 2px 12px var(--accent-indigo-glow);
+      border-color: rgba(99, 102, 241, 0.5);
+      box-shadow: 0 4px 16px var(--accent-indigo-glow);
     }}
 
     .tab-badge {{
@@ -577,6 +581,254 @@ def build_modern_dashboard_html(
       background: var(--bg-surface-elevated);
       color: var(--text-muted);
       border: 1px solid var(--border-subtle);
+    }}
+
+    
+    /* Modern Chats Dual-View & Conversation Cards */
+    .chats-view-switcher {{
+      display: inline-flex;
+      background: var(--bg-surface-elevated);
+      padding: 4px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      gap: 4px;
+    }}
+
+    .view-btn {{
+      padding: 6px 14px;
+      font-size: 0.82rem;
+      font-weight: 600;
+      border-radius: var(--radius-sm);
+      border: 1px solid transparent;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: var(--transition);
+      background: transparent;
+      color: var(--text-secondary);
+    }}
+
+    .view-btn.active {{
+      background: var(--accent-indigo) !important;
+      color: #ffffff !important;
+      box-shadow: 0 2px 8px var(--accent-indigo-glow);
+    }}
+
+    .chats-card-grid {{
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(360px, 1fr));
+      gap: 16px;
+      margin-top: 14px;
+    }}
+
+    .modern-chat-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      gap: 14px;
+      box-shadow: var(--shadow-sm);
+      transition: var(--transition);
+      position: relative;
+      overflow: hidden;
+    }}
+
+    .modern-chat-card::before {{
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 4px;
+      height: 100%;
+      background: linear-gradient(180deg, var(--accent-indigo), var(--accent-cyan));
+      opacity: 0.8;
+    }}
+
+    .modern-chat-card:hover {{
+      transform: translateY(-2px);
+      border-color: var(--border-accent);
+      box-shadow: 0 8px 24px rgba(99, 102, 241, 0.18);
+    }}
+
+    .chat-card-top-row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }}
+
+    .chat-avatar-badge {{
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    .chat-avatar-icon {{
+      width: 32px;
+      height: 32px;
+      border-radius: var(--radius-sm);
+      background: linear-gradient(135deg, rgba(99, 102, 241, 0.25), rgba(168, 85, 247, 0.25));
+      border: 1px solid rgba(99, 102, 241, 0.35);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+    }}
+
+    .chat-topic-title {{
+      font-size: 1.02rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      line-height: 1.4;
+      display: -webkit-box;
+      -webkit-line-clamp: 2;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }}
+
+    .chat-metrics-bar {{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }}
+
+    .chat-metric-pill {{
+      font-size: 0.76rem;
+      font-weight: 600;
+      font-family: var(--font-mono);
+      padding: 3px 9px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }}
+
+    .chat-card-actions {{
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      padding-top: 10px;
+      border-top: 1px solid var(--border-subtle);
+    }}
+
+    .btn-chat-action {{
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-primary);
+      padding: 6px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 0.78rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      transition: var(--transition);
+    }}
+
+    .btn-chat-action:hover {{
+      background: var(--accent-indigo);
+      color: #fff;
+      border-color: var(--accent-indigo);
+      box-shadow: 0 2px 10px var(--accent-indigo-glow);
+    }}
+
+    /* Questions Tab Developer Decision Studio */
+    .questions-quick-filters {{
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-bottom: 16px;
+      align-items: center;
+    }}
+
+    .q-filter-chip {{
+      background: var(--bg-surface-elevated);
+      border: 1px solid var(--border-subtle);
+      color: var(--text-secondary);
+      font-size: 0.78rem;
+      font-weight: 600;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      cursor: pointer;
+      transition: var(--transition);
+    }}
+
+    .q-filter-chip:hover {{
+      color: var(--text-primary);
+      border-color: var(--accent-indigo);
+      background: var(--bg-surface-highlight);
+    }}
+
+    .q-filter-chip.active {{
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border-color: var(--accent-indigo);
+      box-shadow: 0 2px 8px var(--accent-indigo-glow);
+    }}
+
+    .question-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      margin-bottom: 12px;
+      overflow: hidden;
+      transition: var(--transition);
+      position: relative;
+    }}
+
+    .question-card::before {{
+      content: "";
+      position: absolute;
+      top: 0;
+      left: 0;
+      bottom: 0;
+      width: 4px;
+      background: var(--accent-indigo);
+    }}
+
+    .question-card.rec-matched::before {{
+      background: var(--accent-emerald);
+    }}
+
+    .question-card:hover {{
+      border-color: var(--border-accent);
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.2);
+    }}
+
+    .option-item {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      background: var(--bg-surface-elevated);
+      font-size: 0.86rem;
+      color: var(--text-secondary);
+      transition: var(--transition);
+      gap: 10px;
+    }}
+
+    .option-item:hover {{
+      border-color: var(--border-hover);
+      background: var(--bg-surface-highlight);
+      color: var(--text-primary);
+    }}
+
+    .option-item.selected {{
+      border-color: var(--accent-emerald);
+      background: rgba(16, 185, 129, 0.1);
+      color: var(--text-primary);
+      font-weight: 600;
+      box-shadow: 0 0 12px rgba(16, 185, 129, 0.2);
     }}
 
     /* ========================================================================
@@ -2431,28 +2683,53 @@ def build_modern_dashboard_html(
     <main id="tab-chats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-chats">
       <div class="stats-strip">
         <div class="stat-pill">
-          <span class="stat-num">{total_chats}</span>
-          <span>Total Unique Chats</span>
+          <span class="stat-icon" style="font-size: 1.5rem; margin-right: 8px;">📂</span>
+          <div>
+            <div class="stat-num">{total_chats}</div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Total Unique Chats</div>
+          </div>
         </div>
         <div class="stat-pill">
-          <span class="stat-num">{total_runs}</span>
-          <span>Lifetime Pipeline Runs</span>
+          <span class="stat-icon" style="font-size: 1.5rem; margin-right: 8px;">⚡</span>
+          <div>
+            <div class="stat-num">{total_runs}</div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Lifetime Pipeline Runs</div>
+          </div>
         </div>
         <div class="stat-pill">
-          <span class="stat-num">{avg_runs_per_chat:.1f}</span>
-          <span>Avg Runs / Chat</span>
+          <span class="stat-icon" style="font-size: 1.5rem; margin-right: 8px;">🎯</span>
+          <div>
+            <div class="stat-num">{avg_runs_per_chat:.1f}</div>
+            <div style="font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase;">Avg Runs / Chat</div>
+          </div>
         </div>
       </div>
 
-      <div class="controls-bar">
-        <div class="search-input-wrap">
+      <div class="controls-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div class="search-input-wrap" style="flex: 1 1 300px;">
           <span class="search-icon-pos">🔍</span>
           <input type="text" id="search-chats" class="search-input" placeholder="Search chats by Conversation ID or topic summary...">
           <span class="search-shortcut-hint">Press [/]</span>
         </div>
+        <div class="chats-view-switcher">
+          <button type="button" class="view-btn active" id="btn-view-cards" onclick="setChatsView('cards')">
+            <span>🎴 Visual Cards</span>
+          </button>
+          <button type="button" class="view-btn" id="btn-view-table" onclick="setChatsView('table')">
+            <span>📑 Compact Table</span>
+          </button>
+        </div>
       </div>
 
-      <div class="overview-diagram-card">
+      <!-- View 1: Modern Card Grid Explorer (Default) -->
+      <div id="chats-cards-view" class="chats-cards-grid-container" style="display: block;">
+        <div id="chats-card-grid" class="chats-card-grid">
+          <!-- Rendered dynamically by JavaScript -->
+        </div>
+      </div>
+
+      <!-- View 2: Compact Structured Data Table -->
+      <div id="chats-table-view" class="overview-diagram-card" style="display: none; margin-top: 14px;">
         <div class="table-container">
           <table id="summary-table">
             <thead>
@@ -2474,8 +2751,8 @@ def build_modern_dashboard_html(
 
     <!-- TAB 3: QUESTIONS (BY DEFAULT COLLAPSED ACCORDION TREE) -->
     <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
-      <div class="controls-bar" style="justify-content: space-between; flex-wrap: wrap;">
-        <div class="search-input-wrap">
+      <div class="controls-bar" style="justify-content: space-between; flex-wrap: wrap; gap: 12px;">
+        <div class="search-input-wrap" style="flex: 1 1 300px;">
           <span class="search-icon-pos">🔍</span>
           <input type="text" id="search-questions" class="search-input" placeholder="Search questions, options, topics, or conversation IDs...">
           <span class="search-shortcut-hint">Press [/]</span>
@@ -2484,6 +2761,13 @@ def build_modern_dashboard_html(
           <button type="button" class="btn" id="btn-expand-all-questions">▾ Expand All</button>
           <button type="button" class="btn" id="btn-collapse-all-questions">▸ Collapse All</button>
         </div>
+      </div>
+
+      <div class="questions-quick-filters">
+        <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.04em;">Filter Focus:</span>
+        <button type="button" class="q-filter-chip active" data-qfilter="all" onclick="setQFilter('all', this)">All Questions</button>
+        <button type="button" class="q-filter-chip" data-qfilter="recommended" onclick="setQFilter('recommended', this)">⭐ Recommended Matches</button>
+        <button type="button" class="q-filter-chip" data-qfilter="multi" onclick="setQFilter('multi', this)">⚡ Multi-Option</button>
       </div>
 
       <div id="details-container">
@@ -3423,13 +3707,15 @@ def build_modern_dashboard_html(
         applyFilters();
       }};
 
-      // Render Chats Table
+      // Render Chats: Dual Engine (Cards Explorer & Data Table)
+      const chatsCardGrid = document.getElementById('chats-card-grid');
+
       function renderChats() {{
-        if (!summaryTbody) return;
         const searchVal = (searchChats ? searchChats.value : '').toLowerCase().trim();
         const chatEntries = Object.entries(chats);
-        summaryTbody.innerHTML = '';
-        let tableRows = 0;
+        if (summaryTbody) summaryTbody.innerHTML = '';
+        if (chatsCardGrid) chatsCardGrid.innerHTML = '';
+        let matchCount = 0;
 
         for (const [cid, chat] of chatEntries) {{
           const topic = chat.topic_summary || 'Untitled Conversation';
@@ -3447,28 +3733,120 @@ def build_modern_dashboard_html(
           const chatFilterMatch = runs.length > 0 ? (matchingRuns.length > 0) : (filterChat ? filterChat.value === 'all' || filterChat.value === cid : true);
 
           if (chatFilterMatch) {{
-            tableRows++;
+            matchCount++;
             const displayRunCount = runs.length > 0 ? matchingRuns.length : (chat.run_count || 0);
             const displayQsCount = runs.length > 0 ? matchingRuns.reduce((acc, r) => acc + (r.questions_count || (r.questions ? r.questions.length : 0)), 0) : (chat.total_questions || 0);
+            const lastTimeStr = chat.last_run_timestamp ? new Date(chat.last_run_timestamp).toLocaleString() : 'N/A';
 
-            const tr = document.createElement('tr');
-            tr.innerHTML = `
-              <td><span class="chat-id-tag">${{escapeHtml(cid)}}</span></td>
-              <td><strong>${{escapeHtml(topic)}}</strong></td>
-              <td><span class="badge-count">${{displayRunCount}}</span></td>
-              <td><span class="badge-count">${{displayQsCount}}</span></td>
-              <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">${{chat.last_run_timestamp ? new Date(chat.last_run_timestamp).toLocaleString() : 'N/A'}}</td>
-            `;
-            summaryTbody.appendChild(tr);
+            // 1. Classic Table Row (Full feature parity & test assertions)
+            if (summaryTbody) {{
+              const tr = document.createElement('tr');
+              tr.innerHTML = `
+                <td><span class="chat-id-tag">${{escapeHtml(cid)}}</span></td>
+                <td><strong>${{escapeHtml(topic)}}</strong></td>
+                <td><span class="badge-count">${{displayRunCount}}</span></td>
+                <td><span class="badge-count">${{displayQsCount}}</span></td>
+                <td style="font-family: var(--font-mono); font-size: 0.8rem; color: var(--text-secondary);">${{lastTimeStr}}</td>
+              `;
+              summaryTbody.appendChild(tr);
+            }}
+
+            // 2. High-Tech Visual Conversation Card (Modern Default Experience)
+            if (chatsCardGrid) {{
+              const card = document.createElement('div');
+              card.className = 'modern-chat-card';
+              card.innerHTML = `
+                <div class="chat-card-top-row">
+                  <div class="chat-avatar-badge">
+                    <div class="chat-avatar-icon">🤖</div>
+                    <span class="chat-id-tag" title="Click to copy ID" onclick="navigator.clipboard.writeText('${{escapeHtml(cid)}}'); showToast('Copied ID: ${{escapeHtml(cid)}}'); playChime('copy');" style="cursor: pointer;">${{escapeHtml(cid)}} 📋</span>
+                  </div>
+                  <span class="chat-metric-pill" style="color: var(--accent-emerald); border-color: rgba(16, 185, 129, 0.35); background: rgba(16, 185, 129, 0.08);">🟢 Automated</span>
+                </div>
+
+                <div>
+                  <h3 class="chat-topic-title">${{escapeHtml(topic)}}</h3>
+                  <div style="font-size: 0.78rem; color: var(--text-muted); margin-top: 6px; font-family: var(--font-mono);">
+                    🕒 Last Active: ${{lastTimeStr}}
+                  </div>
+                </div>
+
+                <div class="chat-metrics-bar">
+                  <span class="chat-metric-pill">⚡ <strong>${{displayRunCount}}</strong> Runs</span>
+                  <span class="chat-metric-pill">❓ <strong>${{displayQsCount}}</strong> Questions</span>
+                  ${{prompt ? `<span class="chat-metric-pill" style="max-width: 160px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="${{escapeHtml(prompt)}}">💬 ${{escapeHtml(prompt)}}</span>` : ''}}
+                </div>
+
+                <div class="chat-card-actions">
+                  <button type="button" class="btn-chat-action" onclick="jumpToChatQuestions('${{escapeHtml(cid)}}')">
+                    <span>❓ View Questions (${{displayQsCount}})</span>
+                  </button>
+                  <button type="button" class="btn-chat-action" onclick="navigator.clipboard.writeText('${{escapeHtml(cid)}}'); showToast('Copied Conversation ID'); playChime('copy');">
+                    <span>📋 Copy ID</span>
+                  </button>
+                </div>
+              `;
+              chatsCardGrid.appendChild(card);
+            }}
           }}
         }}
 
-        if (tableRows === 0) {{
-          summaryTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">No matching chat records found.</td></tr>`;
+        if (matchCount === 0) {{
+          if (summaryTbody) {{
+            summaryTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 24px; color: var(--text-muted);">No matching chat records found.</td></tr>`;
+          }}
+          if (chatsCardGrid) {{
+            chatsCardGrid.innerHTML = `
+              <div style="grid-column: 1 / -1; text-align: center; padding: 48px 20px; background: var(--bg-surface); border: 1px dashed var(--border-subtle); border-radius: var(--radius-lg);">
+                <div style="font-size: 2.2rem; margin-bottom: 10px;">🔍</div>
+                <div style="font-size: 1.05rem; font-weight: 700; color: var(--text-primary); margin-bottom: 6px;">No Matching Conversations</div>
+                <div style="font-size: 0.84rem; color: var(--text-secondary);">Try clearing your search query or adjusting the date/speed filters above.</div>
+              </div>
+            `;
+          }}
         }}
       }}
 
-      // Render Questions Cards (BY DEFAULT ALL COLLAPSED)
+      window.setChatsView = function(view) {{
+        localStorage.setItem('asc_chats_view', view);
+        const cardsView = document.getElementById('chats-cards-view');
+        const tableView = document.getElementById('chats-table-view');
+        const btnCards = document.getElementById('btn-view-cards');
+        const btnTable = document.getElementById('btn-view-table');
+
+        if (view === 'table') {{
+          if (cardsView) cardsView.style.display = 'none';
+          if (tableView) tableView.style.display = 'block';
+          if (btnCards) {{ btnCards.classList.remove('active'); btnCards.style.background = 'transparent'; btnCards.style.color = 'var(--text-secondary)'; }}
+          if (btnTable) {{ btnTable.classList.add('active'); btnTable.style.background = 'var(--accent-indigo)'; btnTable.style.color = '#fff'; }}
+        }} else {{
+          if (cardsView) cardsView.style.display = 'block';
+          if (tableView) tableView.style.display = 'none';
+          if (btnCards) {{ btnCards.classList.add('active'); btnCards.style.background = 'var(--accent-indigo)'; btnCards.style.color = '#fff'; }}
+          if (btnTable) {{ btnTable.classList.remove('active'); btnTable.style.background = 'transparent'; btnTable.style.color = 'var(--text-secondary)'; }}
+        }}
+      }};
+
+      window.jumpToChatQuestions = function(cid) {{
+        switchTab('questions');
+        if (searchQuestions) {{
+          searchQuestions.value = cid;
+          applyFilters();
+        }}
+        showToast('Filtered Questions for conversation: ' + cid);
+        playChime('copy');
+      }};
+
+      // Render Questions Cards (Developer Decision Studio with Modern Radio Option Cards)
+      let currentQFilter = 'all';
+
+      window.setQFilter = function(filterType, btn) {{
+        currentQFilter = filterType;
+        document.querySelectorAll('.q-filter-chip').forEach(b => b.classList.remove('active'));
+        if (btn) btn.classList.add('active');
+        renderQuestions();
+      }};
+
       function renderQuestions() {{
         if (!detailsContainer) return;
         const searchVal = (searchQuestions ? searchQuestions.value : '').toLowerCase().trim();
@@ -3482,9 +3860,17 @@ def build_modern_dashboard_html(
 
           const matchingRuns = runs.filter(run => {{
             if (!runMatchesFilters(cid, chat, run)) return false;
+            let questions = run.questions || [];
+            if (currentQFilter === 'recommended') {{
+              questions = questions.filter(q => (q.selected_option_text || '').includes('(Recommended)'));
+              if (questions.length === 0) return false;
+            }} else if (currentQFilter === 'multi') {{
+              questions = questions.filter(q => (q.options || []).length > 2);
+              if (questions.length === 0) return false;
+            }}
             if (!searchVal) return true;
             if (cid.toLowerCase().includes(searchVal) || topic.toLowerCase().includes(searchVal)) return true;
-            return (run.questions || []).some(q =>
+            return questions.some(q =>
               (q.question || '').toLowerCase().includes(searchVal) ||
               (q.options || []).some(opt => opt.toLowerCase().includes(searchVal))
             );
@@ -3499,28 +3885,38 @@ def build_modern_dashboard_html(
             matchingRuns.forEach((run, rIdx) => {{
               const runDate = run.timestamp ? new Date(run.timestamp).toLocaleString() : 'N/A';
               const dur = run.duration_seconds ? run.duration_seconds.toFixed(1) + 's' : 'N/A';
-              const questions = run.questions || [];
+              let questions = run.questions || [];
+              if (currentQFilter === 'recommended') {{
+                questions = questions.filter(q => (q.selected_option_text || '').includes('(Recommended)'));
+              }} else if (currentQFilter === 'multi') {{
+                questions = questions.filter(q => (q.options || []).length > 2);
+              }}
 
               let qHtml = '';
               questions.forEach((q, qIdx) => {{
                 let optionsHtml = '';
+                const isRecMatched = (q.selected_option_text || '').includes('(Recommended)');
+
                 (q.options || []).forEach((opt, optIdx) => {{
                   const isSelected = (optIdx + 1 === q.selected_option_index) ||
                                      (q.selected_option_text && opt.trim() === q.selected_option_text.trim());
                   const isRec = opt.includes('(Recommended)');
                   optionsHtml += `
                     <div class="option-item ${{isSelected ? 'selected' : ''}}">
-                      <span><strong>${{optIdx + 1}}.</strong> ${{escapeHtml(opt)}}</span>
-                      <div style="display:flex; gap:6px;">
-                        ${{isSelected ? '<span class="option-badge">✓ Selected</span>' : ''}}
-                        ${{isRec ? '<span style="font-size:0.68rem; padding:2px 7px; border-radius:9999px; background:rgba(6,182,212,0.18); color:#22d3ee; border:1px solid rgba(6,182,212,0.4);">⭐ Recommended</span>' : ''}}
+                      <div style="display:flex; align-items:center; gap:8px;">
+                        <span style="font-size: 0.9rem; color: ${{isSelected ? 'var(--accent-emerald)' : 'var(--text-muted)'}};">${{isSelected ? '◉' : '○'}}</span>
+                        <span><strong>${{optIdx + 1}}.</strong> ${{escapeHtml(opt)}}</span>
+                      </div>
+                      <div style="display:flex; gap:6px; align-items:center;">
+                        ${{isSelected ? '<span class="option-badge">✓ Selected Decision</span>' : ''}}
+                        ${{isRec ? '<span style="font-size:0.72rem; font-weight:700; padding:2px 8px; border-radius:9999px; background:rgba(6,182,212,0.18); color:#22d3ee; border:1px solid rgba(6,182,212,0.4);">⭐ Recommended Choice</span>' : ''}}
                       </div>
                     </div>
                   `;
                 }});
 
                 qHtml += `
-                  <div class="question-card" data-question-num="${{q.question_index || (qIdx + 1)}}">
+                  <div class="question-card ${{isRecMatched ? 'rec-matched' : ''}}" data-question-num="${{q.question_index || (qIdx + 1)}}">
                     <div class="question-prompt" onclick="toggleQuestionPrompt(this)">
                       <div class="question-prompt-left">
                         <span class="collapse-icon">▸</span>
