@@ -1943,7 +1943,7 @@
             <span id="status-text">⚪ Inactive</span>
           </span>
           <span class="status-pill" id="header-mode-badge" style="background: rgba(99,102,241,0.12); color: #818cf8; border: 1px solid rgba(99,102,241,0.35);">
-            ⚡ PRODUCTION
+            ⚡ TEST
           </span>
         </div>
 
@@ -2877,15 +2877,15 @@
           <!-- Segmented Pill Mode Switcher Bar -->
           <div class="modes-switcher-bar">
             <div class="modes-switcher-label">
-              <span style="color: #10b981;">●</span>
-              <span>Active Operating Mode: <strong>PRODUCTION (उत्पादन मोड)</strong></span>
+              <span style="color: #f59e0b;">●</span>
+              <span>Active Operating Mode: <strong>TEST (परीक्षण मोड)</strong></span>
             </div>
             <div class="modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
-              <button type="button" class="banner-mode-btn active" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+              <button type="button" class="banner-mode-btn " id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
                 <span>🛡️ Production</span>
                 <span class="banner-mode-indicator">Continuous Loop</span>
               </button>
-              <button type="button" class="banner-mode-btn " id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+              <button type="button" class="banner-mode-btn active" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
                 <span>🧪 Test Mode</span>
                 <span class="banner-mode-indicator">Auto-Stop</span>
               </button>
@@ -2895,7 +2895,7 @@
           <!-- Two Rich Interactive Mode Cards -->
           <div class="mode-lifecycle-grid">
             <!-- 1. Production Mode Card -->
-            <div class="lifecycle-card card-production active-mode-card" id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
+            <div class="lifecycle-card card-production " id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
               <div class="lifecycle-card-top">
                 <div class="lifecycle-card-title">
                   <span class="card-icon">🛡️</span>
@@ -2906,7 +2906,7 @@
                 </div>
                 <span class="lifecycle-card-badge badge-prod-mode">
                   <span>●</span>
-                  <span>CURRENT ACTIVE</span>
+                  <span>Continuous Loop</span>
                 </span>
               </div>
               <p class="lifecycle-card-desc">
@@ -2918,13 +2918,13 @@
                 <span class="lifecycle-feature-tag">👤 Manual User Stop Required</span>
                 <span class="lifecycle-feature-tag">🚀 Full Multi-Step Hardware Automation</span>
               </div>
-              <button type="button" class="lifecycle-card-btn btn-automation" id="btn-set-prod">
-                ✓ Active in Production
+              <button type="button" class="lifecycle-card-btn btn" id="btn-set-prod">
+                ⚡ Switch to Production Mode
               </button>
             </div>
 
             <!-- 2. Test Mode Card -->
-            <div class="lifecycle-card card-test " id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
+            <div class="lifecycle-card card-test active-mode-card" id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
               <div class="lifecycle-card-top">
                 <div class="lifecycle-card-title">
                   <span class="card-icon">🧪</span>
@@ -2935,7 +2935,7 @@
                 </div>
                 <span class="lifecycle-card-badge badge-test-mode">
                   <span>●</span>
-                  <span>Single-Run Auto-Stop</span>
+                  <span>CURRENT ACTIVE</span>
                 </span>
               </div>
               <p class="lifecycle-card-desc">
@@ -2947,8 +2947,8 @@
                 <span class="lifecycle-feature-tag">🔬 Safe Verification &amp; Dry-Runs</span>
                 <span class="lifecycle-feature-tag">⏱️ Fast 10.0s Poll Cycle</span>
               </div>
-              <button type="button" class="lifecycle-card-btn btn" id="btn-set-test" style="background: rgba(245,158,11,0.18); color: #fbbf24; border-color: rgba(245,158,11,0.4);">
-                ⚡ Switch to Test Mode
+              <button type="button" class="lifecycle-card-btn btn-automation" id="btn-set-test" style="background: #d97706; color: #ffffff;">
+                ✓ Active in Test Mode
               </button>
             </div>
           </div>
@@ -3110,43 +3110,43 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-prod-poll">Production Poll Interval (s)</label>
               <div class="cfg-desc">Main idle polling cycle in production mode</div>
-              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-prod-poll" value="60">
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-prod-poll" value="1.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-test-poll">Test Mode Poll Interval (s)</label>
               <div class="cfg-desc">Accelerated validation cycle for testing</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-test-poll" value="10">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-test-poll" value="0.1">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-settle">Step Transition Settle (s)</label>
               <div class="cfg-desc">Pause between step transitions for UI stability</div>
-              <input type="number" step="0.1" class="cfg-input" id="cfg-timing-settle" value="0.8">
+              <input type="number" step="0.1" class="cfg-input" id="cfg-timing-settle" value="1.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-activity-delay">User Inactivity Delay (s)</label>
               <div class="cfg-desc">Wait time after mouse/key detection before opening report</div>
-              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-activity-delay" value="10">
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-activity-delay" value="10.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step4-poll">Step 4 Telemetry Polling (s)</label>
               <div class="cfg-desc">Polling interval for user mouse and keystroke detection</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step4-poll" value="0.1">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step4-poll" value="0.5">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step1-focus">Step 1 Focus Settle Delay (s)</label>
               <div class="cfg-desc">Buffer after bringing target window to foreground</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step1-focus" value="0.2">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step1-focus" value="0.5">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step2-dom-settle">Step 2 DOM Click Settle (s)</label>
               <div class="cfg-desc">Pause after simulated click on chat row in GUI</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step2-dom-settle" value="0.3">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step2-dom-settle" value="1.0">
             </div>
 
             <div class="cfg-field">
@@ -3158,25 +3158,25 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-hold-ms">Step 3 Key Hold Delay (ms)</label>
               <div class="cfg-desc">Hardware scan code hold duration during keyboard press</div>
-              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="50">
+              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="80">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-post-ms">Step 3 Post Keypress Delay (ms)</label>
               <div class="cfg-desc">Pause after each individual key stroke</div>
-              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="250">
+              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="100">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-inter-q-ms">Step 3 Inter-Question Delay (ms)</label>
               <div class="cfg-desc">Pause between answering consecutive question prompts</div>
-              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="500">
+              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="200">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-round-ms">Step 3 Round Cooldown Pause (ms)</label>
               <div class="cfg-desc">Cooldown pause after completing entire questionnaire</div>
-              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="1000">
+              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="500">
             </div>
           </div>
         </div>
@@ -3194,7 +3194,7 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-pause-threshold">User Activity Pause Threshold (s)</label>
               <div class="cfg-desc">If user moves keyboard/mouse within this window, automation enters PAUSED state</div>
-              <input type="number" step="5" class="cfg-input" id="cfg-pause-threshold" value="60">
+              <input type="number" step="5" class="cfg-input" id="cfg-pause-threshold" value="60.0">
             </div>
 
             <div class="cfg-field">
@@ -3231,7 +3231,7 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-antigravity-active-hours">Active Window Max Age (hours)</label>
               <div class="cfg-desc">Maximum conversation age in hours before skipping stale sessions</div>
-              <input type="number" step="0.5" min="0.5" max="168" class="cfg-input" id="cfg-antigravity-active-hours" value="12">
+              <input type="number" step="0.5" min="0.5" max="168" class="cfg-input" id="cfg-antigravity-active-hours" value="12.0">
             </div>
           </div>
         </div>
@@ -3277,37 +3277,7 @@
             <button type="button" class="btn" id="btn-toggle-json-drawer" style="padding: 2px 8px; font-size: 0.72rem;">Toggle Preview</button>
           </div>
           <div class="json-preview-box" id="json-preview-container" style="display: none;">{
-  "_comment": "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
-  "mode": "production",
-  "timing": {
-    "step0_poll_interval_prod_seconds": 60,
-    "step0_poll_interval_test_seconds": 10,
-    "settle_delay_between_steps_seconds": 0.8,
-    "user_activity_pause_threshold_seconds": 60,
-    "step4_user_activity_delay_seconds": 10,
-    "step4_poll_interval_seconds": 0.1,
-    "step1_window_focus_delay_seconds": 0.2,
-    "step2_dom_click_settle_delay_seconds": 0.3,
-    "step3_countdown_seconds": 3,
-    "step3_key_hold_delay_ms": 50,
-    "step3_post_keypress_delay_ms": 250,
-    "step3_inter_question_delay_ms": 500,
-    "step3_round_completion_pause_ms": 1000
-  },
-  "enabled_steps": {
-    "step1_find_and_focus": true,
-    "step2_gui_chat_select": true,
-    "step3_keyboard_automation": true,
-    "step4_reporting": true
-  },
-  "antigravity": {
-    "require_grill_me": true,
-    "active_hours": 12
-  },
-  "logging": {
-    "log_file": "complete_automation.log",
-    "verbose": true
-  }
+  "mode": "test"
 }</div>
         </div>
       </div>
@@ -3540,37 +3510,7 @@
   </script>
   <script id="runtime-config-data" type="application/json">
 {
-  "_comment": "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
-  "mode": "production",
-  "timing": {
-    "step0_poll_interval_prod_seconds": 60,
-    "step0_poll_interval_test_seconds": 10,
-    "settle_delay_between_steps_seconds": 0.8,
-    "user_activity_pause_threshold_seconds": 60,
-    "step4_user_activity_delay_seconds": 10,
-    "step4_poll_interval_seconds": 0.1,
-    "step1_window_focus_delay_seconds": 0.2,
-    "step2_dom_click_settle_delay_seconds": 0.3,
-    "step3_countdown_seconds": 3,
-    "step3_key_hold_delay_ms": 50,
-    "step3_post_keypress_delay_ms": 250,
-    "step3_inter_question_delay_ms": 500,
-    "step3_round_completion_pause_ms": 1000
-  },
-  "enabled_steps": {
-    "step1_find_and_focus": true,
-    "step2_gui_chat_select": true,
-    "step3_keyboard_automation": true,
-    "step4_reporting": true
-  },
-  "antigravity": {
-    "require_grill_me": true,
-    "active_hours": 12
-  },
-  "logging": {
-    "log_file": "complete_automation.log",
-    "verbose": true
-  }
+  "mode": "test"
 }
   </script>
 

@@ -3,7 +3,7 @@
 """
 स्टेप 4 - रिपोर्टिंग एवं विजुअल डैशबोर्ड / Step 4 - Reporting & Visual Dashboard
 ==============================================================================
-Part of: AutoSelect-Commander Automation Pipeline
+Part of: AutoSelect Antigravity Automation Pipeline
 Workspace: Keyboard Automation (Step 4: Reporting & Visual Dashboard Engine)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 Standard: Department 06 (Backend & API Engineering) & Department 04 (UI/UX Design System)
@@ -223,7 +223,7 @@ class AutomationHistory:
 
 class Step4ReportingEngine:
     """
-    Core reporting and visual dashboard subsystem for AutoSelect-Commander.
+    Core reporting and visual dashboard subsystem for AutoSelect Antigravity.
     Manages persistent JSON history and generates self-contained HTML dashboards.
     """
 
@@ -5792,7 +5792,7 @@ class Step4ReportingEngine:
         const logF = (cfgLoggingFile && cfgLoggingFile.value.trim()) ? cfgLoggingFile.value.trim() : 'complete_automation.log';
 
         return {{
-          _comment: "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
+          _comment: "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
           mode: modeVal,
           timing: {{
             step0_poll_interval_prod_seconds: pPoll,
@@ -6184,7 +6184,7 @@ class Step4ReportingEngine:
       }}
 
       // ======================================================================
-      // Dynamic Automation Start/Stop Control (AutoSelect-Commander Engine)
+      // Dynamic Automation Start/Stop Control (AutoSelect Antigravity Engine)
       // ======================================================================
       const automationToggleBtn = document.getElementById('automation-toggle-btn');
       const controlIconEl = document.getElementById('control-icon');
@@ -6342,7 +6342,7 @@ class Step4ReportingEngine:
             automationToggleBtn.classList.add('state-running');
             if (controlIconEl) controlIconEl.textContent = '⏹️';
             if (controlLabelEl) controlLabelEl.textContent = 'Stop';
-            automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+            automationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect Antigravity Automation');
           }}
 
           if (modesAutomationToggleBtn) {{
@@ -6350,14 +6350,14 @@ class Step4ReportingEngine:
             modesAutomationToggleBtn.classList.add('state-running');
             if (modesControlIconEl) modesControlIconEl.textContent = '⏹️';
             if (modesControlLabelEl) modesControlLabelEl.textContent = 'Stop';
-            modesAutomationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect-Commander Automation');
+            modesAutomationToggleBtn.setAttribute('title', 'Click to Stop AutoSelect Antigravity Automation');
           }}
 
           updateProcessStatusUI(statusData || {{ running: true, is_paused: false }});
           startProcessStatusPolling(2000);
 
           if (triggerToast) {{
-            showToast('🚀 Automation Started! AutoSelect-Commander is actively monitoring chats.', 'success');
+            showToast('🚀 Automation Started! AutoSelect Antigravity is actively monitoring chats.', 'success');
           }}
         }} else {{
           if (automationToggleBtn) {{
@@ -6365,7 +6365,7 @@ class Step4ReportingEngine:
             automationToggleBtn.classList.add('state-stopped');
             if (controlIconEl) controlIconEl.textContent = '▶️';
             if (controlLabelEl) controlLabelEl.textContent = 'Start';
-            automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+            automationToggleBtn.setAttribute('title', 'Click to Start AutoSelect Antigravity Automation');
           }}
 
           if (modesAutomationToggleBtn) {{
@@ -6373,7 +6373,7 @@ class Step4ReportingEngine:
             modesAutomationToggleBtn.classList.add('state-stopped');
             if (modesControlIconEl) modesControlIconEl.textContent = '▶️';
             if (modesControlLabelEl) modesControlLabelEl.textContent = 'Start';
-            modesAutomationToggleBtn.setAttribute('title', 'Click to Start AutoSelect-Commander Automation');
+            modesAutomationToggleBtn.setAttribute('title', 'Click to Start AutoSelect Antigravity Automation');
           }}
 
           updateProcessStatusUI(statusData || {{ running: false, is_paused: false }});
@@ -7443,7 +7443,7 @@ class Step4ReportingEngine:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Step 4 - Reporting & Visual Dashboard Subsystem (AutoSelect-Commander)"
+        description="Step 4 - Reporting & Visual Dashboard Subsystem (AutoSelect Antigravity)"
     )
     parser.add_argument(
         "--state-file",

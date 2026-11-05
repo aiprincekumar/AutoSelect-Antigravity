@@ -31,7 +31,7 @@ _this_dir = Path(__file__).resolve().parent
 _workspace_dir = _this_dir.parent if _this_dir.name == "core_engine" else _this_dir
 
 DEFAULT_RUNTIME_CONFIG: Dict[str, Any] = {
-    "_comment": "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
+    "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
     "mode": "production",
     "timing": {
         "step0_poll_interval_prod_seconds": 300.0,
