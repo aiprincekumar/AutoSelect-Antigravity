@@ -1,33 +1,3 @@
 {
-  "_comment": "Step 9: Complete Automation Configuration - AutoSelect-Commander Master Configuration",
-  "mode": "production",
-  "timing": {
-    "step0_poll_interval_prod_seconds": 60,
-    "step0_poll_interval_test_seconds": 10,
-    "settle_delay_between_steps_seconds": 0.8,
-    "user_activity_pause_threshold_seconds": 60,
-    "step4_user_activity_delay_seconds": 10,
-    "step4_poll_interval_seconds": 0.1,
-    "step1_window_focus_delay_seconds": 0.2,
-    "step2_dom_click_settle_delay_seconds": 0.3,
-    "step3_countdown_seconds": 3,
-    "step3_key_hold_delay_ms": 50,
-    "step3_post_keypress_delay_ms": 250,
-    "step3_inter_question_delay_ms": 500,
-    "step3_round_completion_pause_ms": 1000
-  },
-  "enabled_steps": {
-    "step1_find_and_focus": true,
-    "step2_gui_chat_select": true,
-    "step3_keyboard_automation": true,
-    "step4_reporting": true
-  },
-  "antigravity": {
-    "require_grill_me": true,
-    "active_hours": 12
-  },
-  "logging": {
-    "log_file": "complete_automation.log",
-    "verbose": true
-  }
+  "mode": "test"
 }

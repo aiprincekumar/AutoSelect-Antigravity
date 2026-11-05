@@ -159,7 +159,7 @@ def build_modern_dashboard_html(
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>AutoSelect-Commander • Modern & Interactive Dashboard</title>
+  <title>AutoSelect Antigravity Dashboard</title>
   <style>
     :root {{
       --bg-primary: #07090f;
@@ -2082,7 +2082,7 @@ def build_modern_dashboard_html(
       <div class="header-left">
         <div class="logo-badge">⚡</div>
         <div class="header-titles">
-          <h1>AutoSelect-Commander <span class="version-pill">MODERN & INTERACTIVE</span></h1>
+          <h1>AutoSelect Antigravity Dashboard <span class="version-pill">MODERN & INTERACTIVE</span></h1>
           <p>Autonomous Execution Telemetry, Process Control & Grill-Me Decision Ledger</p>
         </div>
       </div>
@@ -2506,7 +2506,7 @@ def build_modern_dashboard_html(
             </div>
             <div class="modes-hero-actions">
               <span class="status-pill status-idle" id="modes-status-pill">⚪ Automation Inactive</span>
-              <button type="button" class="btn btn-automation state-stopped" id="modes-automation-toggle-btn" title="Toggle AutoSelect-Commander Automation directly from Mode Switch">
+              <button type="button" class="btn btn-automation state-stopped" id="modes-automation-toggle-btn" title="Toggle AutoSelect Antigravity Automation directly from Mode Switch">
                 <span id="modes-control-icon">▶️</span>
                 <span id="modes-control-label">Start Automation</span>
               </button>

@@ -151,7 +151,7 @@ class TestModernDashboardSuite(unittest.TestCase):
             with urllib.request.urlopen(req_classic, timeout=3.0) as resp:
                 self.assertEqual(resp.status, 200)
                 body = resp.read().decode("utf-8")
-                self.assertIn("AutoSelect-Commander", body)
+                self.assertIn("AutoSelect", body)
 
             # 3. GET / (default should serve modern)
             req_root = urllib.request.Request(f"http://127.0.0.1:{port}/")

@@ -1359,7 +1359,7 @@ class TestStep4Reporting(unittest.TestCase):
 
         # 2. Automation Modal & 1-Click Execution Drawer
         self.assertIn('id="automation-modal"', content)
-        self.assertIn('AutoSelect-Commander Automation', content)
+        self.assertIn('AutoSelect Antigravity Automation', content)
         self.assertIn('id="btn-copy-automation-cmd"', content)
         self.assertIn('id="btn-copy-automation-bat"', content)
         self.assertIn('id="btn-copy-automation-dry-run"', content)

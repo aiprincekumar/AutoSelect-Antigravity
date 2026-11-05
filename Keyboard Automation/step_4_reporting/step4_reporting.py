@@ -7301,6 +7301,12 @@ class Step4ReportingEngine:
         try:
             with open(self.dashboard_file, "w", encoding="utf-8") as f:
                 f.write(html_content)
+            with open(self.reports_dir / "classic_dashboard.html", "w", encoding="utf-8") as f:
+                f.write(html_content)
+            simple_f = self.reports_dir.parent / "Simple and Classic Dashboard" / "dashboard.html"
+            if simple_f.parent.is_dir():
+                with open(simple_f, "w", encoding="utf-8") as f:
+                    f.write(html_content)
         except Exception as e:
             logging.getLogger("Step4Reporting").error("Failed to write dashboard HTML: %s", e)
 
