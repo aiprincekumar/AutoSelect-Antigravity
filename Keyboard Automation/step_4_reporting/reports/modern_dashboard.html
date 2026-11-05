@@ -3412,19 +3412,19 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-prod-poll">Production Poll Interval (s)</label>
               <div class="cfg-desc">Main idle polling cycle in production mode</div>
-              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-prod-poll" value="1.0">
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-prod-poll" value="300.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-test-poll">Test Mode Poll Interval (s)</label>
               <div class="cfg-desc">Accelerated validation cycle for testing</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-test-poll" value="0.1">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-test-poll" value="10.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-settle">Step Transition Settle (s)</label>
               <div class="cfg-desc">Pause between step transitions for UI stability</div>
-              <input type="number" step="0.1" class="cfg-input" id="cfg-timing-settle" value="1.0">
+              <input type="number" step="0.1" class="cfg-input" id="cfg-timing-settle" value="0.8">
             </div>
 
             <div class="cfg-field">
@@ -3436,19 +3436,19 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step4-poll">Step 4 Telemetry Polling (s)</label>
               <div class="cfg-desc">Polling interval for user mouse and keystroke detection</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step4-poll" value="0.5">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step4-poll" value="0.1">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step1-focus">Step 1 Focus Settle Delay (s)</label>
               <div class="cfg-desc">Buffer after bringing target window to foreground</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step1-focus" value="0.5">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step1-focus" value="0.2">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step2-dom-settle">Step 2 DOM Click Settle (s)</label>
               <div class="cfg-desc">Pause after simulated click on chat row in GUI</div>
-              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step2-dom-settle" value="1.0">
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step2-dom-settle" value="0.3">
             </div>
 
             <div class="cfg-field">
@@ -3460,25 +3460,25 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-hold-ms">Step 3 Key Hold Delay (ms)</label>
               <div class="cfg-desc">Hardware scan code hold duration during keyboard press</div>
-              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="80.0">
+              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="50.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-post-ms">Step 3 Post Keypress Delay (ms)</label>
               <div class="cfg-desc">Pause after each individual key stroke</div>
-              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="100.0">
+              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="250.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-inter-q-ms">Step 3 Inter-Question Delay (ms)</label>
               <div class="cfg-desc">Pause between answering consecutive question prompts</div>
-              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="200.0">
+              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="500.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-round-ms">Step 3 Round Cooldown Pause (ms)</label>
               <div class="cfg-desc">Cooldown pause after completing entire questionnaire</div>
-              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="500.0">
+              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="1000.0">
             </div>
           </div>
         </div>
@@ -3582,19 +3582,19 @@
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
   "mode": "production",
   "timing": {
-    "step0_poll_interval_prod_seconds": 1.0,
-    "step0_poll_interval_test_seconds": 0.1,
-    "settle_delay_between_steps_seconds": 1.0,
+    "step0_poll_interval_prod_seconds": 300.0,
+    "step0_poll_interval_test_seconds": 10.0,
+    "settle_delay_between_steps_seconds": 0.8,
     "user_activity_pause_threshold_seconds": 60.0,
     "step4_user_activity_delay_seconds": 10.0,
-    "step4_poll_interval_seconds": 0.5,
-    "step1_window_focus_delay_seconds": 0.5,
-    "step2_dom_click_settle_delay_seconds": 1.0,
+    "step4_poll_interval_seconds": 0.1,
+    "step1_window_focus_delay_seconds": 0.2,
+    "step2_dom_click_settle_delay_seconds": 0.3,
     "step3_countdown_seconds": 3.0,
-    "step3_key_hold_delay_ms": 80.0,
-    "step3_post_keypress_delay_ms": 100.0,
-    "step3_inter_question_delay_ms": 200.0,
-    "step3_round_completion_pause_ms": 500.0,
+    "step3_key_hold_delay_ms": 50.0,
+    "step3_post_keypress_delay_ms": 250.0,
+    "step3_inter_question_delay_ms": 500.0,
+    "step3_round_completion_pause_ms": 1000.0,
     "continuous_loop_delay_seconds": 300.0
   },
   "enabled_steps": {
@@ -3846,19 +3846,19 @@
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
   "mode": "production",
   "timing": {
-    "step0_poll_interval_prod_seconds": 1.0,
-    "step0_poll_interval_test_seconds": 0.1,
-    "settle_delay_between_steps_seconds": 1.0,
+    "step0_poll_interval_prod_seconds": 300.0,
+    "step0_poll_interval_test_seconds": 10.0,
+    "settle_delay_between_steps_seconds": 0.8,
     "user_activity_pause_threshold_seconds": 60.0,
     "step4_user_activity_delay_seconds": 10.0,
-    "step4_poll_interval_seconds": 0.5,
-    "step1_window_focus_delay_seconds": 0.5,
-    "step2_dom_click_settle_delay_seconds": 1.0,
+    "step4_poll_interval_seconds": 0.1,
+    "step1_window_focus_delay_seconds": 0.2,
+    "step2_dom_click_settle_delay_seconds": 0.3,
     "step3_countdown_seconds": 3.0,
-    "step3_key_hold_delay_ms": 80.0,
-    "step3_post_keypress_delay_ms": 100.0,
-    "step3_inter_question_delay_ms": 200.0,
-    "step3_round_completion_pause_ms": 500.0,
+    "step3_key_hold_delay_ms": 50.0,
+    "step3_post_keypress_delay_ms": 250.0,
+    "step3_inter_question_delay_ms": 500.0,
+    "step3_round_completion_pause_ms": 1000.0,
     "continuous_loop_delay_seconds": 300.0
   },
   "enabled_steps": {
