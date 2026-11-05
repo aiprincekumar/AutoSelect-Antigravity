@@ -671,10 +671,19 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 return
 
             cfg_path = get_canonical_config_path(self.workspace_dir)
-            ok = core_save_runtime_config(body, cfg_path)
+            existing_cfg = core_load_runtime_config(cfg_path)
+            # Merge incoming body into existing_cfg to avoid overwriting nested sections
+            for k, v in body.items():
+                if isinstance(v, dict) and isinstance(existing_cfg.get(k), dict):
+                    existing_cfg[k].update(v)
+                else:
+                    existing_cfg[k] = v
+            ok = core_save_runtime_config(existing_cfg, cfg_path)
             if ok:
-                logger.info("Successfully updated runtime configuration in config.json.")
-                self.send_json_response({"saved": True, "message": "Configuration successfully saved to config.json on disk."})
+                if "mode" in body and isinstance(body["mode"], str):
+                    mgr.active_mode = str(body["mode"]).strip().lower()
+                logger.info(f"Successfully updated runtime configuration in config.json (mode={mgr.active_mode}).")
+                self.send_json_response({"saved": True, "message": "Configuration successfully saved to config.json on disk.", "mode": mgr.active_mode})
             else:
                 self.send_json_response({"saved": False, "message": "Failed to persist configuration to disk."}, status=500, success=False)
             return
@@ -685,6 +694,15 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 from step_4_reporting.step4_reporting import Step4ReportingEngine
                 engine = Step4ReportingEngine(reports_dir=self.reports_dir)
                 gen_path = engine.generate_html_dashboard()
+
+                import importlib.util
+                modern_gen_path = self.step4_dir / "Modern and Interactive Dashboard" / "generate_modern_dashboard.py"
+                if modern_gen_path.is_file():
+                    spec = importlib.util.spec_from_file_location("modern_gen_server", str(modern_gen_path))
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    mod.generate_and_save_modern_dashboard(self.workspace_dir)
+
                 self.send_json_response({"refreshed": True, "path": str(gen_path)})
             except Exception as e:
                 self.send_json_response({"refreshed": False, "message": f"Refresh failed: {e}"}, status=500, success=False)

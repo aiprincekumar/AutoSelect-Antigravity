@@ -1,10 +1,10 @@
 {
   "success": true,
   "data": {
-    "conversation_id": "43229a5d-a7e5-4754-bddd-439fb28c4a01",
-    "topic_summary": "अब तुम्हें ये देखना है कि डैशबोर्ड में जो UI and UX है उसको किस तरह से और भी बेह...",
-    "last_user_prompt": "mode switch ka ui and ux dono hi kharb hai usko sahi karo",
-    "selected_at": "2026-11-05T01:40:38.336994+00:00",
+    "conversation_id": "4e2d2d4c-3f11-4dae-a3ee-fd4c647da00c",
+    "topic_summary": "ui fix karo upper header wala and location changa karne ke baad data reset ho ga...",
+    "last_user_prompt": "ui fix karo upper header wala and location changa karne ke baad data reset ho gaya or na server on ho raha hai or na hi ...",
+    "selected_at": "2026-11-05T02:48:19.429385+00:00",
     "status": "SUCCESS_SELECTED",
     "questions_count": 1,
     "total_questions_count": 1,
@@ -12,7 +12,7 @@
     "questions": [
       {
         "question_index": 1,
-        "question": "क्या आप इस नए Mode Switch UI/UX ओवरहॉल को GitHub ऑनलाइन रिपॉजिटरी पर पुश करना चाहते हैं?",
+        "question": "क्या आप नए कमिट (fix: UI header, dynamic path resolution & auto-service launch) को GitHub रिमोट रिपॉजिटरी पर पुश करना चाहते हैं?",
         "options": [
           "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
           "नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है"
@@ -25,7 +25,7 @@
     "selections": [
       {
         "question_index": 1,
-        "question": "क्या आप इस नए Mode Switch UI/UX ओवरहॉल को GitHub ऑनलाइन रिपॉजिटरी पर पुश करना चाहते हैं?",
+        "question": "क्या आप नए कमिट (fix: UI header, dynamic path resolution & auto-service launch) को GitHub रिमोट रिपॉजिटरी पर पुश करना चाहते हैं?",
         "selected_option_index": 1,
         "selected_option_text": "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
         "is_multi_select": false,
@@ -33,16 +33,16 @@
         "is_recommended": true
       }
     ],
-    "window_hwnd": 328338,
-    "window_title": "Rename Dashboard to Proje...",
-    "window_focused": true,
+    "window_hwnd": 0,
+    "window_title": "",
+    "window_focused": false,
     "dry_run": false,
     "gui_chat_selected": true,
     "gui_selection_method": "cdp_dom_click",
-    "gui_selected_at": "2026-11-05T01:40:40.905285+00:00"
+    "gui_selected_at": "2026-11-05T02:48:21.599248+00:00"
   },
   "meta": {
-    "timestamp": "2026-11-05T01:40:40.905285+00:00",
+    "timestamp": "2026-11-05T02:48:21.599248+00:00",
     "generator": "step2_gui_chat_select.py (Dept 06 Architecture)"
   }
 }

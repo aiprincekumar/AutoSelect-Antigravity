@@ -2799,9 +2799,9 @@ def build_modern_dashboard_html(
 
           <!-- Segmented Pill Mode Switcher Bar -->
           <div class="modes-switcher-bar">
-            <div class="modes-switcher-label">
-              <span style="color: {'#10b981' if is_prod else '#f59e0b'};">●</span>
-              <span>Active Operating Mode: <strong>{'PRODUCTION (उत्पादन मोड)' if is_prod else 'TEST (परीक्षण मोड)'}</strong></span>
+            <div class="modes-switcher-label" id="modes-active-mode-label">
+              <span id="modes-active-dot" style="color: {'#10b981' if is_prod else '#f59e0b'};">●</span>
+              <span id="modes-active-text">Active Operating Mode: <strong>{'PRODUCTION (उत्पादन मोड)' if is_prod else 'TEST (परीक्षण मोड)'}</strong></span>
             </div>
             <div class="modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
               <button type="button" class="banner-mode-btn {'active' if is_prod else ''}" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
@@ -2827,9 +2827,9 @@ def build_modern_dashboard_html(
                     <span class="card-title-hindi">(प्रोडक्शन लेवल - Continuous Autonomous Loop)</span>
                   </div>
                 </div>
-                <span class="lifecycle-card-badge badge-prod-mode">
+                <span class="lifecycle-card-badge badge-prod-mode" id="mode-badge-prod">
                   <span>●</span>
-                  <span>{'CURRENT ACTIVE' if is_prod else 'Continuous Loop'}</span>
+                  <span id="mode-badge-text-prod">{'CURRENT ACTIVE' if is_prod else 'Continuous Loop'}</span>
                 </span>
               </div>
               <p class="lifecycle-card-desc">
@@ -2856,9 +2856,9 @@ def build_modern_dashboard_html(
                     <span class="card-title-hindi">(टेस्ट रन - Single-Run &amp; Auto-Stop)</span>
                   </div>
                 </div>
-                <span class="lifecycle-card-badge badge-test-mode">
+                <span class="lifecycle-card-badge badge-test-mode" id="mode-badge-test">
                   <span>●</span>
-                  <span>{'CURRENT ACTIVE' if not is_prod else 'Single-Run Auto-Stop'}</span>
+                  <span id="mode-badge-text-test">{'CURRENT ACTIVE' if not is_prod else 'Single-Run Auto-Stop'}</span>
                 </span>
               </div>
               <p class="lifecycle-card-desc">
@@ -4280,13 +4280,18 @@ def build_modern_dashboard_html(
         toggleBtn.addEventListener('click', () => {{
           const endpoint = isAutomationActive ? '/api/automation/stop' : '/api/automation/start';
           toggleBtn.disabled = true;
-          fetch(API_BASE + endpoint, {{ method: 'POST' }})
+          const bodyPayload = isAutomationActive ? {{}} : {{ mode: currentExecutionMode }};
+          fetch(API_BASE + endpoint, {{
+            method: 'POST',
+            headers: {{ 'Content-Type': 'application/json' }},
+            body: JSON.stringify(bodyPayload)
+          }})
             .then(res => res.json())
             .then(data => {{
               toggleBtn.disabled = false;
               if (data.success) {{
                 playChime(isAutomationActive ? 'stop' : 'start');
-                showToast(isAutomationActive ? '⏹️ Automation stopped' : '▶️ Automation started');
+                showToast(isAutomationActive ? '⏹️ Automation stopped' : `▶️ Automation started in ${{currentExecutionMode.toUpperCase()}} mode!`);
                 pollServerStatus();
               }}
             }})
@@ -4365,20 +4370,82 @@ def build_modern_dashboard_html(
       const bannerBtnTest = document.getElementById('banner-mode-test-btn');
       const modesToggleBtn = document.getElementById('modes-automation-toggle-btn');
 
+      let currentExecutionMode = localStorage.getItem('asc_execution_mode') || '{current_mode}';
+
+      function applyExecutionModeUI(mode) {{
+        const isTest = (mode === 'test');
+        currentExecutionMode = isTest ? 'test' : 'production';
+        localStorage.setItem('asc_execution_mode', currentExecutionMode);
+        localStorage.setItem('asc_automation_last_mode', currentExecutionMode);
+
+        // 1. Update Segmented Switcher Buttons
+        const bannerProd = document.getElementById('banner-mode-prod-btn');
+        const bannerTest = document.getElementById('banner-mode-test-btn');
+        if (bannerProd) bannerProd.classList.toggle('active', !isTest);
+        if (bannerTest) bannerTest.classList.toggle('active', isTest);
+
+        // 2. Update Interactive Lifecycle Cards Highlight
+        const cProd = document.getElementById('mode-card-prod') || document.getElementById('banner-card-prod');
+        const cTest = document.getElementById('mode-card-test') || document.getElementById('banner-card-test');
+        if (cProd) cProd.classList.toggle('active-mode-card', !isTest);
+        if (cTest) cTest.classList.toggle('active-mode-card', isTest);
+
+        // 3. Update Active Mode Label and Indicator Dot
+        const activeDot = document.getElementById('modes-active-dot');
+        const activeText = document.getElementById('modes-active-text');
+        if (activeDot) activeDot.style.color = isTest ? '#f59e0b' : '#10b981';
+        if (activeText) {{
+          activeText.innerHTML = `Active Operating Mode: <strong>${{isTest ? 'TEST (परीक्षण मोड)' : 'PRODUCTION (उत्पादन मोड)'}}</strong>`;
+        }}
+
+        // 4. Update Mode Switch Tab Badge in Horizontal Tab Navigation
+        const tabBadge = document.getElementById('tab-modes-badge');
+        if (tabBadge) {{
+          tabBadge.textContent = isTest ? 'Test' : 'Prod';
+          tabBadge.style.background = isTest ? 'rgba(245, 158, 11, 0.2)' : 'rgba(16, 185, 129, 0.2)';
+          tabBadge.style.color = isTest ? '#fbbf24' : '#34d399';
+        }}
+
+        // 5. Update Lifecycle Card Badges
+        const badgeTxtProd = document.getElementById('mode-badge-text-prod');
+        const badgeTxtTest = document.getElementById('mode-badge-text-test');
+        if (badgeTxtProd) badgeTxtProd.textContent = !isTest ? 'CURRENT ACTIVE' : 'Continuous Loop';
+        if (badgeTxtTest) badgeTxtTest.textContent = isTest ? 'CURRENT ACTIVE' : 'Single-Run Auto-Stop';
+
+        // 6. Update Card Action Buttons
+        const bSetProd = document.getElementById('btn-set-prod');
+        const bSetTest = document.getElementById('btn-set-test');
+        if (bSetProd) {{
+          bSetProd.textContent = !isTest ? '✓ Active in Production' : '⚡ Switch to Production Mode';
+          bSetProd.className = `lifecycle-card-btn ${{!isTest ? 'btn-automation' : 'btn'}}`;
+        }}
+        if (bSetTest) {{
+          bSetTest.textContent = isTest ? '✓ Active in Test Mode' : '⚡ Switch to Test Mode';
+          bSetTest.className = `lifecycle-card-btn ${{isTest ? 'btn-automation' : 'btn'}}`;
+          bSetTest.style.background = isTest ? '#d97706' : 'rgba(245,158,11,0.18)';
+          bSetTest.style.color = isTest ? '#ffffff' : '#fbbf24';
+        }}
+      }}
+
       function switchMode(newMode) {{
+        const isTest = (newMode === 'test');
         playChime('copy');
-        showToast(`⚡ Switching to ${{newMode.toUpperCase()}} Mode...`);
+        applyExecutionModeUI(newMode);
+        showToast(isTest ? '🧪 Activated Test Mode (Single-Run & Auto-Stop)' : '🛡️ Activated Production Mode (Continuous Autonomous Loop)');
+
+        // Background server persistence & silent dashboard refresh
+        const payload = collectConfigData();
+        payload.mode = newMode;
         fetch(API_BASE + '/api/config/save', {{
           method: 'POST',
           headers: {{ 'Content-Type': 'application/json' }},
-          body: JSON.stringify({{ mode: newMode }})
+          body: JSON.stringify(payload)
         }})
         .then(res => res.json())
-        .then(d => {{
-          showToast(`✅ Successfully activated ${{newMode.toUpperCase()}} Mode!`);
-          setTimeout(() => location.reload(), 500);
+        .then(() => {{
+          fetch(API_BASE + '/api/dashboard/refresh', {{ method: 'POST' }}).catch(() => {{}});
         }})
-        .catch(() => showToast('❌ Error saving mode configuration to server.'));
+        .catch(() => {{}});
       }}
 
       if (btnSetProd) btnSetProd.addEventListener('click', (e) => {{ e.stopPropagation(); switchMode('production'); }});
@@ -4412,7 +4479,7 @@ def build_modern_dashboard_html(
         const logF = document.getElementById('cfg-logging-file');
 
         return {{
-          mode: currentActiveTab === 'modes' ? (document.getElementById('mode-card-prod').classList.contains('active-mode') ? 'production' : 'test') : 'production',
+          mode: currentExecutionMode,
           timing: {{
             step0_poll_interval_prod_seconds: parseFloat(document.getElementById('cfg-timing-prod-poll').value) || 1.0,
             step0_poll_interval_test_seconds: parseFloat(document.getElementById('cfg-timing-test-poll').value) || 0.1,
@@ -4678,6 +4745,7 @@ def build_modern_dashboard_html(
       // Initialize
       pollServerStatus();
       applyFilters();
+      applyExecutionModeUI(currentExecutionMode);
 
     }})();
   </script>
