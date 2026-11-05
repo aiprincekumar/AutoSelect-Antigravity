@@ -430,6 +430,27 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertTrue(self.engine.dashboard_file.is_file())
         mock_browser.assert_called_once()
 
+    @patch("webbrowser.open_new_tab")
+    def test_10b_open_dashboard_session_lock_skips_duplicate(self, mock_browser):
+        """Verify subsequent calls to open_dashboard(force=False) skip browser launch when lock exists."""
+        mock_browser.return_value = True
+
+        # First call: launches browser and creates lock
+        opened_first = self.engine.open_dashboard(force=False)
+        self.assertTrue(opened_first)
+        self.assertEqual(mock_browser.call_count, 1)
+        self.assertTrue(self.engine.session_lock_file.is_file())
+
+        # Second call with force=False: should skip browser launch
+        opened_second = self.engine.open_dashboard(force=False)
+        self.assertTrue(opened_second)
+        self.assertEqual(mock_browser.call_count, 1)
+
+        # Third call with force=True: should bypass lock and launch browser
+        opened_third = self.engine.open_dashboard(force=True)
+        self.assertTrue(opened_third)
+        self.assertEqual(mock_browser.call_count, 2)
+
     def test_11_step0_pipeline_discovery_recognizes_step4(self):
         """Verify Step 0's discover_pipeline_steps automatically detects Step 4 as PRESENT."""
         steps = discover_pipeline_steps(root_dir=_root_dir, include_future=True)

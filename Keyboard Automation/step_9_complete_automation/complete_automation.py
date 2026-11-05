@@ -399,6 +399,7 @@ class CompleteAutomationController:
             self.headless = headless
 
         self._stop_requested = False
+        self._dashboard_opened: bool = False
 
         # Logger
         self.logger = logging.getLogger("CompleteAutomation")
@@ -551,6 +552,8 @@ class CompleteAutomationController:
                     "--delay", str(self.config.timing.step4_user_activity_delay_seconds),
                     "--poll-interval", str(self.config.timing.step4_poll_interval_seconds),
                 ])
+                if getattr(self, "_dashboard_opened", False):
+                    cmd.append("--no-watch")
 
             if extra_args:
                 cmd.extend(extra_args)
@@ -608,6 +611,8 @@ class CompleteAutomationController:
                 return False, proc.returncode, msg, step_reports
 
             self.logger.info("Step %d (%s) completed successfully (exit 0).", step.step_index, step.name)
+            if step.step_index == 4 and proc.returncode == 0:
+                self._dashboard_opened = True
 
         summary = f"Complete Automation Pipeline completed successfully ({executed_count} steps executed)."
         self.logger.info(summary)

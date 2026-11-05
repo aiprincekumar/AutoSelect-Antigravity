@@ -265,6 +265,7 @@ class Step4ReportingEngine:
 
         # Dashboard HTML output path
         self.dashboard_file = self.reports_dir / "dashboard.html"
+        self.session_lock_file = self.reports_dir / ".dashboard_launched.lock"
 
         # System runtime configuration file path (step_9_complete_automation/config.json)
         self.runtime_config_file = self.get_runtime_config_path()
@@ -7346,10 +7347,24 @@ class Step4ReportingEngine:
     # Open Dashboard in Browser
     # ========================================================================
 
-    def open_dashboard(self, port: int = 8501) -> bool:
+    def open_dashboard(self, port: int = 8501, force: bool = False) -> bool:
         """Launch dashboard in web browser. Connects to local server if active, else falls back to file:// URI."""
         if not self.dashboard_file.is_file():
             self.generate_html_dashboard()
+
+        # Session launch lock check (Smart Single-Tab Lifecycle)
+        if not force and hasattr(self, "session_lock_file") and self.session_lock_file.is_file():
+            try:
+                with open(self.session_lock_file, "r", encoding="utf-8") as f:
+                    lock_data = json.load(f)
+                launched_at = lock_data.get("launched_at_epoch", 0)
+                if (time.time() - launched_at) < 86400:
+                    logging.getLogger("Step4Reporting").info(
+                        "Dashboard browser tab was already launched in this session. Skipping duplicate launch."
+                    )
+                    return True
+            except Exception:
+                pass
 
         server_running = False
         try:
@@ -7370,6 +7385,21 @@ class Step4ReportingEngine:
 
             url = f"http://127.0.0.1:{port}/" if server_running else target_f.resolve().as_uri()
             webbrowser.open_new_tab(url)
+
+            # Record session launch lock
+            try:
+                if hasattr(self, "session_lock_file"):
+                    lock_info = {
+                        "launched_at": datetime.now(timezone.utc).isoformat(),
+                        "launched_at_epoch": time.time(),
+                        "pid": os.getpid(),
+                        "url": url,
+                    }
+                    with open(self.session_lock_file, "w", encoding="utf-8") as f:
+                        json.dump(lock_info, f, indent=2)
+            except Exception as le:
+                logging.getLogger("Step4Reporting").warning("Failed to write session lock: %s", le)
+
             return True
         except Exception:
             return False
@@ -7585,7 +7615,7 @@ def main() -> int:
     # Manual Mode: Immediately open dashboard
     if args.show:
         engine.generate_html_dashboard()
-        engine.open_dashboard()
+        engine.open_dashboard(force=True)
         return 0
 
     # Internal Detached Watcher Worker

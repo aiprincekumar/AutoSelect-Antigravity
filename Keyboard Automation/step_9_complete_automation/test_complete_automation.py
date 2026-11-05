@@ -204,6 +204,33 @@ class TestCompleteAutomationExecution(unittest.TestCase):
         self.assertNotIn("creationflags", call_kwargs)
         self.assertNotIn("startupinfo", call_kwargs)
 
+    @patch("subprocess.run")
+    def test_step4_subsequent_executions_pass_no_watch(self, mock_run):
+        """Verify that after step 4 completes once, subsequent step 4 calls append --no-watch."""
+        mock_proc = MagicMock()
+        mock_proc.returncode = 0
+        mock_run.return_value = mock_proc
+
+        self.assertFalse(self.controller._dashboard_opened)
+
+        # Run pipeline first time
+        self.controller.execute_pipeline(capture_output=True)
+        self.assertTrue(self.controller._dashboard_opened)
+
+        # Inspect commands from first run
+        step4_calls = [call for call in mock_run.call_args_list if any("step4" in str(arg).lower() for arg in call[0][0])]
+        self.assertTrue(len(step4_calls) > 0)
+        first_step4_cmd = step4_calls[0][0][0]
+        self.assertNotIn("--no-watch", first_step4_cmd)
+
+        # Run pipeline second time
+        mock_run.reset_mock()
+        self.controller.execute_pipeline(capture_output=True)
+        step4_calls_2 = [call for call in mock_run.call_args_list if any("step4" in str(arg).lower() for arg in call[0][0])]
+        self.assertTrue(len(step4_calls_2) > 0)
+        second_step4_cmd = step4_calls_2[0][0][0]
+        self.assertIn("--no-watch", second_step4_cmd)
+
 
 class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     def setUp(self):
