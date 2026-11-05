@@ -42,6 +42,7 @@ from .constants import (
     VK_8,
     VK_9,
     VK_MENU,
+    VK_ESCAPE,
     SW_HIDE,
     SW_SHOWNORMAL,
     SW_SHOWMINIMIZED,

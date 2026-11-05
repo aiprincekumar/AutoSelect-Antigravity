@@ -232,11 +232,15 @@ def discover_pipeline_steps(
     ))
 
     # 5. Dynamic Future Steps (step_{N}_* where 5 <= N < 9; Step 9 is this master orchestrator)
+    # Exclude daemon/sentinel/background services like step_5_automation
     try:
         for sub_dir in sorted(r_dir.glob("step_*_*")):
             if not sub_dir.is_dir():
                 continue
             if sub_dir.resolve() == _this_dir.resolve():
+                continue
+            # Sentinel and lifecycle daemons are external supervisors, NOT sequential pipeline steps
+            if sub_dir.name.lower() in ("step_5_automation", "step_5_sentinel") or any(k in sub_dir.name.lower() for k in ("sentinel", "daemon", "lifecycle")):
                 continue
             parts = sub_dir.name.split("_")
             if len(parts) >= 2 and parts[1].isdigit():
@@ -245,6 +249,7 @@ def discover_pipeline_steps(
                     cand_scripts = [
                         p for p in sub_dir.glob("*.py")
                         if not p.name.startswith(("test_", "__", "setup"))
+                        and not any(k in p.name.lower() for k in ("sentinel", "daemon", "server", "service", "lifecycle"))
                     ]
                     if cand_scripts:
                         cand_scripts.sort(key=lambda x: (0 if f"step{idx}" in x.name.lower() else 1, len(x.name)))

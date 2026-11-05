@@ -112,7 +112,7 @@ def is_antigravity_running() -> bool:
         kernel32 = ctypes.windll.kernel32
         h_snapshot = kernel32.CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0)
         if h_snapshot == wintypes.HANDLE(-1).value or h_snapshot == -1:
-            return False
+            raise OSError("CreateToolhelp32Snapshot failed")
 
         pe = PROCESSENTRY32()
         pe.dwSize = ctypes.sizeof(PROCESSENTRY32)
@@ -214,6 +214,7 @@ class AntigravityLifecycleSentinel:
         self._running = False
         self._last_ag_state: Optional[bool] = None
         self._session_automation_started: bool = False
+        self._consecutive_closed_count: int = 0
 
         # Resolve Python Executable (Prefer .venv\Scripts\python.exe)
         venv_python = self.workspace_dir / ".venv" / "Scripts" / "python.exe"
@@ -389,6 +390,7 @@ class AntigravityLifecycleSentinel:
 
         # Case 1: Antigravity is OPEN
         if ag_running:
+            self._consecutive_closed_count = 0
             # 1.1 Ensure server is started
             if not server_listening:
                 logger.info("Antigravity detected OPEN. Booting dashboard server...")
@@ -410,6 +412,7 @@ class AntigravityLifecycleSentinel:
 
         # Case 2: Antigravity is CLOSED
         else:
+            self._consecutive_closed_count += 1
             self._session_automation_started = False
             if server_listening or automation_running:
                 logger.info("Antigravity detected CLOSED / EXITED. Shutting down server and automation...")

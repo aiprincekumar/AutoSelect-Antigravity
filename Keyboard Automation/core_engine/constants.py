@@ -37,6 +37,7 @@ VK_7 = 0x37
 VK_8 = 0x38
 VK_9 = 0x39
 VK_MENU = 0x12  # Alt key (used for OS foreground lock release)
+VK_ESCAPE = 0x1B  # Escape key (used to dismiss menu bar/dialogs)
 
 # ShowWindow commands (Win32)
 SW_HIDE = 0

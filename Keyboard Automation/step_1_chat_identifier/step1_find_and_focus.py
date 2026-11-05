@@ -92,6 +92,7 @@ if IS_WINDOWS:
 
     # Virtual key constants
     VK_MENU = 0x12  # Alt key for foreground lock release
+    VK_ESCAPE = 0x1B  # Escape key to dismiss any active menu bar or system menu
 
     # ShowWindow commands
     SW_HIDE = 0
@@ -620,12 +621,7 @@ class AntigravityFocusManager:
             attached_target = bool(user32.AttachThreadInput(cur_thread, target_thread, True))
 
         try:
-            # Pulse Alt key to force Windows foreground scheduler
-            user32.keybd_event(VK_MENU, 0, 0, 0)
-            time.sleep(0.01)
-            user32.keybd_event(VK_MENU, 0, 2, 0)
-
-            # Bring to top
+            # Bring to top and focus window
             user32.BringWindowToTop(hwnd)
             user32.SetForegroundWindow(hwnd)
             user32.SetFocus(hwnd)
@@ -634,6 +630,11 @@ class AntigravityFocusManager:
             user32.SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
             time.sleep(0.05)
             user32.SetWindowPos(hwnd, HWND_NOTOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE | SWP_SHOWWINDOW)
+
+            # Dismiss any active menu bar or system menu (prevents Electron menu bar trap)
+            user32.keybd_event(VK_ESCAPE, 0, 0, 0)
+            time.sleep(0.01)
+            user32.keybd_event(VK_ESCAPE, 0, 2, 0)
         finally:
             if attached_fg:
                 user32.AttachThreadInput(cur_thread, fg_thread, False)

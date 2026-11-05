@@ -17,6 +17,7 @@ from typing import Optional, List, Tuple, Dict, Any
 from .constants import (
     IS_WINDOWS,
     VK_MENU,
+    VK_ESCAPE,
     SW_RESTORE,
     SW_MAXIMIZE,
     SW_SHOW,
@@ -456,10 +457,6 @@ if IS_WINDOWS:
                         attached_target = bool(user32.AttachThreadInput(cur_thread, target_thread, True))
 
                     try:
-                        # Windows Foreground Lock Bypass: Virtual Alt key tap
-                        _send_key_event(VK_MENU, key_up=False)
-                        _send_key_event(VK_MENU, key_up=True)
-
                         # Z-Order bump to force window to topmost layer then restore
                         user32.SetWindowPos(
                             hwnd, HWND_TOPMOST, 0, 0, 0, 0,
@@ -476,6 +473,11 @@ if IS_WINDOWS:
                             user32.SwitchToThisWindow(hwnd, True)
                         user32.SetActiveWindow(hwnd)
                         user32.SetFocus(hwnd)
+
+                        # Dismiss any accidentally activated application menu bar (e.g. Electron Alt trap)
+                        # to guarantee window menu / Close button is never focused
+                        _send_key_event(VK_ESCAPE, key_up=False)
+                        _send_key_event(VK_ESCAPE, key_up=True)
                     finally:
                         if attached_fg:
                             user32.AttachThreadInput(cur_thread, fg_thread, False)

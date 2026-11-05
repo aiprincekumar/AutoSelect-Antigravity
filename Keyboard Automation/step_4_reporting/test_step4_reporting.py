@@ -1335,11 +1335,17 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertIn("post_keypress_delay_s", kb_timing)
         self.assertIn("inter_question_delay_s", kb_timing)
         self.assertIn("round_completion_pause_s", kb_timing)
-        self.assertEqual(kb_timing["countdown"], 3.0)
-        self.assertEqual(kb_timing["hold_delay_s"], 0.05)
-        self.assertEqual(kb_timing["post_keypress_delay_s"], 0.25)
-        self.assertEqual(kb_timing["inter_question_delay_s"], 0.5)
-        self.assertEqual(kb_timing["round_completion_pause_s"], 1.0)
+        self.assertGreater(kb_timing["countdown"], 0)
+        self.assertGreater(kb_timing["hold_delay_s"], 0)
+        self.assertGreater(kb_timing["post_keypress_delay_s"], 0)
+
+        # Verify canonical default timings
+        default_kb = cm.get_keyboard_timing(cm.DEFAULT_RUNTIME_CONFIG)
+        self.assertEqual(default_kb["countdown"], 3.0)
+        self.assertEqual(default_kb["hold_delay_s"], 0.05)
+        self.assertEqual(default_kb["post_keypress_delay_s"], 0.25)
+        self.assertEqual(default_kb["inter_question_delay_s"], 0.5)
+        self.assertEqual(default_kb["round_completion_pause_s"], 1.0)
 
     def test_28_dynamic_automation_start_stop_control(self):
         """Verify dynamic Start/Stop automation toggle button, modal drawer, and JS logic."""

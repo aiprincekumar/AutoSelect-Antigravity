@@ -28,6 +28,7 @@ from .constants import (
     VK_SHIFT,
     VK_TAB,
     VK_RETURN,
+    VK_ESCAPE,
     DISQUALIFIED_BROWSER_PROCS,
 )
 from .win32_api import (
@@ -540,6 +541,14 @@ class GrillMeAutomator:
         settle_pause = max(0.001, self.post_keypress_delay) if not self.dry_run else 0.001
         transition_pause = max(0.001, self.inter_question_delay) if not self.dry_run else 0.001
         round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
+
+        # Ensure menu bar is dismissed prior to keystroke dispatch
+        if IS_WINDOWS and not self.dry_run:
+            try:
+                send_single_key(VK_ESCAPE, hold_delay=0.01)
+                time.sleep(0.05)
+            except Exception:
+                pass
 
         try:
             for q_idx in range(1, total_questions + 1):
