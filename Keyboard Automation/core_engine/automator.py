@@ -156,16 +156,26 @@ class GrillMeAutomator:
         Locates the target_chat.json file using relative directory probing.
         Probes common locations without recursive scans.
         """
+        root_dir = Path(__file__).resolve().parent.parent
         candidates = [
-            Path(__file__).resolve().parent.parent / "target_chat.json",
+            root_dir / "target_chat.json",
             Path.cwd() / "target_chat.json",
             Path.cwd().parent / "target_chat.json",
-            Path(__file__).resolve().parent.parent / "step_1_chat_identifier" / "target_chat.json",
+            root_dir / "last_selection_state.json",
+            Path.cwd() / "last_selection_state.json",
+            Path.cwd().parent / "last_selection_state.json",
+            root_dir / "step_2_chat_and_focus" / "target_chat.json",
+            root_dir / "step_2_chat_and_focus" / "last_selection_state.json",
+            root_dir / "step_1_chat_identifier" / "target_chat.json",
+            root_dir / "step_1_chat_identifier" / "last_selection_state.json",
+            Path.cwd() / "step_2_chat_and_focus" / "target_chat.json",
             Path.cwd() / "step_1_chat_identifier" / "target_chat.json",
+            root_dir / "question_count.json",
+            Path.cwd() / "question_count.json",
             Path.cwd() / "Identify Chat" / "target_chat.json",
             Path.cwd() / ".." / "Identify Chat" / "target_chat.json",
-            Path(__file__).resolve().parent.parent / "Identify Chat" / "target_chat.json",
-            Path(__file__).resolve().parent.parent.parent / "Identify Chat" / "target_chat.json",
+            root_dir / "Identify Chat" / "target_chat.json",
+            root_dir.parent / "Identify Chat" / "target_chat.json",
         ]
         for candidate in candidates:
             try:
@@ -267,18 +277,19 @@ class GrillMeAutomator:
                 detected_q = len(qs)
             elif isinstance(sels, list) and len(sels) > 0:
                 detected_q = len(sels)
-            elif state_data.get("total_questions_count") is not None:
-                try:
-                    detected_q = max(0, int(state_data["total_questions_count"]))
-                except (ValueError, TypeError):
-                    detected_q = 1
-            elif state_data.get("questions_count") is not None:
-                try:
-                    detected_q = max(0, int(state_data["questions_count"]))
-                except (ValueError, TypeError):
-                    detected_q = 1
             else:
-                detected_q = 1
+                scalar_val = None
+                for k in ("total_questions_count", "questions_count", "total_questions", "question_count"):
+                    v = state_data.get(k)
+                    if v is not None:
+                        try:
+                            v_int = int(v)
+                            if v_int > 0:
+                                scalar_val = v_int
+                                break
+                        except (ValueError, TypeError):
+                            pass
+                detected_q = scalar_val if scalar_val is not None else 1
 
             # Extract option choices from selections or questions
             if isinstance(sels, list) and sels:
@@ -293,6 +304,22 @@ class GrillMeAutomator:
                         idx = item.get("recommended_option_index") or item.get("selected_option_index")
                         if idx is not None:
                             detected_options.append(str(idx))
+
+        # Check live CDP DOM inspection if available, not dry_run, and no explicit CLI count
+        if not self.dry_run and explicit_questions is None:
+            try:
+                from .cdp_helper import AntigravityCDPClient
+                cdp = AntigravityCDPClient()
+                if cdp.is_available() and cdp.connect():
+                    q_status = cdp.get_questionnaire_status()
+                    if q_status and (q_status.get("has_card") or q_status.get("options_count", 0) > 0):
+                        live_tq = q_status.get("total_questions", 1)
+                        if live_tq > 0:
+                            logger.info(f"Live CDP DOM detected active questionnaire: {live_tq} question(s)")
+                            detected_q = live_tq
+                    cdp.close()
+            except Exception as cdp_err:
+                logger.debug(f"Live CDP question detection bypassed: {cdp_err}")
 
         # Final determination of total_questions (strictly integer >= 0)
         final_questions = explicit_questions if explicit_questions is not None else detected_q
@@ -663,7 +690,7 @@ class GrillMeAutomator:
 
 
 def execute_multi_question(
-    total_questions: int = 1,
+    total_questions: Optional[Union[int, str]] = None,
     options: Optional[List[str]] = None,
     **kwargs
 ) -> bool:
@@ -671,7 +698,7 @@ def execute_multi_question(
     Convenience functional interface to execute multi-question automation.
     """
     automator = GrillMeAutomator(
-        questions=total_questions,
+        questions=total_questions if total_questions is not None else "auto",
         options_list=options,
         **kwargs
     )

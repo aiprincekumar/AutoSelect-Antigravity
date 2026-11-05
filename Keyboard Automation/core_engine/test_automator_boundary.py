@@ -248,5 +248,91 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(len(executed_steps), 0)
 
 
+    def test_execute_multi_question_n4_exact_keystroke_boundary(self):
+        """Verify N=4 dynamically executes 4 loops: total 16 steps, with proper Continues and final Submit."""
+        automator = GrillMeAutomator(
+            questions=4,
+            options_list=["1", "2", "1", "3"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=4, options=["1", "2", "1", "3"])
+        self.assertTrue(ok)
+        self.assertEqual(len(executed_steps), 16)
+        self.assertIn("Continue to Question 2", executed_steps[3][1])
+        self.assertIn("Continue to Question 3", executed_steps[7][1])
+        self.assertIn("Continue to Question 4", executed_steps[11][1])
+        self.assertIn("Submit ALL 4 answers", executed_steps[15][1])
+
+    def test_execute_multi_question_n5_exact_keystroke_boundary(self):
+        """Verify N=5 dynamically executes 5 loops: total 20 steps, scaling cleanly beyond N=3."""
+        automator = GrillMeAutomator(
+            questions=5,
+            options_list=["1", "1", "2", "2", "1"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=5, options=["1", "1", "2", "2", "1"])
+        self.assertTrue(ok)
+        self.assertEqual(len(executed_steps), 20)
+        self.assertIn("Submit ALL 5 answers", executed_steps[19][1])
+
+    def test_state_resolution_step2_metadata_keys(self):
+        """Verify Step 3 dynamically resolves questions from Step 2 metadata keys (total_questions, question_count)."""
+        for key, count in [("total_questions", 4), ("question_count", 5), ("total_questions_count", 3)]:
+            state = {
+                "success": True,
+                "data": {
+                    "conversation_id": f"test_{key}",
+                    key: count,
+                    "gui_chat_selected": True,
+                }
+            }
+            with open(self.state_file, "w", encoding="utf-8") as f:
+                import json
+                json.dump(state, f)
+
+            automator = GrillMeAutomator(
+                questions="auto",
+                state_file=str(self.state_file),
+                dry_run=True,
+                auto_focus=False,
+                auto_maximize=False,
+            )
+            self.assertEqual(automator.total_questions, count)
+            self.assertEqual(len(automator.options_list), count)
+
+    def test_convenience_execute_multi_question_auto_default(self):
+        """Verify execute_multi_question() functional interface defaults to auto detection instead of forcing 1."""
+        state = {
+            "success": True,
+            "data": {
+                "conversation_id": "auto_test",
+                "total_questions_count": 4,
+            }
+        }
+        with open(self.state_file, "w", encoding="utf-8") as f:
+            import json
+            json.dump(state, f)
+
+        from core_engine.automator import execute_multi_question
+        with patch("core_engine.automator.GrillMeAutomator.execute", return_value=True) as mock_exec:
+            ok = execute_multi_question(state_file=str(self.state_file), dry_run=True)
+            self.assertTrue(ok)
+            mock_exec.assert_called_once()
+
+
 if __name__ == "__main__":
     unittest.main()

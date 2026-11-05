@@ -420,6 +420,25 @@ class AntigravityGUISelector:
                 state_str = cdp.eval_js(check_js)
                 logger.info("Antigravity Page State after selection: %s", state_str)
 
+                # Inspect live questionnaire state via CDP
+                try:
+                    q_status = cdp.get_questionnaire_status()
+                    if q_status and (q_status.get("has_card") or q_status.get("options_count", 0) > 0):
+                        result["has_card"] = True
+                        result["total_questions"] = max(1, int(q_status.get("total_questions", 1)))
+                        result["current_question"] = int(q_status.get("current_question", 1))
+                        result["options_count"] = int(q_status.get("options_count", 0))
+                        result["question_text"] = q_status.get("question_text")
+                        result["continue_btn_text"] = q_status.get("continue_btn_text")
+                        logger.info(
+                            "Live Questionnaire Detected via CDP: Total Questions=%d, Current=%d, Options=%d",
+                            result["total_questions"],
+                            result["current_question"],
+                            result["options_count"]
+                        )
+                except Exception as q_err:
+                    logger.debug("Live questionnaire detection error: %s", q_err)
+
             finally:
                 cdp.close()
 
@@ -664,12 +683,45 @@ def run_step2(
         config_path=config_path,
     )
 
-    # 3. Update and Save State
+    # 3. Synchronize Questions Metadata & Update State
     timestamp_now = datetime.now(timezone.utc).isoformat()
     state_data["gui_chat_selected"] = selection_res["success"]
     state_data["gui_selection_method"] = selection_res["method"]
     state_data["gui_selected_at"] = timestamp_now
     state_data["status"] = "SUCCESS_SELECTED" if selection_res["success"] else "FAILED_SELECTION"
+
+    # Prioritize live CDP DOM inspection for question count if available
+    live_tq = selection_res.get("total_questions")
+    if live_tq is not None and live_tq > 0:
+        state_data["total_questions_count"] = live_tq
+        state_data["questions_count"] = live_tq
+        state_data["total_questions"] = live_tq
+        state_data["question_count"] = live_tq
+        state_data["is_multi_question"] = (live_tq > 1)
+        state_data["live_questionnaire_detected"] = True
+        if selection_res.get("options_count"):
+            state_data["detected_options_count"] = selection_res.get("options_count")
+        if selection_res.get("current_question"):
+            state_data["current_question_index"] = selection_res.get("current_question")
+    else:
+        # Preserve existing questions count or scalar count from state
+        tq = (
+            state_data.get("total_questions_count")
+            or state_data.get("questions_count")
+            or state_data.get("total_questions")
+            or (len(state_data.get("questions", [])) if isinstance(state_data.get("questions"), list) and state_data.get("questions") else None)
+            or (len(state_data.get("selections", [])) if isinstance(state_data.get("selections"), list) and state_data.get("selections") else None)
+            or 1
+        )
+        try:
+            tq_int = max(0, int(tq))
+        except (ValueError, TypeError):
+            tq_int = 1
+        state_data["total_questions_count"] = tq_int
+        state_data["questions_count"] = tq_int
+        state_data["total_questions"] = tq_int
+        state_data["question_count"] = tq_int
+        state_data["is_multi_question"] = (tq_int > 1)
 
     envelope_update = {
         "success": selection_res["success"],
@@ -688,6 +740,9 @@ def run_step2(
     except Exception as e:
         logger.debug("Failed to update state file: %s", e)
 
+    tq_report = state_data.get("total_questions_count", 1)
+    is_multi_report = state_data.get("is_multi_question", tq_report > 1)
+
     print("\n" + "=" * 76)
     if selection_res["success"]:
         print(f"🎉 [SUCCESS] Chat successfully activated in Antigravity GUI!")
@@ -695,6 +750,7 @@ def run_step2(
         if selection_res["screen_coordinates"]:
             print(f"   Coordinates : Screen {selection_res['screen_coordinates']}")
         print(f"   Chat Focus  : Ctrl + L dispatched, input box ready.")
+        print(f"   Questions   : Total Questions = {tq_report} (Multi-Question: {'YES' if is_multi_report else 'NO'})")
         if effective_settle > 0:
             logger.info("Applying configured settle delay between steps: %.2fs...", effective_settle)
             time.sleep(effective_settle)

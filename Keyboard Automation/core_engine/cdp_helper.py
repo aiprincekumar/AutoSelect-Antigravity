@@ -245,7 +245,9 @@ class AntigravityCDPClient:
 
             let currentQ = 1;
             let totalQ = 1;
-            const match = document.body.innerText.match(/\\b([1-9]\\d*)\\s+of\\s+([1-9]\\d*)\\b/);
+            const fullText = (headerText ? headerText.innerText + ' ' : '') + (card ? card.innerText + ' ' : '') + document.body.innerText;
+            const match = fullText.match(/\\b([1-9]\\d*)\\s*(?:of|\\/)\\s*([1-9]\\d*)\\b/i)
+                       || fullText.match(/\\[.*?\\b([1-9]\\d*)\\s*(?:of|\\/)\\s*([1-9]\\d*)\\b.*?\\]/i);
             if (match) {
                 currentQ = parseInt(match[1]);
                 totalQ = parseInt(match[2]);
