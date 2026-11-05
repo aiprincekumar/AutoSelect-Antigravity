@@ -206,11 +206,13 @@ class AntigravityLifecycleSentinel:
         port: int = 8501,
         poll_interval: float = 2.5,
         default_mode: str = "production",
+        auto_start_pipeline: bool = False,
     ):
         self.workspace_dir = (workspace_dir or _WORKSPACE_DIR).resolve()
         self.port = port
         self.poll_interval = poll_interval
         self.default_mode = default_mode
+        self.auto_start_pipeline = auto_start_pipeline
         self._running = False
         self._last_ag_state: Optional[bool] = None
         self._session_automation_started: bool = False
@@ -398,11 +400,11 @@ class AntigravityLifecycleSentinel:
                 server_listening = is_port_listening("127.0.0.1", self.port)
                 result["action_taken"] = "STARTED_SERVER"
 
-            # 1.2 Ensure automation is started once per Antigravity open session
-            if server_listening and not self._session_automation_started:
+            # 1.2 Optional automation trigger (ONLY if auto_start_pipeline is explicitly True)
+            if self.auto_start_pipeline and server_listening and not self._session_automation_started:
                 automation_status = api_get_status(port=self.port)
                 if not (automation_status and automation_status.get("running")):
-                    logger.info("Server is up. Automatically activating Automation Task (Step 0 to 4)...")
+                    logger.info("Server is up and auto_start_pipeline is True. Activating Automation Task (Step 0 to 4)...")
                     if self.trigger_automation_start():
                         result["action_taken"] = (
                             "STARTED_SERVER_AND_AUTOMATION" if result["action_taken"] == "STARTED_SERVER" else "STARTED_AUTOMATION"
@@ -472,12 +474,15 @@ def main() -> int:
     parser.add_argument("--port", type=int, default=8501, help="Dashboard server port (default: 8501)")
     parser.add_argument("--interval", type=float, default=2.5, help="Poll interval in seconds (default: 2.5)")
     parser.add_argument("--mode", type=str, default="production", help="Automation mode (production / test)")
+    parser.add_argument("--auto-start-pipeline", action="store_true", default=False, help="Explicitly enable triggering automation pipeline on Antigravity open")
+    parser.add_argument("--no-pause", action="store_true", default=False, help="Non-interactive execution flag")
 
-    args = parser.parse_args()
+    args, _ = parser.parse_known_args()
     sentinel = AntigravityLifecycleSentinel(
         port=args.port,
         poll_interval=args.interval,
         default_mode=args.mode,
+        auto_start_pipeline=args.auto_start_pipeline,
     )
 
     if args.status:
@@ -501,13 +506,13 @@ def main() -> int:
         sentinel.stop_dashboard_server()
         return 0
 
-    if args.check:
-        res = sentinel.run_single_cycle()
-        print(json.dumps(res, indent=2))
+    if args.daemon:
+        sentinel.start_daemon()
         return 0
 
-    # Default to daemon if specified or if no other action passed
-    sentinel.start_daemon()
+    # Default / Check: Run a single inspection and reconciliation pass, print status, and STOP!
+    res = sentinel.run_single_cycle()
+    print(json.dumps(res, indent=2))
     return 0
 
 

@@ -319,58 +319,58 @@ class TestDashboardFormatting(unittest.TestCase):
         finally:
             sys.argv = old_argv
 
-    def test_mode_and_run_pipeline_argparse_support(self):
-        """Verify that step0_antigravity_detector supports --mode, --run-pipeline, and --interactive."""
+    def test_mode_and_decoupled_argparse_support(self):
+        """Verify that step0_antigravity_detector supports --mode, --loop/--watch, and defaults to single-pass."""
         from step0_antigravity_detector import parse_args
         old_argv = sys.argv
         try:
-            sys.argv = ["step0_antigravity_detector.py", "--mode", "test", "--run-pipeline", "--interactive"]
+            sys.argv = ["step0_antigravity_detector.py", "--mode", "test", "--watch", "--interactive"]
             args = parse_args()
             self.assertEqual(args.mode, "test")
-            self.assertTrue(args.run_pipeline)
+            self.assertTrue(args.loop)
             self.assertTrue(args.interactive)
 
             sys.argv = ["step0_antigravity_detector.py", "--mode", "production"]
             args_prod = parse_args()
             self.assertEqual(args_prod.mode, "production")
-            self.assertFalse(args_prod.run_pipeline)
-            self.assertFalse(args_prod.interactive)
+            self.assertFalse(args_prod.loop)
+            self.assertTrue(args_prod.once)
         finally:
             sys.argv = old_argv
 
-    @patch("step0_antigravity_detector.execute_complete_pipeline")
-    def test_main_run_pipeline_direct_invocation(self, mock_exec):
-        """Verify main() executes pipeline directly when --run-pipeline is passed."""
+    @patch.object(AntiGravityDetector, "detect")
+    def test_main_step0_standalone_stops_cleanly(self, mock_detect):
+        """Verify main() runs Step 0 detection once and stops cleanly with exit code 0."""
         import step0_antigravity_detector as s0
-        mock_exec.return_value = 0
+        mock_detect.return_value = DetectionResult(
+            is_detected=True,
+            trigger_matched=False,
+            pending_grill_me_chats=0
+        )
         old_argv = sys.argv
         try:
-            sys.argv = ["step0_antigravity_detector.py", "--run-pipeline", "--mode", "test", "--no-pause"]
+            sys.argv = ["step0_antigravity_detector.py", "--mode", "test", "--no-pause"]
             with self.assertRaises(SystemExit) as cm:
                 s0.main()
             self.assertEqual(cm.exception.code, 0)
-            mock_exec.assert_called_once_with(mode="test", interactive=True)
         finally:
             sys.argv = old_argv
 
-    @patch("step0_antigravity_detector.execute_complete_pipeline")
     @patch.object(AntiGravityDetector, "detect")
-    def test_main_once_executes_pipeline_on_trigger(self, mock_detect, mock_exec):
-        """Verify main() executes complete pipeline when --once is passed and trigger matches."""
+    def test_main_does_not_execute_downstream_pipeline_on_trigger(self, mock_detect):
+        """Verify main() does NOT execute downstream pipeline when trigger matches, only stops cleanly."""
         import step0_antigravity_detector as s0
         mock_detect.return_value = DetectionResult(
             is_detected=True,
             trigger_matched=True,
             pending_grill_me_chats=1
         )
-        mock_exec.return_value = 0
         old_argv = sys.argv
         try:
             sys.argv = ["step0_antigravity_detector.py", "--once", "--mode", "test", "--no-pause"]
             with self.assertRaises(SystemExit) as cm:
                 s0.main()
             self.assertEqual(cm.exception.code, 0)
-            mock_exec.assert_called_once_with(mode="test", interactive=True)
         finally:
             sys.argv = old_argv
 

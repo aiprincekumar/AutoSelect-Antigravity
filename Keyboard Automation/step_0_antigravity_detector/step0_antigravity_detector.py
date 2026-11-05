@@ -23,10 +23,10 @@ Standard: Department 06 (Backend & API Engineering) & Department 02 (Solution Ar
   3. Two-Factor Trigger Verification:
      - Factor 1: Is Anti-Gravity running/open?
      - Factor 2: Is there a pending Grill-Me chat (ask_question) waiting?
-  4. Unified Architecture:
-     - Single canonical runner for both development testing and production monitoring.
-     - Configurable polling cadence via `--interval` (default: 10.0s).
-     - Execution of remaining steps is decoupled and handled by Complete Automation.
+  4. Single-Step Execution & Complete Independence:
+     - Step 0 executes ONLY its own single step (AntiGravity & Chat Detection).
+     - Does NOT execute, trigger, or cascade into any downstream steps.
+     - Completes its detection, displays the status dashboard box, and stops cleanly.
 """
 
 from __future__ import annotations
@@ -156,66 +156,15 @@ def display_dashboard(
     sys.stdout.flush()
 
 
-def resolve_complete_automation_script() -> Path:
-    """Resolve the canonical complete_automation.py script path."""
-    candidates = [
-        _root_dir / "step_9_complete_automation" / "complete_automation.py",
-        _this_dir.parent / "step_9_complete_automation" / "complete_automation.py",
-        Path.cwd() / "step_9_complete_automation" / "complete_automation.py",
-    ]
-    for c in candidates:
-        if c.is_file():
-            return c.resolve()
-    return candidates[0]
-
-
-def execute_complete_pipeline(
-    mode: str = "production",
-    interactive: bool = True,
-    extra_args: Optional[List[str]] = None,
-) -> int:
-    """
-    Execute the complete 4-step pipeline via step_9_complete_automation/complete_automation.py.
-    Returns the child process exit code (0 = success, 10 = no pending chats, 1 = error).
-    """
-    script = resolve_complete_automation_script()
-    if not script.is_file():
-        sys.stderr.write(f"[ERROR] Complete Automation script not found: {script}\n")
-        return 1
-
-    cmd = [
-        sys.executable,
-        str(script),
-        "--run-pipeline",
-        "--mode", mode,
-    ]
-    if interactive:
-        cmd.append("--interactive")
-    if extra_args:
-        cmd.extend(extra_args)
-
-    try:
-        proc = subprocess.run(cmd, cwd=str(_root_dir))
-        return proc.returncode
-    except Exception as e:
-        sys.stderr.write(f"[ERROR] Failed to execute pipeline: {e}\n")
-        return 1
-
-
 def parse_args():
     parser = argparse.ArgumentParser(
-        description="Step 0 - AntiGravity Detector (Canonical Unified Status Monitor & 10s Timer Dashboard)"
+        description="Step 0 - AntiGravity Detector (Canonical Unified Status Monitor & Single-Step Detector)"
     )
     parser.add_argument(
         "--mode",
         choices=["production", "test"],
         default="production",
         help="Operating mode: 'production' (5-minute poll) or 'test' (10-second timer dashboard)"
-    )
-    parser.add_argument(
-        "--run-pipeline",
-        action="store_true",
-        help="Execute the complete 4-step pipeline immediately without waiting for detector polling"
     )
     parser.add_argument(
         "--interactive",
@@ -225,7 +174,16 @@ def parse_args():
     parser.add_argument(
         "--once",
         action="store_true",
-        help="Perform a single detection check, print clean dashboard box, and exit immediately"
+        default=True,
+        help="Perform a single detection check, print clean dashboard box, and exit immediately (default)"
+    )
+    parser.add_argument(
+        "--watch",
+        "--loop",
+        dest="loop",
+        action="store_true",
+        default=False,
+        help="Optional: Run continuous status monitoring loop without executing downstream steps"
     )
     parser.add_argument(
         "--dry-run",
@@ -303,14 +261,6 @@ def main():
     pause_enabled = should_pause(args)
     require_grill_me = False if args.any_antigravity else None
     eff_mode = args.mode or "production"
-    interactive = args.interactive or (not args.json)
-
-    # 1. Direct --run-pipeline request
-    if args.run_pipeline:
-        code = execute_complete_pipeline(mode=eff_mode, interactive=interactive)
-        if pause_enabled:
-            wait_for_user()
-        sys.exit(code)
 
     detector = AntiGravityDetector(
         poll_interval=args.interval,
@@ -323,77 +273,64 @@ def main():
     )
     actual_interval = detector.poll_interval
 
-    # 2. Single-run or dry-run detection
-    if args.once or args.dry_run:
-        result = detector.detect()
+    # Optional continuous monitoring loop (ONLY when explicitly requested via --watch or --loop)
+    if args.loop:
+        try:
+            while True:
+                result = detector.detect()
 
-        if args.json:
-            envelope = result.to_json_envelope()
-            print(json.dumps(envelope, indent=2))
-        else:
-            display_dashboard(
-                result,
-                chat_stats=result.chat_stats,
-                wipe_screen=(not args.dry_run),
-                poll_interval=actual_interval,
-            )
-
-        if not args.dry_run and result.trigger_matched:
-            if not args.json:
-                print(f"\n[TRIGGER MATCHED] Antigravity is open and pending Grill-Me chat detected ({result.pending_grill_me_chats})!")
-                print("Initiating Complete Automation Pipeline execution now...")
-            code = execute_complete_pipeline(mode=eff_mode, interactive=interactive)
-            if pause_enabled:
-                wait_for_user()
-            sys.exit(code)
-
-        exit_code = 0 if (result.is_detected or result.has_pending_grill_me) else 1
-        if pause_enabled and not args.dry_run:
-            wait_for_user()
-        sys.exit(exit_code)
-
-    # 3. Continuous polling timer loop (Two-Factor Status Monitor)
-    try:
-        while True:
-            result = detector.detect()
-
-            if not args.json:
-                display_dashboard(
-                    result,
-                    chat_stats=result.chat_stats,
-                    wipe_screen=True,
-                    poll_interval=actual_interval,
-                )
-
-            # Two-Factor Trigger: Antigravity open AND pending Grill-Me chat detected!
-            if result.trigger_matched:
                 if args.json:
                     envelope = result.to_json_envelope()
                     print(json.dumps(envelope, indent=2))
                 else:
+                    display_dashboard(
+                        result,
+                        chat_stats=result.chat_stats,
+                        wipe_screen=True,
+                        poll_interval=actual_interval,
+                    )
                     now_str = datetime.now().strftime("%H:%M:%S")
-                    print(f"\n[{now_str}] [TRIGGER MATCHED] Antigravity is open and pending Grill-Me chat detected ({result.pending_grill_me_chats})!")
-                    print("Initiating Complete Automation Pipeline execution now...")
+                    if result.trigger_matched:
+                        print(f"\n[{now_str}] [TRIGGER MATCHED] Antigravity is OPEN and pending Grill-Me chat detected ({result.pending_grill_me_chats})!")
+                    else:
+                        print(f"\n[{now_str}] [STATUS] Antigravity: {'OPEN' if result.is_detected else 'CLOSED'} | Pending Grill-Me: {result.pending_grill_me_chats} chats")
 
-                code = execute_complete_pipeline(mode=eff_mode, interactive=interactive)
+                sleep_remaining = actual_interval
+                while sleep_remaining > 0:
+                    time.sleep(min(0.5, sleep_remaining))
+                    sleep_remaining -= 0.5
 
-                if eff_mode == "test":
-                    if not args.json:
-                        print(f"\n[RESULT] Pipeline execution finished (Exit Code: {code}).")
-                        print("Test Mode: Continuing 10-second monitoring loop...")
-                else:
-                    if not args.json:
-                        print(f"\n[RESULT] Pipeline execution finished (Exit Code: {code}).")
-                        print("Production Mode: Continuing autonomous background monitoring...")
+        except (KeyboardInterrupt, SystemExit):
+            sys.exit(0)
 
-            # Sleep in small increments for Ctrl+C responsiveness
-            sleep_remaining = actual_interval
-            while sleep_remaining > 0:
-                time.sleep(min(0.5, sleep_remaining))
-                sleep_remaining -= 0.5
+    # Standard Default Execution: Perform Step 0 detection ONLY, display status box, and STOP immediately!
+    result = detector.detect()
 
-    except (KeyboardInterrupt, SystemExit):
-        sys.exit(0)
+    if args.json:
+        envelope = result.to_json_envelope()
+        print(json.dumps(envelope, indent=2))
+    else:
+        display_dashboard(
+            result,
+            chat_stats=result.chat_stats,
+            wipe_screen=(not args.dry_run),
+            poll_interval=actual_interval,
+        )
+
+        if result.trigger_matched:
+            print(f"\n[TRIGGER MATCHED] Antigravity is OPEN and pending Grill-Me chat detected ({result.pending_grill_me_chats})!")
+        else:
+            print(f"\n[STATUS] Antigravity: {'OPEN' if result.is_detected else 'CLOSED'} | Pending Grill-Me: {result.pending_grill_me_chats} chats")
+
+        print("\n" + "=" * 70)
+        print("✅ [STEP 0 COMPLETE] AntiGravity detection check finished successfully.")
+        print("[*] Step 0 completed and stopped cleanly (No downstream steps chained).")
+        print("======================================================================")
+
+    exit_code = 0
+    if pause_enabled and not args.dry_run:
+        wait_for_user()
+    sys.exit(exit_code)
 
 
 if __name__ == "__main__":

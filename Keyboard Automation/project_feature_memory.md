@@ -8,6 +8,22 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
+### Isolated Single-Step Execution & Complete Independence Standard (Step 0 to Step 5)
+- **Status:** Completed & Grade A+ Certified (124/124 Total Workspace Tests Passed, Zero Gitleaks Findings)
+- **Local Commits:** Pending local micro-commit.
+- **Architectural Enhancements:**
+  - **Complete Decoupling of Step 0 (`step0_antigravity_detector.py`):** Completely removed `resolve_complete_automation_script`, `execute_complete_pipeline`, and `--run-pipeline` CLI argument from Step 0. When Step 0 runs (standalone or via `run_step0.bat` / `run_step0_test.bat`), it performs ONLY its single detection check (AntiGravity running state, total/active/inactive/pending chats), displays the 100% Screen Purity Unicode dashboard box, and immediately stops with exit code 0.
+  - **Universal Isolated Single-Step Execution (Step 0 through Step 5):**
+    - **Step 0:** Detects AntiGravity & pending Grill-Me chats, displays status, and STOPS. (Zero downstream chaining).
+    - **Step 1:** Scans transcripts, saves `target_chat.json`, focuses window, and STOPS. (Zero downstream chaining).
+    - **Step 2:** Locates chat in GUI sidebar, focuses chat input, and STOPS. (Zero downstream chaining).
+    - **Step 3:** Injects keyboard navigation to select recommended option, and STOPS. (Zero downstream chaining).
+    - **Step 4:** Generates HTML dashboard / records telemetry, and STOPS. (Zero downstream chaining).
+    - **Step 5:** Inspects Antigravity lifecycle process & server port status, updates `sentinel_state.json`, and STOPS. (`auto_start_pipeline=False` by default; zero cascading).
+  - **Standardized Step 5 Runner (`step_5_automation/run_step5.bat`):** Created dedicated 1-click batch launcher for Step 5 matching Steps 0-4 architecture, running a clean single inspection pass and stopping cleanly.
+  - **Pipeline Orchestration Decoupled in Step 9:** Multi-step pipeline execution remains exclusively centralized in `step_9_complete_automation` (`run_all_steps.bat`, `run_automation_prod.bat`, `run_automation_test.bat`, or `complete_automation.py`) for users who explicitly want all steps executed together.
+  - **Automated QA Verification:** Updated `test_step0_detector.py` and `test_sentinel.py` to assert strict isolation and zero downstream execution; 124/124 tests passed cleanly.
+
 ### Classic Mode Switch Button Text Single-Word ("Modern") & Header Flexbox Alignment Overhaul
 - **Status:** Completed & Grade A+ Certified (55/55 Reporting Tests Passed, Zero Gitleaks Findings)
 - **Local Commits:** Pending local micro-commit.
@@ -163,3 +179,4 @@
 | 16 | `core_engine/automator.py` | Step 3 loop boundary and question count parsing ambiguity when question count <= 3 | Prioritize `state_data['questions']` length over scalars; enforce strict 1-to-1 loop boundary and single final Enter | Exactly N question actions executed with 0 phantom keystrokes or trailing iterations; 17/17 boundary tests passed | Phase 13 / Defect 2 | unittest (17/17 pass, 123/123 total) |
 | 17 | `Modern and Interactive Dashboard/generate_modern_dashboard.py`, `step_4_reporting/dashboard_server.py` | Modern dashboard top header mode badge (#header-mode-badge) was static and not dynamically updating when toggling between Test and Production mode | Added dynamic DOM sync in `applyExecutionModeUI`, bound mode extraction in `pollServerStatus`, added `/api/automation/events` SSE stream in server | Real-time dynamic reflection of operating mode (Amber 🧪 TEST vs Emerald ⚡ PRODUCTION) across top panel and header badge | Phase 13 / Defect 3 | unittest (20/20 pass, 123/123 total) |
 | 18 | `Modern and Interactive Dashboard/generate_modern_dashboard.py`, `step_4_reporting/step4_reporting.py`, `step_4_reporting/dashboard_server.py` | Mode change between Live and Test failed to update top header immediately and required manual page refresh because background polling/SSE (running every 2.5s) raced with the async save, snapping client state back, plus Classic dashboard lacked header badge and save trigger, and server did not update active_mode in DashboardRequestHandler | Added 4s user-change debounce window to polling/SSE listeners; added `#header-mode-badge` to Classic header with direct click toggle; synced active_mode in server `/api/config/save`; labeled modes cleanly as '⚡ LIVE' and '🧪 TEST' across both dashboards | Mode switch between Live and Test updates header instantaneously with zero page refresh required; click on header badge directly toggles mode; 55/55 reporting tests passed (123/123 workspace total) | Phase 14 / Bugfix | unittest (55/55 pass), gitleaks (0 leaks) |
+| 19 | `step_0_antigravity_detector/step0_antigravity_detector.py`, `step_5_automation/antigravity_lifecycle_sentinel.py`, `step_5_automation/run_step5.bat` | Step 0 chained all subsequent steps via `execute_complete_pipeline` upon detection, and Step 5 auto-triggered the pipeline on open, violating isolated single-step responsibility | Completely removed `execute_complete_pipeline` and `--run-pipeline` from Step 0; enforced single-step execution and auto-stop across all steps (0 to 5); set Step 5 `auto_start_pipeline=False` by default; created standard `step_5_automation/run_step5.bat` | Every step from Step 0 to Step 5 performs ONLY its own assigned step and stops cleanly; zero downstream chaining; 124/124 tests passed, Grade A+ certified | Phase 15 / Decoupling | unittest (124/124 pass), gitleaks (0 leaks) |

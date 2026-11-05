@@ -98,13 +98,28 @@ class TestAntigravityLifecycleSentinel(unittest.TestCase):
     @patch("step_5_automation.antigravity_lifecycle_sentinel.api_get_status")
     @patch("step_5_automation.antigravity_lifecycle_sentinel.api_post_command", return_value=True)
     def test_single_cycle_when_antigravity_open_and_automation_idle(self, mock_post, mock_status, mock_port, mock_ag):
-        """When Antigravity is open and server is listening but automation is idle, start automation."""
+        """When Antigravity is open and auto_start_pipeline is True, start automation."""
+        self.sentinel.auto_start_pipeline = True
         mock_status.return_value = {"running": False, "pid": None}
         res = self.sentinel.run_single_cycle()
         self.assertTrue(res["antigravity_running"])
         self.assertTrue(res["server_listening"])
         self.assertEqual(res["action_taken"], "STARTED_AUTOMATION")
         mock_post.assert_called_once_with("start", port=8599, payload={"mode": "test", "run_pipeline": False})
+
+    @patch("step_5_automation.antigravity_lifecycle_sentinel.is_antigravity_running", return_value=True)
+    @patch("step_5_automation.antigravity_lifecycle_sentinel.is_port_listening", return_value=True)
+    @patch("step_5_automation.antigravity_lifecycle_sentinel.api_get_status")
+    @patch("step_5_automation.antigravity_lifecycle_sentinel.api_post_command", return_value=True)
+    def test_single_cycle_when_antigravity_open_and_auto_start_pipeline_false(self, mock_post, mock_status, mock_port, mock_ag):
+        """When auto_start_pipeline is False (default), do not start downstream automation."""
+        self.sentinel.auto_start_pipeline = False
+        mock_status.return_value = {"running": False, "pid": None}
+        res = self.sentinel.run_single_cycle()
+        self.assertTrue(res["antigravity_running"])
+        self.assertTrue(res["server_listening"])
+        self.assertEqual(res["action_taken"], "NONE")
+        mock_post.assert_not_called()
 
     @patch("step_5_automation.antigravity_lifecycle_sentinel.is_antigravity_running", return_value=False)
     @patch("step_5_automation.antigravity_lifecycle_sentinel.is_port_listening", return_value=True)
