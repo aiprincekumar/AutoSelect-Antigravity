@@ -2194,8 +2194,8 @@
             <span class="pulse-dot"></span>
             <span id="status-text">⚪ Inactive</span>
           </span>
-          <span class="status-pill" id="header-mode-badge" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35);" title="Operating in Continuous Production Mode (Autonomous Loop)">
-            ⚡ PRODUCTION
+          <span class="status-pill" id="header-mode-badge" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35);" title="Operating in Single-Run Test Mode (Auto-Stop on Completion)">
+            🧪 TEST
           </span>
         </div>
 
@@ -3187,15 +3187,15 @@
           <!-- Segmented Pill Mode Switcher Bar -->
           <div class="modes-switcher-bar">
             <div class="modes-switcher-label" id="modes-active-mode-label">
-              <span id="modes-active-dot" style="color: #10b981;">●</span>
-              <span id="modes-active-text">Active Operating Mode: <strong>PRODUCTION (उत्पादन मोड)</strong></span>
+              <span id="modes-active-dot" style="color: #f59e0b;">●</span>
+              <span id="modes-active-text">Active Operating Mode: <strong>TEST (परीक्षण मोड)</strong></span>
             </div>
             <div class="modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
-              <button type="button" class="banner-mode-btn active" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+              <button type="button" class="banner-mode-btn " id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
                 <span>🛡️ Production</span>
                 <span class="banner-mode-indicator">Continuous Loop</span>
               </button>
-              <button type="button" class="banner-mode-btn " id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+              <button type="button" class="banner-mode-btn active" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
                 <span>🧪 Test Mode</span>
                 <span class="banner-mode-indicator">Auto-Stop</span>
               </button>
@@ -3205,7 +3205,7 @@
           <!-- Two Rich Interactive Mode Cards -->
           <div class="mode-lifecycle-grid">
             <!-- 1. Production Mode Card -->
-            <div class="lifecycle-card card-production active-mode-card" id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
+            <div class="lifecycle-card card-production " id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
               <div class="lifecycle-card-top">
                 <div class="lifecycle-card-title">
                   <span class="card-icon">🛡️</span>
@@ -3216,7 +3216,7 @@
                 </div>
                 <span class="lifecycle-card-badge badge-prod-mode" id="mode-badge-prod">
                   <span>●</span>
-                  <span id="mode-badge-text-prod">CURRENT ACTIVE</span>
+                  <span id="mode-badge-text-prod">Continuous Loop</span>
                 </span>
               </div>
               <p class="lifecycle-card-desc">
@@ -3228,13 +3228,13 @@
                 <span class="lifecycle-feature-tag">👤 Manual User Stop Required</span>
                 <span class="lifecycle-feature-tag">🚀 Full Multi-Step Hardware Automation</span>
               </div>
-              <button type="button" class="lifecycle-card-btn btn-automation" id="btn-set-prod">
-                ✓ Active in Production
+              <button type="button" class="lifecycle-card-btn btn" id="btn-set-prod">
+                ⚡ Switch to Production Mode
               </button>
             </div>
 
             <!-- 2. Test Mode Card -->
-            <div class="lifecycle-card card-test " id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
+            <div class="lifecycle-card card-test active-mode-card" id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
               <div class="lifecycle-card-top">
                 <div class="lifecycle-card-title">
                   <span class="card-icon">🧪</span>
@@ -3245,7 +3245,7 @@
                 </div>
                 <span class="lifecycle-card-badge badge-test-mode" id="mode-badge-test">
                   <span>●</span>
-                  <span id="mode-badge-text-test">Single-Run Auto-Stop</span>
+                  <span id="mode-badge-text-test">CURRENT ACTIVE</span>
                 </span>
               </div>
               <p class="lifecycle-card-desc">
@@ -3257,8 +3257,8 @@
                 <span class="lifecycle-feature-tag">🔬 Safe Verification &amp; Dry-Runs</span>
                 <span class="lifecycle-feature-tag">⏱️ Fast 10.0s Poll Cycle</span>
               </div>
-              <button type="button" class="lifecycle-card-btn btn" id="btn-set-test" style="background: rgba(245,158,11,0.18); color: #fbbf24; border-color: rgba(245,158,11,0.4);">
-                ⚡ Switch to Test Mode
+              <button type="button" class="lifecycle-card-btn btn-automation" id="btn-set-test" style="background: #d97706; color: #ffffff;">
+                ✓ Active in Test Mode
               </button>
             </div>
           </div>
@@ -3588,7 +3588,7 @@
           </div>
           <div class="json-preview-box" id="json-preview-container" style="display: none;">{
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "production",
+  "mode": "test",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,
     "step0_poll_interval_test_seconds": 10.0,
@@ -3852,7 +3852,7 @@
   <script id="runtime-config-data" type="application/json">
 {
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "production",
+  "mode": "test",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,
     "step0_poll_interval_test_seconds": 10.0,
@@ -4856,7 +4856,7 @@
       const bannerBtnTest = document.getElementById('banner-mode-test-btn');
       const modesToggleBtn = document.getElementById('modes-automation-toggle-btn');
 
-      let currentExecutionMode = localStorage.getItem('asc_execution_mode') || 'production';
+      let currentExecutionMode = localStorage.getItem('asc_execution_mode') || 'test';
 
       function applyExecutionModeUI(mode) {
         const isTest = (String(mode).toLowerCase() === 'test');
