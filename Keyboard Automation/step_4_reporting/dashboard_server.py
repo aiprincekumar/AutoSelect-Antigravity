@@ -548,9 +548,19 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_json_response({"logs": mgr.get_log_tail(lines_count)})
             return
 
-        # 4. Static: Dashboard HTML
-        if path in ("/", "/dashboard", "/dashboard.html", "/index.html"):
-            if not self.dashboard_file.is_file():
+        # 4. Static: Dashboard HTML (Modern & Classic Dual Routes)
+        target_file = None
+        if path in ("/", "/dashboard", "/dashboard.html", "/index.html", "/modern", "/modern.html", "/modern_dashboard.html"):
+            target_file = self.reports_dir / "modern_dashboard.html"
+            if not target_file.is_file():
+                target_file = self.dashboard_file
+        elif path in ("/classic", "/classic.html", "/classic_dashboard.html"):
+            target_file = self.reports_dir / "classic_dashboard.html"
+            if not target_file.is_file():
+                target_file = self.dashboard_file
+
+        if target_file is not None:
+            if not target_file.is_file():
                 try:
                     from step_4_reporting.step4_reporting import Step4ReportingEngine
                     engine = Step4ReportingEngine(reports_dir=self.reports_dir)
@@ -558,9 +568,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 except Exception as e:
                     logger.error(f"Failed to generate dashboard HTML: {e}")
 
-            if self.dashboard_file.is_file():
+            if target_file.is_file():
                 try:
-                    content = self.dashboard_file.read_bytes()
+                    content = target_file.read_bytes()
                     self.send_response(200)
                     self.send_header("Content-Type", "text/html; charset=utf-8")
                     self.send_cors_headers()
