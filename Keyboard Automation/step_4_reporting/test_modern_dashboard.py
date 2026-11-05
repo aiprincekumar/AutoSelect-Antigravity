@@ -163,6 +163,14 @@ class TestModernDashboardSuite(unittest.TestCase):
         finally:
             server.shutdown()
 
+    def test_04_header_mode_badge_and_sse_bindings(self):
+        """Verify header-mode-badge exists with dynamic script bindings and SSE stream hook."""
+        content = (self.modern_dir / "dashboard.html").read_text(encoding="utf-8")
+        self.assertIn('id="header-mode-badge"', content, "Must have header-mode-badge element.")
+        self.assertIn("headerModeBadge.innerHTML", content, "Must dynamically bind headerModeBadge in JS.")
+        self.assertIn("/api/automation/events", content, "Must have Server-Sent Events (SSE) stream endpoint.")
+        self.assertIn("EventSource", content, "Must initialize EventSource for real-time mode reflection.")
+
 
 if __name__ == "__main__":
     unittest.main()

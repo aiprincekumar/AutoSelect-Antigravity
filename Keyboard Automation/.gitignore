@@ -12,5 +12,7 @@ env/
 # Logs & temp files
 *.log
 *.pid
+*.lock
+.dashboard_launched.lock
 .automation_process.json
 sentinel_state.json

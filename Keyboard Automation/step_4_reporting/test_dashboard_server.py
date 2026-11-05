@@ -412,5 +412,22 @@ class TestDashboardServer(unittest.TestCase):
             self.manager.stop()
 
 
+    def test_16_events_sse_endpoint_and_mode_consistency(self):
+        """Verify /api/automation/events streams valid SSE event with matching mode."""
+        url = f"http://{self.server.host}:{self.server.actual_port}/api/automation/events"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            self.assertEqual(resp.status, 200)
+            self.assertIn("text/event-stream", resp.headers.get("Content-Type", ""))
+            line1 = resp.readline().decode("utf-8")
+            line2 = resp.readline().decode("utf-8")
+            self.assertTrue("event: status" in line1 or "event: status" in line2 or "data:" in line1 or "data:" in line2)
+            data_line = line2 if "data:" in line2 else line1
+            if "data:" in data_line:
+                data_json = json.loads(data_line.replace("data:", "").strip())
+                self.assertTrue(data_json["success"])
+                self.assertIn("mode", data_json["data"])
+
+
 if __name__ == "__main__":
     unittest.main()

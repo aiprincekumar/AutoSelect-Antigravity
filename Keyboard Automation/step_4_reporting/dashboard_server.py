@@ -468,6 +468,13 @@ class AutomationProcessManager:
         else:
             is_paused = False
             status_text = "Inactive"
+            try:
+                cfg_path = get_canonical_config_path(self.workspace_dir)
+                cfg = core_load_runtime_config(cfg_path)
+                if cfg.get("mode"):
+                    self.active_mode = str(cfg.get("mode")).lower()
+            except Exception:
+                pass
 
         return {
             "running": running,
@@ -547,6 +554,50 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/automation/status":
             mgr = self.server_manager or AutomationProcessManager(self.workspace_dir)
             self.send_json_response(mgr.get_status())
+            return
+
+        # 1b. API: Server-Sent Events (SSE) Live Status Stream
+        if path == "/api/automation/events":
+            mgr = self.server_manager or AutomationProcessManager(self.workspace_dir)
+            self.send_response(200)
+            self.send_header("Content-Type", "text/event-stream")
+            self.send_header("Cache-Control", "no-cache")
+            self.send_header("Connection", "keep-alive")
+            self.send_header("Access-Control-Allow-Origin", "*")
+            self.end_headers()
+
+            try:
+                # Send initial status event immediately
+                status_data = mgr.get_status()
+                payload = {
+                    "success": True,
+                    "data": status_data,
+                    "meta": {
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "server": "AutoSelect-Dashboard-Control/1.0",
+                    },
+                }
+                msg = f"event: status\ndata: {json.dumps(payload)}\n\n"
+                self.wfile.write(msg.encode("utf-8"))
+                self.wfile.flush()
+
+                # Stream periodic status events
+                while True:
+                    time.sleep(2.0)
+                    status_data = mgr.get_status()
+                    payload = {
+                        "success": True,
+                        "data": status_data,
+                        "meta": {
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "server": "AutoSelect-Dashboard-Control/1.0",
+                        },
+                    }
+                    msg = f"event: status\ndata: {json.dumps(payload)}\n\n"
+                    self.wfile.write(msg.encode("utf-8"))
+                    self.wfile.flush()
+            except (BrokenPipeError, ConnectionResetError, Exception):
+                pass
             return
 
         # 2. API: Runtime Configuration
