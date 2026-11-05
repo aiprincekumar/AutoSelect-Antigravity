@@ -367,7 +367,7 @@ class TestStep4Reporting(unittest.TestCase):
         content = html_path.read_text(encoding="utf-8")
         # Check title and doctype
         self.assertIn("<!DOCTYPE html>", content)
-        self.assertIn("AutoSelect-Commander • Telemetry Dashboard", content)
+        self.assertIn("AutoSelect Antigravity Dashboard", content)
 
         # Check Department 04 CSS design tokens
         self.assertIn("--bg-primary: #0b0f17;", content)

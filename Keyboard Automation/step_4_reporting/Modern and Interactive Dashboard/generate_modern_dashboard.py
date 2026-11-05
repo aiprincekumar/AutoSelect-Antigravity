@@ -4,7 +4,7 @@
 Modern and Interactive Dashboard Generator (generate_modern_dashboard.py)
 ========================================================================
 Subsystem: Modern and Interactive Dashboard Engine (V3 - Full Architecture Alignment)
-Part of: AutoSelect-Commander Telemetry & Execution Reporting Suite
+Part of: AutoSelect Antigravity Reporting Suite
 Department: Department 04 (UI/UX Design System) & Department 05 (Frontend Engineering)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
@@ -3022,7 +3022,7 @@ def build_modern_dashboard_html(
           <div style="display: flex; align-items: center; gap: 8px;">
             <span style="font-size: 1.2rem;">🚀</span>
             <div>
-              <h3 style="font-size: 1rem; font-weight: 700; margin: 0;" id="automation-modal-title">AutoSelect-Commander Automation</h3>
+              <h3 style="font-size: 1rem; font-weight: 700; margin: 0;" id="automation-modal-title">AutoSelect Antigravity Automation</h3>
               <p style="font-size: 0.74rem; color: var(--text-muted); margin: 0;">1-Click Server &amp; Terminal Execution Scripts</p>
             </div>
           </div>
@@ -3035,7 +3035,7 @@ def build_modern_dashboard_html(
             <span>Autonomous Background Monitoring Engine</span>
           </div>
           <p style="font-size: 0.78rem; color: var(--text-secondary); margin: 0; line-height: 1.4;">
-            AutoSelect-Commander constantly monitors Antigravity chats. When an interactive questionnaire appears, it brings the window to the foreground and autonomously confirms the recommended option.
+            AutoSelect Antigravity constantly monitors Antigravity chats. When an interactive questionnaire appears, it brings the window to the foreground and autonomously confirms the recommended option.
           </p>
         </div>
 

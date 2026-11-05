@@ -4,7 +4,7 @@
 Local Automation Control & Visual Dashboard Server (dashboard_server.py)
 ========================================================================
 Pipeline Role: Local HTTP/REST API Control Server & Static Dashboard Host
-Part of: AutoSelect-Commander Automation Suite
+Part of: AutoSelect Antigravity Automation Suite
 Standard: Department 06 (Backend & API Engineering) & Department 05 (Frontend Architecture)
 Primary Developer: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
@@ -749,7 +749,7 @@ class DashboardServer:
         url = f"http://{self.host}:{self.actual_port}/"
 
         logger.info("=" * 70)
-        logger.info("  AutoSelect-Commander - Local Control & Dashboard Server")
+        logger.info("  AutoSelect Antigravity - Local Control & Dashboard Server")
         logger.info(f"  Live URL    : {url}")
         logger.info(f"  API Base    : {url}api/automation/status")
         logger.info(f"  Workspace   : {self.workspace_dir}")
@@ -792,7 +792,7 @@ class DashboardServer:
 
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="AutoSelect-Commander Dashboard & Automation Control Server"
+        description="AutoSelect Antigravity Dashboard & Automation Control Server"
     )
     parser.add_argument("--port", type=int, default=8501, help="HTTP port to bind (default: 8501)")
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
