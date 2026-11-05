@@ -4234,7 +4234,7 @@
                       <span>Step 0 Polling Interval (Prod)</span>
                       <span class="unit-tag">sec</span>
                     </label>
-                    <input type="number" id="cfg-timing-prod-poll" class="cfg-num-input" value="300.0" step="5" min="1" max="3600">
+                    <input type="number" id="cfg-timing-prod-poll" class="cfg-num-input" value="1.0" step="5" min="1" max="3600">
                     <span class="input-card-help">Main idle polling cycle interval in production mode</span>
                   </div>
 
@@ -4243,7 +4243,7 @@
                       <span>Step 0 Polling Interval (Test)</span>
                       <span class="unit-tag">sec</span>
                     </label>
-                    <input type="number" id="cfg-timing-test-poll" class="cfg-num-input" value="10.0" step="1" min="1" max="300">
+                    <input type="number" id="cfg-timing-test-poll" class="cfg-num-input" value="0.1" step="1" min="1" max="300">
                     <span class="input-card-help">Accelerated validation cycle for testing</span>
                   </div>
 
@@ -4252,7 +4252,7 @@
                       <span>Settle Delay Between Steps</span>
                       <span class="unit-tag">sec</span>
                     </label>
-                    <input type="number" id="cfg-timing-settle" class="cfg-num-input" value="0.8" step="0.1" min="0" max="10">
+                    <input type="number" id="cfg-timing-settle" class="cfg-num-input" value="1.0" step="0.1" min="0" max="10">
                     <span class="input-card-help">Pause between step transitions for UI stability</span>
                   </div>
 
@@ -4270,7 +4270,7 @@
                       <span>Step 4 Activity Polling Interval</span>
                       <span class="unit-tag">sec</span>
                     </label>
-                    <input type="number" id="cfg-timing-step4-poll" class="cfg-num-input" value="0.1" step="0.05" min="0.01" max="5">
+                    <input type="number" id="cfg-timing-step4-poll" class="cfg-num-input" value="0.5" step="0.05" min="0.01" max="5">
                     <span class="input-card-help">Polling interval for user mouse and keystroke detection</span>
                   </div>
 
@@ -4279,7 +4279,7 @@
                       <span>Step 1 Window Focus Delay</span>
                       <span class="unit-tag">sec</span>
                     </label>
-                    <input type="number" id="cfg-timing-step1-focus" class="cfg-num-input" value="0.2" step="0.05" min="0" max="5">
+                    <input type="number" id="cfg-timing-step1-focus" class="cfg-num-input" value="0.5" step="0.05" min="0" max="5">
                     <span class="input-card-help">Settle buffer after bringing Antigravity window to foreground</span>
                   </div>
 
@@ -4288,7 +4288,7 @@
                       <span>Step 2 DOM Click Settle Delay</span>
                       <span class="unit-tag">sec</span>
                     </label>
-                    <input type="number" id="cfg-timing-step2-dom-settle" class="cfg-num-input" value="0.3" step="0.05" min="0" max="5">
+                    <input type="number" id="cfg-timing-step2-dom-settle" class="cfg-num-input" value="1.0" step="0.05" min="0" max="5">
                     <span class="input-card-help">Settle pause after simulated click on chat row in GUI</span>
                   </div>
 
@@ -4306,7 +4306,7 @@
                       <span>Step 3 Key Hold Duration</span>
                       <span class="unit-tag">ms</span>
                     </label>
-                    <input type="number" id="cfg-timing-step3-hold-ms" class="cfg-num-input" value="50.0" step="10" min="5" max="1000">
+                    <input type="number" id="cfg-timing-step3-hold-ms" class="cfg-num-input" value="80.0" step="10" min="5" max="1000">
                     <span class="input-card-help">Hardware scan code hold duration during keyboard press</span>
                   </div>
 
@@ -4315,7 +4315,7 @@
                       <span>Step 3 Post-Keypress Pause</span>
                       <span class="unit-tag">ms</span>
                     </label>
-                    <input type="number" id="cfg-timing-step3-post-ms" class="cfg-num-input" value="250.0" step="25" min="10" max="5000">
+                    <input type="number" id="cfg-timing-step3-post-ms" class="cfg-num-input" value="100.0" step="25" min="10" max="5000">
                     <span class="input-card-help">Pause after each individual key stroke (बटन दबने के बाद का पॉज़)</span>
                   </div>
 
@@ -4324,7 +4324,7 @@
                       <span>Step 3 Inter-Question Delay</span>
                       <span class="unit-tag">ms</span>
                     </label>
-                    <input type="number" id="cfg-timing-step3-inter-q-ms" class="cfg-num-input" value="500.0" step="50" min="50" max="10000">
+                    <input type="number" id="cfg-timing-step3-inter-q-ms" class="cfg-num-input" value="200.0" step="50" min="50" max="10000">
                     <span class="input-card-help">Pause between answering consecutive questionnaire prompts</span>
                   </div>
 
@@ -4333,7 +4333,7 @@
                       <span>Step 3 Round Completion Pause</span>
                       <span class="unit-tag">ms</span>
                     </label>
-                    <input type="number" id="cfg-timing-step3-round-ms" class="cfg-num-input" value="1000.0" step="100" min="100" max="30000">
+                    <input type="number" id="cfg-timing-step3-round-ms" class="cfg-num-input" value="500.0" step="100" min="100" max="30000">
                     <span class="input-card-help">Cooldown pause after completing an entire questionnaire round</span>
                   </div>
                 </div>
@@ -4458,19 +4458,20 @@
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
   "mode": "production",
   "timing": {
-    "step0_poll_interval_prod_seconds": 300.0,
-    "step0_poll_interval_test_seconds": 10.0,
-    "settle_delay_between_steps_seconds": 0.8,
+    "step0_poll_interval_prod_seconds": 1.0,
+    "step0_poll_interval_test_seconds": 0.1,
+    "settle_delay_between_steps_seconds": 1.0,
     "user_activity_pause_threshold_seconds": 60.0,
     "step4_user_activity_delay_seconds": 10.0,
-    "step4_poll_interval_seconds": 0.1,
-    "step1_window_focus_delay_seconds": 0.2,
-    "step2_dom_click_settle_delay_seconds": 0.3,
+    "step4_poll_interval_seconds": 0.5,
+    "step1_window_focus_delay_seconds": 0.5,
+    "step2_dom_click_settle_delay_seconds": 1.0,
     "step3_countdown_seconds": 3.0,
-    "step3_key_hold_delay_ms": 50.0,
-    "step3_post_keypress_delay_ms": 250.0,
-    "step3_inter_question_delay_ms": 500.0,
-    "step3_round_completion_pause_ms": 1000.0
+    "step3_key_hold_delay_ms": 80.0,
+    "step3_post_keypress_delay_ms": 100.0,
+    "step3_inter_question_delay_ms": 200.0,
+    "step3_round_completion_pause_ms": 500.0,
+    "continuous_loop_delay_seconds": 300.0
   },
   "enabled_steps": {
     "step1_find_and_focus": true,
@@ -4784,7 +4785,7 @@
     <footer>
       <div>Generated by AutoSelect Antigravity (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-05 08:45:18</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-05 09:43:41</span></div>
     </footer>
   </div>
 
@@ -4799,19 +4800,20 @@
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
   "mode": "production",
   "timing": {
-    "step0_poll_interval_prod_seconds": 300.0,
-    "step0_poll_interval_test_seconds": 10.0,
-    "settle_delay_between_steps_seconds": 0.8,
+    "step0_poll_interval_prod_seconds": 1.0,
+    "step0_poll_interval_test_seconds": 0.1,
+    "settle_delay_between_steps_seconds": 1.0,
     "user_activity_pause_threshold_seconds": 60.0,
     "step4_user_activity_delay_seconds": 10.0,
-    "step4_poll_interval_seconds": 0.1,
-    "step1_window_focus_delay_seconds": 0.2,
-    "step2_dom_click_settle_delay_seconds": 0.3,
+    "step4_poll_interval_seconds": 0.5,
+    "step1_window_focus_delay_seconds": 0.5,
+    "step2_dom_click_settle_delay_seconds": 1.0,
     "step3_countdown_seconds": 3.0,
-    "step3_key_hold_delay_ms": 50.0,
-    "step3_post_keypress_delay_ms": 250.0,
-    "step3_inter_question_delay_ms": 500.0,
-    "step3_round_completion_pause_ms": 1000.0
+    "step3_key_hold_delay_ms": 80.0,
+    "step3_post_keypress_delay_ms": 100.0,
+    "step3_inter_question_delay_ms": 200.0,
+    "step3_round_completion_pause_ms": 500.0,
+    "continuous_loop_delay_seconds": 300.0
   },
   "enabled_steps": {
     "step1_find_and_focus": true,

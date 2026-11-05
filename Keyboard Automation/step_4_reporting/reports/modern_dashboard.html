@@ -3454,31 +3454,31 @@
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-countdown">Step 3 Pre-Execution Countdown (s)</label>
               <div class="cfg-desc">Countdown before keystrokes are transmitted</div>
-              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-step3-countdown" value="3">
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-step3-countdown" value="3.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-hold-ms">Step 3 Key Hold Delay (ms)</label>
               <div class="cfg-desc">Hardware scan code hold duration during keyboard press</div>
-              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="80">
+              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="80.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-post-ms">Step 3 Post Keypress Delay (ms)</label>
               <div class="cfg-desc">Pause after each individual key stroke</div>
-              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="100">
+              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="100.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-inter-q-ms">Step 3 Inter-Question Delay (ms)</label>
               <div class="cfg-desc">Pause between answering consecutive question prompts</div>
-              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="200">
+              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="200.0">
             </div>
 
             <div class="cfg-field">
               <label class="cfg-label" for="cfg-timing-step3-round-ms">Step 3 Round Cooldown Pause (ms)</label>
               <div class="cfg-desc">Cooldown pause after completing entire questionnaire</div>
-              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="500">
+              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="500.0">
             </div>
           </div>
         </div>
@@ -3579,7 +3579,38 @@
             <button type="button" class="btn" id="btn-toggle-json-drawer" style="padding: 2px 8px; font-size: 0.72rem;">Toggle Preview</button>
           </div>
           <div class="json-preview-box" id="json-preview-container" style="display: none;">{
-  "mode": "production"
+  "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
+  "mode": "production",
+  "timing": {
+    "step0_poll_interval_prod_seconds": 1.0,
+    "step0_poll_interval_test_seconds": 0.1,
+    "settle_delay_between_steps_seconds": 1.0,
+    "user_activity_pause_threshold_seconds": 60.0,
+    "step4_user_activity_delay_seconds": 10.0,
+    "step4_poll_interval_seconds": 0.5,
+    "step1_window_focus_delay_seconds": 0.5,
+    "step2_dom_click_settle_delay_seconds": 1.0,
+    "step3_countdown_seconds": 3.0,
+    "step3_key_hold_delay_ms": 80.0,
+    "step3_post_keypress_delay_ms": 100.0,
+    "step3_inter_question_delay_ms": 200.0,
+    "step3_round_completion_pause_ms": 500.0,
+    "continuous_loop_delay_seconds": 300.0
+  },
+  "enabled_steps": {
+    "step1_find_and_focus": true,
+    "step2_gui_chat_select": true,
+    "step3_keyboard_automation": true,
+    "step4_reporting": true
+  },
+  "antigravity": {
+    "require_grill_me": true,
+    "active_hours": 12.0
+  },
+  "logging": {
+    "log_file": "complete_automation.log",
+    "verbose": true
+  }
 }</div>
         </div>
       </div>
@@ -3812,7 +3843,38 @@
   </script>
   <script id="runtime-config-data" type="application/json">
 {
-  "mode": "production"
+  "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
+  "mode": "production",
+  "timing": {
+    "step0_poll_interval_prod_seconds": 1.0,
+    "step0_poll_interval_test_seconds": 0.1,
+    "settle_delay_between_steps_seconds": 1.0,
+    "user_activity_pause_threshold_seconds": 60.0,
+    "step4_user_activity_delay_seconds": 10.0,
+    "step4_poll_interval_seconds": 0.5,
+    "step1_window_focus_delay_seconds": 0.5,
+    "step2_dom_click_settle_delay_seconds": 1.0,
+    "step3_countdown_seconds": 3.0,
+    "step3_key_hold_delay_ms": 80.0,
+    "step3_post_keypress_delay_ms": 100.0,
+    "step3_inter_question_delay_ms": 200.0,
+    "step3_round_completion_pause_ms": 500.0,
+    "continuous_loop_delay_seconds": 300.0
+  },
+  "enabled_steps": {
+    "step1_find_and_focus": true,
+    "step2_gui_chat_select": true,
+    "step3_keyboard_automation": true,
+    "step4_reporting": true
+  },
+  "antigravity": {
+    "require_grill_me": true,
+    "active_hours": 12.0
+  },
+  "logging": {
+    "log_file": "complete_automation.log",
+    "verbose": true
+  }
 }
   </script>
 

@@ -29,11 +29,11 @@ Else
     workspaceDir = scriptDir
 End If
 
-' 2. Resolve Python Executable (Prefer .venv\Scripts\pythonw.exe or python.exe)
-If fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")) Then
-    pythonExe = fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")
-ElseIf fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\python.exe")) Then
+' 2. Resolve Python Executable (Prefer .venv\Scripts\python.exe)
+If fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\python.exe")) Then
     pythonExe = fso.BuildPath(workspaceDir, ".venv\Scripts\python.exe")
+ElseIf fso.FileExists(fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")) Then
+    pythonExe = fso.BuildPath(workspaceDir, ".venv\Scripts\pythonw.exe")
 Else
     pythonExe = "python.exe"
 End If

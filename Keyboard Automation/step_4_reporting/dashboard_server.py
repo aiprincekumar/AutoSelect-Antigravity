@@ -696,12 +696,17 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 gen_path = engine.generate_html_dashboard()
 
                 import importlib.util
-                modern_gen_path = self.step4_dir / "Modern and Interactive Dashboard" / "generate_modern_dashboard.py"
+                step4_dir = self.reports_dir.parent if self.reports_dir else (self.workspace_dir / "step_4_reporting")
+                modern_gen_path = step4_dir / "Modern and Interactive Dashboard" / "generate_modern_dashboard.py"
                 if modern_gen_path.is_file():
                     spec = importlib.util.spec_from_file_location("modern_gen_server", str(modern_gen_path))
-                    mod = importlib.util.module_from_spec(spec)
-                    spec.loader.exec_module(mod)
-                    mod.generate_and_save_modern_dashboard(self.workspace_dir)
+                    if spec and spec.loader:
+                        mod = importlib.util.module_from_spec(spec)
+                        spec.loader.exec_module(mod)
+                        if hasattr(mod, "generate_modern_dashboard"):
+                            mod.generate_modern_dashboard(self.workspace_dir)
+                        elif hasattr(mod, "generate_and_save_modern_dashboard"):
+                            mod.generate_and_save_modern_dashboard(self.workspace_dir)
 
                 self.send_json_response({"refreshed": True, "path": str(gen_path)})
             except Exception as e:

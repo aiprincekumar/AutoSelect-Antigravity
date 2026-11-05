@@ -4778,6 +4778,9 @@ def generate_and_save_modern_dashboard(workspace_dir: Optional[Path] = None) -> 
     return out_modern
 
 
+generate_modern_dashboard = generate_and_save_modern_dashboard
+
+
 if __name__ == "__main__":
     out = generate_and_save_modern_dashboard()
     print(f"Modern and Interactive Dashboard generated successfully at: {out}")
