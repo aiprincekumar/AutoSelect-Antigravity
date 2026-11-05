@@ -256,31 +256,27 @@ class GrillMeAutomator:
             # Capture conversation_id if present
             self.conversation_id = state_data.get("conversation_id")
 
-            # Check all candidate indicators
-            candidate_counts = []
+            # Ground truth question resolution hierarchy:
+            # 1. Authoritative state_data['questions'] array length
+            # 2. state_data['selections'] array length
+            # 3. Explicit total_questions_count / questions_count scalar
             qs = state_data.get("questions")
-            if isinstance(qs, list) and len(qs) > 0:
-                candidate_counts.append(len(qs))
-
             sels = state_data.get("selections")
-            if isinstance(sels, list) and len(sels) > 0:
-                candidate_counts.append(len(sels))
-
-            for k in ("total_questions_count", "questions_count"):
-                val = state_data.get(k)
-                if val is not None:
-                    try:
-                        val_int = int(val)
-                        if val_int > 0:
-                            candidate_counts.append(val_int)
-                    except (ValueError, TypeError):
-                        pass
 
             if isinstance(qs, list) and len(qs) > 0:
-                # If questions list is present, len(questions) is the ground-truth definition
                 detected_q = len(qs)
-            elif candidate_counts:
-                detected_q = max(candidate_counts)
+            elif isinstance(sels, list) and len(sels) > 0:
+                detected_q = len(sels)
+            elif state_data.get("total_questions_count") is not None:
+                try:
+                    detected_q = max(0, int(state_data["total_questions_count"]))
+                except (ValueError, TypeError):
+                    detected_q = 1
+            elif state_data.get("questions_count") is not None:
+                try:
+                    detected_q = max(0, int(state_data["questions_count"]))
+                except (ValueError, TypeError):
+                    detected_q = 1
             else:
                 detected_q = 1
 
@@ -298,8 +294,9 @@ class GrillMeAutomator:
                         if idx is not None:
                             detected_options.append(str(idx))
 
-        # Final determination of total_questions
+        # Final determination of total_questions (strictly integer >= 0)
         final_questions = explicit_questions if explicit_questions is not None else detected_q
+        final_questions = max(0, int(final_questions))
 
         # Final determination of options_list
         if parsed_options is not None:
@@ -309,10 +306,12 @@ class GrillMeAutomator:
         else:
             final_options = [str(self.option)] * final_questions
 
-        # Dynamically scale / pad to exactly final_questions elements
-        while len(final_options) < final_questions:
-            final_options.append(str(self.option))
-        final_options = final_options[:final_questions]
+        # Dynamically scale / pad / truncate to exactly final_questions elements
+        if len(final_options) > final_questions:
+            final_options = final_options[:final_questions]
+        else:
+            while len(final_options) < final_questions:
+                final_options.append(str(self.option))
 
         logger.info(
             f"Question resolution: Mode={'Explicit' if explicit_questions is not None else 'Auto-Detected'}, "
@@ -491,24 +490,25 @@ class GrillMeAutomator:
             * Step C / Q{q_idx}.3: Send option key (e.g. '1', or per-question option)
               Settle pause (0.2s - 0.25s)
             * Step D / Q{q_idx}.4: Enter Gate:
-              - If q_idx < total_questions:
+              - If q_idx < tq:
                 * Send Enter (Advances Continue to next question)
                 * UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI
-              - If q_idx == total_questions:
+              - If q_idx == tq:
                 * Send Enter (Submits final batch answer)
         """
-        if total_questions is None:
-            total_questions = self.total_questions
-        if total_questions <= 0:
-            logger.info("Total questions is 0 (status: NO_PENDING_CHATS). Step 3 cancelled.")
+        tq = max(0, int(total_questions if total_questions is not None else self.total_questions))
+        if tq == 0:
+            logger.info("Total questions is 0 (status: NO_PENDING_CHATS or clean cancellation). Step 3 cancelled.")
             return True
 
-        opts = list(options) if options else list(self.options_list)
-        while len(opts) < total_questions:
-            opts.append(str(self.option))
-        opts = opts[:total_questions]
+        opts = list(options) if options is not None else list(self.options_list)
+        if len(opts) > tq:
+            opts = opts[:tq]
+        else:
+            while len(opts) < tq:
+                opts.append(str(self.option))
 
-        logger.info(f"Initiating dynamic keyboard automation loop: {total_questions} question(s) | Options: {opts}")
+        logger.info(f"Initiating dynamic keyboard automation loop: {tq} question(s) | Options: {opts}")
         logger.info("Executing via Pure Native Physical Keystroke Injection (Win32 SendInput)...")
 
         # Ensure target window is restored, maximized, and in foreground before physical keystrokes
@@ -551,14 +551,14 @@ class GrillMeAutomator:
                 pass
 
         try:
-            for q_idx in range(1, total_questions + 1):
+            for q_idx in range(1, tq + 1):
                 opt = opts[q_idx - 1]
-                is_last = (q_idx == total_questions)
+                is_last = (q_idx == tq)
 
                 if is_last:
-                    logger.info(f"[Question {total_questions}/{total_questions}] Final Question: Selecting option {opt} and submitting with Enter!")
+                    logger.info(f"[Question {q_idx}/{tq}] Final Question: Selecting option {opt} and submitting with Enter!")
                 else:
-                    logger.info(f"[Question {q_idx}/{total_questions}] Selecting option {opt} and continuing with Enter...")
+                    logger.info(f"[Question {q_idx}/{tq}] Selecting option {opt} and continuing with Enter...")
 
                 # Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
                 if not self.skip_ctrl_l:
@@ -618,7 +618,7 @@ class GrillMeAutomator:
                 # Step D / Q{q_idx}.4: Enter Gate (Advances on Q1..QN-1, Submits on QN)
                 if not self.skip_enter:
                     enter_desc = (
-                        f"Press [Enter] (Submit ALL {total_questions} answers on final question)"
+                        f"Press [Enter] (Submit ALL {tq} answers on final question)"
                         if is_last else
                         f"Press [Enter] (Continue to Question {q_idx + 1})"
                     )
@@ -647,7 +647,7 @@ class GrillMeAutomator:
                 logger.info(f"Round completion pause ({round_pause:.2f}s) after full questionnaire sequence...")
                 time.sleep(round_pause)
 
-            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {total_questions} question(s) via physical keystrokes!")
+            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {tq} question(s) via physical keystrokes!")
             return True
 
         except Exception as e:
