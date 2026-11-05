@@ -3,52 +3,39 @@
 """
 Modern and Interactive Dashboard Generator (generate_modern_dashboard.py)
 ========================================================================
-Subsystem: Modern and Interactive Dashboard Engine (V2 - Complete Feature Parity + UI/UX Overhaul)
+Subsystem: Modern and Interactive Dashboard Engine (V3 - Full Architecture Alignment)
 Part of: AutoSelect-Commander Telemetry & Execution Reporting Suite
 Department: Department 04 (UI/UX Design System) & Department 05 (Frontend Engineering)
 Author: Atul Verma (aiprincekumar / aiprincekumar010100@gmail.com)
 
-Highlights & Full Feature Set:
-  1. Complete Classic Filter Parity:
-     - Full Presets: All Time, Today, Yesterday, Last 7 Days, Last 30 Days, This Week, This Month.
-     - Date Range pickers (From Date, To Date).
-     - Conversation selector dropdown (with dynamic topic & short ID options).
-     - Complexity filter dropdown (All, Single Question, Multi-Question).
-     - Speed / Latency filter dropdown (All, Fast <3s, Moderate 3-8s, Heavy >8s).
-     - Filter Reset button.
-     - Active Dismissible Chips for 1-click filter clearing.
-  2. Tab-Contextual Keyboard Shortcut [/]:
-     - When on 'Chats' tab: pressing [/] focuses #search-chats.
-     - When on 'Questions' tab: pressing [/] focuses #search-questions.
-     - When on 'Config' tab: pressing [/] focuses #search-config.
-     - Auto-selects text on focus.
-  3. Chats Tab (Complete Feature Parity):
-     - Summary Stats Strip (Unique Chats, Lifetime Runs, Avg Runs/Chat).
-     - Dedicated Search Input (#search-chats).
-     - Full Chats Breakdown Table with Conversation ID, Topic Summary, Runs Count, Questions Answered, Last Automated.
-  4. Questions Tab (Hierarchical & Actionable):
-     - Organized by Conversation Card ➔ Run Block ➔ Question Prompt ➔ Option List.
-     - 1-Click "Copy Q&A" on every question card with emerald toast notification.
+Key Architectural Solutions:
+  1. Real-Time 3-State Status Polling:
+     - Correctly binds `is_paused` and `idle_seconds` from `/api/automation/status`.
+     - 🟡 Paused (User Active) with glowing amber pulse when idle < 60s.
+     - 🟢 Active (Autonomous) with pulsing emerald glow.
+     - ⚪ Inactive with standby telemetry indicator.
+  2. Complete Configuration Engine with Dual Sub-Tabs:
+     - ⚡ System Runtime Configuration (step_9_complete_automation/config.json)
+       * Mode Pill Selector & Lifecycle callout blocks.
+       * 4 Pipeline Step Toggles (Step 1, 2, 3, 4).
+       * Complete 12 Millisecond Timing & Delay Inputs with full descriptions.
+       * Governance, Safety & Auto-Pause (LastActivitySentinel 60s, continuous loop 300s).
+       * Logging & Telemetry Hygiene.
+       * Formatted JSON Live Preview Drawer.
+     - 🎨 Dashboard & Telemetry Preferences (dashboard_config.json)
+       * Auto-refresh frequency (10s, 30s, 60s, OFF).
+       * User activity delay, default tab, selection policy, visual motion, and audio chimes.
+       * Unified Action Buttons: Save to config.json, Reset to Defaults, Export JSON.
+  3. Strict Collapsible Governance:
+     - OVERVIEW TAB: ZERO collapsible sections. 100% full-width, permanently open, responsive layout.
+     - CHATS & QUESTIONS TABS: By default COLLAPSED on initial load. Single/smooth expansion on click.
      - Global Expand All / Collapse All buttons.
-     - Clear Selected vs Recommended badge differentiation.
-  5. Next-Gen Visual Hierarchy:
-     - 2 North Star KPI Hero Cards with 2.5rem display font, vibrant gradients, and count-up animations.
-     - 6 Secondary Operational Metrics.
-     - 5-Step Pipeline Topology vector SVG with animated bus.
-     - 7 Analytics SVG Charts with interactive floating tooltips on hover.
-  6. Dual Header Clusters:
-     - System Health Cluster (Server Bridge Online, Engine State, Mode Badge).
-     - Action Control Cluster (Start/Stop, Logs Drawer, Theme, Sound Chimes, Refresh, Classic Switch, Shortcuts).
-  7. Slide-Up Live Console Logs Drawer:
-     - Real-time stream from /api/logs/tail (2.5s polling).
-     - Syntax coloring, auto-scroll toggle, clear, close [Esc] or [L].
-  8. Mode Switch & Config Tabs:
-     - Side-by-side Production vs Test cards & Parameter Diff Matrix.
-     - Live settings search input & floating Unsaved Changes dock.
-  9. Web Audio API Synthesizer:
-     - Futuristic chimes on Start, Stop, Copy (muteable via [M] or header button).
- 10. Bidirectional Switcher:
-     - 1-Click toggle between Modern & Interactive and Simple & Classic dashboards.
+  4. Full-Width Responsive SVG Architecture:
+     - Topology diagram and all 7 SVG charts scale to 100% full width of their containers.
+  5. Complete Classic Filter Parity:
+     - Presets, Date pickers, Conversation selector, Complexity, Speed, Reset button, and Active Chips.
+  6. Tab-Contextual Keyboard Shortcut [/]:
+     - Automatically routes to the active tab's search input.
 """
 
 from __future__ import annotations
@@ -121,15 +108,27 @@ def build_modern_dashboard_html(
     current_mode = runtime_cfg.get("mode", "production").lower()
     is_prod = current_mode == "production"
 
+    # Extract all 12 timing parameters from config.json with safe fallbacks
     timing_cfg = runtime_cfg.get("timing", {})
+    step0_poll_prod = timing_cfg.get("step0_poll_interval_prod_seconds", 1.0)
+    step0_poll_test = timing_cfg.get("step0_poll_interval_test_seconds", 0.1)
+    settle_delay = timing_cfg.get("settle_delay_between_steps_seconds", 1.0)
+    user_pause_threshold = timing_cfg.get("user_activity_pause_threshold_seconds", 60.0)
+    step4_delay = timing_cfg.get("step4_user_activity_delay_seconds", 10.0)
+    step4_poll = timing_cfg.get("step4_poll_interval_seconds", 0.5)
+    step1_focus = timing_cfg.get("step1_window_focus_delay_seconds", 0.5)
+    step2_dom_settle = timing_cfg.get("step2_dom_click_settle_delay_seconds", 1.0)
+    step3_countdown = timing_cfg.get("step3_countdown_seconds", 3)
+    step3_hold_ms = timing_cfg.get("step3_key_hold_delay_ms", 80)
+    step3_post_ms = timing_cfg.get("step3_post_keypress_delay_ms", 100)
+    step3_inter_q_ms = timing_cfg.get("step3_inter_question_delay_ms", 200)
+    step3_round_ms = timing_cfg.get("step3_round_completion_pause_ms", 500)
+
+    # Enabled steps
     enabled_steps = runtime_cfg.get("enabled_steps", {})
-    poll_prod = timing_cfg.get("production_poll_interval", 1.0)
-    poll_test = timing_cfg.get("test_poll_interval", 0.1)
-    settle_delay = timing_cfg.get("settle_delay", 1.0)
-    activity_delay = timing_cfg.get("user_activity_delay", 10.0)
-    step1_enabled = enabled_steps.get("step1_window_focus", True)
-    step2_enabled = enabled_steps.get("step2_dom_extraction", True)
-    step3_enabled = enabled_steps.get("step3_keyboard_selection", True)
+    step1_enabled = enabled_steps.get("step1_find_and_focus", True)
+    step2_enabled = enabled_steps.get("step2_gui_chat_select", True)
+    step3_enabled = enabled_steps.get("step3_keyboard_automation", True)
     step4_enabled = enabled_steps.get("step4_reporting", True)
 
     # Generate pure inline SVG charts
@@ -157,7 +156,7 @@ def build_modern_dashboard_html(
       --bg-surface: #0e1422;
       --bg-surface-elevated: #151d30;
       --bg-surface-highlight: #1e2942;
-      --bg-surface-glass: rgba(14, 20, 34, 0.85);
+      --bg-surface-glass: rgba(14, 20, 34, 0.88);
       --border-subtle: rgba(255, 255, 255, 0.08);
       --border-accent: rgba(99, 102, 241, 0.4);
       --border-hover: rgba(255, 255, 255, 0.18);
@@ -192,7 +191,7 @@ def build_modern_dashboard_html(
       --bg-surface: #ffffff;
       --bg-surface-elevated: #f1f5f9;
       --bg-surface-highlight: #e2e8f0;
-      --bg-surface-glass: rgba(255, 255, 255, 0.9);
+      --bg-surface-glass: rgba(255, 255, 255, 0.92);
       --border-subtle: rgba(0, 0, 0, 0.08);
       --border-accent: rgba(99, 102, 241, 0.3);
       --border-hover: rgba(0, 0, 0, 0.18);
@@ -217,14 +216,15 @@ def build_modern_dashboard_html(
       color: var(--text-primary);
       font-family: var(--font-family);
       line-height: 1.5;
-      padding: 18px 20px 60px;
+      padding: 16px 20px 60px;
       -webkit-font-smoothing: antialiased;
       transition: background-color 0.25s ease, color 0.25s ease;
       min-height: 100vh;
     }}
 
     .container {{
-      max-width: 1340px;
+      max-width: 1400px;
+      width: 100%;
       margin: 0 auto;
     }}
 
@@ -320,17 +320,17 @@ def build_modern_dashboard_html(
       display: inline-flex;
       align-items: center;
       gap: 6px;
-      padding: 5px 11px;
+      padding: 5px 12px;
       border-radius: 9999px;
       font-size: 0.75rem;
-      font-weight: 600;
+      font-weight: 700;
       white-space: nowrap;
       transition: var(--transition);
     }}
 
     .pulse-dot {{
-      width: 7px;
-      height: 7px;
+      width: 8px;
+      height: 8px;
       border-radius: 50%;
       display: inline-block;
     }}
@@ -346,15 +346,6 @@ def build_modern_dashboard_html(
       animation: pulseAnim 2s infinite;
     }}
 
-    .status-bridge-offline {{
-      background: rgba(244, 63, 94, 0.12);
-      color: var(--accent-rose);
-      border: 1px solid rgba(244, 63, 94, 0.35);
-    }}
-    .status-bridge-offline .pulse-dot {{
-      background: var(--accent-rose);
-    }}
-
     .status-idle {{
       background: rgba(148, 163, 184, 0.12);
       color: var(--text-muted);
@@ -368,26 +359,29 @@ def build_modern_dashboard_html(
       background: var(--accent-emerald-bg);
       color: var(--accent-emerald);
       border: 1px solid var(--accent-emerald-border);
+      box-shadow: 0 0 14px rgba(16, 185, 129, 0.25);
     }}
     .status-active .pulse-dot {{
       background: var(--accent-emerald);
       box-shadow: 0 0 10px var(--accent-emerald);
-      animation: pulseAnim 1.4s infinite;
+      animation: pulseAnim 1.2s infinite;
     }}
 
     .status-paused {{
-      background: rgba(245, 158, 11, 0.12);
-      color: var(--accent-amber);
-      border: 1px solid rgba(245, 158, 11, 0.4);
+      background: rgba(245, 158, 11, 0.15) !important;
+      color: #f59e0b !important;
+      border: 1px solid rgba(245, 158, 11, 0.5) !important;
+      box-shadow: 0 0 14px rgba(245, 158, 11, 0.3) !important;
     }}
     .status-paused .pulse-dot {{
-      background: var(--accent-amber);
-      animation: pulseAnim 1.6s infinite;
+      background: #f59e0b !important;
+      box-shadow: 0 0 10px #f59e0b !important;
+      animation: pulseAnim 1.4s infinite !important;
     }}
 
     @keyframes pulseAnim {{
       0%, 100% {{ transform: scale(1); opacity: 1; }}
-      50% {{ transform: scale(1.4); opacity: 0.6; }}
+      50% {{ transform: scale(1.4); opacity: 0.55; }}
     }}
 
     .action-cluster {{
@@ -474,7 +468,7 @@ def build_modern_dashboard_html(
       display: flex;
       justify-content: space-between;
       align-items: center;
-      padding: 7px 16px;
+      padding: 8px 18px;
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-md);
@@ -578,7 +572,7 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity + Modern Chips)
+       Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity)
        ======================================================================== */
     .filter-toolbar {{
       background: var(--bg-surface);
@@ -616,7 +610,6 @@ def build_modern_dashboard_html(
       border: 1px solid var(--border-subtle);
     }}
 
-    /* Row 1: Quick Presets Bar */
     .filter-presets-row {{
       display: flex;
       align-items: center;
@@ -661,7 +654,6 @@ def build_modern_dashboard_html(
       box-shadow: 0 0 10px var(--accent-indigo-glow);
     }}
 
-    /* Row 2: Granular Controls Row */
     .filter-controls-row {{
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
@@ -727,7 +719,6 @@ def build_modern_dashboard_html(
       border-color: rgba(244, 63, 94, 0.5);
     }}
 
-    /* Active Dismissible Chips Row */
     .active-chips-row {{
       display: flex;
       align-items: center;
@@ -769,7 +760,7 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Tab Panels & General Containers
+       Tab Panels
        ======================================================================== */
     .tab-panel {{
       display: none;
@@ -785,20 +776,21 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Overview Tab: 8 KPIs with Visual Hierarchy (North Star Hero Cards)
+       Overview Tab (100% FULL-WIDTH, NO COLLAPSIBLE SECTIONS)
        ======================================================================== */
     .hero-kpis-grid {{
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 16px;
       margin-bottom: 16px;
+      width: 100%;
     }}
 
     .hero-kpi-card {{
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 20px 24px;
+      padding: 22px 26px;
       box-shadow: var(--shadow-md);
       position: relative;
       overflow: hidden;
@@ -806,6 +798,7 @@ def build_modern_dashboard_html(
       display: flex;
       justify-content: space-between;
       align-items: center;
+      width: 100%;
     }}
 
     .hero-kpi-card:hover {{
@@ -866,6 +859,7 @@ def build_modern_dashboard_html(
       grid-template-columns: repeat(6, 1fr);
       gap: 12px;
       margin-bottom: 24px;
+      width: 100%;
     }}
 
     @media (max-width: 1100px) {{
@@ -928,18 +922,60 @@ def build_modern_dashboard_html(
       margin-top: 4px;
     }}
 
-    /* ========================================================================
-       Charts & Topology Cards
-       ======================================================================== */
+    /* Permanent Full-Width Overview Cards */
+    .overview-diagram-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+      width: 100%;
+      box-shadow: var(--shadow-sm);
+    }}
+
+    .overview-card-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 16px;
+    }}
+
+    .overview-card-title {{
+      font-size: 1rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    .overview-card-subtitle {{
+      font-size: 0.78rem;
+      color: var(--text-muted);
+    }}
+
+    .diagram-body {{
+      width: 100%;
+      overflow-x: auto;
+    }}
+
+    .diagram-body svg,
+    .chart-card svg {{
+      width: 100% !important;
+      height: auto !important;
+      display: block;
+    }}
+
     .charts-grid {{
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 18px;
       margin-bottom: 24px;
+      width: 100%;
     }}
 
     .chart-card-wide {{
       grid-column: 1 / -1;
+      width: 100%;
     }}
 
     @media (max-width: 900px) {{
@@ -952,53 +988,24 @@ def build_modern_dashboard_html(
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 18px 20px;
+      padding: 20px 22px;
       box-shadow: var(--shadow-sm);
-      position: relative;
+      width: 100%;
     }}
 
-    .card-header {{
+    .chart-card-header {{
       display: flex;
       justify-content: space-between;
       align-items: center;
-      cursor: pointer;
-      user-select: none;
+      margin-bottom: 14px;
     }}
 
-    .card-title {{
+    .chart-card-title {{
+      font-size: 0.95rem;
+      font-weight: 700;
       display: flex;
       align-items: center;
       gap: 8px;
-      font-size: 0.95rem;
-      font-weight: 700;
-    }}
-
-    .collapse-icon {{
-      transition: transform 0.2s ease;
-      font-size: 0.85rem;
-      color: var(--text-muted);
-    }}
-
-    .collapsed .collapse-icon {{
-      transform: rotate(-90deg);
-    }}
-
-    .card-collapsible-body {{
-      display: grid;
-      grid-template-rows: 1fr;
-      transition: grid-template-rows 0.25s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.2s;
-    }}
-
-    .card-collapsible-body.collapsed {{
-      grid-template-rows: 0fr;
-      opacity: 0;
-      overflow: hidden;
-      margin-top: 0 !important;
-    }}
-
-    .card-collapsible-body > div,
-    .card-collapsible-body > svg {{
-      overflow: hidden;
     }}
 
     /* Floating SVG Tooltip */
@@ -1157,7 +1164,7 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Questions Tab (Deep Hierarchical Q&A Tree)
+       Questions Tab (Default Collapsed Hierarchical Q&A Tree)
        ======================================================================== */
     .chat-card {{
       background: var(--bg-surface);
@@ -1197,6 +1204,7 @@ def build_modern_dashboard_html(
       gap: 8px;
     }}
 
+    /* By default, collapsed */
     .chat-card-body {{
       padding: 16px 18px;
       display: flex;
@@ -1334,105 +1342,89 @@ def build_modern_dashboard_html(
     }}
 
     /* ========================================================================
-       Mode Switch Tab
+       Configuration Tab & Dual Sub-Tabs (System vs Dashboard Config)
        ======================================================================== */
-    .mode-cards-container {{
-      display: grid;
-      grid-template-columns: repeat(2, 1fr);
-      gap: 18px;
-      margin-bottom: 22px;
-    }}
-
-    @media (max-width: 800px) {{
-      .mode-cards-container {{
-        grid-template-columns: 1fr;
-      }}
-    }}
-
-    .mode-card {{
-      background: var(--bg-surface);
-      border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 22px;
-      box-shadow: var(--shadow-sm);
+    .config-subnav {{
       display: flex;
-      flex-direction: column;
-      justify-content: space-between;
-      transition: var(--transition);
-      position: relative;
-    }}
-
-    .mode-card.active-mode {{
-      border-color: var(--accent-emerald);
-      box-shadow: 0 0 24px rgba(16, 185, 129, 0.2);
-    }}
-
-    .mode-card-header {{
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 14px;
-    }}
-
-    .mode-title {{
-      font-size: 1.15rem;
-      font-weight: 700;
-    }}
-
-    .mode-active-pill {{
-      font-size: 0.7rem;
-      font-weight: 700;
-      padding: 3px 9px;
-      border-radius: 9999px;
-      background: var(--accent-emerald-bg);
-      color: var(--accent-emerald);
-      border: 1px solid var(--accent-emerald-border);
-    }}
-
-    .mode-features-list {{
-      list-style: none;
-      margin: 14px 0 20px;
-      display: flex;
-      flex-direction: column;
       gap: 8px;
+      margin-bottom: 18px;
+      border-bottom: 1px solid var(--border-subtle);
+      padding-bottom: 8px;
+    }}
+
+    .config-subnav-btn {{
+      padding: 8px 16px;
       font-size: 0.82rem;
-      color: var(--text-secondary);
-    }}
-
-    .mode-features-list li {{
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }}
-
-    .diff-table-card {{
-      background: var(--bg-surface);
+      font-weight: 700;
+      border-radius: var(--radius-md);
       border: 1px solid var(--border-subtle);
-      border-radius: var(--radius-lg);
-      padding: 20px;
-      box-shadow: var(--shadow-sm);
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      cursor: pointer;
+      transition: var(--transition);
     }}
 
-    /* ========================================================================
-       Config Tab
-       ======================================================================== */
+    .config-subnav-btn:hover {{
+      color: var(--text-primary);
+      background: var(--bg-surface-highlight);
+    }}
+
+    .config-subnav-btn.active {{
+      background: var(--accent-indigo);
+      color: #ffffff;
+      border-color: var(--accent-indigo);
+      box-shadow: 0 0 12px var(--accent-indigo-glow);
+    }}
+
+    .config-subpanel {{
+      display: none;
+    }}
+    .config-subpanel.active {{
+      display: block;
+      animation: fadeIn 0.2s ease;
+    }}
+
     .config-group-card {{
       background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       border-radius: var(--radius-lg);
-      padding: 18px 20px;
-      margin-bottom: 16px;
+      padding: 20px 22px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-sm);
     }}
 
-    .config-grid {{
+    .config-group-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 14px;
+      padding-bottom: 10px;
+      border-bottom: 1px solid var(--border-subtle);
+    }}
+
+    .config-group-title {{
+      font-size: 0.95rem;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }}
+
+    .config-grid-3col {{
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }}
+
+    .config-grid-2col {{
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 14px;
-      margin-top: 14px;
     }}
 
-    @media (max-width: 768px) {{
-      .config-grid {{
+    @media (max-width: 900px) {{
+      .config-grid-3col,
+      .config-grid-2col {{
         grid-template-columns: 1fr;
       }}
     }}
@@ -1440,28 +1432,116 @@ def build_modern_dashboard_html(
     .cfg-field {{
       display: flex;
       flex-direction: column;
-      gap: 5px;
+      gap: 6px;
+      background: var(--bg-surface-elevated);
+      padding: 12px 14px;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
     }}
 
     .cfg-label {{
       font-size: 0.78rem;
-      font-weight: 600;
-      color: var(--text-secondary);
+      font-weight: 700;
+      color: var(--text-primary);
+    }}
+
+    .cfg-desc {{
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      line-height: 1.35;
     }}
 
     .cfg-input {{
       padding: 8px 12px;
-      border-radius: var(--radius-md);
-      background: var(--bg-surface-elevated);
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface);
       border: 1px solid var(--border-subtle);
       color: var(--text-primary);
-      font-size: 0.82rem;
+      font-size: 0.85rem;
       font-family: var(--font-mono);
       outline: none;
     }}
 
     .cfg-input:focus {{
       border-color: var(--accent-indigo);
+      box-shadow: 0 0 10px var(--accent-indigo-glow);
+    }}
+
+    .toggle-row {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }}
+
+    .switch-toggle {{
+      position: relative;
+      display: inline-block;
+      width: 44px;
+      height: 24px;
+    }}
+
+    .switch-toggle input {{
+      opacity: 0;
+      width: 0;
+      height: 0;
+    }}
+
+    .slider {{
+      position: absolute;
+      cursor: pointer;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background-color: var(--bg-surface-highlight);
+      transition: .25s;
+      border-radius: 34px;
+      border: 1px solid var(--border-subtle);
+    }}
+
+    .slider:before {{
+      position: absolute;
+      content: "";
+      height: 16px;
+      width: 16px;
+      left: 3px;
+      bottom: 3px;
+      background-color: white;
+      transition: .25s;
+      border-radius: 50%;
+    }}
+
+    input:checked + .slider {{
+      background-color: var(--accent-emerald);
+    }}
+
+    input:checked + .slider:before {{
+      transform: translateX(20px);
+    }}
+
+    .config-actions-bar {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      padding: 16px 20px;
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-lg);
+      margin-top: 18px;
+      flex-wrap: wrap;
+    }}
+
+    /* Live JSON Drawer */
+    .json-preview-box {{
+      margin-top: 14px;
+      padding: 14px;
+      background: #050811;
+      border-radius: var(--radius-md);
+      border: 1px solid var(--border-subtle);
+      font-family: var(--font-mono);
+      font-size: 0.74rem;
+      color: #94a3b8;
+      max-height: 240px;
+      overflow-y: auto;
+      white-space: pre-wrap;
     }}
 
     /* Floating Unsaved Changes Dock */
@@ -1625,13 +1705,13 @@ def build_modern_dashboard_html(
       </div>
 
       <div class="header-right">
-        <!-- Cluster 1: System Health Indicators -->
+        <!-- Cluster 1: System Health Indicators (Active, Paused, Inactive) -->
         <div class="health-cluster">
           <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Control Server Port 8501">
             <span class="pulse-dot"></span>
             <span id="bridge-text">Bridge Online</span>
           </span>
-          <span class="status-pill status-idle" id="dashboard-status-pill">
+          <span class="status-pill status-idle" id="dashboard-status-pill" title="Standby">
             <span class="pulse-dot"></span>
             <span id="status-text">⚪ Inactive</span>
           </span>
@@ -1646,14 +1726,14 @@ def build_modern_dashboard_html(
             <span id="control-icon">▶️</span>
             <span id="control-label">Start Automation</span>
           </button>
+          <button class="btn btn-classic-switch" id="btn-switch-classic" onclick="window.location.href='classic_dashboard.html'" title="Switch to Simple & Classic Dashboard">
+            <span>🏛️</span>
+            <span>Classic View</span>
+          </button>
           <button class="btn" id="btn-toggle-logs" title="Toggle Live Console Logs Stream (L)">
             <span>📟</span>
             <span>Logs</span>
             <span class="log-unread-badge" id="log-count-badge">0</span>
-          </button>
-          <button class="btn btn-classic-switch" id="btn-switch-classic" onclick="window.location.href='classic_dashboard.html'" title="Switch to Simple & Classic Dashboard">
-            <span>🏛️</span>
-            <span>Classic View</span>
           </button>
           <button class="btn" id="btn-audio-toggle" title="Toggle Futuristic Audio Chimes (M)">
             <span id="audio-icon">🔔</span>
@@ -1672,7 +1752,7 @@ def build_modern_dashboard_html(
     <div class="live-ticker-strip">
       <div class="ticker-left">
         <span class="ticker-beacon"><span class="beacon-dot"></span> LIVE TELEMETRY</span>
-        <span class="ticker-msg" id="ticker-status-msg">Complete Automation Daemon Ready • Last Run: {avg_latency:.1f}s • {total_questions} Questions Resolved</span>
+        <span class="ticker-msg" id="ticker-status-msg">Complete Automation Daemon Ready • Ready to spawn complete_automation.py</span>
       </div>
       <div class="ticker-clock" id="live-clock">--:--:--</div>
     </div>
@@ -1704,7 +1784,7 @@ def build_modern_dashboard_html(
       </button>
     </nav>
 
-    <!-- Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity + Modern Dismiss Chips) -->
+    <!-- Full Interactive Multi-Dimensional Filter Toolbar (Classic Parity) -->
     <section class="filter-toolbar" id="contextual-filter-toolbar" aria-label="Filters Toolbar">
       <div class="filter-toolbar-header">
         <div class="filter-toolbar-title">
@@ -1730,9 +1810,8 @@ def build_modern_dashboard_html(
         </div>
       </div>
 
-      <!-- Row 2: Granular Custom Filter Controls (Classic 100% Parity) -->
+      <!-- Row 2: Granular Controls -->
       <div class="filter-controls-row">
-        <!-- Date Range Filter -->
         <div class="filter-control-group">
           <label class="filter-label" for="filter-date-from">Date Range</label>
           <div class="filter-date-inputs">
@@ -1742,7 +1821,6 @@ def build_modern_dashboard_html(
           </div>
         </div>
 
-        <!-- Conversation Selector Dropdown -->
         <div class="filter-control-group">
           <label class="filter-label" for="filter-chat">Conversation</label>
           <select id="filter-chat" class="filter-select">
@@ -1751,7 +1829,6 @@ def build_modern_dashboard_html(
           </select>
         </div>
 
-        <!-- Complexity Filter Dropdown -->
         <div class="filter-control-group">
           <label class="filter-label" for="filter-complexity">Complexity</label>
           <select id="filter-complexity" class="filter-select">
@@ -1761,7 +1838,6 @@ def build_modern_dashboard_html(
           </select>
         </div>
 
-        <!-- Speed / Latency Filter Dropdown -->
         <div class="filter-control-group">
           <label class="filter-label" for="filter-speed">Speed / Latency</label>
           <select id="filter-speed" class="filter-select">
@@ -1772,7 +1848,6 @@ def build_modern_dashboard_html(
           </select>
         </div>
 
-        <!-- Reset Button -->
         <div class="filter-control-group">
           <label class="filter-label">&nbsp;</label>
           <button type="button" class="btn btn-reset-filter" id="filter-reset-btn" title="Reset all filters to default">
@@ -1788,7 +1863,7 @@ def build_modern_dashboard_html(
       </div>
     </section>
 
-    <!-- TAB 1: OVERVIEW -->
+    <!-- TAB 1: OVERVIEW (PERMANENTLY OPEN, 100% FULL-WIDTH, NO COLLAPSIBLES) -->
     <main id="tab-overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-overview">
       <!-- Row 1: Two High-Priority North Star Hero Cards -->
       <div class="hero-kpis-grid">
@@ -1868,111 +1943,102 @@ def build_modern_dashboard_html(
         </div>
       </div>
 
-      <!-- Collapsible Architecture Topology Diagram -->
-      <div class="chart-card chart-card-wide" style="margin-bottom: 24px;">
-        <div class="card-header collapsible-header" data-target="arch-body">
-          <div class="card-title">
-            <span class="collapse-icon">▾</span>
+      <!-- Permanent Full-Width 5-Step Pipeline Topology Diagram -->
+      <div class="overview-diagram-card">
+        <div class="overview-card-header">
+          <div class="overview-card-title">
             <span>⚡ 5-Step Pipeline Topology & Subsystem Bus</span>
           </div>
-          <span style="font-size: 0.75rem; color: var(--text-muted);">Step 0 to Step 4 Data Highway</span>
+          <span class="overview-card-subtitle">Live End-to-End Orchestration Architecture</span>
         </div>
-        <div class="card-collapsible-body" id="arch-body" style="margin-top: 14px;">
+        <div class="diagram-body">
           {pipeline_svg}
         </div>
       </div>
 
-      <!-- 7 Modern Visual Analytics SVG Charts Grid -->
+      <!-- Permanent 7 Visual Analytics SVG Charts Grid -->
       <div class="charts-grid">
         <div class="chart-card">
-          <div class="card-header collapsible-header" data-target="chart-velocity">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>📈 Velocity Timeline & Run Latency</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-velocity" style="margin-top: 14px;">
+          <div>
             {velocity_svg}
           </div>
         </div>
 
         <div class="chart-card">
-          <div class="card-header collapsible-header" data-target="chart-gauge">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>🎯 Productivity & Efficiency Gauge</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-gauge" style="margin-top: 14px;">
+          <div>
             {gauge_svg}
           </div>
         </div>
 
         <div class="chart-card">
-          <div class="card-header collapsible-header" data-target="chart-heatmap">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>🗓️ 24-Hour Execution Activity Heatmap</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-heatmap" style="margin-top: 14px;">
+          <div>
             {heatmap_svg}
           </div>
         </div>
 
         <div class="chart-card">
-          <div class="card-header collapsible-header" data-target="chart-options">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>📊 Option Selection Breakdown</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-options" style="margin-top: 14px;">
+          <div>
             {option_breakdown_svg}
           </div>
         </div>
 
         <div class="chart-card">
-          <div class="card-header collapsible-header" data-target="chart-dist">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>📶 Chat Distribution & Run Volume</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-dist" style="margin-top: 14px;">
+          <div>
             {distribution_svg}
           </div>
         </div>
 
         <div class="chart-card">
-          <div class="card-header collapsible-header" data-target="chart-topic">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>🍩 Conversation Topic Share</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-topic" style="margin-top: 14px;">
+          <div>
             {topic_share_svg}
           </div>
         </div>
 
         <div class="chart-card chart-card-wide">
-          <div class="card-header collapsible-header" data-target="chart-latency">
-            <div class="card-title">
-              <span class="collapse-icon">▾</span>
+          <div class="chart-card-header">
+            <div class="chart-card-title">
               <span>📉 Run Duration & Latency Trend</span>
             </div>
           </div>
-          <div class="card-collapsible-body" id="chart-latency" style="margin-top: 14px;">
+          <div>
             {latency_trend_svg}
           </div>
         </div>
       </div>
     </main>
 
-    <!-- TAB 2: CHATS (Complete Feature Parity & Dedicated Search) -->
+    <!-- TAB 2: CHATS -->
     <main id="tab-chats" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-chats">
-      <!-- Chat Summary Stats Strip -->
       <div class="stats-strip">
         <div class="stat-pill">
           <span class="stat-num">{total_chats}</span>
@@ -1988,7 +2054,6 @@ def build_modern_dashboard_html(
         </div>
       </div>
 
-      <!-- Dedicated Search Controls for Chats -->
       <div class="controls-bar">
         <div class="search-input-wrap">
           <span class="search-icon-pos">🔍</span>
@@ -1997,8 +2062,7 @@ def build_modern_dashboard_html(
         </div>
       </div>
 
-      <!-- Chat Breakdown Table -->
-      <div class="chart-card chart-card-wide" id="chats-breakdown-section">
+      <div class="overview-diagram-card">
         <div class="table-container">
           <table id="summary-table">
             <thead>
@@ -2011,14 +2075,14 @@ def build_modern_dashboard_html(
               </tr>
             </thead>
             <tbody id="summary-tbody">
-              <!-- Dynamically populated by client JS -->
+              <!-- Rendered dynamically by JavaScript -->
             </tbody>
           </table>
         </div>
       </div>
     </main>
 
-    <!-- TAB 3: QUESTIONS (Hierarchical Tree with Expand/Collapse & Copy) -->
+    <!-- TAB 3: QUESTIONS (BY DEFAULT COLLAPSED ACCORDION TREE) -->
     <main id="tab-questions" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-questions">
       <div class="controls-bar" style="justify-content: space-between; flex-wrap: wrap;">
         <div class="search-input-wrap">
@@ -2033,7 +2097,7 @@ def build_modern_dashboard_html(
       </div>
 
       <div id="details-container">
-        <!-- Dynamically populated by client JS -->
+        <!-- Rendered dynamically by JavaScript in collapsed mode -->
       </div>
     </main>
 
@@ -2047,12 +2111,12 @@ def build_modern_dashboard_html(
               {'<span class="mode-active-pill">CURRENT ACTIVE</span>' if is_prod else ''}
             </div>
             <p style="font-size: 0.82rem; color: var(--text-muted);">
-              Strict human-like execution cadence, safety sentinels, 10-second user inactivity verification, and resilient retry buffers.
+              Strict human-like execution cadence, safety sentinels, 10-second user inactivity verification, and continuous monitoring loop.
             </p>
             <ul class="mode-features-list">
               <li><span>🛡️</span> 10.0s User Inactivity Settle Delay</li>
               <li><span>⏱️</span> 1.0s Process Polling Interval</li>
-              <li><span>⌨️</span> Human-mimicking keystroke hold delays</li>
+              <li><span>⌨️</span> Human-mimicking keystroke hold delays (80ms hold / 100ms post)</li>
               <li><span>🔒</span> Full Win32 Foreground Focus Verification</li>
             </ul>
           </div>
@@ -2068,13 +2132,13 @@ def build_modern_dashboard_html(
               {'<span class="mode-active-pill">CURRENT ACTIVE</span>' if not is_prod else ''}
             </div>
             <p style="font-size: 0.82rem; color: var(--text-muted);">
-              High-speed development mode with minimal delays, fast 0.1s polling, and rapid execution for automated regression testing.
+              High-speed development mode with minimal delays, fast 0.1s polling, single-run execution, and instant simulation.
             </p>
             <ul class="mode-features-list">
               <li><span>⚡</span> 0.5s Fast Settle Delay</li>
               <li><span>⏱️</span> 0.1s High-Frequency Polling</li>
               <li><span>⏩</span> Zero keystroke delay simulation</li>
-              <li><span>🧪</span> Lightweight headless test runs</li>
+              <li><span>🧪</span> Single-cycle auto-stop verification</li>
             </ul>
           </div>
           <button class="btn" id="btn-set-test" style="width: 100%; justify-content: center; background: rgba(168,85,247,0.18); color: #c084fc; border-color: rgba(168,85,247,0.4);">
@@ -2083,7 +2147,6 @@ def build_modern_dashboard_html(
         </div>
       </div>
 
-      <!-- Diff Comparison Table -->
       <div class="diff-table-card">
         <h3 style="font-size: 0.95rem; font-weight: 700; margin-bottom: 4px;">Parameter Difference Matrix</h3>
         <p style="font-size: 0.78rem; color: var(--text-muted);">Comparison of execution parameters between Production and Test modes.</p>
@@ -2126,57 +2189,275 @@ def build_modern_dashboard_html(
       </div>
     </main>
 
-    <!-- TAB 5: CONFIG -->
+    <!-- TAB 5: COMPLETE CONFIGURATION (DUAL SUB-TABS: SYSTEM RUNTIME vs DASHBOARD) -->
     <main id="tab-config" class="tab-panel" role="tabpanel" aria-labelledby="tab-btn-config">
-      <div class="controls-bar">
+      <div class="controls-bar" style="margin-bottom: 14px;">
         <div class="search-input-wrap">
           <span class="search-icon-pos">🔍</span>
-          <input type="text" class="search-input" id="search-config" placeholder="Filter settings by keyword (timing, delay, poll, step)...">
+          <input type="text" class="search-input" id="search-config" placeholder="Search settings (timing, delay, poll, threshold, step)...">
           <span class="search-shortcut-hint">Press [/]</span>
         </div>
       </div>
 
-      <div class="config-group-card">
-        <h3 style="font-size: 0.92rem; font-weight: 700;">⏱️ Execution Timing & Millisecond Delays</h3>
-        <div class="config-grid">
-          <div class="cfg-field">
-            <label class="cfg-label" for="cfg-poll-prod">Production Poll Interval (s)</label>
-            <input type="number" step="0.1" class="cfg-input" id="cfg-poll-prod" value="{poll_prod}">
+      <!-- Config Sub-Navigation Pills -->
+      <div class="config-subnav">
+        <button type="button" class="config-subnav-btn active" id="subtab-btn-runtime" data-subtab="runtime">
+          ⚡ System Runtime Configuration (config.json)
+        </button>
+        <button type="button" class="config-subnav-btn" id="subtab-btn-dashboard" data-subtab="dashboard">
+          🎨 Dashboard &amp; Telemetry Preferences
+        </button>
+      </div>
+
+      <!-- SUB-PANEL 1: SYSTEM RUNTIME CONFIGURATION -->
+      <div class="config-subpanel active" id="subpanel-runtime">
+        <!-- 1. Pipeline Steps Toggles -->
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>⚡</span>
+              <span>Pipeline Steps Toggles</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Enable/Disable Execution Seams</span>
           </div>
-          <div class="cfg-field">
-            <label class="cfg-label" for="cfg-poll-test">Test Mode Poll Interval (s)</label>
-            <input type="number" step="0.05" class="cfg-input" id="cfg-poll-test" value="{poll_test}">
+          <div class="config-grid-2col">
+            <div class="cfg-field">
+              <div class="toggle-row">
+                <div>
+                  <span class="cfg-label">Step 1: Window Focus &amp; Activation</span>
+                  <div class="cfg-desc">Finds and brings Antigravity target window to foreground</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="cfg-step1-enabled" {'checked' if step1_enabled else ''}>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="cfg-field">
+              <div class="toggle-row">
+                <div>
+                  <span class="cfg-label">Step 2: UIA DOM Element Extraction</span>
+                  <div class="cfg-desc">Scans accessibility DOM tree to click target chat thread</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="cfg-step2-enabled" {'checked' if step2_enabled else ''}>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="cfg-field">
+              <div class="toggle-row">
+                <div>
+                  <span class="cfg-label">Step 3: Keyboard Grill-Me Selection</span>
+                  <div class="cfg-desc">Hardware scan code keystrokes to select and confirm options</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="cfg-step3-enabled" {'checked' if step3_enabled else ''}>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
+
+            <div class="cfg-field">
+              <div class="toggle-row">
+                <div>
+                  <span class="cfg-label">Step 4: Reporting &amp; Visual Dashboard</span>
+                  <div class="cfg-desc">Telemetry recording, dynamic charts &amp; user inactivity HUD</div>
+                </div>
+                <label class="switch-toggle">
+                  <input type="checkbox" id="cfg-step4-enabled" {'checked' if step4_enabled else ''}>
+                  <span class="slider"></span>
+                </label>
+              </div>
+            </div>
           </div>
-          <div class="cfg-field">
-            <label class="cfg-label" for="cfg-settle-delay">Window Focus Settle Delay (s)</label>
-            <input type="number" step="0.1" class="cfg-input" id="cfg-settle-delay" value="{settle_delay}">
+        </div>
+
+        <!-- 2. All 12 Precise Millisecond Timings & Delays -->
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>⏱️</span>
+              <span>Precise Millisecond Timings &amp; Delays</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Complete Hardware &amp; Polling Control</span>
           </div>
-          <div class="cfg-field">
-            <label class="cfg-label" for="cfg-activity-delay">User Inactivity Delay (s)</label>
-            <input type="number" step="0.5" class="cfg-input" id="cfg-activity-delay" value="{activity_delay}">
+          <div class="config-grid-3col">
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-prod-poll">Production Poll Interval (s)</label>
+              <div class="cfg-desc">Main idle polling cycle in production mode</div>
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-prod-poll" value="{step0_poll_prod}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-test-poll">Test Mode Poll Interval (s)</label>
+              <div class="cfg-desc">Accelerated validation cycle for testing</div>
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-test-poll" value="{step0_poll_test}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-settle">Step Transition Settle (s)</label>
+              <div class="cfg-desc">Pause between step transitions for UI stability</div>
+              <input type="number" step="0.1" class="cfg-input" id="cfg-timing-settle" value="{settle_delay}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-activity-delay">User Inactivity Delay (s)</label>
+              <div class="cfg-desc">Wait time after mouse/key detection before opening report</div>
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-activity-delay" value="{step4_delay}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step4-poll">Step 4 Telemetry Polling (s)</label>
+              <div class="cfg-desc">Polling interval for user mouse and keystroke detection</div>
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step4-poll" value="{step4_poll}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step1-focus">Step 1 Focus Settle Delay (s)</label>
+              <div class="cfg-desc">Buffer after bringing target window to foreground</div>
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step1-focus" value="{step1_focus}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step2-dom-settle">Step 2 DOM Click Settle (s)</label>
+              <div class="cfg-desc">Pause after simulated click on chat row in GUI</div>
+              <input type="number" step="0.05" class="cfg-input" id="cfg-timing-step2-dom-settle" value="{step2_dom_settle}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step3-countdown">Step 3 Pre-Execution Countdown (s)</label>
+              <div class="cfg-desc">Countdown before keystrokes are transmitted</div>
+              <input type="number" step="0.5" class="cfg-input" id="cfg-timing-step3-countdown" value="{step3_countdown}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step3-hold-ms">Step 3 Key Hold Delay (ms)</label>
+              <div class="cfg-desc">Hardware scan code hold duration during keyboard press</div>
+              <input type="number" step="10" class="cfg-input" id="cfg-timing-step3-hold-ms" value="{step3_hold_ms}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step3-post-ms">Step 3 Post Keypress Delay (ms)</label>
+              <div class="cfg-desc">Pause after each individual key stroke</div>
+              <input type="number" step="25" class="cfg-input" id="cfg-timing-step3-post-ms" value="{step3_post_ms}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step3-inter-q-ms">Step 3 Inter-Question Delay (ms)</label>
+              <div class="cfg-desc">Pause between answering consecutive question prompts</div>
+              <input type="number" step="50" class="cfg-input" id="cfg-timing-step3-inter-q-ms" value="{step3_inter_q_ms}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-timing-step3-round-ms">Step 3 Round Cooldown Pause (ms)</label>
+              <div class="cfg-desc">Cooldown pause after completing entire questionnaire</div>
+              <input type="number" step="100" class="cfg-input" id="cfg-timing-step3-round-ms" value="{step3_round_ms}">
+            </div>
+          </div>
+        </div>
+
+        <!-- 3. Governance, Safety & Auto-Pause Sentinel -->
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>🛡️</span>
+              <span>Governance, Safety &amp; Auto-Pause Sentinel</span>
+            </div>
+            <span style="font-size: 0.72rem; color: var(--text-muted);">Win32 User32 Activity Protection</span>
+          </div>
+          <div class="config-grid-2col">
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-pause-threshold">User Activity Pause Threshold (s)</label>
+              <div class="cfg-desc">If user moves keyboard/mouse within this window, automation enters PAUSED state</div>
+              <input type="number" step="5" class="cfg-input" id="cfg-pause-threshold" value="{user_pause_threshold}">
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-continuous-delay">Continuous Loop Delay (s)</label>
+              <div class="cfg-desc">Sleep interval between continuous autonomous monitoring cycles</div>
+              <input type="number" step="10" class="cfg-input" id="cfg-continuous-delay" value="{timing_cfg.get('continuous_loop_delay_seconds', 300.0)}">
+            </div>
+          </div>
+        </div>
+
+        <!-- 4. Formatted JSON Live Preview Drawer -->
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>📄</span>
+              <span>Raw Runtime Config (config.json)</span>
+            </div>
+            <button type="button" class="btn" id="btn-toggle-json-drawer" style="padding: 2px 8px; font-size: 0.72rem;">Toggle Preview</button>
+          </div>
+          <div class="json-preview-box" id="json-preview-container" style="display: none;">{runtime_config_json_str}</div>
+        </div>
+      </div>
+
+      <!-- SUB-PANEL 2: DASHBOARD & TELEMETRY PREFERENCES -->
+      <div class="config-subpanel" id="subpanel-dashboard">
+        <div class="config-group-card">
+          <div class="config-group-header">
+            <div class="config-group-title">
+              <span>🎨</span>
+              <span>Dashboard Telemetry &amp; Presentation Preferences</span>
+            </div>
+          </div>
+          <div class="config-grid-2col">
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-auto-refresh">Auto-Refresh Frequency</label>
+              <div class="cfg-desc">Interval for automatic client data reload</div>
+              <select id="cfg-auto-refresh" class="filter-select">
+                <option value="10">10 Seconds (Recommended)</option>
+                <option value="30">30 Seconds</option>
+                <option value="60">60 Seconds</option>
+                <option value="0">Disabled (Manual Only)</option>
+              </select>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-default-tab">Default Landing Tab</label>
+              <div class="cfg-desc">Initial tab activated on dashboard startup</div>
+              <select id="cfg-default-tab" class="filter-select">
+                <option value="overview">Overview (KPIs &amp; Visual Charts)</option>
+                <option value="chats">Chats (Conversations Breakdown)</option>
+                <option value="questions">Questions (Detailed Q&amp;A Ledger)</option>
+                <option value="modes">Mode Switch</option>
+                <option value="config">Config</option>
+              </select>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-visual-effects">Visual Animation Effects</label>
+              <div class="cfg-desc">Enable smooth 60fps glassmorphism and count-up animations</div>
+              <select id="cfg-visual-effects" class="filter-select">
+                <option value="rich">Rich 60FPS Glassmorphism &amp; Glows</option>
+                <option value="reduced">Reduced Motion (Low CPU)</option>
+              </select>
+            </div>
+
+            <div class="cfg-field">
+              <label class="cfg-label" for="cfg-sound-notify">Futuristic Web Audio Chimes</label>
+              <div class="cfg-desc">Synthesized audio cues on Start, Stop, and Copy actions</div>
+              <select id="cfg-sound-notify" class="filter-select">
+                <option value="enabled">Enabled (Browser AudioContext)</option>
+                <option value="disabled">Muted / Disabled</option>
+              </select>
+            </div>
           </div>
         </div>
       </div>
 
-      <div class="config-group-card">
-        <h3 style="font-size: 0.92rem; font-weight: 700;">⚡ Pipeline Step Toggles</h3>
-        <div class="config-grid">
-          <div class="cfg-field">
-            <label class="cfg-label">Step 1: Window Focus & Activation</label>
-            <input type="text" class="cfg-input" id="cfg-step1" value="{step1_enabled}">
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-label">Step 2: UIA DOM Element Extraction</label>
-            <input type="text" class="cfg-input" id="cfg-step2" value="{step2_enabled}">
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-label">Step 3: Keyboard Grill-Me Selection</label>
-            <input type="text" class="cfg-input" id="cfg-step3" value="{step3_enabled}">
-          </div>
-          <div class="cfg-field">
-            <label class="cfg-label">Step 4: Reporting & Visual Dashboard</label>
-            <input type="text" class="cfg-input" id="cfg-step4" value="{step4_enabled}">
-          </div>
+      <!-- Unified Configuration Actions Bar -->
+      <div class="config-actions-bar">
+        <div style="display: flex; gap: 8px;">
+          <button type="button" class="btn" id="btn-export-config">📤 Export JSON</button>
+          <button type="button" class="btn" id="btn-reset-config-defaults" style="color: var(--accent-rose);">🔄 Reset to Defaults</button>
+        </div>
+        <div>
+          <button type="button" class="btn btn-automation" id="btn-save-runtime-config">💾 Save Configuration to config.json</button>
         </div>
       </div>
     </main>
@@ -2204,7 +2485,7 @@ def build_modern_dashboard_html(
     <div id="unsaved-changes-dock">
       <span style="font-size: 0.8rem; color: var(--accent-amber); font-weight: 600;">⚠️ Unsaved configuration changes detected</span>
       <button class="btn" id="btn-discard-config" style="padding: 4px 10px; font-size: 0.75rem;">Discard</button>
-      <button class="btn btn-automation" id="btn-save-config" style="padding: 4px 12px; font-size: 0.75rem;">Save to config.json</button>
+      <button class="btn btn-automation" id="btn-save-config-dock" style="padding: 4px 12px; font-size: 0.75rem;">Save to config.json</button>
     </div>
 
     <!-- Floating Toast Notification -->
@@ -2266,6 +2547,7 @@ def build_modern_dashboard_html(
       const searchChats = document.getElementById('search-chats');
       const searchQuestions = document.getElementById('search-questions');
       const searchConfig = document.getElementById('search-config');
+      const tickerStatusMsg = document.getElementById('ticker-status-msg');
 
       // Filter Toolbar Elements
       const filterDateFrom = document.getElementById('filter-date-from');
@@ -2363,7 +2645,7 @@ def build_modern_dashboard_html(
       }}
       runCounters();
 
-      // Horizontal Tabs & Contextual Filter Toolbar visibility
+      // Main Horizontal Tabs & Contextual Filter Toolbar visibility
       const tabs = document.querySelectorAll('.tab-btn');
       const panels = document.querySelectorAll('.tab-panel');
       const contextualFilters = document.getElementById('contextual-filter-toolbar');
@@ -2382,7 +2664,7 @@ def build_modern_dashboard_html(
           p.classList.toggle('active', active);
         }});
 
-        // Show filters on overview & chats, hide on modes & config
+        // Show filters on overview, chats, and questions; hide on modes and config
         if (contextualFilters) {{
           contextualFilters.style.display = (targetTab === 'overview' || targetTab === 'chats' || targetTab === 'questions') ? 'block' : 'none';
         }}
@@ -2393,15 +2675,17 @@ def build_modern_dashboard_html(
       }});
       switchTab(currentActiveTab);
 
-      // Collapsible Card Headers
-      document.querySelectorAll('.collapsible-header').forEach(header => {{
-        header.addEventListener('click', () => {{
-          const targetId = header.getAttribute('data-target');
-          const body = document.getElementById(targetId);
-          if (body) {{
-            const isCollapsed = body.classList.toggle('collapsed');
-            header.classList.toggle('collapsed', isCollapsed);
-          }}
+      // Config Sub-Tabs (System Runtime vs Dashboard Preferences)
+      const subtabBtns = document.querySelectorAll('.config-subnav-btn');
+      const subpanels = document.querySelectorAll('.config-subpanel');
+      subtabBtns.forEach(btn => {{
+        btn.addEventListener('click', () => {{
+          subtabBtns.forEach(b => b.classList.remove('active'));
+          subpanels.forEach(p => p.classList.remove('active'));
+          btn.classList.add('active');
+          const subId = btn.getAttribute('data-subtab');
+          const targetPanel = document.getElementById('subpanel-' + subId);
+          if (targetPanel) targetPanel.classList.add('active');
         }});
       }});
 
@@ -2429,9 +2713,7 @@ def build_modern_dashboard_html(
         }}
       }});
 
-      // ======================================================================
-      // Multi-Dimensional Filtering Logic (100% Classic Parity)
-      // ======================================================================
+      // Multi-Dimensional Filtering Logic
       function formatDate(d) {{
         const year = d.getFullYear();
         const month = String(d.getMonth() + 1).padStart(2, '0');
@@ -2446,26 +2728,20 @@ def build_modern_dashboard_html(
         const selComplexity = filterComplexity ? filterComplexity.value : 'all';
         const selSpeed = filterSpeed ? filterSpeed.value : 'all';
 
-        // 1. Conversation filter
-        if (selChat !== 'all' && cid !== selChat) {{
-          return false;
-        }}
+        if (selChat !== 'all' && cid !== selChat) return false;
 
-        // 2. Date range filter
         if (run && run.timestamp) {{
           const runDateStr = run.timestamp.split('T')[0];
           if (fromVal && runDateStr < fromVal) return false;
           if (toVal && runDateStr > toVal) return false;
         }}
 
-        // 3. Complexity filter
         if (run) {{
           const qCount = run.questions_count !== undefined ? run.questions_count : (run.questions ? run.questions.length : 0);
           if (selComplexity === 'single' && qCount !== 1) return false;
           if (selComplexity === 'multi' && qCount < 2) return false;
         }}
 
-        // 4. Latency / Speed filter
         if (run) {{
           const dur = typeof run.duration_seconds === 'number' ? run.duration_seconds : 0.0;
           if (selSpeed === 'fast' && dur >= 3.0) return false;
@@ -2480,28 +2756,22 @@ def build_modern_dashboard_html(
         if (!activeChipsContainer) return;
         let chipsHtml = '<span class="active-chips-label">Active:</span>';
 
-        // Preset chip
         const activePresetBtn = document.querySelector('.preset-btn.active');
-        const presetVal = activePresetBtn ? activePresetBtn.getAttribute('data-preset') : 'all';
         chipsHtml += `<span class="filter-chip">⚡ ${{activePresetBtn ? activePresetBtn.textContent : 'All Time'}}</span>`;
 
-        // Date chip
         if (filterDateFrom && filterDateFrom.value && filterDateTo && filterDateTo.value) {{
           chipsHtml += `<span class="filter-chip">📅 ${{filterDateFrom.value}} to ${{filterDateTo.value}} <span class="filter-chip-remove" onclick="clearDateFilter()">✕</span></span>`;
         }}
 
-        // Chat chip
         if (filterChat && filterChat.value !== 'all') {{
           const selOpt = filterChat.options[filterChat.selectedIndex];
           chipsHtml += `<span class="filter-chip">📂 ${{selOpt ? selOpt.textContent.slice(0, 25) : 'Chat'}} <span class="filter-chip-remove" onclick="clearChatFilter()">✕</span></span>`;
         }}
 
-        // Complexity chip
         if (filterComplexity && filterComplexity.value !== 'all') {{
           chipsHtml += `<span class="filter-chip">🎯 ${{filterComplexity.value === 'single' ? 'Single Q' : 'Multi Q'}} <span class="filter-chip-remove" onclick="clearComplexityFilter()">✕</span></span>`;
         }}
 
-        // Speed chip
         if (filterSpeed && filterSpeed.value !== 'all') {{
           chipsHtml += `<span class="filter-chip">⚡ ${{filterSpeed.value}} <span class="filter-chip-remove" onclick="clearSpeedFilter()">✕</span></span>`;
         }}
@@ -2540,7 +2810,6 @@ def build_modern_dashboard_html(
           const prompt = chat.last_user_prompt || '';
           const runs = chat.runs || [];
 
-          // Text match
           const textMatch = !searchVal ||
             cid.toLowerCase().includes(searchVal) ||
             topic.toLowerCase().includes(searchVal) ||
@@ -2548,7 +2817,6 @@ def build_modern_dashboard_html(
 
           if (!textMatch) continue;
 
-          // Check if any run matches active multidimensional filters
           const matchingRuns = runs.filter(run => runMatchesFilters(cid, chat, run));
           const chatFilterMatch = runs.length > 0 ? (matchingRuns.length > 0) : (filterChat ? filterChat.value === 'all' || filterChat.value === cid : true);
 
@@ -2574,7 +2842,7 @@ def build_modern_dashboard_html(
         }}
       }}
 
-      // Render Questions Cards (Deep Hierarchical Structure)
+      // Render Questions Cards (BY DEFAULT ALL COLLAPSED)
       function renderQuestions() {{
         if (!detailsContainer) return;
         const searchVal = (searchQuestions ? searchQuestions.value : '').toLowerCase().trim();
@@ -2629,7 +2897,7 @@ def build_modern_dashboard_html(
                   <div class="question-card" data-question-num="${{q.question_index || (qIdx + 1)}}">
                     <div class="question-prompt" onclick="toggleQuestionPrompt(this)">
                       <div class="question-prompt-left">
-                        <span class="collapse-icon">▾</span>
+                        <span class="collapse-icon">▸</span>
                         <span class="question-num">Q${{q.question_index || (qIdx + 1)}}</span>
                         <span>${{escapeHtml(q.question)}}</span>
                       </div>
@@ -2640,7 +2908,7 @@ def build_modern_dashboard_html(
                         <span class="badge-count" style="font-size: 0.72rem;">${{(q.options || []).length}} options</span>
                       </div>
                     </div>
-                    <div class="options-list">
+                    <div class="options-list collapsed">
                       ${{optionsHtml}}
                     </div>
                   </div>
@@ -2651,14 +2919,14 @@ def build_modern_dashboard_html(
                 <div class="run-block" data-run-id="${{escapeHtml(run.run_id || '')}}">
                   <div class="run-header" onclick="toggleRunHeader(this)">
                     <div style="display: flex; align-items: center; gap: 8px;">
-                      <span class="collapse-icon">▾</span>
+                      <span class="collapse-icon">▸</span>
                       <span style="font-weight: 700; color: var(--text-primary);">⚡ Run #${{rIdx + 1}} (${{escapeHtml(run.run_id || 'N/A')}})</span>
                     </div>
                     <div style="display: flex; align-items: center; gap: 12px;">
                       <span>Duration: ${{dur}} | ${{runDate}}</span>
                     </div>
                   </div>
-                  <div class="run-body">
+                  <div class="run-body collapsed">
                     ${{qHtml}}
                   </div>
                 </div>
@@ -2670,7 +2938,7 @@ def build_modern_dashboard_html(
             card.innerHTML = `
               <div class="chat-card-header" onclick="toggleChatHeader(this)">
                 <div class="chat-card-title">
-                  <span class="collapse-icon">▾</span>
+                  <span class="collapse-icon">▸</span>
                   <span class="chat-id-tag">${{escapeHtml(cid)}}</span>
                   <span>${{escapeHtml(topic)}}</span>
                 </div>
@@ -2679,7 +2947,7 @@ def build_modern_dashboard_html(
                   <span class="badge-count">${{totalFilteredQs}} question(s)</span>
                 </div>
               </div>
-              <div class="chat-card-body">
+              <div class="chat-card-body collapsed">
                 ${{runsHtml}}
               </div>
             `;
@@ -2725,7 +2993,6 @@ def build_modern_dashboard_html(
         }}
       }};
 
-      // 1-Click Copy Q&A
       window.copyQACard = function(btn) {{
         const q = decodeURIComponent(btn.getAttribute('data-q') || '');
         const ans = decodeURIComponent(btn.getAttribute('data-ans') || '');
@@ -2736,7 +3003,7 @@ def build_modern_dashboard_html(
         }});
       }};
 
-      // Expand All / Collapse All Questions
+      // Global Expand All / Collapse All Questions
       const btnExpandAllQ = document.getElementById('btn-expand-all-questions');
       const btnCollapseAllQ = document.getElementById('btn-collapse-all-questions');
 
@@ -2786,7 +3053,7 @@ def build_modern_dashboard_html(
         renderQuestions();
       }}
 
-      // Preset button handlers
+      // Preset buttons
       presetBtns.forEach(btn => {{
         btn.addEventListener('click', () => {{
           presetBtns.forEach(b => b.classList.remove('active'));
@@ -2816,7 +3083,7 @@ def build_modern_dashboard_html(
             if (filterDateFrom) filterDateFrom.value = formatDate(past30);
             if (filterDateTo) filterDateTo.value = formatDate(now);
           }} else if (preset === 'week') {{
-            const dayOfWeek = (now.getDay() + 6) % 7; // Monday as 0
+            const dayOfWeek = (now.getDay() + 6) % 7;
             const mon = new Date(now.getTime() - dayOfWeek * 24 * 3600 * 1000);
             if (filterDateFrom) filterDateFrom.value = formatDate(mon);
             if (filterDateTo) filterDateTo.value = formatDate(now);
@@ -2830,7 +3097,6 @@ def build_modern_dashboard_html(
         }});
       }});
 
-      // Event listeners for filter controls
       if (filterDateFrom) filterDateFrom.addEventListener('change', applyFilters);
       if (filterDateTo) filterDateTo.addEventListener('change', applyFilters);
       if (filterChat) filterChat.addEventListener('change', applyFilters);
@@ -2852,12 +3118,11 @@ def build_modern_dashboard_html(
         }});
       }}
 
-      // Real-time Search input listeners
       if (searchChats) searchChats.addEventListener('input', renderChats);
       if (searchQuestions) searchQuestions.addEventListener('input', renderQuestions);
 
       // ======================================================================
-      // Tab-Contextual Keyboard Shortcut [/] Fix
+      // Tab-Contextual Keyboard Shortcut [/]
       // ======================================================================
       window.addEventListener('keydown', (e) => {{
         if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA') return;
@@ -2877,7 +3142,6 @@ def build_modern_dashboard_html(
           }} else if (currentActiveTab === 'config') {{
             targetInput = searchConfig;
           }} else {{
-            // On Overview, switch to chats or focus chats search
             switchTab('chats');
             targetInput = searchChats;
           }}
@@ -2904,6 +3168,85 @@ def build_modern_dashboard_html(
           if (logsOpen) toggleLogs(false);
         }}
       }});
+
+      // ======================================================================
+      // 3-State Status Polling: Active, Paused (User Active), Inactive
+      // ======================================================================
+      const toggleBtn = document.getElementById('automation-toggle-btn');
+      const controlIcon = document.getElementById('control-icon');
+      const controlLabel = document.getElementById('control-label');
+      const statusPill = document.getElementById('dashboard-status-pill');
+      const statusText = document.getElementById('status-text');
+
+      function updateStatusUI(running, isPaused, idleSec, threshold) {{
+        isAutomationActive = running;
+        if (toggleBtn) {{
+          toggleBtn.classList.toggle('state-running', running);
+          toggleBtn.classList.toggle('state-stopped', !running);
+          controlIcon.textContent = running ? '⏹️' : '▶️';
+          controlLabel.textContent = running ? 'Stop Automation' : 'Start Automation';
+        }}
+        if (statusPill && statusText) {{
+          if (running) {{
+            if (isPaused) {{
+              statusPill.className = 'status-pill status-paused';
+              statusText.textContent = '🟡 Paused (User Active)';
+              statusPill.title = `Automation paused: user input detected (idle: ${{idleSec || 0}}s < ${{threshold || 60}}s)`;
+              if (tickerStatusMsg) {{
+                tickerStatusMsg.textContent = `[PAUSED] User activity detected (idle: ${{idleSec || 0}}s < ${{threshold || 60}}s) • Automation sleeping until 60s inactivity`;
+              }}
+            }} else {{
+              statusPill.className = 'status-pill status-active';
+              statusText.textContent = '🟢 Active (Autonomous)';
+              statusPill.title = 'Automation active: autonomous background monitoring enabled';
+              if (tickerStatusMsg) {{
+                tickerStatusMsg.textContent = `[ACTIVE] Autonomous engine executing • Background monitoring live (PID: active)`;
+              }}
+            }}
+          }} else {{
+            statusPill.className = 'status-pill status-idle';
+            statusText.textContent = '⚪ Inactive';
+            statusPill.title = 'Automation stopped: daemon ready to spawn';
+            if (tickerStatusMsg) {{
+              tickerStatusMsg.textContent = `Complete Automation Daemon Ready • Ready to spawn complete_automation.py`;
+            }}
+          }}
+        }}
+      }}
+
+      function pollServerStatus() {{
+        fetch(API_BASE + '/api/automation/status')
+          .then(res => res.json())
+          .then(data => {{
+            if (data && data.success && data.data) {{
+              const d = data.data;
+              updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold);
+            }}
+          }})
+          .catch(() => {{}});
+      }}
+      setInterval(pollServerStatus, 2500);
+
+      if (toggleBtn) {{
+        toggleBtn.addEventListener('click', () => {{
+          const endpoint = isAutomationActive ? '/api/automation/stop' : '/api/automation/start';
+          toggleBtn.disabled = true;
+          fetch(API_BASE + endpoint, {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(data => {{
+              toggleBtn.disabled = false;
+              if (data.success) {{
+                playChime(isAutomationActive ? 'stop' : 'start');
+                showToast(isAutomationActive ? '⏹️ Automation stopped' : '▶️ Automation started');
+                pollServerStatus();
+              }}
+            }})
+            .catch(() => {{
+              toggleBtn.disabled = false;
+              showToast('❌ Server request failed. Ensure server is running on port 8501');
+            }});
+        }});
+      }}
 
       // Live Logs Drawer
       const logsDrawer = document.getElementById('logs-drawer');
@@ -2957,67 +3300,12 @@ def build_modern_dashboard_html(
         }});
       }}
 
-      // Clear Logs Display
       const btnClearLogs = document.getElementById('btn-clear-logs');
       if (btnClearLogs) {{
         btnClearLogs.addEventListener('click', () => {{
           if (logsTerminal) logsTerminal.innerHTML = '<div>Console cleared. Waiting for next stream tick...</div>';
         }});
       }}
-
-      // Automation Start/Stop Control
-      const toggleBtn = document.getElementById('automation-toggle-btn');
-      const controlIcon = document.getElementById('control-icon');
-      const controlLabel = document.getElementById('control-label');
-      const statusPill = document.getElementById('dashboard-status-pill');
-      const statusText = document.getElementById('status-text');
-
-      function updateStatusUI(running, paused) {{
-        isAutomationActive = running;
-        if (toggleBtn) {{
-          toggleBtn.classList.toggle('state-running', running);
-          toggleBtn.classList.toggle('state-stopped', !running);
-          controlIcon.textContent = running ? '⏹️' : '▶️';
-          controlLabel.textContent = running ? 'Stop Automation' : 'Start Automation';
-        }}
-        if (statusPill && statusText) {{
-          statusPill.className = 'status-pill ' + (running ? (paused ? 'status-paused' : 'status-active') : 'status-idle');
-          statusText.textContent = running ? (paused ? '🟡 Paused' : '🟢 Active') : '⚪ Inactive';
-        }}
-      }}
-
-      if (toggleBtn) {{
-        toggleBtn.addEventListener('click', () => {{
-          const endpoint = isAutomationActive ? '/api/automation/stop' : '/api/automation/start';
-          toggleBtn.disabled = true;
-          fetch(API_BASE + endpoint, {{ method: 'POST' }})
-            .then(res => res.json())
-            .then(data => {{
-              toggleBtn.disabled = false;
-              if (data.success) {{
-                playChime(isAutomationActive ? 'stop' : 'start');
-                showToast(isAutomationActive ? '⏹️ Automation stopped' : '▶️ Automation started');
-                updateStatusUI(!isAutomationActive, false);
-              }}
-            }})
-            .catch(() => {{
-              toggleBtn.disabled = false;
-              showToast('❌ Server request failed. Ensure server is running on port 8501');
-            }});
-        }});
-      }}
-
-      function pollServerStatus() {{
-        fetch(API_BASE + '/api/automation/status')
-          .then(res => res.json())
-          .then(data => {{
-            if (data && data.success && data.data) {{
-              updateStatusUI(data.data.running, data.data.paused);
-            }}
-          }})
-          .catch(() => {{}});
-      }}
-      setInterval(pollServerStatus, 3000);
 
       // Mode Switch Controls
       const btnSetProd = document.getElementById('btn-set-prod');
@@ -3038,11 +3326,89 @@ def build_modern_dashboard_html(
       if (btnSetProd) btnSetProd.addEventListener('click', () => switchMode('production'));
       if (btnSetTest) btnSetTest.addEventListener('click', () => switchMode('test'));
 
+      // Config Form Handling & JSON Drawer
+      const btnToggleJson = document.getElementById('btn-toggle-json-drawer');
+      const jsonDrawer = document.getElementById('json-preview-container');
+      if (btnToggleJson && jsonDrawer) {{
+        btnToggleJson.addEventListener('click', () => {{
+          const isHidden = jsonDrawer.style.display === 'none';
+          jsonDrawer.style.display = isHidden ? 'block' : 'none';
+          btnToggleJson.textContent = isHidden ? 'Hide Preview' : 'Toggle Preview';
+        }});
+      }}
+
+      function collectConfigData() {{
+        return {{
+          timing: {{
+            step0_poll_interval_prod_seconds: parseFloat(document.getElementById('cfg-timing-prod-poll').value) || 1.0,
+            step0_poll_interval_test_seconds: parseFloat(document.getElementById('cfg-timing-test-poll').value) || 0.1,
+            settle_delay_between_steps_seconds: parseFloat(document.getElementById('cfg-timing-settle').value) || 1.0,
+            user_activity_pause_threshold_seconds: parseFloat(document.getElementById('cfg-pause-threshold').value) || 60.0,
+            step4_user_activity_delay_seconds: parseFloat(document.getElementById('cfg-timing-activity-delay').value) || 10.0,
+            step4_poll_interval_seconds: parseFloat(document.getElementById('cfg-timing-step4-poll').value) || 0.5,
+            step1_window_focus_delay_seconds: parseFloat(document.getElementById('cfg-timing-step1-focus').value) || 0.5,
+            step2_dom_click_settle_delay_seconds: parseFloat(document.getElementById('cfg-timing-step2-dom-settle').value) || 1.0,
+            step3_countdown_seconds: parseInt(document.getElementById('cfg-timing-step3-countdown').value, 10) || 3,
+            step3_key_hold_delay_ms: parseInt(document.getElementById('cfg-timing-step3-hold-ms').value, 10) || 80,
+            step3_post_keypress_delay_ms: parseInt(document.getElementById('cfg-timing-step3-post-ms').value, 10) || 100,
+            step3_inter_question_delay_ms: parseInt(document.getElementById('cfg-timing-step3-inter-q-ms').value, 10) || 200,
+            step3_round_completion_pause_ms: parseInt(document.getElementById('cfg-timing-step3-round-ms').value, 10) || 500,
+            continuous_loop_delay_seconds: parseFloat(document.getElementById('cfg-continuous-delay').value) || 300.0,
+          }},
+          enabled_steps: {{
+            step1_find_and_focus: document.getElementById('cfg-step1-enabled').checked,
+            step2_gui_chat_select: document.getElementById('cfg-step2-enabled').checked,
+            step3_keyboard_automation: document.getElementById('cfg-step3-enabled').checked,
+            step4_reporting: document.getElementById('cfg-step4-enabled').checked,
+          }}
+        }};
+      }}
+
+      function saveConfigChanges() {{
+        const payload = collectConfigData();
+        fetch(API_BASE + '/api/config/save', {{
+          method: 'POST',
+          headers: {{ 'Content-Type': 'application/json' }},
+          body: JSON.stringify(payload)
+        }})
+        .then(res => res.json())
+        .then(d => {{
+          showToast('✅ Configuration successfully saved to config.json!');
+          const unsavedDock = document.getElementById('unsaved-changes-dock');
+          if (unsavedDock) unsavedDock.classList.remove('visible');
+          setTimeout(() => location.reload(), 800);
+        }})
+        .catch(() => showToast('❌ Failed to save configuration to local server.'));
+      }}
+
+      const btnSaveRuntimeCfg = document.getElementById('btn-save-runtime-config');
+      const btnSaveDock = document.getElementById('btn-save-config-dock');
+      if (btnSaveRuntimeCfg) btnSaveRuntimeCfg.addEventListener('click', saveConfigChanges);
+      if (btnSaveDock) btnSaveDock.addEventListener('click', saveConfigChanges);
+
+      const btnExportCfg = document.getElementById('btn-export-config');
+      if (btnExportCfg) {{
+        btnExportCfg.addEventListener('click', () => {{
+          const payload = collectConfigData();
+          const blob = new Blob([JSON.stringify(payload, null, 2)], {{ type: 'application/json' }});
+          const url = URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = 'config_export.json';
+          a.click();
+          URL.revokeObjectURL(url);
+          showToast('📤 Configuration JSON exported.');
+        }});
+      }}
+
       // Config Unsaved Dock
       const unsavedDock = document.getElementById('unsaved-changes-dock');
-      const cfgInputs = document.querySelectorAll('.cfg-input');
+      const cfgInputs = document.querySelectorAll('.cfg-input, .switch-toggle input');
       cfgInputs.forEach(inp => {{
         inp.addEventListener('input', () => {{
+          if (unsavedDock) unsavedDock.classList.add('visible');
+        }});
+        inp.addEventListener('change', () => {{
           if (unsavedDock) unsavedDock.classList.add('visible');
         }});
       }});
@@ -3100,6 +3466,7 @@ def build_modern_dashboard_html(
       }}, 1000);
 
       // Initialize
+      pollServerStatus();
       applyFilters();
 
     }})();
