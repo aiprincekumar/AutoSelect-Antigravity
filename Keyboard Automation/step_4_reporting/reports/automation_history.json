@@ -1,11 +1,11 @@
 {
   "success": true,
   "data": {
-    "total_pipeline_runs": 6,
-    "total_questions_answered": 21,
-    "total_runtime_seconds": 195.11,
-    "total_unique_chats": 2,
-    "last_updated": "2026-11-04T21:17:17.799568+00:00",
+    "total_pipeline_runs": 7,
+    "total_questions_answered": 22,
+    "total_runtime_seconds": 205.56,
+    "total_unique_chats": 3,
+    "last_updated": "2026-11-05T00:13:38.222771+00:00",
     "chats": {
       "e0645f63-cc82-41f8-8385-2538e9e8f6bf": {
         "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
@@ -358,11 +358,43 @@
             "selected_at": "2026-11-04T21:17:07.393404+00:00"
           }
         ]
+      },
+      "43229a5d-a7e5-4754-bddd-439fb28c4a01": {
+        "conversation_id": "43229a5d-a7e5-4754-bddd-439fb28c4a01",
+        "topic_summary": "अब तुम्हें ये देखना है कि डैशबोर्ड में जो UI and UX है उसको किस तरह से और भी बेह...",
+        "last_user_prompt": "मैं तुम्हारा सभी रिकमेंडेशन को एक्सेप्ट करता हूँ लेकिन इस पर कार्य करने से पहले तुम्हें एक नया कॉपी बनाना होगा डैशबोर्ड ...",
+        "run_count": 1,
+        "total_questions": 1,
+        "last_run_timestamp": "2026-11-05T00:13:38.222771+00:00",
+        "runs": [
+          {
+            "run_id": "run_20261105_054338",
+            "timestamp": "2026-11-05T00:13:38.222771+00:00",
+            "duration_seconds": 10.45,
+            "questions_count": 1,
+            "questions": [
+              {
+                "question_index": 1,
+                "question": "क्या आप इस कार्य के कमिटेड चेंजेस को GitHub पर पुश करना चाहते हैं?",
+                "options": [
+                  "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+                  "नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+                "is_multi_select": false,
+                "is_recommended": true
+              }
+            ],
+            "status": "COMPLETED",
+            "selected_at": "2026-11-05T00:13:27.772883+00:00"
+          }
+        ]
       }
     }
   },
   "meta": {
-    "timestamp": "2026-11-04T21:17:17.799568+00:00",
+    "timestamp": "2026-11-05T00:13:38.222771+00:00",
     "step": "step_4_reporting",
     "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
     "format_version": "1.0.0"

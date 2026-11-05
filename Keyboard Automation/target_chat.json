@@ -1,24 +1,48 @@
 {
-  "success": false,
+  "success": true,
   "data": {
-    "conversation_id": null,
-    "topic_summary": "",
-    "last_user_prompt": "",
-    "status": "NO_PENDING_CHATS",
-    "message": "No chat with pending Grill Me / ask_question found across transcripts.",
-    "cancelled_remaining_steps": true,
-    "questions_count": 0,
-    "total_questions_count": 0,
+    "conversation_id": "43229a5d-a7e5-4754-bddd-439fb28c4a01",
+    "topic_summary": "अब तुम्हें ये देखना है कि डैशबोर्ड में जो UI and UX है उसको किस तरह से और भी बेह...",
+    "last_user_prompt": "मैं तुम्हारा सभी रिकमेंडेशन को एक्सेप्ट करता हूँ लेकिन इस पर कार्य करने से पहले तुम्हें एक नया कॉपी बनाना होगा डैशबोर्ड ...",
+    "selected_at": "2026-11-05T00:13:27.772883+00:00",
+    "status": "SUCCESS_SELECTED",
+    "questions_count": 1,
+    "total_questions_count": 1,
     "is_multi_question": false,
-    "questions": [],
-    "selections": [],
-    "window_hwnd": 0,
-    "window_title": "",
-    "window_focused": false,
-    "dry_run": false
+    "questions": [
+      {
+        "question_index": 1,
+        "question": "क्या आप इस कार्य के कमिटेड चेंजेस को GitHub पर पुश करना चाहते हैं?",
+        "options": [
+          "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+          "नहीं, अभी रहने दो क्योंकि टेस्टिंग पेंडिंग है"
+        ],
+        "is_multi_select": false,
+        "recommended_option_index": 1,
+        "recommended_option_text": "(Recommended) GitHub पर कमिट चेंजेस पुश करना"
+      }
+    ],
+    "selections": [
+      {
+        "question_index": 1,
+        "question": "क्या आप इस कार्य के कमिटेड चेंजेस को GitHub पर पुश करना चाहते हैं?",
+        "selected_option_index": 1,
+        "selected_option_text": "(Recommended) GitHub पर कमिट चेंजेस पुश करना",
+        "is_multi_select": false,
+        "total_options": 2,
+        "is_recommended": true
+      }
+    ],
+    "window_hwnd": 328338,
+    "window_title": "Automating GitHub Push Ru...",
+    "window_focused": true,
+    "dry_run": false,
+    "gui_chat_selected": true,
+    "gui_selection_method": "cdp_dom_click",
+    "gui_selected_at": "2026-11-05T00:13:30.387415+00:00"
   },
   "meta": {
-    "timestamp": "2026-11-04T23:53:04.572765+00:00",
-    "generator": "step1_find_and_focus.py (Dept 06 Architecture)"
+    "timestamp": "2026-11-05T00:13:30.387415+00:00",
+    "generator": "step2_gui_chat_select.py (Dept 06 Architecture)"
   }
 }
