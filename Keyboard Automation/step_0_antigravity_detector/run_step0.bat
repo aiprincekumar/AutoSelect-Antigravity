@@ -13,7 +13,13 @@ REM ============================================================================
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 set "STEP0_SCRIPT=%SCRIPT_DIR%step0_antigravity_detector.py"
-set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+if exist "%SCRIPT_DIR%..\state\target_chat.json" (
+    set "STATE_FILE=%SCRIPT_DIR%..\state\target_chat.json"
+) else if exist "%SCRIPT_DIR%..\target_chat.json" (
+    set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+) else (
+    set "STATE_FILE=%SCRIPT_DIR%..\state\target_chat.json"
+)
 
 set "NO_PAUSE_ARG=0"
 set "CMD_ARGS=%*"

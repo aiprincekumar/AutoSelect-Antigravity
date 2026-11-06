@@ -248,7 +248,14 @@ class Step4ReportingEngine:
         if state_file_path:
             self.state_file = Path(state_file_path).resolve()
         else:
-            self.state_file = self.workspace_dir / "target_chat.json"
+            state_primary = self.workspace_dir / "state" / "target_chat.json"
+            state_fallback = self.workspace_dir / "target_chat.json"
+            if state_primary.is_file():
+                self.state_file = state_primary.resolve()
+            elif state_fallback.is_file():
+                self.state_file = state_fallback.resolve()
+            else:
+                self.state_file = state_primary.resolve()
 
         # Reports directory
         if reports_dir:
@@ -367,6 +374,14 @@ class Step4ReportingEngine:
         :return: (was_recorded: bool, message: str, run_record: Optional[RunRecord])
         """
         p_state = Path(state_file).resolve() if state_file else self.state_file
+        if not p_state.is_file() and not state_file:
+            alt = (
+                self.workspace_dir / "target_chat.json"
+                if p_state.parent.name == "state"
+                else self.workspace_dir / "state" / "target_chat.json"
+            )
+            if alt.is_file():
+                p_state = alt.resolve()
         if not p_state.is_file():
             return False, f"State file not found at: {p_state}", None
 

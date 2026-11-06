@@ -20,7 +20,13 @@ chcp 65001 >nul
 
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
-set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+if exist "%SCRIPT_DIR%..\state\target_chat.json" (
+    set "STATE_FILE=%SCRIPT_DIR%..\state\target_chat.json"
+) else if exist "%SCRIPT_DIR%..\target_chat.json" (
+    set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+) else (
+    set "STATE_FILE=%SCRIPT_DIR%..\state\target_chat.json"
+)
 set "STEP3_SCRIPT=%SCRIPT_DIR%step3_keyboard_automation.py"
 
 :: 1. Dedicated Self-Healing Virtual Environment (.venv) Resolution

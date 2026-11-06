@@ -101,6 +101,9 @@ from .cli import parse_arguments, print_banner, main
 from .config_manager import (
     get_canonical_config_path,
     get_default_runtime_config,
+    get_state_dir,
+    resolve_runtime_state_file,
+    resolve_state_pair,
     load_runtime_config,
     save_runtime_config,
     get_effective_poll_interval,
@@ -120,6 +123,9 @@ from .config_manager import (
 __all__ = [
     "get_canonical_config_path",
     "get_default_runtime_config",
+    "get_state_dir",
+    "resolve_runtime_state_file",
+    "resolve_state_pair",
     "load_runtime_config",
     "save_runtime_config",
     "get_effective_poll_interval",

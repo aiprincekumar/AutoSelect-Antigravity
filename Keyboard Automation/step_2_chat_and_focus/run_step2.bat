@@ -21,7 +21,13 @@ chcp 65001 >nul
 set "SCRIPT_DIR=%~dp0"
 cd /d "%SCRIPT_DIR%"
 set "STEP2_SCRIPT=%SCRIPT_DIR%step2_gui_chat_select.py"
-set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+if exist "%SCRIPT_DIR%..\state\target_chat.json" (
+    set "STATE_FILE=%SCRIPT_DIR%..\state\target_chat.json"
+) else if exist "%SCRIPT_DIR%..\target_chat.json" (
+    set "STATE_FILE=%SCRIPT_DIR%..\target_chat.json"
+) else (
+    set "STATE_FILE=%SCRIPT_DIR%..\state\target_chat.json"
+)
 
 :: 1. Dedicated Self-Healing Virtual Environment (.venv) Resolution
 if not exist "%SCRIPT_DIR%..\.venv\Scripts\python.exe" (

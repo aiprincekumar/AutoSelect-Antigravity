@@ -658,17 +658,20 @@ class AntigravityFocusManager:
         return True
 
 
-def resolve_state_file_path(state_file: str) -> Tuple[Path, Path]:
+def resolve_state_file_path(state_file: str = "target_chat.json") -> Tuple[Path, Path]:
     """
     Intelligently resolves target_chat.json and last_selection_state.json paths.
-    Prioritizes explicit paths, CWD, root workspace directory, then script directory.
+    Prioritizes explicit paths, dedicated state/ directory, CWD, root workspace directory, then script directory.
+    - Tier 1 (Primary): <workspace>/state/target_chat.json (and state/last_selection_state.json)
+    - Tier 2 (Fallback): <workspace>/target_chat.json if legacy root file exists
     """
     p = Path(state_file)
+    script_dir = Path(__file__).resolve().parent
+    root_dir = script_dir.parent if script_dir.name.startswith(("step_", "step-")) else script_dir
+
     if p.is_absolute():
         target = p
-    else:
-        script_dir = Path(__file__).resolve().parent
-        root_dir = script_dir.parent if script_dir.name.startswith(("step_", "step-")) else script_dir
+    elif len(p.parts) > 1:
         if (Path.cwd() / p).is_file():
             target = (Path.cwd() / p).resolve()
         elif (root_dir / p).is_file():
@@ -677,7 +680,25 @@ def resolve_state_file_path(state_file: str) -> Tuple[Path, Path]:
             target = (script_dir / p).resolve()
         else:
             target = (root_dir / p).resolve()
+    else:
+        state_dir = root_dir / "state"
+        state_file_in_dir = state_dir / p.name
+        root_file = root_dir / p.name
+        cwd_state_file = Path.cwd() / "state" / p.name
+        cwd_root_file = Path.cwd() / p.name
 
+        if state_file_in_dir.is_file():
+            target = state_file_in_dir.resolve()
+        elif cwd_state_file.is_file():
+            target = cwd_state_file.resolve()
+        elif root_file.is_file():
+            target = root_file.resolve()
+        elif cwd_root_file.is_file():
+            target = cwd_root_file.resolve()
+        else:
+            target = state_file_in_dir.resolve()
+
+    target.parent.mkdir(parents=True, exist_ok=True)
     legacy = target.parent / "last_selection_state.json"
     return target, legacy
 

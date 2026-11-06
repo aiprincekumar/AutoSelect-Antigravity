@@ -24,7 +24,7 @@ import json
 import copy
 import logging
 from pathlib import Path
-from typing import Dict, Any, Optional, Union
+from typing import Dict, Any, Optional, Union, Tuple
 
 # Base workspace resolution
 _this_dir = Path(__file__).resolve().parent
@@ -98,6 +98,96 @@ def get_canonical_config_path(base_dir: Optional[Union[str, Path]] = None) -> Pa
             return c.resolve()
     # Default canonical location if file not yet on disk
     return (root / "step_9_complete_automation" / "config.json").resolve()
+
+
+def get_state_dir(base_dir: Optional[Union[str, Path]] = None) -> Path:
+    """
+    Returns the canonical dedicated runtime state directory (<workspace>/state).
+    Guarantees the directory exists on disk.
+    """
+    root = Path(base_dir).resolve() if base_dir else _workspace_dir
+    state_dir = (root / "state").resolve()
+    state_dir.mkdir(parents=True, exist_ok=True)
+    return state_dir
+
+
+def resolve_runtime_state_file(
+    filename: str = "target_chat.json",
+    base_dir: Optional[Union[str, Path]] = None,
+    for_writing: bool = False,
+) -> Path:
+    """
+    Resilient two-tier state file path resolver:
+      Tier 1 (Primary): <workspace>/state/<filename>
+      Tier 2 (Fallback): <workspace>/<filename> (backward-compatible legacy fallback)
+
+    Behavior:
+      - When `for_writing=True`: Always targets Tier 1 (<workspace>/state/<filename>)
+        and guarantees the `state/` directory exists.
+      - When reading (`for_writing=False`):
+        1. Checks Tier 1 (<workspace>/state/<filename>). If exists, returns it.
+        2. Checks Tier 2 fallback (<workspace>/<filename>). If exists, returns it.
+        3. Checks current working directory fallbacks (CWD/state/<filename> then CWD/<filename>).
+        4. If not found anywhere, defaults to Tier 1 (<workspace>/state/<filename>).
+    """
+    p = Path(filename)
+    if p.is_absolute():
+        if for_writing:
+            p.parent.mkdir(parents=True, exist_ok=True)
+        return p.resolve()
+
+    root = Path(base_dir).resolve() if base_dir else _workspace_dir
+    state_dir = root / "state"
+
+    if for_writing:
+        state_dir.mkdir(parents=True, exist_ok=True)
+        return (state_dir / p.name).resolve()
+
+    # If explicit path has multiple parts (e.g. 'state/target_chat.json' or 'custom/foo.json')
+    if len(p.parts) > 1:
+        if (root / p).is_file():
+            return (root / p).resolve()
+        if (Path.cwd() / p).is_file():
+            return (Path.cwd() / p).resolve()
+        return (root / p).resolve()
+
+    # Tier 1: Dedicated state directory
+    primary = (state_dir / p.name).resolve()
+    if primary.is_file():
+        return primary
+
+    # Tier 2: Root directory fallback
+    fallback_root = (root / p.name).resolve()
+    if fallback_root.is_file():
+        return fallback_root
+
+    # CWD checks
+    cwd_state = (Path.cwd() / "state" / p.name).resolve()
+    if cwd_state.is_file():
+        return cwd_state
+    cwd_root = (Path.cwd() / p.name).resolve()
+    if cwd_root.is_file():
+        return cwd_root
+
+    # Default to Tier 1
+    return primary
+
+
+def resolve_state_pair(
+    state_file: Optional[Union[str, Path]] = None,
+    base_dir: Optional[Union[str, Path]] = None,
+    for_writing: bool = False,
+) -> Tuple[Path, Path]:
+    """
+    Resolves both target_chat.json and last_selection_state.json paths atomically.
+    Returns (target_chat_path, last_selection_state_path).
+    """
+    fname = Path(state_file).name if state_file else "target_chat.json"
+    target = resolve_runtime_state_file(filename=fname, base_dir=base_dir, for_writing=for_writing)
+    legacy = target.parent / "last_selection_state.json"
+    if for_writing:
+        target.parent.mkdir(parents=True, exist_ok=True)
+    return target, legacy
 
 
 def get_default_runtime_config() -> Dict[str, Any]:

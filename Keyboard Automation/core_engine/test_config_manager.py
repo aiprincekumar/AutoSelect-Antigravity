@@ -26,6 +26,9 @@ if str(_root_dir) not in sys.path:
 from core_engine.config_manager import (
     get_canonical_config_path,
     get_default_runtime_config,
+    get_state_dir,
+    resolve_runtime_state_file,
+    resolve_state_pair,
     load_runtime_config,
     save_runtime_config,
     get_effective_poll_interval,
@@ -46,7 +49,7 @@ class TestConfigManager(unittest.TestCase):
     """Unit test suite verifying single source of truth configuration engine."""
 
     def setUp(self):
-        self.test_dir = Path(tempfile.mkdtemp(prefix="test_cfg_mgr_"))
+        self.test_dir = Path(tempfile.mkdtemp(prefix="test_cfg_mgr_")).resolve()
         self.custom_config_path = self.test_dir / "custom_config.json"
 
     def tearDown(self):
@@ -208,6 +211,41 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(s4["step4_user_activity_delay_seconds"], 15.0)
         s9 = get_step_timing(9, cfg)
         self.assertEqual(s9["settle_delay_between_steps_seconds"], 1.2)
+
+    def test_14_get_state_dir_creation(self):
+        """Verify get_state_dir creates and returns the dedicated state directory."""
+        state_dir = get_state_dir(self.test_dir)
+        self.assertTrue(state_dir.is_dir())
+        self.assertEqual(state_dir.name, "state")
+        self.assertEqual(state_dir.parent.resolve(), self.test_dir.resolve())
+
+    def test_15_resolve_runtime_state_file_two_tier(self):
+        """Verify two-tier resolution: state/ primary, root fallback, and for_writing creation."""
+        # Writing mode: always targets state/
+        w_path = resolve_runtime_state_file("target_chat.json", base_dir=self.test_dir, for_writing=True)
+        self.assertEqual(w_path.parent.name, "state")
+        self.assertTrue(w_path.parent.is_dir())
+
+        # Fallback reading: when only root file exists
+        root_file = self.test_dir / "target_chat.json"
+        root_file.write_text("{}", encoding="utf-8")
+        r_path = resolve_runtime_state_file("target_chat.json", base_dir=self.test_dir, for_writing=False)
+        self.assertEqual(r_path.resolve(), root_file.resolve())
+
+        # Primary reading: when state/ file exists, it takes precedence over root
+        state_file = self.test_dir / "state" / "target_chat.json"
+        state_file.write_text(json.dumps({"in": "state"}), encoding="utf-8")
+        p_path = resolve_runtime_state_file("target_chat.json", base_dir=self.test_dir, for_writing=False)
+        self.assertEqual(p_path.resolve(), state_file.resolve())
+
+    def test_16_resolve_state_pair(self):
+        """Verify resolve_state_pair returns both target_chat.json and last_selection_state.json."""
+        target, legacy = resolve_state_pair("target_chat.json", base_dir=self.test_dir, for_writing=True)
+        self.assertEqual(target.name, "target_chat.json")
+        self.assertEqual(legacy.name, "last_selection_state.json")
+        self.assertEqual(target.parent, legacy.parent)
+        self.assertEqual(target.parent.name, "state")
+
 
 
 if __name__ == "__main__":

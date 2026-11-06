@@ -8,6 +8,24 @@
 
 ## 🚀 1. Feature Log & Milestone History
 
+### Dedicated Runtime State Subfolder Migration (`state/`) & Resilient Two-Tier Resolution Architecture
+- **Status:** Completed & Grade A+ Certified (131/131 Total Workspace Tests Passed, Zero Gitleaks Findings)
+- **Local Commits:** Pending local micro-commit.
+- **Architectural Enhancements:**
+  - **100% Clean Workspace Root:** Relocated ephemeral runtime state files (`target_chat.json`, `last_selection_state.json`) from workspace root into dedicated `state/` directory (`Keyboard Automation/state/`). The workspace root is now completely clean and free of loose runtime JSON state data.
+  - **Resilient Two-Tier Path Resolution (`core_engine/config_manager.py`):** Added canonical helpers `get_state_dir()`, `resolve_runtime_state_file()`, and `resolve_state_pair()`.
+    - **Tier 1 (Primary):** Targets `state/target_chat.json` and `state/last_selection_state.json`. All state generation and write operations target `state/` automatically.
+    - **Tier 2 (Fallback):** Reads root fallback (`target_chat.json`) seamlessly if a legacy file exists in root and no file is found in `state/`.
+  - **Universal Subsystem Alignment:**
+    - `core_engine/automator.py`: Probing candidates prioritize `state/` before root fallbacks.
+    - `step_1_chat_identifier/step1_find_and_focus.py`: Saves state to `state/target_chat.json` and `state/last_selection_state.json` by default.
+    - `step_2_chat_and_focus/step2_gui_chat_select.py`: Reads and updates `state/target_chat.json` with fallback support.
+    - `step_4_reporting/step4_reporting.py`: Ingests runs from `state/target_chat.json` with fallback support.
+    - `step_9_complete_automation/complete_automation.py`: Passes `--state-file` pointing to `state/target_chat.json`.
+    - Batch Scripts (`run_step0.bat`, `run_step1.bat`, `run_step2.bat`, `run_step3.bat`): Intelligently prioritize `state/target_chat.json`.
+  - **Git Hygiene:** Configured `.gitignore` to ignore `target_chat.json`, `last_selection_state.json`, and `state/*.json` while preserving `state/.gitkeep`, ensuring ephemeral runtime state files never pollute git history.
+  - **Test Suite Expansion:** Added comprehensive unit tests in `core_engine/test_config_manager.py` covering directory creation, two-tier resolution, and state pair resolution; 131/131 tests passed cleanly.
+
 ### Isolated Single-Step Execution & Complete Independence Standard (Step 0 to Step 5)
 - **Status:** Completed & Grade A+ Certified (124/124 Total Workspace Tests Passed, Zero Gitleaks Findings)
 - **Local Commits:** Pending local micro-commit.
@@ -180,3 +198,4 @@
 | 17 | `Modern and Interactive Dashboard/generate_modern_dashboard.py`, `step_4_reporting/dashboard_server.py` | Modern dashboard top header mode badge (#header-mode-badge) was static and not dynamically updating when toggling between Test and Production mode | Added dynamic DOM sync in `applyExecutionModeUI`, bound mode extraction in `pollServerStatus`, added `/api/automation/events` SSE stream in server | Real-time dynamic reflection of operating mode (Amber 🧪 TEST vs Emerald ⚡ PRODUCTION) across top panel and header badge | Phase 13 / Defect 3 | unittest (20/20 pass, 123/123 total) |
 | 18 | `Modern and Interactive Dashboard/generate_modern_dashboard.py`, `step_4_reporting/step4_reporting.py`, `step_4_reporting/dashboard_server.py` | Mode change between Live and Test failed to update top header immediately and required manual page refresh because background polling/SSE (running every 2.5s) raced with the async save, snapping client state back, plus Classic dashboard lacked header badge and save trigger, and server did not update active_mode in DashboardRequestHandler | Added 4s user-change debounce window to polling/SSE listeners; added `#header-mode-badge` to Classic header with direct click toggle; synced active_mode in server `/api/config/save`; labeled modes cleanly as '⚡ LIVE' and '🧪 TEST' across both dashboards | Mode switch between Live and Test updates header instantaneously with zero page refresh required; click on header badge directly toggles mode; 55/55 reporting tests passed (123/123 workspace total) | Phase 14 / Bugfix | unittest (55/55 pass), gitleaks (0 leaks) |
 | 19 | `step_0_antigravity_detector/step0_antigravity_detector.py`, `step_5_automation/antigravity_lifecycle_sentinel.py`, `step_5_automation/run_step5.bat` | Step 0 chained all subsequent steps via `execute_complete_pipeline` upon detection, and Step 5 auto-triggered the pipeline on open, violating isolated single-step responsibility | Completely removed `execute_complete_pipeline` and `--run-pipeline` from Step 0; enforced single-step execution and auto-stop across all steps (0 to 5); set Step 5 `auto_start_pipeline=False` by default; created standard `step_5_automation/run_step5.bat` | Every step from Step 0 to Step 5 performs ONLY its own assigned step and stops cleanly; zero downstream chaining; 124/124 tests passed, Grade A+ certified | Phase 15 / Decoupling | unittest (124/124 pass), gitleaks (0 leaks) |
+| 20 | Workspace Root & All Steps | Runtime state files (`target_chat.json`, `last_selection_state.json`) were generated directly in project root, cluttering root directory and polluting git status | Created dedicated `state/` directory with `.gitkeep`, updated `.gitignore`, migrated root state files, and implemented two-tier path resolution across core_engine, Steps 1-4, Step 9, and batch scripts | Workspace root 100% clean and structured; automatic two-tier resolution with backward compatibility; 131/131 tests passed cleanly | Phase 16 / Clean Root Architecture | unittest (131/131 pass), gitleaks (0 leaks) |

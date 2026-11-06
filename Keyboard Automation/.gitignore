@@ -16,3 +16,9 @@ env/
 .dashboard_launched.lock
 .automation_process.json
 sentinel_state.json
+
+# Runtime state files (Automated Chat & Telemetry)
+target_chat.json
+last_selection_state.json
+state/*.json
+!state/.gitkeep

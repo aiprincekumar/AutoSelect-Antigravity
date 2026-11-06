@@ -386,7 +386,17 @@ class CompleteAutomationController:
             self.config = AutomationConfig.load_from_file(config_path)
 
         self.workspace_dir = _root_dir
-        self.state_file = Path(state_file_path).resolve() if state_file_path else (_root_dir / "target_chat.json").resolve()
+        if state_file_path:
+            self.state_file = Path(state_file_path).resolve()
+        else:
+            state_primary = _root_dir / "state" / "target_chat.json"
+            state_fallback = _root_dir / "target_chat.json"
+            if state_primary.is_file():
+                self.state_file = state_primary.resolve()
+            elif state_fallback.is_file():
+                self.state_file = state_fallback.resolve()
+            else:
+                self.state_file = state_primary.resolve()
         self.pid_file = (self.workspace_dir / "step_4_reporting" / ".automation_process.json").resolve()
         self.python_exe = self._resolve_python_exe(python_exe_path)
         self.pipeline_steps = discover_pipeline_steps(root_dir=self.workspace_dir, include_future=True)

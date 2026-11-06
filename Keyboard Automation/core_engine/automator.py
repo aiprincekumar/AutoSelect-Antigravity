@@ -158,6 +158,13 @@ class GrillMeAutomator:
         """
         root_dir = Path(__file__).resolve().parent.parent
         candidates = [
+            # Dedicated state/ directory (Tier 1 Primary)
+            root_dir / "state" / "target_chat.json",
+            Path.cwd() / "state" / "target_chat.json",
+            root_dir / "state" / "last_selection_state.json",
+            Path.cwd() / "state" / "last_selection_state.json",
+            Path.cwd().parent / "state" / "target_chat.json",
+            # Workspace root directory (Tier 2 Fallback)
             root_dir / "target_chat.json",
             Path.cwd() / "target_chat.json",
             Path.cwd().parent / "target_chat.json",
