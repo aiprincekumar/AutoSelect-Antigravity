@@ -231,6 +231,47 @@ class TestCompleteAutomationExecution(unittest.TestCase):
         second_step4_cmd = step4_calls_2[0][0][0]
         self.assertIn("--no-watch", second_step4_cmd)
 
+    @patch("subprocess.run")
+    def test_step3_forwards_multi_question_state(self, mock_run):
+        """Verify Step 3 receives --questions and --options-list when state file has multi-question data."""
+        mock_proc = MagicMock(returncode=0)
+        mock_run.return_value = mock_proc
+
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            json.dump({
+                "success": True,
+                "data": {
+                    "conversation_id": "step9_mq_test",
+                    "total_questions_count": 2,
+                    "questions": [
+                        {"question": "Q1", "recommended_option_index": 1},
+                        {"question": "Q2", "recommended_option_index": 2},
+                    ],
+                    "selections": [
+                        {"selected_option_index": 1},
+                        {"selected_option_index": 2},
+                    ]
+                }
+            }, f)
+            temp_state = Path(f.name)
+
+        try:
+            self.controller.state_file = temp_state
+            self.controller.execute_pipeline(capture_output=True)
+
+            step3_calls = [call for call in mock_run.call_args_list if any("step3" in str(arg).lower() for arg in call[0][0])]
+            self.assertTrue(len(step3_calls) > 0)
+            step3_cmd = step3_calls[0][0][0]
+            self.assertIn("--questions", step3_cmd)
+            q_idx = step3_cmd.index("--questions")
+            self.assertEqual(step3_cmd[q_idx + 1], "2")
+            self.assertIn("--options-list", step3_cmd)
+            ol_idx = step3_cmd.index("--options-list")
+            self.assertEqual(step3_cmd[ol_idx + 1], "1,2")
+        finally:
+            if temp_state.exists():
+                os.remove(temp_state)
+
 
 class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     def setUp(self):

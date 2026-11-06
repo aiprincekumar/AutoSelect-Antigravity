@@ -262,6 +262,7 @@ class GrillMeAutomator:
 
         detected_q = 1
         detected_options: List[str] = []
+        state_ground_truth_found = False
 
         if state_data:
             # Check if Step 1 cancelled the workflow due to no pending chats
@@ -282,8 +283,10 @@ class GrillMeAutomator:
 
             if isinstance(qs, list) and len(qs) > 0:
                 detected_q = len(qs)
+                state_ground_truth_found = True
             elif isinstance(sels, list) and len(sels) > 0:
                 detected_q = len(sels)
+                state_ground_truth_found = True
             else:
                 scalar_val = None
                 for k in ("total_questions_count", "questions_count", "total_questions", "question_count"):
@@ -296,7 +299,14 @@ class GrillMeAutomator:
                                 break
                         except (ValueError, TypeError):
                             pass
-                detected_q = scalar_val if scalar_val is not None else 1
+                if scalar_val is not None:
+                    detected_q = scalar_val
+                    state_ground_truth_found = True
+
+            # Multi-question boolean flag guard
+            if state_data.get("is_multi_question") is True and detected_q < 2:
+                detected_q = 2
+                state_ground_truth_found = True
 
             # Extract option choices from selections or questions
             if isinstance(sels, list) and sels:
@@ -312,8 +322,12 @@ class GrillMeAutomator:
                         if idx is not None:
                             detected_options.append(str(idx))
 
-        # Check live CDP DOM inspection if available, not dry_run, and no explicit CLI count
-        if not self.dry_run and explicit_questions is None:
+            if detected_options:
+                state_ground_truth_found = True
+
+        # Check live CDP DOM inspection ONLY if not dry_run, no explicit CLI count, AND no state ground truth
+        # Ground truth from target_chat.json takes absolute precedence and must NEVER be overridden or truncated!
+        if not self.dry_run and explicit_questions is None and not state_ground_truth_found:
             try:
                 from .cdp_helper import AntigravityCDPClient
                 cdp = AntigravityCDPClient()
@@ -327,6 +341,11 @@ class GrillMeAutomator:
                     cdp.close()
             except Exception as cdp_err:
                 logger.debug(f"Live CDP question detection bypassed: {cdp_err}")
+        elif state_ground_truth_found:
+            logger.info(
+                f"State file ground truth authoritative: {detected_q} question(s), options={detected_options}. "
+                "Bypassing CDP DOM question override to prevent truncation."
+            )
 
         # Final determination of total_questions (strictly integer >= 0)
         final_questions = explicit_questions if explicit_questions is not None else detected_q

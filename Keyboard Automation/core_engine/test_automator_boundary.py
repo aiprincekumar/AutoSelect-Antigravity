@@ -334,5 +334,87 @@ class TestAutomatorBoundary(unittest.TestCase):
             mock_exec.assert_called_once()
 
 
+    def test_cdp_inspection_never_overrides_state_file_ground_truth(self):
+        """Verify live CDP DOM inspection never overrides ground truth from state file."""
+        state = {
+            "success": True,
+            "data": {
+                "conversation_id": "multi_q_test",
+                "questions_count": 2,
+                "total_questions_count": 2,
+                "is_multi_question": True,
+                "questions": [
+                    {"question": "Q1", "recommended_option_index": 1},
+                    {"question": "Q2", "recommended_option_index": 1},
+                ],
+                "selections": [
+                    {"question_index": 1, "selected_option_index": 1},
+                    {"question_index": 2, "selected_option_index": 1},
+                ]
+            }
+        }
+        with open(self.state_file, "w", encoding="utf-8") as f:
+            json.dump(state, f)
+
+        # Mock CDP to return 1 question (simulating live DOM single card view)
+        mock_cdp_instance = MagicMock()
+        mock_cdp_instance.is_available.return_value = True
+        mock_cdp_instance.connect.return_value = True
+        mock_cdp_instance.get_questionnaire_status.return_value = {
+            "has_card": True,
+            "options_count": 3,
+            "total_questions": 1,  # Defective CDP return
+        }
+
+        with patch("core_engine.cdp_helper.AntigravityCDPClient", return_value=mock_cdp_instance):
+            automator = GrillMeAutomator(
+                questions="auto",
+                state_file=str(self.state_file),
+                dry_run=False,
+                auto_focus=False,
+                auto_maximize=False,
+            )
+
+        # Ground truth from state file MUST be preserved
+        self.assertEqual(automator.total_questions, 2)
+        self.assertEqual(automator.options_list, ["1", "1"])
+
+    def test_multi_question_sequence_exact_keys_without_space(self):
+        """Verify exact sequence: Ctrl+L -> Shift+Tab -> Option -> Enter without space."""
+        automator = GrillMeAutomator(
+            questions=2,
+            options_list=["1", "1"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=2, options=["1", "1"])
+        self.assertTrue(ok)
+        self.assertEqual(len(executed_steps), 8)
+
+        # Verify Q1 sequence
+        self.assertIn("Ctrl + L", executed_steps[0][1])
+        self.assertIn("Shift + Tab", executed_steps[1][1])
+        self.assertIn("[1]", executed_steps[2][1])
+        self.assertIn("Enter", executed_steps[3][1])
+        self.assertIn("Continue to Question 2", executed_steps[3][1])
+
+        # Verify Q2 sequence
+        self.assertIn("Ctrl + L", executed_steps[4][1])
+        self.assertIn("Shift + Tab", executed_steps[5][1])
+        self.assertIn("[1]", executed_steps[6][1])
+        self.assertIn("Enter", executed_steps[7][1])
+        self.assertIn("Submit ALL 2 answers", executed_steps[7][1])
+
+        # Verify NO step executed space
+        for sc, d in executed_steps:
+            self.assertNotIn("space", d.lower())
+
+
 if __name__ == "__main__":
     unittest.main()

@@ -561,6 +561,65 @@ class CompleteAutomationController:
                     "--inter-question-delay", str(self.config.timing.step3_inter_question_delay_ms / 1000.0),
                     "--round-completion-pause", str(self.config.timing.step3_round_completion_pause_ms / 1000.0),
                 ])
+                # Inspect state file to forward multi-question count and options sequence explicitly
+                has_custom_q = extra_args and any(arg in ("-q", "--questions") for arg in extra_args)
+                has_custom_ol = extra_args and any(arg in ("-ol", "--options-list") for arg in extra_args)
+                if not has_custom_q and self.state_file and self.state_file.is_file():
+                    try:
+                        with open(self.state_file, "r", encoding="utf-8") as sf:
+                            s_data = json.load(sf)
+                            s_inner = s_data.get("data", s_data) if isinstance(s_data, dict) else {}
+
+                            # Resolve question count
+                            q_cnt = None
+                            qs = s_inner.get("questions")
+                            sels = s_inner.get("selections")
+                            if isinstance(qs, list) and len(qs) > 0:
+                                q_cnt = len(qs)
+                            elif isinstance(sels, list) and len(sels) > 0:
+                                q_cnt = len(sels)
+                            else:
+                                for k in ("total_questions_count", "questions_count", "total_questions", "question_count"):
+                                    v = s_inner.get(k)
+                                    if v is not None:
+                                        try:
+                                            v_int = int(v)
+                                            if v_int > 0:
+                                                q_cnt = v_int
+                                                break
+                                        except (ValueError, TypeError):
+                                            pass
+
+                            if s_inner.get("is_multi_question") is True and (q_cnt is None or q_cnt < 2):
+                                q_cnt = 2
+
+                            # Resolve options sequence
+                            opts = []
+                            if isinstance(sels, list) and sels:
+                                for item in sels:
+                                    if isinstance(item, dict):
+                                        idx = item.get("selected_option_index") or item.get("recommended_option_index")
+                                        if idx is not None:
+                                            opts.append(str(idx))
+                            elif isinstance(qs, list) and qs:
+                                for item in qs:
+                                    if isinstance(item, dict):
+                                        idx = item.get("recommended_option_index") or item.get("selected_option_index")
+                                        if idx is not None:
+                                            opts.append(str(idx))
+
+                            if q_cnt is not None and q_cnt > 0:
+                                cmd.extend(["--questions", str(q_cnt)])
+                                if not has_custom_ol and opts:
+                                    while len(opts) < q_cnt:
+                                        opts.append("1")
+                                    cmd.extend(["--options-list", ",".join(opts[:q_cnt])])
+                                self.logger.info(
+                                    "Step 9 forwarded state ground truth to Step 3: %d question(s), options=%s",
+                                    q_cnt, opts[:q_cnt] if opts else ["1"] * q_cnt
+                                )
+                    except Exception as s_err:
+                        self.logger.warning("Could not pre-read state file in Step 9: %s", s_err)
             elif step.step_index == 4:
                 cmd.extend([
                     "--delay", str(self.config.timing.step4_user_activity_delay_seconds),
