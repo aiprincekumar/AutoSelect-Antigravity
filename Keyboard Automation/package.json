@@ -1,0 +1,31 @@
+{
+  "name": "autoselect-antigravity",
+  "version": "1.0.0",
+  "description": "100% automatic hands-free NPM/NPX CLI wrapper for AutoSelect Antigravity automation suite and dashboard",
+  "bin": {
+    "autoselect-antigravity": "./bin/cli.js"
+  },
+  "main": "./bin/cli.js",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aiprincekumar/AutoSelect-Antigravity.git"
+  },
+  "keywords": [
+    "antigravity",
+    "automation",
+    "autoselect",
+    "cli",
+    "dashboard",
+    "npx"
+  ],
+  "author": "Atul Verma <aiprincekumar010100@gmail.com> (https://github.com/aiprincekumar)",
+  "license": "MIT",
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node ./bin/cli.js",
+    "test": "pytest"
+  }
+}
