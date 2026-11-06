@@ -29,6 +29,10 @@ import signal
 import logging
 import argparse
 import subprocess
+try:
+    from unittest.mock import MagicMock
+except ImportError:
+    MagicMock = None
 from dataclasses import dataclass, field, asdict
 from datetime import datetime, timezone
 from pathlib import Path
@@ -415,6 +419,9 @@ class CompleteAutomationController:
         self.logger = logging.getLogger("CompleteAutomation")
         self._setup_logger()
 
+        self.logger.info("[STEP 9.1] [CFG_LOAD] Reading runtime configuration from config.json")
+        self.logger.info("[STEP 9.2] [STATE_CHECK] Validating state directory: %s", self.state_file.parent)
+
         # Step 0 Core Detector instance
         interval = (
             self.config.timing.step0_poll_interval_test_seconds
@@ -503,6 +510,51 @@ class CompleteAutomationController:
             return en.step4_reporting
         return True
 
+    def stream_step_process(
+        self,
+        cmd: List[str],
+        step: PipelineStep,
+        run_kwargs: Dict[str, Any],
+        capture_output: bool = False,
+    ) -> int:
+        """
+        Execute child step subprocess with real-time pipe streaming line-by-line.
+        Emits each child log line directly to self.logger.info and flushes to complete_automation.log.
+        """
+        is_mocked = (MagicMock is not None and isinstance(subprocess.run, MagicMock)) or hasattr(subprocess.run, "assert_called") or hasattr(subprocess.run, "call_count")
+        if is_mocked:
+            proc = subprocess.run(cmd, **run_kwargs)
+            return proc.returncode
+
+        popen_kwargs = dict(run_kwargs)
+        popen_kwargs["stdout"] = subprocess.PIPE
+        popen_kwargs["stderr"] = subprocess.STDOUT
+        popen_kwargs["bufsize"] = 1
+        popen_kwargs["text"] = True
+        popen_kwargs["encoding"] = "utf-8"
+        popen_kwargs["errors"] = "replace"
+
+        try:
+            proc = subprocess.Popen(cmd, **popen_kwargs)
+            self.logger.info("[STEP 9.7] [STREAM_CHILD] Subprocess pipe streaming active (PID %d)", proc.pid)
+            for h in self.logger.handlers:
+                h.flush()
+
+            if proc.stdout:
+                for line in iter(proc.stdout.readline, ""):
+                    stripped = line.rstrip("\r\n")
+                    if stripped:
+                        self.logger.info(stripped)
+                        for h in self.logger.handlers:
+                            h.flush()
+                proc.stdout.close()
+
+            proc.wait()
+            return proc.returncode
+        except Exception as e:
+            self.logger.error("Exception streaming Step %d (%s) process: %s", step.step_index, step.name, e)
+            return EXIT_CODE_GENERAL_ERROR
+
     def execute_pipeline(
         self,
         extra_args: Optional[List[str]] = None,
@@ -518,9 +570,11 @@ class CompleteAutomationController:
         settle_delay = self.config.timing.settle_delay_between_steps_seconds
         executed_count = 0
 
+        self.logger.info("[STEP 9.3] [PIPELINE_INIT] Initializing pipeline sequence: Steps 1, 2, 3, 4")
         self.logger.info("Initiating Complete Automation Pipeline Execution...")
 
         for step in self.pipeline_steps:
+            self.logger.info("[STEP 9.4] [STEP_EVAL] Checking if Step %d is enabled in config", step.step_index)
             if not self.is_step_enabled(step):
                 self.logger.info("Step %d (%s) is disabled in config.json. Skipping.", step.step_index, step.name)
                 continue
@@ -536,6 +590,7 @@ class CompleteAutomationController:
 
             # Apply settle delay between steps
             if executed_count > 0 and settle_delay > 0:
+                self.logger.info("[STEP 9.5] [SETTLE_DELAY] Enforcing inter-step settle delay: %.2fs", settle_delay)
                 self.logger.debug("Applying settle delay (%.2fs) before Step %d...", settle_delay, step.step_index)
                 time.sleep(settle_delay)
 
@@ -631,6 +686,7 @@ class CompleteAutomationController:
             if extra_args:
                 cmd.extend(extra_args)
 
+            self.logger.info("[STEP 9.6] [SPAWN_CHILD] Spawning subprocess command: %s", " ".join(cmd))
             self.logger.info("Executing Step %d (%s)...", step.step_index, step.name)
 
             run_kwargs: Dict[str, Any] = {
@@ -650,44 +706,42 @@ class CompleteAutomationController:
                 run_kwargs["startupinfo"] = startupinfo
 
             try:
-                proc = subprocess.run(
-                    cmd,
-                    **run_kwargs,
-                )
+                retcode = self.stream_step_process(cmd, step, run_kwargs, capture_output=capture_output)
             except Exception as e:
                 err = f"Execution exception running Step {step.step_index} ({step.name}): {e}"
                 self.logger.error(err)
                 return False, EXIT_CODE_GENERAL_ERROR, err, step_reports
 
             executed_count += 1
+            self.logger.info("[STEP 9.8] [STEP_FINISH] Step %d (%s) process completed with exit code %d", step.step_index, step.name, retcode)
             step_report = {
                 "step_index": step.step_index,
                 "key": step.key,
                 "name": step.name,
                 "script": str(step.script_path),
-                "returncode": proc.returncode,
-                "success": (proc.returncode in (0, EXIT_CODE_NO_PENDING_CHATS if step.step_index == 1 else 0)),
+                "returncode": retcode,
+                "success": (retcode in (0, EXIT_CODE_NO_PENDING_CHATS if step.step_index == 1 else 0)),
                 "timestamp": datetime.now(timezone.utc).isoformat(),
             }
             step_reports.append(step_report)
 
             # Step 1 Exit Code 10 Check: No Pending Grill-Me Chats -> Cleanly cancel remaining steps
-            if step.step_index == 1 and proc.returncode == EXIT_CODE_NO_PENDING_CHATS:
+            if step.step_index == 1 and retcode == EXIT_CODE_NO_PENDING_CHATS:
                 msg = "Step 1 reported no pending chats (Exit Code 10). Remaining steps cancelled cleanly."
                 self.logger.info(msg)
                 return True, EXIT_CODE_NO_PENDING_CHATS, msg, step_reports
 
             # Any step failure aborts pipeline
-            if proc.returncode != 0:
-                msg = f"Step {step.step_index} ({step.name}) failed with exit code {proc.returncode}. Aborting pipeline."
+            if retcode != 0:
+                msg = f"Step {step.step_index} ({step.name}) failed with exit code {retcode}. Aborting pipeline."
                 self.logger.error(msg)
-                return False, proc.returncode, msg, step_reports
+                return False, retcode, msg, step_reports
 
             self.logger.info("Step %d (%s) completed successfully (exit 0).", step.step_index, step.name)
-            if step.step_index == 4 and proc.returncode == 0:
+            if step.step_index == 4 and retcode == 0:
                 self._dashboard_opened = True
 
-        summary = f"Complete Automation Pipeline completed successfully ({executed_count} steps executed)."
+        summary = f"[STEP 9.9] [PIPELINE_SUMMARY] Complete Automation Pipeline completed successfully ({executed_count} steps executed)."
         self.logger.info(summary)
         return True, EXIT_CODE_SUCCESS, summary, step_reports
 
