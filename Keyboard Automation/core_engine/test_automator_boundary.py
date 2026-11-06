@@ -624,5 +624,115 @@ class TestAutomatorBoundary(unittest.TestCase):
             self.assertEqual(executed_steps[3][0], "OPT.2")
             self.assertIn("Option press 2/2", executed_steps[3][1])
 
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(1234, "Antigravity.exe", "Antigravity"))
+    def test_cdp_hybrid_multi_question_intermediate_continue_and_submit(self, mock_proc_info):
+        """Verify N=2 multi-question in CDP Hybrid mode clicks Continue for Q1 and Submit for Q2."""
+        mock_cdp = MagicMock()
+        mock_cdp.is_available.return_value = True
+        mock_cdp.connect.return_value = True
+        mock_cdp.get_questionnaire_status.return_value = {
+            "has_card": True,
+            "options_count": 3,
+            "current_question": 1,
+            "total_questions": 2,
+            "continue_btn_disabled": False,
+            "chat_input_focused": False,
+        }
+
+        automator = GrillMeAutomator(
+            questions=2,
+            options_list=["1", "2"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        ok = automator.execute_multi_question(total_questions=2, options=["1", "2"])
+        self.assertTrue(ok)
+
+        # Q1 select option 1, click continue, wait advance
+        # Q2 select option 2, click submit, wait close
+        self.assertEqual(mock_cdp.select_option.call_count, 2)
+        mock_cdp.select_option.assert_any_call(1)
+        mock_cdp.select_option.assert_any_call(2)
+
+        # Continue (Q1) and Submit (Q2) both call click_continue_or_submit
+        self.assertEqual(mock_cdp.click_continue_or_submit.call_count, 2)
+
+        # wait_for_advance_or_close called for Q1 (is_last=False) and Q2 (is_last=True)
+        self.assertEqual(mock_cdp.wait_for_advance_or_close.call_count, 2)
+        mock_cdp.wait_for_advance_or_close.assert_any_call(previous_question=1, is_last=False, timeout=unittest.mock.ANY)
+        mock_cdp.wait_for_advance_or_close.assert_any_call(previous_question=2, is_last=True, timeout=unittest.mock.ANY)
+
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(1234, "Antigravity.exe", "Antigravity"))
+    def test_cdp_hybrid_stops_immediately_when_card_closed(self, mock_proc_info):
+        """Verify CDP Hybrid mode immediately halts when has_card is False, never dispatching keystrokes."""
+        mock_cdp = MagicMock()
+        mock_cdp.is_available.return_value = True
+        mock_cdp.connect.return_value = True
+        mock_cdp.get_questionnaire_status.return_value = {
+            "has_card": False,
+            "current_question": 0,
+            "total_questions": 0,
+            "chat_input_focused": False,
+        }
+        mock_cdp.wait_for_question.return_value = False
+
+        automator = GrillMeAutomator(
+            questions=3,
+            options_list=["1", "2", "1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        dispatched_keys = []
+        automator.dispatch_key = lambda vk: dispatched_keys.append(vk)
+
+        ok = automator.execute_multi_question(total_questions=3, options=["1", "2", "1"])
+        self.assertTrue(ok)
+
+        # Card was closed: select_option, click_continue_or_submit, and keystrokes MUST NOT be called!
+        mock_cdp.select_option.assert_not_called()
+        mock_cdp.click_continue_or_submit.assert_not_called()
+        self.assertEqual(len(dispatched_keys), 0)
+
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(1234, "Antigravity.exe", "Antigravity"))
+    def test_cdp_hybrid_chat_input_pollution_guard(self, mock_proc_info):
+        """Verify CDP Hybrid mode detects chat input focus and calls blur_chat_input to prevent pollution."""
+        mock_cdp = MagicMock()
+        mock_cdp.is_available.return_value = True
+        mock_cdp.connect.return_value = True
+        mock_cdp.is_chat_input_focused.return_value = True
+        mock_cdp.get_questionnaire_status.return_value = {
+            "has_card": True,
+            "options_count": 2,
+            "current_question": 1,
+            "total_questions": 1,
+            "continue_btn_disabled": False,
+            "chat_input_focused": True,
+        }
+
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        dispatched_keys = []
+        automator.dispatch_key = lambda vk: dispatched_keys.append(vk)
+
+        ok = automator.execute_multi_question(total_questions=1, options=["1"])
+        self.assertTrue(ok)
+
+        # Verify blur_chat_input was called
+        mock_cdp.blur_chat_input.assert_called()
+        self.assertEqual(len(dispatched_keys), 0)
+
 if __name__ == "__main__":
     unittest.main()

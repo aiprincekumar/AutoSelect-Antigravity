@@ -565,94 +565,173 @@ class GrillMeAutomator:
             settle_delay=self.settle_delay,
         )
 
-    def execute_multi_question(
+    def _execute_cdp_hybrid(
         self,
-        total_questions: Optional[int] = None,
-        options: Optional[List[str]] = None,
-        cdp_client: Optional[Any] = None,
+        cdp: Any,
+        total_questions: int,
+        options: List[str],
     ) -> bool:
         """
-        Executes deterministic multi-question keyboard automation loop for any N questions (1..N).
-        Operates via pure native Windows ctypes SendInput physical keystrokes on the active GUI window:
-          - Focus & Activation: _ensure_window_ready() brings Antigravity to foreground & maximizes.
-          - Initial Focus (executed ONLY 1st time at start):
-            * Step FOCUS.1: Focus chat input (Ctrl + L)
-              Settle pause (0.2s - 0.25s)
-            * Step FOCUS.2: Reverse tab into option button group (Shift + Tab)
-              Settle pause (0.2s - 0.25s)
-          - Option Key Press Loop:
-            * Press option key (total_questions + 1) times (e.g. 5 times for 4 questions, 2 times for 1 question).
-            * For each press k in 1..(total_questions + 1):
-              - Step OPT.{k}: Send option key (e.g. '1' or per-question option; repeats last option for N+1)
-              - Ample wait time (0.45s - 0.5s) so Antigravity UI has ample time to register the option.
-          - No Enter, Space, or other keys needed; the (N+1)-th option press handles registration/submission.
-          - Round completion pause after all option presses complete.
+        Executes precision questionnaire selection and submission via Chrome DevTools Protocol (CDP).
+        Guarantees:
+        1. Pre-check: Verify questionnaire card is active. If card closed, STOP immediately!
+        2. Clean option selection via cdp.select_option (radio/checkbox state in React).
+        3. Option verification: wait_for_button_enabled & focus action button (Continue/Submit).
+        4. Intermediate advance: click Continue, wait for next question card to render in DOM.
+        5. Final submission: click Submit, wait for card to disappear/close cleanly.
+        6. Absolute zero chat pollution: never dispatch stray keystrokes ('1', Enter) into chat input.
         """
-        tq = max(0, int(total_questions if total_questions is not None else self.total_questions))
-        if tq == 0:
-            logger.info("Total questions is 0 (status: NO_PENDING_CHATS or clean cancellation). Step 3 cancelled.")
-            return True
+        tq = total_questions
+        opts = list(options)
+        logger.info(f"[STEP 3.CDP] Starting CDP Hybrid questionnaire execution for {tq} question(s) | Options: {opts}")
+        logger.info("Executing via Precision DOM Chrome DevTools Protocol (CDP Hybrid)...")
 
-        opts = list(options) if options is not None else list(self.options_list)
-        if len(opts) > tq:
-            opts = opts[:tq]
-        else:
-            while len(opts) < tq:
-                opts.append(str(self.option))
+        # 1. Activate target conversation if known
+        if self.conversation_id:
+            try:
+                cdp.ensure_chat_active(self.conversation_id)
+            except Exception as e:
+                logger.debug(f"CDP ensure_chat_active bypassed: {e}")
 
-        total_option_presses = tq + 1
-        logger.info(f"Initiating keyboard automation sequence: {tq} question(s) -> {total_option_presses} option key press(es) | Options: {opts}")
-        logger.info("Executing via Pure Native Physical Keystroke Injection (Win32 SendInput)...")
+        # 2. Focus safety check: blur Skip button and chat input if focused
+        try:
+            logger.info("[STEP 3.24] [BLUR_SKIP] Verifying skip button is not focused")
+            if hasattr(cdp, "ensure_skip_not_focused"):
+                cdp.ensure_skip_not_focused()
+            if hasattr(cdp, "is_chat_input_focused") and cdp.is_chat_input_focused():
+                logger.info("[SAFETY] Chat input box is focused. Blurring chat input to prevent stray keystroke pollution.")
+                cdp.blur_chat_input()
+        except Exception as e:
+            logger.debug(f"Initial focus safety check bypassed: {e}")
 
-        # Ensure target window is restored, maximized, and in foreground before physical keystrokes
-        if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
-            self._ensure_window_ready()
+        # 3. Initial check for questionnaire card presence
+        st = cdp.get_questionnaire_status() if hasattr(cdp, "get_questionnaire_status") else {}
+        if isinstance(st, dict) and not st.get("has_card", True):
+            if hasattr(cdp, "wait_for_question"):
+                cdp.wait_for_question(expected_question=1, timeout=0.8)
+                st = cdp.get_questionnaire_status()
+            if isinstance(st, dict) and not st.get("has_card", True):
+                logger.info("[STEP 3.A] [CARD_CLOSED] Questionnaire card is closed or not present (has_card=False). Stopping immediately!")
+                logger.info("Halting execution immediately: no stray keystrokes or chat box pollution.")
+                return True
 
-        active_window = get_active_window_title()
-        logger.info("[STEP 3.4] [FOREGROUND_CHECK] Foreground window verified before key injection: '%s'", active_window)
-        logger.info(f"Target Foreground Window: '{active_window}'")
+        # 4. Question loop from 1 to tq
+        for q in range(1, tq + 1):
+            opt = opts[q - 1] if q <= len(opts) else (opts[-1] if opts else str(self.option))
+            try:
+                opt_num = int(opt)
+            except (ValueError, TypeError):
+                opt_num = 1
+            is_last = (q == tq)
 
-        # Double-check: ensure foreground window is NEVER a web browser
-        if IS_WINDOWS and not self.dry_run:
-            fg_hwnd = user32.GetForegroundWindow()
-            _, fg_pname, _ = get_process_info_for_hwnd(fg_hwnd)
-            user_wants_browser = any(
-                any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
-                for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
-            )
-            logger.info("[STEP 3.20] [DISQUALIFY_CHECK] Browser safety check: process=%s", fg_pname)
-            if fg_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
-                logger.error(
-                    f"[ABORT] Foreground window belongs to browser '{fg_pname}' (HWND: {hex(fg_hwnd) if fg_hwnd else 'None'})! "
-                    f"Aborting key simulation to protect user browser tabs and prevent accidental search!"
-                )
-                return False
+            logger.info("[STEP 3.5] [QUESTION_LOOP_START] Entering Question %d of %d loop", q, tq)
+            logger.info("[STEP 3.6] [OPTION_TARGET] Question %d target option: %s", q, opt)
+            self.log(f"[Question {q}/{tq}] Targeting option [{opt}]")
 
+            # 4.a: Verify card is present. If closed, STOP immediately!
+            st = cdp.get_questionnaire_status() if hasattr(cdp, "get_questionnaire_status") else {}
+            if isinstance(st, dict) and not st.get("has_card", True):
+                logger.info("[STEP 3.A] [CARD_CLOSED] Questionnaire card closed/submitted on Question %d. Stopping immediately!", q)
+                logger.info("Stopping execution loop immediately to prevent stray keystrokes or chat box pollution.")
+                return True
+
+            # Chat input pollution guard: ensure chat input does not have focus
+            if (isinstance(st, dict) and st.get("chat_input_focused")) or (hasattr(cdp, "is_chat_input_focused") and cdp.is_chat_input_focused()):
+                logger.warning("[SAFETY] Chat input box is focused! Blurring to prevent keystroke pollution.")
+                if hasattr(cdp, "blur_chat_input"):
+                    cdp.blur_chat_input()
+
+            # Ensure Skip is not focused
+            if hasattr(cdp, "ensure_skip_not_focused"):
+                cdp.ensure_skip_not_focused()
+
+            # 4.b: Select option cleanly using cdp.select_option (radio/checkbox state in React)
+            logger.info("[STEP 3.27] [CDP_VERIFY_OPT] CDP DOM selecting option %s (index %d)", opt, opt_num)
+            if hasattr(cdp, "select_option"):
+                cdp.select_option(opt_num)
+
+            # Ensure Skip button is not focused after selection
+            if hasattr(cdp, "ensure_skip_not_focused"):
+                cdp.ensure_skip_not_focused()
+
+            # 4.c: Verify option is selected and button is enabled
+            logger.info("[STEP 3.28] [CDP_ACTION_BTN] Focusing action button via CDP and verifying enabled")
+            if hasattr(cdp, "wait_for_button_enabled"):
+                cdp.wait_for_button_enabled(timeout=1.5)
+            if hasattr(cdp, "focus_action_button"):
+                cdp.focus_action_button()
+
+            # Check if card is still present
+            st_check = cdp.get_questionnaire_status() if hasattr(cdp, "get_questionnaire_status") else {}
+            if isinstance(st_check, dict) and not st_check.get("has_card", True):
+                logger.info("[STEP 3.A] [CARD_CLOSED] Questionnaire card closed after option selection. Stopping cleanly.")
+                return True
+
+            # 4.d: Intermediate Question (q < tq) -> Click Continue button and wait for advance
+            if not is_last:
+                logger.info("[STEP 3.11] [NAV_KEY] Advancing to next question (Question %d -> %d)", q, q + 1)
+                logger.info("[STEP 3.30] [ADVANCE_NEXT] Clicking Continue button via CDP")
+                if hasattr(cdp, "click_continue_or_submit"):
+                    cdp.click_continue_or_submit()
+
+                logger.info("[STEP 3.13] [INTER_Q_PAUSE] Pausing before next question and waiting for advance in DOM")
+                if hasattr(cdp, "wait_for_advance_or_close"):
+                    cdp.wait_for_advance_or_close(previous_question=q, is_last=False, timeout=self.inter_question_delay + 2.0)
+                if not self.dry_run and self.inter_question_delay > 0:
+                    time.sleep(self.inter_question_delay)
+
+            # 4.e: Final Question (q == tq) -> Click Submit button and wait for card to close
+            else:
+                logger.info("[STEP 3.12] [ENTER_KEY] Confirming option selection for Question %d", q)
+                logger.info("[STEP 3.14] [FINAL_SUBMIT] Final question confirmed: clicking Submit button via CDP")
+                logger.info("[STEP 3.31] [FINAL_PRESS] Submitting questionnaire response via CDP")
+                if hasattr(cdp, "click_continue_or_submit"):
+                    cdp.click_continue_or_submit()
+
+                logger.info("Waiting for questionnaire card to close cleanly...")
+                if hasattr(cdp, "wait_for_advance_or_close"):
+                    cdp.wait_for_advance_or_close(previous_question=q, is_last=True, timeout=self.round_completion_pause + 3.0)
+
+        # 5. Round completion pause
+        round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
+        if round_pause > 0:
+            logger.info("[STEP 3.32] [ROUND_PAUSE] Applying round completion pause: %.2fs", round_pause)
+            time.sleep(round_pause)
+
+        logger.info("[STEP 3.33] [KEYSTROKE_VERIFY] CDP Hybrid questionnaire execution completed cleanly")
+        logger.info("[STEP 3.15] [ROUND_COMPLETE] Question round finished successfully")
+        logger.info("[STEP 3.34] [STATE_UPDATE] Updating completion state in state/last_selection_state.json")
+        logger.info("[STEP 3.35] [AUTOMATION_COMPLETE] Step 3 Keyboard Automation finished successfully")
+        logger.info(f"[SUCCESS] Multi-question CDP Hybrid sequence finished successfully for all {tq} question(s)!")
+        return True
+
+    def _execute_pure_keyboard(
+        self,
+        total_questions: int,
+        options: List[str],
+    ) -> bool:
+        """
+        Executes calibrated fallback keystroke sequence via pure native Win32 SendInput:
+          - Step FOCUS.1: Ctrl + L (Focus chat box) - skipped if skip_ctrl_l is True
+          - Step FOCUS.2: Shift + Tab (Move backward to question options)
+          - Option Loop: Send option keys (total_questions + 1) times with post-delay
+          - Zero Enter / Space keys dispatched
+          - Safety check: verifies window is not a browser before each step
+        """
         if self.engine == "none":
             logger.error("No valid automation engine available on this platform.")
             return False
 
-        # Initialize hybrid Chrome DevTools Protocol (CDP) client if available
-        cdp = cdp_client if cdp_client is not None else getattr(self, "cdp_client", None)
-        opened_cdp = False
-        if cdp is None and not self.dry_run:
-            try:
-                from .cdp_helper import AntigravityCDPClient
-                client = AntigravityCDPClient()
-                if client.is_available() and client.connect():
-                    cdp = client
-                    opened_cdp = True
-                    logger.info("[STEP 3.21] [CDP_INIT] Connecting hybrid CDP client for DOM assist")
-                    logger.info("Hybrid CDP client successfully connected for DOM verification & assist.")
-            except Exception as cdp_init_err:
-                logger.debug(f"Hybrid CDP client initialization bypassed: {cdp_init_err}")
+        tq = total_questions
+        opts = list(options)
+        total_option_presses = tq + 1
+        logger.info(f"Initiating fallback keyboard automation sequence: {tq} question(s) -> {total_option_presses} option key press(es) | Options: {opts}")
+        logger.info("Executing via Pure Native Physical Keystroke Injection (Win32 SendInput)...")
 
-        # Define settle pause, option press delay, and round completion pause directly from config.json
         settle_pause = max(0.001, self.post_keypress_delay) if not self.dry_run else 0.001
         option_press_delay = max(0.45, self.post_keypress_delay) if not self.dry_run else 0.001
         round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
 
-        # Ensure menu bar is dismissed prior to keystroke dispatch
         if IS_WINDOWS and not self.dry_run:
             try:
                 send_single_key(VK_ESCAPE, hold_delay=0.01)
@@ -661,9 +740,6 @@ class GrillMeAutomator:
                 pass
 
         try:
-            # -------------------------------------------------------------
-            # 1. Initial Focus Sequence (executed ONLY 1ST TIME at start)
-            # -------------------------------------------------------------
             # Step FOCUS.1: Focus chat input (Ctrl + L)
             if not self.skip_ctrl_l:
                 logger.info("[STEP 3.22] [FOCUS_CTRL_L] Pressing Ctrl+L (focus chat box)")
@@ -701,17 +777,7 @@ class GrillMeAutomator:
             if not self.dry_run:
                 time.sleep(settle_pause)
 
-            # Hybrid CDP check: Blur Skip button if Shift+Tab landed on it
-            if cdp:
-                try:
-                    logger.info("[STEP 3.24] [BLUR_SKIP] Verifying skip button is not focused")
-                    cdp.ensure_skip_not_focused()
-                except Exception as e:
-                    logger.debug(f"CDP skip blur check bypassed: {e}")
-
-            # -------------------------------------------------------------
-            # 2. Option Key Press Loop (pressed total_questions + 1 times)
-            # -------------------------------------------------------------
+            # Option loop
             for k in range(1, total_option_presses + 1):
                 opt = opts[k - 1] if k <= tq else (opts[-1] if opts else str(self.option))
                 q_num = min(k, tq)
@@ -741,25 +807,8 @@ class GrillMeAutomator:
                 logger.info("[STEP 3.25] [OPTION_KEY] Sending option key %s (press %d of %d)", opt, k, total_option_presses)
                 logger.info("[STEP 3.26] [OPTION_REG_DELAY] Waiting %.2fs for option registration", option_press_delay)
 
-                # Ample wait time after each option press so Antigravity UI has time to register
                 if not self.dry_run:
                     time.sleep(option_press_delay)
-
-                # Hybrid CDP Assistance & Verification (Ensure option selected, button enabled, Skip blurred, Submit/Continue focused)
-                if cdp:
-                    try:
-                        logger.info("[STEP 3.27] [CDP_VERIFY_OPT] CDP DOM verifying option %s selected", opt)
-                        try:
-                            opt_num = int(opt)
-                        except (ValueError, TypeError):
-                            opt_num = 1
-                        cdp.select_option(opt_num)
-                        cdp.wait_for_button_enabled(timeout=1.5)
-                        cdp.ensure_skip_not_focused()
-                        cdp.focus_action_button()
-                        logger.info("[STEP 3.28] [CDP_ACTION_BTN] Focusing action button via CDP")
-                    except Exception as e:
-                        logger.debug(f"Hybrid CDP option verification bypassed: {e}")
 
                 if k < tq:
                     logger.info("[STEP 3.11] [NAV_KEY] Pressing navigation / continue to next question")
@@ -770,9 +819,6 @@ class GrillMeAutomator:
                     logger.info("[STEP 3.14] [FINAL_SUBMIT] Final question confirmed: submitting interview response")
                     logger.info("[STEP 3.31] [FINAL_PRESS] Sending final confirmation option press")
 
-            # -------------------------------------------------------------
-            # 3. Completion (NO ENTER, NO SPACE, NO OTHER KEYS)
-            # -------------------------------------------------------------
             logger.info("[STEP 3.32] [ROUND_PAUSE] Applying round completion pause: %.2fs", round_pause)
             if round_pause > 0 and not self.dry_run:
                 logger.info(f"Round completion pause ({round_pause:.2f}s) after full questionnaire sequence...")
@@ -786,15 +832,93 @@ class GrillMeAutomator:
             return True
 
         except Exception as e:
-            logger.error(f"[ERROR] Multi-question automation failed with error: {e}", exc_info=True)
+            logger.error(f"[ERROR] Pure keyboard fallback automation failed with error: {e}", exc_info=True)
             return False
+
+    def execute_multi_question(
+        self,
+        total_questions: Optional[int] = None,
+        options: Optional[List[str]] = None,
+        cdp_client: Optional[Any] = None,
+    ) -> bool:
+        """
+        Executes deterministic multi-question automation loop for any N questions (1..N).
+        Selects between:
+          - Primary Path: CDP Hybrid Execution (when Antigravity DevTools port is active)
+          - Fallback Path: Pure Physical Keyboard Injection (Win32 SendInput)
+        """
+        tq = max(0, int(total_questions if total_questions is not None else self.total_questions))
+        if tq == 0:
+            logger.info("Total questions is 0 (status: NO_PENDING_CHATS or clean cancellation). Step 3 cancelled.")
+            return True
+
+        opts = list(options) if options is not None else list(self.options_list)
+        if len(opts) > tq:
+            opts = opts[:tq]
+        else:
+            while len(opts) < tq:
+                opts.append(str(self.option))
+
+        # Ensure target window is restored, maximized, and in foreground before proceeding
+        if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
+            self._ensure_window_ready()
+
+        active_window = get_active_window_title()
+        logger.info("[STEP 3.4] [FOREGROUND_CHECK] Foreground window verified before execution: '%s'", active_window)
+        logger.info(f"Target Foreground Window: '{active_window}'")
+
+        # Double-check: ensure foreground window is NEVER a web browser
+        if IS_WINDOWS and not self.dry_run:
+            fg_hwnd = user32.GetForegroundWindow()
+            _, fg_pname, _ = get_process_info_for_hwnd(fg_hwnd)
+            user_wants_browser = any(
+                any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
+                for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
+            )
+            logger.info("[STEP 3.20] [DISQUALIFY_CHECK] Browser safety check: process=%s", fg_pname)
+            if fg_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+                logger.error(
+                    f"[ABORT] Foreground window belongs to browser '{fg_pname}' (HWND: {hex(fg_hwnd) if fg_hwnd else 'None'})! "
+                    f"Aborting to protect user browser tabs and prevent accidental search!"
+                )
+                return False
+
+        # Initialize or resolve CDP client
+        cdp = cdp_client if cdp_client is not None else getattr(self, "cdp_client", None)
+        opened_cdp = False
+        if cdp is None and not self.dry_run:
+            try:
+                from .cdp_helper import AntigravityCDPClient
+                client = AntigravityCDPClient()
+                if client.is_available() and client.connect():
+                    cdp = client
+                    opened_cdp = True
+                    logger.info("[STEP 3.21] [CDP_INIT] Connecting hybrid CDP client for DOM assist")
+                    logger.info("Hybrid CDP client successfully connected for DOM verification & assist.")
+            except Exception as cdp_init_err:
+                logger.debug(f"Hybrid CDP client initialization bypassed: {cdp_init_err}")
+
+        # Check if CDP is active and available
+        cdp_active = False
+        if cdp is not None:
+            try:
+                cdp_active = bool(cdp.is_available())
+            except Exception:
+                cdp_active = True
+
+        try:
+            if cdp_active:
+                logger.info("CDP DevTools connection active. Engaging PRIMARY CDP Hybrid Execution Mode.")
+                return self._execute_cdp_hybrid(cdp, tq, opts)
+            else:
+                logger.info("CDP DevTools connection not available. Engaging Pure Keyboard Fallback Mode.")
+                return self._execute_pure_keyboard(tq, opts)
         finally:
             if opened_cdp and cdp:
                 try:
                     cdp.close()
                 except Exception:
                     pass
-
     def execute(self) -> bool:
         """
         Executes the dynamic Grill Me keyboard automation sequence.
