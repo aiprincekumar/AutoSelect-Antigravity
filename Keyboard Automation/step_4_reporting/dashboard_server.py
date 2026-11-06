@@ -93,6 +93,28 @@ if sys.stderr is None:
 
 # Setup module logger
 logger = logging.getLogger("DashboardServer")
+
+# Autostart Subsystem Integration
+try:
+    from step_4_reporting.autostart import (
+        enable_autostart,
+        disable_autostart,
+        is_autostart_enabled,
+        get_autostart_status,
+    )
+except ImportError:
+    try:
+        from autostart import (
+            enable_autostart,
+            disable_autostart,
+            is_autostart_enabled,
+            get_autostart_status,
+        )
+    except ImportError:
+        def enable_autostart(*args, **kwargs): return {"success": False, "error": "autostart module unavailable"}
+        def disable_autostart(*args, **kwargs): return {"success": False, "error": "autostart module unavailable"}
+        def is_autostart_enabled(*args, **kwargs): return False
+        def get_autostart_status(*args, **kwargs): return {"enabled": False, "error": "autostart module unavailable"}
 if not logger.handlers:
     _stream = sys.__stdout__ if sys.__stdout__ is not None else (sys.stdout if sys.stdout is not None else io.StringIO())
     handler = logging.StreamHandler(_stream)
@@ -653,6 +675,12 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_json_response({"logs": mgr.get_log_tail(lines_count)})
             return
 
+        # 3b. API: Auto-Start Status
+        if path == "/api/autostart/status":
+            st = get_autostart_status(workspace_dir=self.workspace_dir)
+            self.send_json_response(st)
+            return
+
         # 4. Static: Dashboard HTML (Modern & Classic Dual Routes)
         target_file = None
         if path in ("/", "/dashboard", "/dashboard.html", "/index.html", "/modern", "/modern.html", "/modern_dashboard.html"):
@@ -805,6 +833,18 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self.send_json_response({"refreshed": False, "message": f"Refresh failed: {e}"}, status=500, success=False)
             return
 
+        # 5. API: Enable Windows Auto-Start
+        if path == "/api/autostart/enable":
+            res = enable_autostart(workspace_dir=self.workspace_dir)
+            self.send_json_response(res, status=200 if res.get("success") else 500, success=bool(res.get("success")))
+            return
+
+        # 6. API: Disable Windows Auto-Start
+        if path == "/api/autostart/disable":
+            res = disable_autostart()
+            self.send_json_response(res, status=200 if res.get("success") else 500, success=bool(res.get("success")))
+            return
+
         # Default: 404
         self.send_json_response({"message": f"Endpoint not found: {self.path}"}, status=404, success=False)
 
@@ -913,8 +953,37 @@ def main() -> int:
     parser.add_argument("--host", type=str, default="127.0.0.1", help="Host interface (default: 127.0.0.1)")
     parser.add_argument("--no-browser", action="store_true", help="Do not automatically launch web browser")
     parser.add_argument("--mode", type=str, choices=["production", "test"], default=None, help="Operating mode override")
+    parser.add_argument("--enable-autostart", action="store_true", help="Enable Windows auto-start on user login and exit")
+    parser.add_argument("--disable-autostart", action="store_true", help="Disable Windows auto-start and exit")
+    parser.add_argument("--status-autostart", action="store_true", help="Print Windows auto-start status and exit")
 
     args = parser.parse_args()
+
+    # Handle Auto-Start CLI Operations
+    if args.enable_autostart:
+        res = enable_autostart(workspace_dir=_WORKSPACE_DIR)
+        if res.get("success"):
+            print(f"[SUCCESS] {res.get('message')}")
+            return 0
+        else:
+            print(f"[ERROR] {res.get('error', 'Failed to enable autostart')}")
+            return 1
+
+    if args.disable_autostart:
+        res = disable_autostart()
+        print(f"[SUCCESS] {res.get('message')}")
+        return 0
+
+    if args.status_autostart:
+        st = get_autostart_status(workspace_dir=_WORKSPACE_DIR)
+        state_str = "ENABLED" if st.get("enabled") else "DISABLED"
+        print(f"Windows Auto-Start Status: [{state_str}]")
+        print(f"  Shortcut Path: {st.get('shortcut_path')}")
+        print(f"  Target Script: {st.get('vbs_launcher')}")
+        print(f"  Workspace    : {st.get('workspace_directory')}")
+        if "arguments" in st:
+            print(f"  Arguments    : {st.get('arguments')}")
+        return 0
 
     server = DashboardServer(host=args.host, port=args.port)
 

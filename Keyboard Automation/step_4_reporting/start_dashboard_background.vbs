@@ -12,10 +12,19 @@
 Option Explicit
 
 Dim fso, wshShell, scriptDir, workspaceDir, pythonExe, serverScript, runCmd, httpCheck, alreadyRunning
-Dim pollCount, isBound
+Dim pollCount, isBound, openBrowser, arg, i
 
 Set fso = CreateObject("Scripting.FileSystemObject")
 Set wshShell = CreateObject("WScript.Shell")
+
+' 0. Parse command line arguments for silent / no-browser execution
+openBrowser = True
+For i = 0 To WScript.Arguments.Count - 1
+    arg = LCase(WScript.Arguments(i))
+    If arg = "--no-browser" Or arg = "/no-browser" Or arg = "--silent" Or arg = "/silent" Or arg = "-s" Or arg = "--autostart" Or arg = "/autostart" Then
+        openBrowser = False
+    End If
+Next
 
 scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 
@@ -80,38 +89,42 @@ On Error GoTo 0
 
 ' 5. Execution Logic
 If alreadyRunning Then
-    ' Server is already running: Open browser immediately without spawning duplicate
-    wshShell.Run "cmd /c start http://127.0.0.1:8501/", 0, False
+    ' Server is already running: Open browser immediately without spawning duplicate (if browser requested)
+    If openBrowser Then
+        wshShell.Run "cmd /c start http://127.0.0.1:8501/", 0, False
+    End If
 Else
     ' Server is not running: Launch dashboard_server.py completely hidden (style 0)
     wshShell.CurrentDirectory = workspaceDir
     runCmd = """" & pythonExe & """ """ & serverScript & """ --port 8501 --no-browser"
     wshShell.Run runCmd, 0, False
 
-    ' Wait for server port binding (up to 3 seconds) before opening browser
-    isBound = False
-    For pollCount = 1 To 15
-        WScript.Sleep 200
-        On Error Resume Next
-        Set httpCheck = CreateObject("MSXML2.ServerXMLHTTP.6.0")
-        If Not httpCheck Is Nothing Then
-            httpCheck.setTimeouts 200, 200, 400, 400
-            httpCheck.open "GET", "http://127.0.0.1:8501/api/automation/status", False
-            httpCheck.send
-            If Err.Number = 0 Then
-                If httpCheck.status = 200 Then
-                    isBound = True
+    If openBrowser Then
+        ' Wait for server port binding (up to 3 seconds) before opening browser
+        isBound = False
+        For pollCount = 1 To 15
+            WScript.Sleep 200
+            On Error Resume Next
+            Set httpCheck = CreateObject("MSXML2.ServerXMLHTTP.6.0")
+            If Not httpCheck Is Nothing Then
+                httpCheck.setTimeouts 200, 200, 400, 400
+                httpCheck.open "GET", "http://127.0.0.1:8501/api/automation/status", False
+                httpCheck.send
+                If Err.Number = 0 Then
+                    If httpCheck.status = 200 Then
+                        isBound = True
+                    End If
+                Else
+                    Err.Clear
                 End If
-            Else
-                Err.Clear
+                Set httpCheck = Nothing
             End If
-            Set httpCheck = Nothing
-        End If
-        On Error GoTo 0
-        If isBound Then Exit For
-    Next
+            On Error GoTo 0
+            If isBound Then Exit For
+        Next
 
-    wshShell.Run "cmd /c start http://127.0.0.1:8501/", 0, False
+        wshShell.Run "cmd /c start http://127.0.0.1:8501/", 0, False
+    End If
 End If
 
 Set fso = Nothing

@@ -15,6 +15,14 @@ from .step4_reporting import (
     get_last_input_tick,
     watch_for_user_input,
 )
+from .autostart import (
+    enable_autostart,
+    disable_autostart,
+    is_autostart_enabled,
+    get_autostart_status,
+    get_startup_folder,
+    get_shortcut_path,
+)
 
 __all__ = [
     "Step4ReportingEngine",
@@ -24,4 +32,10 @@ __all__ = [
     "QuestionDetail",
     "get_last_input_tick",
     "watch_for_user_input",
+    "enable_autostart",
+    "disable_autostart",
+    "is_autostart_enabled",
+    "get_autostart_status",
+    "get_startup_folder",
+    "get_shortcut_path",
 ]
