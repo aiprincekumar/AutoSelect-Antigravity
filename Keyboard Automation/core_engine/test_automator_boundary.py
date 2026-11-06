@@ -519,7 +519,8 @@ class TestAutomatorBoundary(unittest.TestCase):
         # Check final question executes Submit
         self.assertIn("Submit ALL 5 answers", step_map["Q5.4"])
 
-    def test_hybrid_cdp_helper_interaction_when_available(self):
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(1234, "Antigravity.exe", "Antigravity"))
+    def test_hybrid_cdp_helper_interaction_when_available(self, mock_proc_info):
         """Verify hybrid CDP verification & assistance is actively called when CDP is available."""
         mock_cdp = MagicMock()
         mock_cdp.is_available.return_value = True

@@ -41,7 +41,7 @@ from pathlib import Path
 from http.server import HTTPServer, BaseHTTPRequestHandler
 from socketserver import ThreadingMixIn
 from urllib.parse import urlparse, parse_qs
-from typing import Dict, Any, Optional, Tuple, List
+from typing import Dict, Any, Optional, Tuple, List, Union
 
 # Workspace and Directory Anchors
 _THIS_DIR = Path(__file__).resolve().parent
@@ -473,26 +473,51 @@ class AutomationProcessManager:
                 "message": f"Automation process (PID: {target_pid}) stopped successfully.",
             }
 
-    def get_log_tail(self, max_lines: int = 50) -> str:
-        """Retrieve the last N lines of the automation log file."""
-        target_log = self.log_file
+    def resolve_log_file(self) -> Path:
+        """
+        Dynamically resolve canonical log file path across candidate locations.
+        Auto-creates parent directory and empty log file if missing so it never errors.
+        """
+        candidates = [
+            self.workspace_dir / "logs" / "complete_automation.log",
+            self.workspace_dir / "step_9_complete_automation" / "complete_automation.log",
+            self.workspace_dir / "complete_automation.log",
+        ]
+        for candidate in candidates:
+            if candidate.is_file():
+                self.log_file = candidate
+                return candidate
+
+        # If none exist on disk, default to logs/complete_automation.log and auto-create
+        target_log = self.workspace_dir / "logs" / "complete_automation.log"
+        try:
+            target_log.parent.mkdir(parents=True, exist_ok=True)
+            if not target_log.is_file():
+                target_log.touch(exist_ok=True)
+        except Exception as e:
+            logger.debug(f"Could not auto-create primary log file at {target_log}: {e}")
+        self.log_file = target_log
+        return target_log
+
+    def get_log_tail(self, max_lines: int = 50, return_list: bool = True) -> Union[List[str], str]:
+        """
+        Retrieve the last N lines of the automation log file.
+        If return_list is True, returns a List[str] with line breaks stripped.
+        If return_list is False, returns a raw concatenated str.
+        """
+        target_log = self.resolve_log_file()
         if not target_log.is_file():
-            for candidate in [
-                self.workspace_dir / "logs" / "complete_automation.log",
-                self.workspace_dir / "step_9_complete_automation" / "complete_automation.log",
-                self.workspace_dir / "complete_automation.log",
-            ]:
-                if candidate.is_file():
-                    target_log = candidate
-                    break
-        if not target_log.is_file():
-            return "No log file found."
+            return [] if return_list else "No log file found."
         try:
             with open(target_log, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
-                return "".join(lines[-max_lines:])
+            sliced = lines[-max_lines:] if max_lines > 0 else lines
+            if return_list:
+                return [line.rstrip("\r\n") for line in sliced]
+            return "".join(sliced)
         except Exception as e:
-            return f"Error reading logs: {e}"
+            err_msg = f"Error reading logs: {e}"
+            return [err_msg] if return_list else err_msg
 
     def get_status(self) -> Dict[str, Any]:
         """Compile a complete status summary dictionary."""
@@ -547,7 +572,7 @@ class AutomationProcessManager:
             "python_exe": str(self.python_exe),
             "master_script": str(self.master_script),
             "log_file": str(self.log_file),
-            "last_log": self.get_log_tail(15),
+            "last_log": self.get_log_tail(15, return_list=False),
         }
 
 
@@ -671,8 +696,20 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/logs/tail":
             mgr = self.server_manager or AutomationProcessManager(self.workspace_dir)
             query = parse_qs(parsed.query)
-            lines_count = int(query.get("lines", [50])[0])
-            self.send_json_response({"logs": mgr.get_log_tail(lines_count)})
+            try:
+                lines_count = int(query.get("lines", [50])[0])
+            except (ValueError, TypeError):
+                lines_count = 50
+            line_list = mgr.get_log_tail(lines_count, return_list=True)
+            raw_str = mgr.get_log_tail(lines_count, return_list=False)
+            payload = {
+                "logs": line_list,
+                "raw": raw_str,
+                "total_lines": len(line_list),
+                "log_file": str(mgr.log_file),
+                "file_exists": mgr.log_file.is_file(),
+            }
+            self.send_json_response(payload)
             return
 
         # 3b. API: Auto-Start Status

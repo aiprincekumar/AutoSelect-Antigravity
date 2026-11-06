@@ -265,7 +265,10 @@ class TestDashboardServer(unittest.TestCase):
         status, _, body = self._http_request("GET", "/api/logs/tail?lines=5")
         self.assertEqual(status, 200)
         self.assertTrue(body["success"])
-        self.assertIn("Test line 1", body["data"]["logs"])
+        self.assertIsInstance(body["data"]["logs"], list)
+        self.assertIsInstance(body["data"]["raw"], str)
+        self.assertTrue(any("Test line 1" in line for line in body["data"]["logs"]))
+        self.assertIn("Test line 1", body["data"]["raw"])
 
     def test_10_unknown_endpoint_returns_404(self):
         """Requests to unknown endpoints should return 404 with error message."""
