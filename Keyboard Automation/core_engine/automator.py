@@ -74,10 +74,10 @@ class GrillMeAutomator:
     4. Robust foreground focus bypass (Alt key pulse, thread attach, Z-order bump)
     5. Settle delay for UI rendering
     6. Execute sequence via pure native Win32 SendInput physical keystrokes on the active GUI window:
-       * Step A: Ctrl + L    -> Focus chat input (settle pause 0.2s - 0.25s)
-       * Step B: Shift + Tab -> Shift focus to option select buttons (settle pause 0.2s - 0.25s)
-       * Step C: Option key  -> Select option (e.g. '1') (settle pause 0.2s - 0.25s)
-       * Step D: Enter Gate  -> Continue (Q1..QN-1, UI transition pause 0.4s - 0.5s) or Submit confirmation (QN)
+       * Focus 1: Ctrl + L    -> Focus chat input (executed 1st time only; settle pause 0.2s - 0.25s)
+       * Focus 2: Shift + Tab -> Shift focus to option select buttons (executed 1st time only; settle pause 0.2s - 0.25s)
+       * Option Loop: Option key (e.g. '1') pressed (total_questions + 1) times with ample registration delay (0.45s - 0.5s)
+       * Complete: No Enter, Space, or other keys needed; (N+1)-th option press completes registration/submission
     """
 
     DEFAULT_TARGET = DEFAULT_TARGET_WINDOW
@@ -567,22 +567,18 @@ class GrillMeAutomator:
         Executes deterministic multi-question keyboard automation loop for any N questions (1..N).
         Operates via pure native Windows ctypes SendInput physical keystrokes on the active GUI window:
           - Focus & Activation: _ensure_window_ready() brings Antigravity to foreground & maximizes.
-          - For each question q_idx (1..N):
-            * Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
+          - Initial Focus (executed ONLY 1st time at start):
+            * Step FOCUS.1: Focus chat input (Ctrl + L)
               Settle pause (0.2s - 0.25s)
-            * Step B / Q{q_idx}.2: Reverse tab into option button group (Shift + Tab)
+            * Step FOCUS.2: Reverse tab into option button group (Shift + Tab)
               Settle pause (0.2s - 0.25s)
-              Hybrid CDP: Ensures Skip button is blurred if focused
-            * Step C / Q{q_idx}.3: Send option key (e.g. '1', or per-question option)
-              Settle pause (0.2s - 0.25s)
-              Hybrid CDP: Selects option in DOM, waits for button enabled, focuses Continue/Submit
-            * Step D / Q{q_idx}.4: Enter Gate:
-              - If q_idx < tq:
-                * Send Enter (Advances Continue to Question q_idx + 1)
-                * UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI
-              - If q_idx == tq:
-                * Send Enter (Submits final batch answer)
-                * Round completion pause
+          - Option Key Press Loop:
+            * Press option key (total_questions + 1) times (e.g. 5 times for 4 questions, 2 times for 1 question).
+            * For each press k in 1..(total_questions + 1):
+              - Step OPT.{k}: Send option key (e.g. '1' or per-question option; repeats last option for N+1)
+              - Ample wait time (0.45s - 0.5s) so Antigravity UI has ample time to register the option.
+          - No Enter, Space, or other keys needed; the (N+1)-th option press handles registration/submission.
+          - Round completion pause after all option presses complete.
         """
         tq = max(0, int(total_questions if total_questions is not None else self.total_questions))
         if tq == 0:
@@ -596,7 +592,8 @@ class GrillMeAutomator:
             while len(opts) < tq:
                 opts.append(str(self.option))
 
-        logger.info(f"Initiating dynamic keyboard automation loop: {tq} question(s) | Options: {opts}")
+        total_option_presses = tq + 1
+        logger.info(f"Initiating keyboard automation sequence: {tq} question(s) -> {total_option_presses} option key press(es) | Options: {opts}")
         logger.info("Executing via Pure Native Physical Keystroke Injection (Win32 SendInput)...")
 
         # Ensure target window is restored, maximized, and in foreground before physical keystrokes
@@ -639,9 +636,9 @@ class GrillMeAutomator:
             except Exception as cdp_init_err:
                 logger.debug(f"Hybrid CDP client initialization bypassed: {cdp_init_err}")
 
-        # Define settle pause, UI transition pause, and round completion pause directly from config.json
+        # Define settle pause, option press delay, and round completion pause directly from config.json
         settle_pause = max(0.001, self.post_keypress_delay) if not self.dry_run else 0.001
-        transition_pause = max(0.001, self.inter_question_delay) if not self.dry_run else 0.001
+        option_press_delay = max(0.45, self.post_keypress_delay) if not self.dry_run else 0.001
         round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
 
         # Ensure menu bar is dismissed prior to keystroke dispatch
@@ -653,76 +650,77 @@ class GrillMeAutomator:
                 pass
 
         try:
-            for q_idx in range(1, tq + 1):
-                opt = opts[q_idx - 1]
-                is_last = (q_idx == tq)
-
-                if is_last:
-                    logger.info(f"[Question {q_idx}/{tq}] Final Question: Selecting option {opt} and submitting with Enter!")
-                else:
-                    logger.info(f"[Question {q_idx}/{tq}] Intermediate Question: Selecting option {opt} (Advance with Continue Enter)...")
-
-                # Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
-                if not self.skip_ctrl_l:
-                    if self.engine == "ctypes":
-                        self._execute_step(
-                            f"Q{q_idx}.1",
-                            "Press [Ctrl + L] (Focus chat box)",
-                            lambda: send_key_combo([VK_CONTROL, VK_L], hold_delay=self.hold_delay)
-                        )
-                    elif self.engine == "pyautogui":
-                        self._execute_step(
-                            f"Q{q_idx}.1",
-                            "Press [Ctrl + L] (Focus chat box)",
-                            lambda: pyautogui.hotkey("ctrl", "l")
-                        )
-                    # Settle pause (0.2s - 0.25s)
-                    if not self.dry_run:
-                        time.sleep(settle_pause)
-                else:
-                    logger.info(f"Step Q{q_idx}.1: Skipping Ctrl + L (as requested)")
-
-                # Step B / Q{q_idx}.2: Reverse tab into option button group (Shift + Tab)
+            # -------------------------------------------------------------
+            # 1. Initial Focus Sequence (executed ONLY 1ST TIME at start)
+            # -------------------------------------------------------------
+            # Step FOCUS.1: Focus chat input (Ctrl + L)
+            if not self.skip_ctrl_l:
                 if self.engine == "ctypes":
                     self._execute_step(
-                        f"Q{q_idx}.2",
-                        "Press [Shift + Tab] (Move backward to question options)",
-                        lambda: send_key_combo([VK_SHIFT, VK_TAB], hold_delay=self.hold_delay)
+                        "FOCUS.1",
+                        "Press [Ctrl + L] (Focus chat box)",
+                        lambda: send_key_combo([VK_CONTROL, VK_L], hold_delay=self.hold_delay)
                     )
                 elif self.engine == "pyautogui":
                     self._execute_step(
-                        f"Q{q_idx}.2",
-                        "Press [Shift + Tab] (Move backward to question options)",
-                        lambda: pyautogui.hotkey("shift", "tab")
+                        "FOCUS.1",
+                        "Press [Ctrl + L] (Focus chat box)",
+                        lambda: pyautogui.hotkey("ctrl", "l")
                     )
-                # Settle pause (0.2s - 0.25s)
                 if not self.dry_run:
                     time.sleep(settle_pause)
+            else:
+                logger.info("Step FOCUS.1: Skipping Ctrl + L (as requested)")
 
-                # Hybrid CDP check: Blur Skip button if Shift+Tab landed on it (due to Submit initially disabled)
-                if cdp:
-                    try:
-                        cdp.ensure_skip_not_focused()
-                    except Exception as e:
-                        logger.debug(f"CDP skip blur check bypassed: {e}")
+            # Step FOCUS.2: Reverse tab into option button group (Shift + Tab)
+            if self.engine == "ctypes":
+                self._execute_step(
+                    "FOCUS.2",
+                    "Press [Shift + Tab] (Move backward to question options)",
+                    lambda: send_key_combo([VK_SHIFT, VK_TAB], hold_delay=self.hold_delay)
+                )
+            elif self.engine == "pyautogui":
+                self._execute_step(
+                    "FOCUS.2",
+                    "Press [Shift + Tab] (Move backward to question options)",
+                    lambda: pyautogui.hotkey("shift", "tab")
+                )
+            if not self.dry_run:
+                time.sleep(settle_pause)
 
-                # Step C / Q{q_idx}.3: Select option key (e.g. '1', or per-question option)
+            # Hybrid CDP check: Blur Skip button if Shift+Tab landed on it
+            if cdp:
+                try:
+                    cdp.ensure_skip_not_focused()
+                except Exception as e:
+                    logger.debug(f"CDP skip blur check bypassed: {e}")
+
+            # -------------------------------------------------------------
+            # 2. Option Key Press Loop (pressed total_questions + 1 times)
+            # -------------------------------------------------------------
+            for k in range(1, total_option_presses + 1):
+                opt = opts[k - 1] if k <= tq else (opts[-1] if opts else str(self.option))
+                step_code = f"OPT.{k}"
+                step_desc = f"Press [{opt}] (Option press {k}/{total_option_presses})"
+                self.log(f"[Option {k}/{total_option_presses}] Press [{opt}] (Option press {k}/{total_option_presses})")
+
                 vk_opt = get_option_vk(opt)
                 if self.engine == "ctypes":
                     self._execute_step(
-                        f"Q{q_idx}.3",
-                        f"Press [{opt}] (Select Option {opt})",
-                        lambda: send_single_key(vk_opt, hold_delay=self.hold_delay)
+                        step_code,
+                        step_desc,
+                        lambda vk=vk_opt: send_single_key(vk, hold_delay=self.hold_delay)
                     )
                 elif self.engine == "pyautogui":
                     self._execute_step(
-                        f"Q{q_idx}.3",
-                        f"Press [{opt}] (Select Option {opt})",
-                        lambda: pyautogui.press(str(opt))
+                        step_code,
+                        step_desc,
+                        lambda o=opt: pyautogui.press(str(o))
                     )
-                # Settle pause (0.2s - 0.25s)
+
+                # Ample wait time after each option press so Antigravity UI has time to register
                 if not self.dry_run:
-                    time.sleep(settle_pause)
+                    time.sleep(option_press_delay)
 
                 # Hybrid CDP Assistance & Verification (Ensure option selected, button enabled, Skip blurred, Submit/Continue focused)
                 if cdp:
@@ -738,57 +736,14 @@ class GrillMeAutomator:
                     except Exception as e:
                         logger.debug(f"Hybrid CDP option verification bypassed: {e}")
 
-                # Step D / Q{q_idx}.4: Golden Enter Gate (Intermediate: Advance [Continue]; Final: Submit)
-                if is_last:
-                    enter_desc = f"Press [Enter] (Submit ALL {tq} answers on final question)"
-                    self.log(f"[Question {q_idx}/{tq}] Press [Enter] (Submit ALL {tq} answers on final question)")
-                else:
-                    enter_desc = f"Press [Enter] (Advance [Continue] to Question {q_idx + 1})"
-                    self.log(f"[Question {q_idx}/{tq}] Press [Enter] (Advance [Continue] to Question {q_idx + 1})")
-
-                if not self.skip_enter:
-                    if self.engine == "ctypes":
-                        self._execute_step(
-                            f"Q{q_idx}.4",
-                            enter_desc,
-                            lambda: self.dispatch_key(win32con.VK_RETURN)
-                        )
-                    elif self.engine == "pyautogui":
-                        self._execute_step(
-                            f"Q{q_idx}.4",
-                            enter_desc,
-                            lambda: self.dispatch_key(win32con.VK_RETURN)
-                        )
-
-                    # Hybrid CDP Fallback: Verify button activation or click if Enter was consumed elsewhere
-                    if cdp and not self.dry_run:
-                        try:
-                            time.sleep(0.1)
-                            st = cdp.get_questionnaire_status()
-                            if is_last:
-                                if st and st.get("has_card") and not st.get("continue_btn_disabled"):
-                                    logger.info("Hybrid CDP fallback: Clicking Submit button to ensure questionnaire completes.")
-                                    cdp.click_continue_or_submit()
-                            else:
-                                if st and st.get("has_card") and st.get("current_question", 1) == q_idx and not st.get("continue_btn_disabled"):
-                                    logger.info(f"Hybrid CDP fallback: Clicking Continue button to ensure advance to Question {q_idx + 1}.")
-                                    cdp.click_continue_or_submit()
-                        except Exception as e:
-                            logger.debug(f"Hybrid CDP button click fallback bypassed: {e}")
-                else:
-                    logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
-
-                # If intermediate question, apply UI transition pause (0.4s - 0.5s) allowing next question card to render
-                if not is_last and not self.dry_run:
-                    logger.info(f"UI transition pause ({transition_pause:.2f}s) allowing Question {q_idx + 1} card to render on GUI...")
-                    time.sleep(transition_pause)
-
-            # Round completion pause directly from config.json (step3_round_completion_pause_ms)
+            # -------------------------------------------------------------
+            # 3. Completion (NO ENTER, NO SPACE, NO OTHER KEYS)
+            # -------------------------------------------------------------
             if round_pause > 0 and not self.dry_run:
                 logger.info(f"Round completion pause ({round_pause:.2f}s) after full questionnaire sequence...")
                 time.sleep(round_pause)
 
-            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {tq} question(s) via physical keystrokes!")
+            logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {tq} question(s) via physical keystrokes ({total_option_presses} option presses)!")
             return True
 
         except Exception as e:
