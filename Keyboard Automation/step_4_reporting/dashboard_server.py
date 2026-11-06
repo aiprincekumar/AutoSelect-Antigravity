@@ -483,6 +483,13 @@ class AutomationProcessManager:
             self.workspace_dir / "step_9_complete_automation" / "complete_automation.log",
             self.workspace_dir / "complete_automation.log",
         ]
+        # Prioritize candidates that exist and contain actual log data
+        for candidate in candidates:
+            if candidate.is_file() and candidate.stat().st_size > 0:
+                self.log_file = candidate
+                return candidate
+
+        # Fallback to any existing candidate
         for candidate in candidates:
             if candidate.is_file():
                 self.log_file = candidate
@@ -607,6 +614,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         """Format and return Department 06 standardized JSON response envelope."""
         payload = {
             "success": success,
+            "status": "success" if success else "error",
             "data": data if success else None,
             "error": None if success else data,
             "meta": {
@@ -705,7 +713,9 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             payload = {
                 "logs": line_list,
                 "raw": raw_str,
+                "count": len(line_list),
                 "total_lines": len(line_list),
+                "path": str(mgr.log_file),
                 "log_file": str(mgr.log_file),
                 "file_exists": mgr.log_file.is_file(),
             }
