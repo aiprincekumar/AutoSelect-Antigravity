@@ -27,6 +27,7 @@ from __future__ import annotations
 
 import os
 import sys
+import io
 import json
 import time
 import signal
@@ -84,13 +85,38 @@ except ImportError:
         except Exception:
             return False
 
+# Safe stream fallback for pythonw.exe (where sys.stdout / sys.stderr are None)
+if sys.stdout is None:
+    sys.stdout = io.StringIO()
+if sys.stderr is None:
+    sys.stderr = io.StringIO()
+
 # Setup module logger
 logger = logging.getLogger("DashboardServer")
 if not logger.handlers:
-    handler = logging.StreamHandler(sys.stdout)
+    _stream = sys.__stdout__ if sys.__stdout__ is not None else (sys.stdout if sys.stdout is not None else io.StringIO())
+    handler = logging.StreamHandler(_stream)
     handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] [DashboardServer] %(message)s", datefmt="%H:%M:%S"))
     logger.addHandler(handler)
+
+    # Persistent daemon logging fallback for background pythonw.exe processes
+    try:
+        _log_dir = _WORKSPACE_DIR / "logs"
+        _log_dir.mkdir(parents=True, exist_ok=True)
+        _file_handler = logging.FileHandler(_log_dir / "dashboard_server.log", encoding="utf-8")
+        _file_handler.setFormatter(logging.Formatter("[%(asctime)s] [%(levelname)s] [DashboardServer] %(message)s", datefmt="%H:%M:%S"))
+        logger.addHandler(_file_handler)
+    except Exception:
+        pass
+
     logger.setLevel(logging.INFO)
+
+def _global_exception_handler(exc_type, exc_value, exc_traceback):
+    if issubclass(exc_type, KeyboardInterrupt):
+        return
+    logger.critical("Uncaught exception in DashboardServer", exc_info=(exc_type, exc_value, exc_traceback))
+
+sys.excepthook = _global_exception_handler
 
 
 # ============================================================================
@@ -902,7 +928,11 @@ def main() -> int:
     if sys.platform != "win32":
         signal.signal(signal.SIGTERM, _sig_handler)
 
-    server.start(open_browser=not args.no_browser, in_thread=False)
+    try:
+        server.start(open_browser=not args.no_browser, in_thread=False)
+    except Exception as exc:
+        logger.exception(f"Fatal error running Dashboard Server: {exc}")
+        return 1
     return 0
 
 

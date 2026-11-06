@@ -1,7 +1,7 @@
 @echo off
 chcp 65001 >nul
 setlocal enabledelayedexpansion
-title Complete Automation - Run All Steps (1 -> 2 -> 3 -> 4)
+title Complete Automation - Run All Steps (Step 1 -^> Step 2 -^> Step 3 -^> Step 4)
 
 :: ============================================================================
 :: Complete Automation - Direct Pipeline Runner (Run All Steps)
