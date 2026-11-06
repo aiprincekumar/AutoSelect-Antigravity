@@ -11,6 +11,8 @@ env/
 
 # Logs & temp files
 *.log
+logs/*.log
+!logs/.gitkeep
 *.pid
 *.lock
 .dashboard_launched.lock

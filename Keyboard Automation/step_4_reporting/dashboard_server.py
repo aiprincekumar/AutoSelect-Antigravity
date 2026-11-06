@@ -144,7 +144,9 @@ class AutomationProcessManager:
         self.workspace_dir = Path(workspace_dir).resolve() if workspace_dir else _WORKSPACE_DIR
         self.python_exe = self._resolve_python_exe()
         self.master_script = self.workspace_dir / "step_9_complete_automation" / "complete_automation.py"
-        self.log_file = self.workspace_dir / "step_9_complete_automation" / "complete_automation.log"
+        logs_candidate = self.workspace_dir / "logs" / "complete_automation.log"
+        step9_candidate = self.workspace_dir / "step_9_complete_automation" / "complete_automation.log"
+        self.log_file = logs_candidate if (self.workspace_dir / "logs").is_dir() else step9_candidate
         self.pid_file = self.workspace_dir / "step_4_reporting" / ".automation_process.json"
         
         self.proc: Optional[subprocess.Popen] = None
@@ -425,10 +427,20 @@ class AutomationProcessManager:
 
     def get_log_tail(self, max_lines: int = 50) -> str:
         """Retrieve the last N lines of the automation log file."""
-        if not self.log_file.is_file():
+        target_log = self.log_file
+        if not target_log.is_file():
+            for candidate in [
+                self.workspace_dir / "logs" / "complete_automation.log",
+                self.workspace_dir / "step_9_complete_automation" / "complete_automation.log",
+                self.workspace_dir / "complete_automation.log",
+            ]:
+                if candidate.is_file():
+                    target_log = candidate
+                    break
+        if not target_log.is_file():
             return "No log file found."
         try:
-            with open(self.log_file, "r", encoding="utf-8", errors="replace") as f:
+            with open(target_log, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
                 return "".join(lines[-max_lines:])
         except Exception as e:

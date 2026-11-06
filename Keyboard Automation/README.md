@@ -39,17 +39,17 @@ The system is organized into a modular Clean Architecture pipeline adhering to *
 
 ## 📁 File Topology & Directory Map
 
-### 🏢 Root Infrastructure (Clean & Minimal)
+### 🏢 Root Infrastructure (100% Clean & Structured)
 | File / Folder | Role & Description | Type |
 | :--- | :--- | :--- |
-| **`step_9_complete_automation/`** | **Master User Interaction Hub:** Unified configuration (`config.json`), master controller (`complete_automation.py`), 1-click batch runners, and dashboard launcher (renamed to step 9 to always remain at the end). | **MASTER HUB (STEP 9)** |
-| **`core_engine/`** | **Core Automation Engine:** Win32 API bindings, SendInput injector, window discovery & scoring, automator sequence, and CDP client (renamed from `keyboard_automation`). | **CORE ENGINE** |
-| **`keyboard_automation.py`** | **Backward Compatibility Proxy:** Transparent module delegating all calls and submodules to `core_engine/`. | **COMPATIBILITY PROXY** |
-| **`target_chat.json`** | Shared runtime state file holding extracted question metadata, option choices, and active conversation ID. | **COMMON STATE** |
-| **`last_selection_state.json`** | Runtime state backup synchronized with `target_chat.json`. | **COMMON STATE** |
-| **`setup_env.bat`** | **Self-Healing Environment Setup:** Automatically creates `Keyboard Automation\.venv` and installs dependencies. | **SETUP RUNNER** |
+| **`launchers/`** | **Dedicated Launchers Hub:** All 1-click batch (`.bat`) and VBScript (`.vbs`) execution runners and dashboard shortcuts. | **LAUNCHERS HUB** |
+| **`logs/`** | **Dedicated Logs Hub:** Centralized storage for all execution and server debug logs (`complete_automation.log`, `server_debug.log`, `scratch_err.log`). | **LOG ARCHITECTURE** |
+| **`state/`** | **Dedicated Runtime State Hub:** Shared state files (`target_chat.json`, `last_selection_state.json`) with two-tier resolution. | **STATE HUB** |
+| **`step_9_complete_automation/`** | **Master User Interaction Hub:** Unified configuration (`config.json`), master controller (`complete_automation.py`), and pipeline execution. | **MASTER HUB (STEP 9)** |
+| **`core_engine/`** | **Core Automation Engine:** Win32 API bindings, SendInput injector, window discovery & scoring, automator sequence, and CDP client. | **CORE ENGINE** |
 | **`requirements.txt`** | Dedicated Python dependencies (`pyautogui`, `psutil`) for Keyboard Automation. | **DEPENDENCIES** |
-| **`archive/legacy_monolith/`** | Dedicated archive holding the original monolithic script (`activating_grill_me.py`) and legacy coordinate configuration (`config.json`). | **ARCHIVE** |
+| **`project_feature_memory.md`** | Complete feature tracking, architectural changelog, and 7-column diagnostic matrix. | **LIVING MEMORY** |
+| **`archive/legacy_monolith/`** | Dedicated archive holding legacy monolithic scripts (`activating_grill_me.py`, `keyboard_automation.py`) and legacy configs. | **ARCHIVE** |
 | **`prompts/`** | Architectural specifications and prompt directives. | **DOCUMENTATION** |
 
 ---
@@ -104,7 +104,7 @@ The system is organized into a modular Clean Architecture pipeline adhering to *
 
 ### Prerequisites
 - Windows 10 or 11
-- Python 3.8+ (Automatically bootstrapped via `setup_env.bat`)
+- Python 3.8+ (Automatically bootstrapped via `launchers\setup_env.bat`)
 
 ### Execution Options
 

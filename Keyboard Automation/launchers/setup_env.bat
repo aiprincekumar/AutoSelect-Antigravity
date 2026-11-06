@@ -9,7 +9,7 @@ echo        AutoSelect-Commander - Dedicated Environment Setup (Keyboard Automat
 echo ===============================================================================
 echo.
 
-cd /d "%~dp0"
+cd /d "%~dp0.."
 
 :: 1. Check Python or uv availability
 set "PYTHON_CMD="
@@ -74,7 +74,7 @@ if not exist ".venv\.installed_v1" (
 )
 
 echo [SUCCESS] Keyboard Automation dedicated environment is ready:
-echo   Python: "%~dp0.venv\Scripts\python.exe"
+echo   Python: "%CD%\.venv\Scripts\python.exe"
 echo ===============================================================================
 
 exit /b 0

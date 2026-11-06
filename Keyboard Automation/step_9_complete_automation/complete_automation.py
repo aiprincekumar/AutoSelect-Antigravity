@@ -473,7 +473,11 @@ class CompleteAutomationController:
             datefmt="%Y-%m-%d %H:%M:%S"
         )
 
-        log_p = _this_dir / self.config.log_file
+        logs_dir = _this_dir.parent / "logs"
+        if logs_dir.is_dir():
+            log_p = logs_dir / self.config.log_file
+        else:
+            log_p = _this_dir / self.config.log_file
         try:
             fh = logging.FileHandler(str(log_p), encoding="utf-8")
             fh.setFormatter(formatter)

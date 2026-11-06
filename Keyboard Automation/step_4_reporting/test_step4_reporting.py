@@ -1635,7 +1635,10 @@ class TestStep4Reporting(unittest.TestCase):
         # 3. Verify VBS launchers and README exist on disk
         workspace_dir = Path(__file__).resolve().parent.parent
         repo_root = workspace_dir.parent
-        self.assertTrue((workspace_dir / "start_dashboard_background.vbs").is_file())
+        self.assertTrue(
+            (workspace_dir / "launchers" / "start_dashboard_background.vbs").is_file()
+            or (workspace_dir / "start_dashboard_background.vbs").is_file()
+        )
         self.assertTrue((workspace_dir / "step_4_reporting" / "start_dashboard_background.vbs").is_file())
         self.assertTrue((repo_root / "start_dashboard_background.vbs").is_file())
         self.assertTrue((repo_root / "README.md").is_file())

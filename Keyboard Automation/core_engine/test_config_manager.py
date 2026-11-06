@@ -27,7 +27,9 @@ from core_engine.config_manager import (
     get_canonical_config_path,
     get_default_runtime_config,
     get_state_dir,
+    get_logs_dir,
     resolve_runtime_state_file,
+    resolve_runtime_log_file,
     resolve_state_pair,
     load_runtime_config,
     save_runtime_config,
@@ -245,6 +247,32 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(legacy.name, "last_selection_state.json")
         self.assertEqual(target.parent, legacy.parent)
         self.assertEqual(target.parent.name, "state")
+
+    def test_17_get_logs_dir(self):
+        """Verify get_logs_dir creates and returns the dedicated logs/ directory."""
+        logs_d = get_logs_dir(self.test_dir)
+        self.assertTrue(logs_d.is_dir())
+        self.assertEqual(logs_d.name, "logs")
+
+    def test_18_resolve_runtime_log_file(self):
+        """Verify resolve_runtime_log_file resolves primary logs/ path and fallback paths."""
+        # For writing: always targets logs/
+        w_path = resolve_runtime_log_file("complete_automation.log", base_dir=self.test_dir, for_writing=True)
+        self.assertEqual(w_path.parent.name, "logs")
+
+        # Reading when logs/ file exists
+        w_path.write_text("log content", encoding="utf-8")
+        r_path = resolve_runtime_log_file("complete_automation.log", base_dir=self.test_dir, for_writing=False)
+        self.assertEqual(r_path.resolve(), w_path.resolve())
+
+        # Reading fallback when step_9 file exists
+        w_path.unlink()
+        step9_dir = self.test_dir / "step_9_complete_automation"
+        step9_dir.mkdir(parents=True, exist_ok=True)
+        step9_file = step9_dir / "complete_automation.log"
+        step9_file.write_text("step9 log content", encoding="utf-8")
+        fb_path = resolve_runtime_log_file("complete_automation.log", base_dir=self.test_dir, for_writing=False)
+        self.assertEqual(fb_path.resolve(), step9_file.resolve())
 
 
 

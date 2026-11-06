@@ -21,12 +21,14 @@ scriptDir = fso.GetParentFolderName(WScript.ScriptFullName)
 ' 1. Dynamically resolve workspace root directory (Keyboard Automation)
 If fso.FolderExists(fso.BuildPath(scriptDir, "Keyboard Automation")) Then
     workspaceDir = fso.BuildPath(scriptDir, "Keyboard Automation")
+ElseIf fso.FileExists(fso.BuildPath(fso.GetParentFolderName(scriptDir), "step_4_reporting\dashboard_server.py")) Then
+    workspaceDir = fso.GetParentFolderName(scriptDir)
 ElseIf fso.FileExists(fso.BuildPath(scriptDir, "step_4_reporting\dashboard_server.py")) Then
     workspaceDir = scriptDir
 ElseIf fso.FileExists(fso.BuildPath(scriptDir, "dashboard_server.py")) Then
     workspaceDir = fso.GetParentFolderName(scriptDir)
 Else
-    workspaceDir = scriptDir
+    workspaceDir = fso.GetParentFolderName(scriptDir)
 End If
 
 ' 2. Resolve Python Executable (Prefer .venv\Scripts\python.exe)

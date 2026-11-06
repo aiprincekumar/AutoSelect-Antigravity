@@ -111,6 +111,57 @@ def get_state_dir(base_dir: Optional[Union[str, Path]] = None) -> Path:
     return state_dir
 
 
+def get_logs_dir(base_dir: Optional[Union[str, Path]] = None) -> Path:
+    """
+    Returns the canonical dedicated runtime logs directory (<workspace>/logs).
+    Guarantees the directory exists on disk.
+    """
+    root = Path(base_dir).resolve() if base_dir else _workspace_dir
+    logs_dir = (root / "logs").resolve()
+    logs_dir.mkdir(parents=True, exist_ok=True)
+    return logs_dir
+
+
+def resolve_runtime_log_file(
+    filename: str = "complete_automation.log",
+    base_dir: Optional[Union[str, Path]] = None,
+    for_writing: bool = False,
+) -> Path:
+    """
+    Resilient log file path resolver:
+      Tier 1 (Primary): <workspace>/logs/<filename>
+      Tier 2 (Fallback): <workspace>/step_9_complete_automation/<filename>
+      Tier 3 (Fallback): <workspace>/<filename>
+    """
+    p = Path(filename)
+    if p.is_absolute():
+        if for_writing:
+            p.parent.mkdir(parents=True, exist_ok=True)
+        return p.resolve()
+
+    root = Path(base_dir).resolve() if base_dir else _workspace_dir
+    logs_dir = root / "logs"
+
+    if for_writing:
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        return (logs_dir / p.name).resolve()
+
+    primary = (logs_dir / p.name).resolve()
+    if primary.is_file():
+        return primary
+
+    step9_log = (root / "step_9_complete_automation" / p.name).resolve()
+    if step9_log.is_file():
+        return step9_log
+
+    fallback_root = (root / p.name).resolve()
+    if fallback_root.is_file():
+        return fallback_root
+
+    # Default to Tier 1
+    return primary
+
+
 def resolve_runtime_state_file(
     filename: str = "target_chat.json",
     base_dir: Optional[Union[str, Path]] = None,
@@ -445,9 +496,8 @@ def apply_logging_config(
     # Attach file handler if not already attached for this file
     if log_file:
         try:
-            # Resolve log path relative to step_9_complete_automation or workspace
-            canonical_cfg = get_canonical_config_path()
-            log_path = canonical_cfg.parent / log_file
+            # Resolve log path relative to logs/ or canonical config parent
+            log_path = resolve_runtime_log_file(log_file, base_dir=_workspace_dir, for_writing=True)
             log_path.parent.mkdir(parents=True, exist_ok=True)
 
             already_attached = any(

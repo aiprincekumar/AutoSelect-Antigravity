@@ -22,7 +22,9 @@ __pycache__/
 .pytest_cache/
 
 # Runtime Logs
-logs/
+logs/*
+!logs/.gitkeep
+!**/logs/.gitkeep
 *.log
 @AutomationLog.txt
 

@@ -268,7 +268,9 @@ class AntigravityLifecycleSentinel:
             startupinfo.dwFlags |= subprocess.STARTF_USESHOWWINDOW
             startupinfo.wShowWindow = 0  # SW_HIDE
 
-        server_log_path = self.workspace_dir / "server_debug.log"
+        logs_dir = self.workspace_dir / "logs"
+        logs_dir.mkdir(parents=True, exist_ok=True)
+        server_log_path = logs_dir / "server_debug.log"
         try:
             log_f = open(server_log_path, "a", encoding="utf-8")
             popen_kwargs = {
