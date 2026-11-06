@@ -54,6 +54,14 @@ from .config_manager import (
     get_settle_delay,
 )
 
+
+try:
+    import win32con
+except ImportError:
+    class _Win32ConCompat:
+        VK_RETURN = VK_RETURN
+    win32con = _Win32ConCompat()
+
 logger = logging.getLogger("Step3KeyboardAutomation.Automator")
 
 
@@ -469,6 +477,23 @@ class GrillMeAutomator:
             action_func()
         time.sleep(self.step_delay)
 
+    def log(self, message: str) -> None:
+        """Log an informational message through the standard logger."""
+        logger.info(message)
+
+    def dispatch_key(self, vk_code: int) -> None:
+        """Dispatch a single virtual key code using the active automation engine."""
+        if self.dry_run:
+            logger.info(f"  [DRY RUN] Would dispatch key code: {hex(vk_code) if isinstance(vk_code, int) else vk_code}")
+            return
+        if self.engine == "ctypes":
+            send_single_key(vk_code, hold_delay=self.hold_delay)
+        elif self.engine == "pyautogui":
+            if vk_code == VK_RETURN or vk_code == getattr(win32con, "VK_RETURN", 0x0D):
+                pyautogui.press("enter")
+            else:
+                pyautogui.press(chr(vk_code).lower())
+
     def _ensure_window_ready(self) -> bool:
         """
         Ensures Antigravity window is restored, maximized (SW_MAXIMIZE),
@@ -611,7 +636,7 @@ class GrillMeAutomator:
                 if is_last:
                     logger.info(f"[Question {q_idx}/{tq}] Final Question: Selecting option {opt} and submitting with Enter!")
                 else:
-                    logger.info(f"[Question {q_idx}/{tq}] Selecting option {opt} and continuing with Enter...")
+                    logger.info(f"[Question {q_idx}/{tq}] Intermediate Question: Selecting option {opt} (Enter deferred until final question {tq})...")
 
                 # Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
                 if not self.skip_ctrl_l:
@@ -668,32 +693,31 @@ class GrillMeAutomator:
                 if not self.dry_run:
                     time.sleep(settle_pause)
 
-                # Step D / Q{q_idx}.4: Enter Gate (Advances on Q1..QN-1, Submits on QN)
-                if not self.skip_enter:
-                    enter_desc = (
-                        f"Press [Enter] (Submit ALL {tq} answers on final question)"
-                        if is_last else
-                        f"Press [Enter] (Continue to Question {q_idx + 1})"
-                    )
-                    if self.engine == "ctypes":
-                        self._execute_step(
-                            f"Q{q_idx}.4",
-                            enter_desc,
-                            lambda: send_single_key(VK_RETURN, hold_delay=self.hold_delay)
-                        )
-                    elif self.engine == "pyautogui":
-                        self._execute_step(
-                            f"Q{q_idx}.4",
-                            enter_desc,
-                            lambda: pyautogui.press("enter")
-                        )
-
+                # Step D / Q{q_idx}.4: Golden Enter Gate (Press Enter ONLY on final question)
+                if is_last:
+                    if not self.skip_enter:
+                        enter_desc = f"Press [Enter] (Submit ALL {tq} answers on final question)"
+                        self.log(f"[Question {q_idx}/{tq}] Press [Enter] (Submit ALL {tq} answers on final question)")
+                        if self.engine == "ctypes":
+                            self._execute_step(
+                                f"Q{q_idx}.4",
+                                enter_desc,
+                                lambda: self.dispatch_key(win32con.VK_RETURN)
+                            )
+                        elif self.engine == "pyautogui":
+                            self._execute_step(
+                                f"Q{q_idx}.4",
+                                enter_desc,
+                                lambda: self.dispatch_key(win32con.VK_RETURN)
+                            )
+                    else:
+                        logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
+                else:
+                    self.log(f"[Question {q_idx}/{tq}] Intermediate question: Option {opt} selected. Skipping Enter (Enter will only be pressed on final question {tq}).")
                     # UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI before next Ctrl+L
-                    if not is_last and not self.dry_run:
+                    if not self.dry_run:
                         logger.info(f"UI transition pause ({transition_pause:.2f}s) allowing Question {q_idx + 1} card to render on GUI...")
                         time.sleep(transition_pause)
-                else:
-                    logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
 
             # Round completion pause directly from config.json (step3_round_completion_pause_ms)
             if round_pause > 0 and not self.dry_run:
