@@ -170,7 +170,7 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertIn("Submit ALL 1 answers", executed_steps[3][1])
 
     def test_execute_multi_question_n2_exact_keystroke_boundary(self):
-        """Verify N=2 executes Q1(1-3) and Q2(1-4), total 7 steps (Golden Enter Gate: Enter ONLY on final Q2)."""
+        """Verify N=2 executes Q1(1-4) and Q2(1-4), total 8 steps (Q1 advances with Continue, Q2 submits with Submit)."""
         automator = GrillMeAutomator(
             questions=2,
             options_list=["1", "2"],
@@ -191,16 +191,16 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertTrue(ok)
 
         step_codes = [s[0] for s in executed_steps]
-        expected_codes = ["Q1.1", "Q1.2", "Q1.3", "Q2.1", "Q2.2", "Q2.3", "Q2.4"]
+        expected_codes = ["Q1.1", "Q1.2", "Q1.3", "Q1.4", "Q2.1", "Q2.2", "Q2.3", "Q2.4"]
         self.assertEqual(step_codes, expected_codes)
-        self.assertEqual(len(executed_steps), 7)
-        # Verify intermediate Q1 does NOT execute Enter
-        self.assertNotIn("Q1.4", step_codes)
+        self.assertEqual(len(executed_steps), 8)
+        # Verify intermediate Q1 executes Enter to Advance [Continue] to Question 2
+        self.assertIn("Advance [Continue] to Question 2", executed_steps[3][1])
         # Verify final Q2 executes Enter to submit all answers
-        self.assertIn("Submit ALL 2 answers", executed_steps[6][1])
+        self.assertIn("Submit ALL 2 answers", executed_steps[7][1])
 
     def test_execute_multi_question_n3_exact_keystroke_boundary(self):
-        """Verify N=3 executes Q1(1-3), Q2(1-3), Q3(1-4): total 10 steps, Enter ONLY on Q3."""
+        """Verify N=3 executes Q1(1-4), Q2(1-4), Q3(1-4): total 12 steps (Q1/Q2 Continue, Q3 Submit)."""
         automator = GrillMeAutomator(
             questions=3,
             options_list=["1", "2", "3"],
@@ -222,15 +222,15 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         step_codes = [s[0] for s in executed_steps]
         expected_codes = [
-            "Q1.1", "Q1.2", "Q1.3",
-            "Q2.1", "Q2.2", "Q2.3",
+            "Q1.1", "Q1.2", "Q1.3", "Q1.4",
+            "Q2.1", "Q2.2", "Q2.3", "Q2.4",
             "Q3.1", "Q3.2", "Q3.3", "Q3.4"
         ]
         self.assertEqual(step_codes, expected_codes)
-        self.assertEqual(len(executed_steps), 10)
-        self.assertNotIn("Q1.4", step_codes)
-        self.assertNotIn("Q2.4", step_codes)
-        self.assertIn("Submit ALL 3 answers", executed_steps[9][1])
+        self.assertEqual(len(executed_steps), 12)
+        self.assertIn("Advance [Continue] to Question 2", executed_steps[3][1])
+        self.assertIn("Advance [Continue] to Question 3", executed_steps[7][1])
+        self.assertIn("Submit ALL 3 answers", executed_steps[11][1])
 
     def test_execute_multi_question_zero_questions_clean_exit(self):
         """Verify N=0 results in clean cancellation with 0 keystrokes executed."""
@@ -251,7 +251,7 @@ class TestAutomatorBoundary(unittest.TestCase):
 
 
     def test_execute_multi_question_n4_exact_keystroke_boundary(self):
-        """Verify N=4 dynamically executes Q1..Q3 (3 steps each) + Q4 (4 steps): total 13 steps, Enter ONLY on Q4."""
+        """Verify N=4 dynamically executes Q1..Q3 (Continue) + Q4 (Submit): total 16 steps."""
         automator = GrillMeAutomator(
             questions=4,
             options_list=["1", "2", "1", "3"],
@@ -266,15 +266,22 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=4, options=["1", "2", "1", "3"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 13)
+        self.assertEqual(len(executed_steps), 16)
         step_codes = [s[0] for s in executed_steps]
-        self.assertNotIn("Q1.4", step_codes)
-        self.assertNotIn("Q2.4", step_codes)
-        self.assertNotIn("Q3.4", step_codes)
-        self.assertIn("Submit ALL 4 answers", executed_steps[12][1])
+        expected_codes = [
+            "Q1.1", "Q1.2", "Q1.3", "Q1.4",
+            "Q2.1", "Q2.2", "Q2.3", "Q2.4",
+            "Q3.1", "Q3.2", "Q3.3", "Q3.4",
+            "Q4.1", "Q4.2", "Q4.3", "Q4.4"
+        ]
+        self.assertEqual(step_codes, expected_codes)
+        self.assertIn("Advance [Continue] to Question 2", executed_steps[3][1])
+        self.assertIn("Advance [Continue] to Question 3", executed_steps[7][1])
+        self.assertIn("Advance [Continue] to Question 4", executed_steps[11][1])
+        self.assertIn("Submit ALL 4 answers", executed_steps[15][1])
 
     def test_execute_multi_question_n5_exact_keystroke_boundary(self):
-        """Verify N=5 dynamically executes Q1..Q4 (3 steps each) + Q5 (4 steps): total 16 steps, Enter ONLY on Q5."""
+        """Verify N=5 dynamically executes Q1..Q4 (Continue) + Q5 (Submit): total 20 steps."""
         automator = GrillMeAutomator(
             questions=5,
             options_list=["1", "1", "2", "2", "1"],
@@ -289,13 +296,12 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=5, options=["1", "1", "2", "2", "1"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 16)
-        step_codes = [s[0] for s in executed_steps]
-        self.assertNotIn("Q1.4", step_codes)
-        self.assertNotIn("Q2.4", step_codes)
-        self.assertNotIn("Q3.4", step_codes)
-        self.assertNotIn("Q4.4", step_codes)
-        self.assertIn("Submit ALL 5 answers", executed_steps[15][1])
+        self.assertEqual(len(executed_steps), 20)
+        self.assertIn("Advance [Continue] to Question 2", executed_steps[3][1])
+        self.assertIn("Advance [Continue] to Question 3", executed_steps[7][1])
+        self.assertIn("Advance [Continue] to Question 4", executed_steps[11][1])
+        self.assertIn("Advance [Continue] to Question 5", executed_steps[15][1])
+        self.assertIn("Submit ALL 5 answers", executed_steps[19][1])
 
     def test_state_resolution_step2_metadata_keys(self):
         """Verify Step 3 dynamically resolves questions from Step 2 metadata keys (total_questions, question_count)."""
@@ -388,7 +394,7 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(automator.options_list, ["1", "1"])
 
     def test_multi_question_sequence_exact_keys_without_space(self):
-        """Verify exact sequence: Q1 has (Ctrl+L, Shift+Tab, Option), Q2 has (Ctrl+L, Shift+Tab, Option, Enter) without space."""
+        """Verify exact sequence: Q1 has (Ctrl+L, Shift+Tab, Option, Continue Enter), Q2 has (Ctrl+L, Shift+Tab, Option, Submit Enter) without space."""
         automator = GrillMeAutomator(
             questions=2,
             options_list=["1", "1"],
@@ -403,31 +409,27 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=2, options=["1", "1"])
         self.assertTrue(ok)
-        # 3 steps for intermediate Q1 + 4 steps for final Q2 = 7 steps
-        self.assertEqual(len(executed_steps), 7)
+        # 4 steps for intermediate Q1 + 4 steps for final Q2 = 8 steps
+        self.assertEqual(len(executed_steps), 8)
 
-        # Verify Q1 sequence (Intermediate: NO Enter)
+        # Verify Q1 sequence (Intermediate: Continue Enter)
         self.assertIn("Ctrl + L", executed_steps[0][1])
         self.assertIn("Shift + Tab", executed_steps[1][1])
         self.assertIn("[1]", executed_steps[2][1])
-        # Ensure intermediate Q1 did NOT execute Enter
-        self.assertNotIn("Enter", executed_steps[0][1])
-        self.assertNotIn("Enter", executed_steps[1][1])
-        self.assertNotIn("Enter", executed_steps[2][1])
+        self.assertIn("Advance [Continue] to Question 2", executed_steps[3][1])
 
-        # Verify Q2 sequence (Final: Enter IS executed)
-        self.assertIn("Ctrl + L", executed_steps[3][1])
-        self.assertIn("Shift + Tab", executed_steps[4][1])
-        self.assertIn("[1]", executed_steps[5][1])
-        self.assertIn("Enter", executed_steps[6][1])
-        self.assertIn("Submit ALL 2 answers", executed_steps[6][1])
+        # Verify Q2 sequence (Final: Submit Enter)
+        self.assertIn("Ctrl + L", executed_steps[4][1])
+        self.assertIn("Shift + Tab", executed_steps[5][1])
+        self.assertIn("[1]", executed_steps[6][1])
+        self.assertIn("Submit ALL 2 answers", executed_steps[7][1])
 
         # Verify NO step executed space
         for sc, d in executed_steps:
             self.assertNotIn("space", d.lower())
 
-    def test_golden_enter_gate_dispatches_vk_return_only_on_final_question(self):
-        """Verify Golden Enter Gate dispatches VK_RETURN strictly on final question and skips Enter on intermediate questions."""
+    def test_enter_gate_dispatches_vk_return_on_all_questions(self):
+        """Verify Enter Gate dispatches VK_RETURN on intermediate (Continue) and final (Submit) questions."""
         automator = GrillMeAutomator(
             questions=3,
             options_list=["1", "2", "3"],
@@ -452,16 +454,129 @@ class TestAutomatorBoundary(unittest.TestCase):
         ok = automator.execute_multi_question(total_questions=3, options=["1", "2", "3"])
         self.assertTrue(ok)
 
-        # VK_RETURN (0x0D) should have been dispatched exactly ONCE
+        # VK_RETURN (0x0D) should have been dispatched exactly 3 times (Q1 Continue, Q2 Continue, Q3 Submit)
         from core_engine.constants import VK_RETURN
-        self.assertEqual(dispatched_keys, [VK_RETURN])
+        self.assertEqual(dispatched_keys, [VK_RETURN, VK_RETURN, VK_RETURN])
 
-        # Verify intermediate question logging confirmed skipping Enter
-        self.assertTrue(any("Intermediate question: Option 1 selected. Skipping Enter" in m for m in logged_messages))
-        self.assertTrue(any("Intermediate question: Option 2 selected. Skipping Enter" in m for m in logged_messages))
+        # Verify intermediate question logging confirmed Continue Enter
+        self.assertTrue(any("Advance [Continue] to Question 2" in m for m in logged_messages))
+        self.assertTrue(any("Advance [Continue] to Question 3" in m for m in logged_messages))
         # Verify final question logging confirmed submitting with Enter
         self.assertTrue(any("Submit ALL 3 answers on final question" in m for m in logged_messages))
 
+    def test_single_question_n1_selects_option_and_submits_without_skipping(self):
+        """Verify single question (N=1) flow selects option 1 and submits via Enter without triggering Skip button."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=1, options=["1"])
+        self.assertTrue(ok)
+        self.assertEqual(len(executed_steps), 4)
+        self.assertEqual(executed_steps[0][0], "Q1.1")
+        self.assertEqual(executed_steps[1][0], "Q1.2")
+        self.assertEqual(executed_steps[2][0], "Q1.3")
+        self.assertIn("[1]", executed_steps[2][1])
+        self.assertEqual(executed_steps[3][0], "Q1.4")
+        self.assertIn("Submit ALL 1 answers", executed_steps[3][1])
+
+        # Verify none of the steps activate or target Skip
+        for sc, desc in executed_steps:
+            self.assertNotIn("skip", desc.lower())
+
+    def test_execute_multi_question_n5_intermediate_continue_and_final_submit(self):
+        """Verify N=5 flow guarantees Q1->Continue, Q2->Continue, Q3->Continue, Q4->Continue, Q5->Submit."""
+        automator = GrillMeAutomator(
+            questions=5,
+            options_list=["1", "2", "3", "1", "2"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=5, options=["1", "2", "3", "1", "2"])
+        self.assertTrue(ok)
+        self.assertEqual(len(executed_steps), 20)
+
+        step_map = {sc: d for sc, d in executed_steps}
+        # Check every intermediate question executes Continue
+        self.assertIn("Advance [Continue] to Question 2", step_map["Q1.4"])
+        self.assertIn("Advance [Continue] to Question 3", step_map["Q2.4"])
+        self.assertIn("Advance [Continue] to Question 4", step_map["Q3.4"])
+        self.assertIn("Advance [Continue] to Question 5", step_map["Q4.4"])
+        # Check final question executes Submit
+        self.assertIn("Submit ALL 5 answers", step_map["Q5.4"])
+
+    def test_hybrid_cdp_helper_interaction_when_available(self):
+        """Verify hybrid CDP verification & assistance is actively called when CDP is available."""
+        mock_cdp = MagicMock()
+        mock_cdp.is_available.return_value = True
+        mock_cdp.connect.return_value = True
+        mock_cdp.get_questionnaire_status.return_value = {
+            "has_card": True,
+            "options_count": 2,
+            "current_question": 1,
+            "total_questions": 1,
+            "continue_btn_disabled": False,
+        }
+
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=1, options=["1"])
+        self.assertTrue(ok)
+
+        # Assert hybrid CDP helper methods were called
+        mock_cdp.ensure_skip_not_focused.assert_called()
+        mock_cdp.select_option.assert_called_with(1)
+        mock_cdp.wait_for_button_enabled.assert_called_with(timeout=1.5)
+        mock_cdp.focus_action_button.assert_called()
+
+    def test_hybrid_cdp_helper_interaction_when_offline(self):
+        """Verify hybrid CDP offline fallback: execution cleanly succeeds via physical keystrokes with 0 exceptions."""
+        mock_cdp = MagicMock()
+        mock_cdp.is_available.return_value = False
+        mock_cdp.connect.return_value = False
+
+        with patch("core_engine.cdp_helper.AntigravityCDPClient", return_value=mock_cdp):
+            automator = GrillMeAutomator(
+                questions=1,
+                options_list=["1"],
+                dry_run=True,
+                auto_focus=False,
+                auto_maximize=False,
+            )
+
+            executed_steps = []
+            automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+            automator.engine = "ctypes"
+
+            ok = automator.execute_multi_question(total_questions=1, options=["1"])
+            self.assertTrue(ok)
+            self.assertEqual(len(executed_steps), 4)
+            self.assertIn("Submit ALL 1 answers", executed_steps[3][1])
 
 if __name__ == "__main__":
     unittest.main()

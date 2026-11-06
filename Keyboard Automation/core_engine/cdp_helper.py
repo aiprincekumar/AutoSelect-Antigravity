@@ -262,6 +262,12 @@ class AntigravityCDPClient:
 
             const inputs = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
             const hasChecked = inputs.some(i => i.checked);
+            const active = document.activeElement;
+            const skipFocused = !!active && (
+                active === skipBtn ||
+                active.getAttribute('data-testid') === 'interaction-skip-button' ||
+                (active.innerText || '').trim().toLowerCase() === 'skip'
+            );
 
             return {
                 has_card: hasCard,
@@ -271,7 +277,8 @@ class AntigravityCDPClient:
                 options_count: labels.length,
                 has_checked_option: hasChecked,
                 continue_btn_text: btnText,
-                continue_btn_disabled: btnDisabled
+                continue_btn_disabled: btnDisabled,
+                skip_focused: skipFocused
             };
         })()
         """
@@ -281,13 +288,70 @@ class AntigravityCDPClient:
             "current_question": 1,
             "total_questions": 1,
             "has_checked_option": False,
-            "continue_btn_disabled": None
+            "continue_btn_disabled": None,
+            "skip_focused": False
         }
+
+    def ensure_skip_not_focused(self) -> bool:
+        """
+        Ensures the Skip button is NEVER focused in the DOM.
+        If activeElement is interaction-skip-button, blurs it immediately.
+        """
+        js = """
+        (() => {
+            const active = document.activeElement;
+            if (active && (
+                active.getAttribute('data-testid') === 'interaction-skip-button' ||
+                active.classList.contains('interaction-skip-button') ||
+                (active.innerText || '').trim().toLowerCase() === 'skip'
+            )) {
+                active.blur();
+                return true;
+            }
+            return false;
+        })()
+        """
+        return bool(self.eval_js(js))
+
+    def focus_action_button(self) -> bool:
+        """
+        Focuses the active Continue or Submit confirmation button on the questionnaire.
+        Also blurs the Skip button if active. Guarantees Enter activates Continue or Submit, NEVER Skip.
+        """
+        js = """
+        (() => {
+            const active = document.activeElement;
+            if (active && (
+                active.getAttribute('data-testid') === 'interaction-skip-button' ||
+                active.classList.contains('interaction-skip-button') ||
+                (active.innerText || '').trim().toLowerCase() === 'skip'
+            )) {
+                active.blur();
+            }
+
+            let btn = document.querySelector('[data-testid="interaction-continue-button"]')
+                   || document.querySelector('[data-testid="interaction-submit-button"]');
+            if (!btn) {
+                btn = Array.from(document.querySelectorAll('button')).find(b => {
+                    const t = (b.innerText || '').trim();
+                    return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                });
+            }
+
+            if (btn && !btn.disabled && !btn.classList.contains('pointer-events-none')) {
+                btn.focus();
+                return true;
+            }
+            return false;
+        })()
+        """
+        return bool(self.eval_js(js))
 
     def select_option(self, option_index: int = 1) -> bool:
         """
         Selects the specified 1-based option index in the visible questionnaire.
         Dispatches click, pointer events, and change event to update React state immediately.
+        Also ensures Skip button is blurred and option element receives focus.
         """
         opt_idx = max(0, option_index - 1)
         js = f"""
@@ -313,9 +377,28 @@ class AntigravityCDPClient:
                 }}
 
                 if (input) {{
-                    input.checked = true;
+                    try {{
+                        const setter = Object.getOwnPropertyDescriptor(window.HTMLInputElement.prototype, 'checked')?.set;
+                        if (setter) {{
+                            setter.call(input, true);
+                        }} else {{
+                            input.checked = true;
+                        }}
+                    }} catch(e) {{
+                        input.checked = true;
+                    }}
                     input.dispatchEvent(new Event('input', {{ bubbles: true }}));
                     input.dispatchEvent(new Event('change', {{ bubbles: true }}));
+                    try {{ input.focus(); }} catch(e) {{}}
+                }}
+
+                // Ensure Skip button is blurred if active
+                const active = document.activeElement;
+                if (active && (
+                    active.getAttribute('data-testid') === 'interaction-skip-button' ||
+                    (active.innerText || '').trim().toLowerCase() === 'skip'
+                )) {{
+                    active.blur();
                 }}
 
                 target.click();

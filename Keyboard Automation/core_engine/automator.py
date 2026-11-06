@@ -15,7 +15,7 @@ import time
 import json
 import logging
 from pathlib import Path
-from typing import Optional, Union, List, Tuple
+from typing import Optional, Union, List, Tuple, Any
 
 from .constants import (
     STEP_ID,
@@ -103,6 +103,7 @@ class GrillMeAutomator:
         inter_question_delay: Optional[float] = None,
         round_completion_pause: Optional[float] = None,
         countdown: Optional[float] = None,
+        cdp_client: Optional[Any] = None,
     ):
         self.config_path = config_path
         self.config = load_runtime_config(config_path)
@@ -130,6 +131,7 @@ class GrillMeAutomator:
         self.target_title: Optional[str] = None
         self.state_file = state_file
         self.conversation_id: Optional[str] = None
+        self.cdp_client = cdp_client
 
         # Resolve engine
         if engine == "pyautogui":
@@ -555,7 +557,12 @@ class GrillMeAutomator:
             settle_delay=self.settle_delay,
         )
 
-    def execute_multi_question(self, total_questions: Optional[int] = None, options: Optional[List[str]] = None) -> bool:
+    def execute_multi_question(
+        self,
+        total_questions: Optional[int] = None,
+        options: Optional[List[str]] = None,
+        cdp_client: Optional[Any] = None,
+    ) -> bool:
         """
         Executes deterministic multi-question keyboard automation loop for any N questions (1..N).
         Operates via pure native Windows ctypes SendInput physical keystrokes on the active GUI window:
@@ -565,14 +572,17 @@ class GrillMeAutomator:
               Settle pause (0.2s - 0.25s)
             * Step B / Q{q_idx}.2: Reverse tab into option button group (Shift + Tab)
               Settle pause (0.2s - 0.25s)
+              Hybrid CDP: Ensures Skip button is blurred if focused
             * Step C / Q{q_idx}.3: Send option key (e.g. '1', or per-question option)
               Settle pause (0.2s - 0.25s)
+              Hybrid CDP: Selects option in DOM, waits for button enabled, focuses Continue/Submit
             * Step D / Q{q_idx}.4: Enter Gate:
               - If q_idx < tq:
-                * Send Enter (Advances Continue to next question)
+                * Send Enter (Advances Continue to Question q_idx + 1)
                 * UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI
               - If q_idx == tq:
                 * Send Enter (Submits final batch answer)
+                * Round completion pause
         """
         tq = max(0, int(total_questions if total_questions is not None else self.total_questions))
         if tq == 0:
@@ -615,6 +625,20 @@ class GrillMeAutomator:
             logger.error("No valid automation engine available on this platform.")
             return False
 
+        # Initialize hybrid Chrome DevTools Protocol (CDP) client if available
+        cdp = cdp_client if cdp_client is not None else getattr(self, "cdp_client", None)
+        opened_cdp = False
+        if cdp is None and not self.dry_run:
+            try:
+                from .cdp_helper import AntigravityCDPClient
+                client = AntigravityCDPClient()
+                if client.is_available() and client.connect():
+                    cdp = client
+                    opened_cdp = True
+                    logger.info("Hybrid CDP client successfully connected for DOM verification & assist.")
+            except Exception as cdp_init_err:
+                logger.debug(f"Hybrid CDP client initialization bypassed: {cdp_init_err}")
+
         # Define settle pause, UI transition pause, and round completion pause directly from config.json
         settle_pause = max(0.001, self.post_keypress_delay) if not self.dry_run else 0.001
         transition_pause = max(0.001, self.inter_question_delay) if not self.dry_run else 0.001
@@ -636,7 +660,7 @@ class GrillMeAutomator:
                 if is_last:
                     logger.info(f"[Question {q_idx}/{tq}] Final Question: Selecting option {opt} and submitting with Enter!")
                 else:
-                    logger.info(f"[Question {q_idx}/{tq}] Intermediate Question: Selecting option {opt} (Enter deferred until final question {tq})...")
+                    logger.info(f"[Question {q_idx}/{tq}] Intermediate Question: Selecting option {opt} (Advance with Continue Enter)...")
 
                 # Step A / Q{q_idx}.1: Focus chat input (Ctrl + L)
                 if not self.skip_ctrl_l:
@@ -675,6 +699,13 @@ class GrillMeAutomator:
                 if not self.dry_run:
                     time.sleep(settle_pause)
 
+                # Hybrid CDP check: Blur Skip button if Shift+Tab landed on it (due to Submit initially disabled)
+                if cdp:
+                    try:
+                        cdp.ensure_skip_not_focused()
+                    except Exception as e:
+                        logger.debug(f"CDP skip blur check bypassed: {e}")
+
                 # Step C / Q{q_idx}.3: Select option key (e.g. '1', or per-question option)
                 vk_opt = get_option_vk(opt)
                 if self.engine == "ctypes":
@@ -693,31 +724,64 @@ class GrillMeAutomator:
                 if not self.dry_run:
                     time.sleep(settle_pause)
 
-                # Step D / Q{q_idx}.4: Golden Enter Gate (Press Enter ONLY on final question)
+                # Hybrid CDP Assistance & Verification (Ensure option selected, button enabled, Skip blurred, Submit/Continue focused)
+                if cdp:
+                    try:
+                        try:
+                            opt_num = int(opt)
+                        except (ValueError, TypeError):
+                            opt_num = 1
+                        cdp.select_option(opt_num)
+                        cdp.wait_for_button_enabled(timeout=1.5)
+                        cdp.ensure_skip_not_focused()
+                        cdp.focus_action_button()
+                    except Exception as e:
+                        logger.debug(f"Hybrid CDP option verification bypassed: {e}")
+
+                # Step D / Q{q_idx}.4: Golden Enter Gate (Intermediate: Advance [Continue]; Final: Submit)
                 if is_last:
-                    if not self.skip_enter:
-                        enter_desc = f"Press [Enter] (Submit ALL {tq} answers on final question)"
-                        self.log(f"[Question {q_idx}/{tq}] Press [Enter] (Submit ALL {tq} answers on final question)")
-                        if self.engine == "ctypes":
-                            self._execute_step(
-                                f"Q{q_idx}.4",
-                                enter_desc,
-                                lambda: self.dispatch_key(win32con.VK_RETURN)
-                            )
-                        elif self.engine == "pyautogui":
-                            self._execute_step(
-                                f"Q{q_idx}.4",
-                                enter_desc,
-                                lambda: self.dispatch_key(win32con.VK_RETURN)
-                            )
-                    else:
-                        logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
+                    enter_desc = f"Press [Enter] (Submit ALL {tq} answers on final question)"
+                    self.log(f"[Question {q_idx}/{tq}] Press [Enter] (Submit ALL {tq} answers on final question)")
                 else:
-                    self.log(f"[Question {q_idx}/{tq}] Intermediate question: Option {opt} selected. Skipping Enter (Enter will only be pressed on final question {tq}).")
-                    # UI transition pause (0.4s - 0.5s) so the next question card fully renders on GUI before next Ctrl+L
-                    if not self.dry_run:
-                        logger.info(f"UI transition pause ({transition_pause:.2f}s) allowing Question {q_idx + 1} card to render on GUI...")
-                        time.sleep(transition_pause)
+                    enter_desc = f"Press [Enter] (Advance [Continue] to Question {q_idx + 1})"
+                    self.log(f"[Question {q_idx}/{tq}] Press [Enter] (Advance [Continue] to Question {q_idx + 1})")
+
+                if not self.skip_enter:
+                    if self.engine == "ctypes":
+                        self._execute_step(
+                            f"Q{q_idx}.4",
+                            enter_desc,
+                            lambda: self.dispatch_key(win32con.VK_RETURN)
+                        )
+                    elif self.engine == "pyautogui":
+                        self._execute_step(
+                            f"Q{q_idx}.4",
+                            enter_desc,
+                            lambda: self.dispatch_key(win32con.VK_RETURN)
+                        )
+
+                    # Hybrid CDP Fallback: Verify button activation or click if Enter was consumed elsewhere
+                    if cdp and not self.dry_run:
+                        try:
+                            time.sleep(0.1)
+                            st = cdp.get_questionnaire_status()
+                            if is_last:
+                                if st and st.get("has_card") and not st.get("continue_btn_disabled"):
+                                    logger.info("Hybrid CDP fallback: Clicking Submit button to ensure questionnaire completes.")
+                                    cdp.click_continue_or_submit()
+                            else:
+                                if st and st.get("has_card") and st.get("current_question", 1) == q_idx and not st.get("continue_btn_disabled"):
+                                    logger.info(f"Hybrid CDP fallback: Clicking Continue button to ensure advance to Question {q_idx + 1}.")
+                                    cdp.click_continue_or_submit()
+                        except Exception as e:
+                            logger.debug(f"Hybrid CDP button click fallback bypassed: {e}")
+                else:
+                    logger.info(f"Step Q{q_idx}.4: Skipping Enter per user flag (--skip-enter)")
+
+                # If intermediate question, apply UI transition pause (0.4s - 0.5s) allowing next question card to render
+                if not is_last and not self.dry_run:
+                    logger.info(f"UI transition pause ({transition_pause:.2f}s) allowing Question {q_idx + 1} card to render on GUI...")
+                    time.sleep(transition_pause)
 
             # Round completion pause directly from config.json (step3_round_completion_pause_ms)
             if round_pause > 0 and not self.dry_run:
@@ -730,6 +794,12 @@ class GrillMeAutomator:
         except Exception as e:
             logger.error(f"[ERROR] Multi-question automation failed with error: {e}", exc_info=True)
             return False
+        finally:
+            if opened_cdp and cdp:
+                try:
+                    cdp.close()
+                except Exception:
+                    pass
 
     def execute(self) -> bool:
         """
