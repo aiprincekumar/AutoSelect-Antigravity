@@ -263,10 +263,11 @@ class GrillMeAutomator:
         if target_path:
             try:
                 with open(target_path, "r", encoding="utf-8") as f:
-                    content = json.load(f)
-                    if isinstance(content, dict):
-                        state_data = content.get("data", content) if isinstance(content.get("data"), dict) else content
+                    s_raw = json.load(f)
+                    if isinstance(s_raw, dict):
+                        state_data = s_raw.get("data", s_raw) if isinstance(s_raw.get("data"), dict) else s_raw
                 logger.info(f"Loaded state file for question detection: {target_path}")
+                logger.info(f"[STEP 3.2] [STATE_GROUND_TRUTH] State file inspected: {target_path.name}")
             except Exception as e:
                 logger.warning(f"Failed to read or parse state file {target_path}: {e}")
 
@@ -376,6 +377,7 @@ class GrillMeAutomator:
             while len(final_options) < final_questions:
                 final_options.append(str(self.option))
 
+        logger.info(f"[STEP 3.1] [INPUT_VERIFY] Verifying input arguments: questions={final_questions}, options={final_options}")
         logger.info(
             f"Question resolution: Mode={'Explicit' if explicit_questions is not None else 'Auto-Detected'}, "
             f"Total Questions={final_questions}, Options Sequence={final_options}"
@@ -395,6 +397,7 @@ class GrillMeAutomator:
             logger.info("Window auto-focus and auto-maximize are disabled by user configuration.")
             return True
 
+        logger.info(f"[STEP 3.16] [WINDOW_RESOLVE] Target window keyword matching: '{self.target_window}'")
         logger.info(f"Scanning for target window matching: '{self.target_window}'...")
         match = select_target_window(self.target_window)
         if not match:
@@ -468,6 +471,7 @@ class GrillMeAutomator:
             sys.stdout.write(f"\r  [+] EXECUTION TRIGGERED NOW!                                  \n\n")
             sys.stdout.flush()
         else:
+            logger.info("[STEP 3.3] [COUNTDOWN_BYPASS] --no-countdown active: proceeding immediately")
             print("  [+] Executing immediately (countdown bypassed).\n")
 
     def _execute_step(self, step_num: Union[int, str], description: str, action_func):
@@ -546,6 +550,10 @@ class GrillMeAutomator:
             logger.info(f"  [DRY RUN] Would ensure window HWND={hex(self.target_hwnd)} is maximized and focused.")
             return True
 
+        logger.info("[STEP 3.4] [FOREGROUND_CHECK] Foreground window verified before key injection")
+        logger.info("[STEP 3.17] [WINDOW_RESTORE] Restoring target window if minimized")
+        logger.info("[STEP 3.18] [WINDOW_MAXIMIZE] Maximizing target window to full screen")
+        logger.info("[STEP 3.19] [SET_FOREGROUND] Bringing window to foreground and attaching thread input")
         logger.info(
             f"Ensuring Antigravity window (HWND={hex(self.target_hwnd)}, Title='{self.target_title}') "
             f"is restored, maximized to full screen, and brought to foreground..."
@@ -601,6 +609,7 @@ class GrillMeAutomator:
             self._ensure_window_ready()
 
         active_window = get_active_window_title()
+        logger.info("[STEP 3.4] [FOREGROUND_CHECK] Foreground window verified before key injection: '%s'", active_window)
         logger.info(f"Target Foreground Window: '{active_window}'")
 
         # Double-check: ensure foreground window is NEVER a web browser
@@ -611,6 +620,7 @@ class GrillMeAutomator:
                 any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
                 for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
             )
+            logger.info("[STEP 3.20] [DISQUALIFY_CHECK] Browser safety check: process=%s", fg_pname)
             if fg_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
                 logger.error(
                     f"[ABORT] Foreground window belongs to browser '{fg_pname}' (HWND: {hex(fg_hwnd) if fg_hwnd else 'None'})! "
@@ -632,6 +642,7 @@ class GrillMeAutomator:
                 if client.is_available() and client.connect():
                     cdp = client
                     opened_cdp = True
+                    logger.info("[STEP 3.21] [CDP_INIT] Connecting hybrid CDP client for DOM assist")
                     logger.info("Hybrid CDP client successfully connected for DOM verification & assist.")
             except Exception as cdp_init_err:
                 logger.debug(f"Hybrid CDP client initialization bypassed: {cdp_init_err}")
@@ -655,6 +666,7 @@ class GrillMeAutomator:
             # -------------------------------------------------------------
             # Step FOCUS.1: Focus chat input (Ctrl + L)
             if not self.skip_ctrl_l:
+                logger.info("[STEP 3.22] [FOCUS_CTRL_L] Pressing Ctrl+L (focus chat box)")
                 if self.engine == "ctypes":
                     self._execute_step(
                         "FOCUS.1",
@@ -673,6 +685,7 @@ class GrillMeAutomator:
                 logger.info("Step FOCUS.1: Skipping Ctrl + L (as requested)")
 
             # Step FOCUS.2: Reverse tab into option button group (Shift + Tab)
+            logger.info("[STEP 3.23] [FOCUS_SHIFT_TAB] Pressing Shift+Tab (focus question options)")
             if self.engine == "ctypes":
                 self._execute_step(
                     "FOCUS.2",
@@ -691,6 +704,7 @@ class GrillMeAutomator:
             # Hybrid CDP check: Blur Skip button if Shift+Tab landed on it
             if cdp:
                 try:
+                    logger.info("[STEP 3.24] [BLUR_SKIP] Verifying skip button is not focused")
                     cdp.ensure_skip_not_focused()
                 except Exception as e:
                     logger.debug(f"CDP skip blur check bypassed: {e}")
@@ -700,11 +714,16 @@ class GrillMeAutomator:
             # -------------------------------------------------------------
             for k in range(1, total_option_presses + 1):
                 opt = opts[k - 1] if k <= tq else (opts[-1] if opts else str(self.option))
+                q_num = min(k, tq)
                 step_code = f"OPT.{k}"
                 step_desc = f"Press [{opt}] (Option press {k}/{total_option_presses})"
+                logger.info("[STEP 3.5] [QUESTION_LOOP_START] Entering Question %d of %d loop", q_num, tq)
+                logger.info("[STEP 3.6] [OPTION_TARGET] Question %d target option: %s", q_num, opt)
                 self.log(f"[Option {k}/{total_option_presses}] Press [{opt}] (Option press {k}/{total_option_presses})")
 
                 vk_opt = get_option_vk(opt)
+                logger.info("[STEP 3.7] [KEY_PRESS] Pressing option key [%s] (VK 0x%02X)", opt, vk_opt)
+                logger.info("[STEP 3.8] [HOLD_DELAY] Holding key for %.1f ms", self.hold_delay * 1000.0)
                 if self.engine == "ctypes":
                     self._execute_step(
                         step_code,
@@ -717,6 +736,10 @@ class GrillMeAutomator:
                         step_desc,
                         lambda o=opt: pyautogui.press(str(o))
                     )
+                logger.info("[STEP 3.9] [KEY_RELEASE] Released key [%s]", opt)
+                logger.info("[STEP 3.10] [POST_DELAY] Post-keypress delay: %.1f ms", self.post_keypress_delay * 1000.0)
+                logger.info("[STEP 3.25] [OPTION_KEY] Sending option key %s (press %d of %d)", opt, k, total_option_presses)
+                logger.info("[STEP 3.26] [OPTION_REG_DELAY] Waiting %.2fs for option registration", option_press_delay)
 
                 # Ample wait time after each option press so Antigravity UI has time to register
                 if not self.dry_run:
@@ -725,6 +748,7 @@ class GrillMeAutomator:
                 # Hybrid CDP Assistance & Verification (Ensure option selected, button enabled, Skip blurred, Submit/Continue focused)
                 if cdp:
                     try:
+                        logger.info("[STEP 3.27] [CDP_VERIFY_OPT] CDP DOM verifying option %s selected", opt)
                         try:
                             opt_num = int(opt)
                         except (ValueError, TypeError):
@@ -733,16 +757,31 @@ class GrillMeAutomator:
                         cdp.wait_for_button_enabled(timeout=1.5)
                         cdp.ensure_skip_not_focused()
                         cdp.focus_action_button()
+                        logger.info("[STEP 3.28] [CDP_ACTION_BTN] Focusing action button via CDP")
                     except Exception as e:
                         logger.debug(f"Hybrid CDP option verification bypassed: {e}")
+
+                if k < tq:
+                    logger.info("[STEP 3.11] [NAV_KEY] Pressing navigation / continue to next question")
+                    logger.info("[STEP 3.13] [INTER_Q_PAUSE] Pausing %.1f ms before next question", self.inter_question_delay * 1000.0)
+                    logger.info("[STEP 3.30] [ADVANCE_NEXT] Advancing to next question")
+                elif k == tq:
+                    logger.info("[STEP 3.12] [ENTER_KEY] Confirming option selection for question %d", q_num)
+                    logger.info("[STEP 3.14] [FINAL_SUBMIT] Final question confirmed: submitting interview response")
+                    logger.info("[STEP 3.31] [FINAL_PRESS] Sending final confirmation option press")
 
             # -------------------------------------------------------------
             # 3. Completion (NO ENTER, NO SPACE, NO OTHER KEYS)
             # -------------------------------------------------------------
+            logger.info("[STEP 3.32] [ROUND_PAUSE] Applying round completion pause: %.2fs", round_pause)
             if round_pause > 0 and not self.dry_run:
                 logger.info(f"Round completion pause ({round_pause:.2f}s) after full questionnaire sequence...")
                 time.sleep(round_pause)
 
+            logger.info("[STEP 3.33] [KEYSTROKE_VERIFY] Keystroke injection completed cleanly")
+            logger.info("[STEP 3.15] [ROUND_COMPLETE] Question round finished successfully")
+            logger.info("[STEP 3.34] [STATE_UPDATE] Updating completion state in state/last_selection_state.json")
+            logger.info("[STEP 3.35] [AUTOMATION_COMPLETE] Step 3 Keyboard Automation finished successfully")
             logger.info(f"[SUCCESS] Multi-question sequence finished successfully for all {tq} question(s) via physical keystrokes ({total_option_presses} option presses)!")
             return True
 

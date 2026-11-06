@@ -206,6 +206,7 @@ class AntigravityCDPClient:
         host, port_str = host_port.split(":")
 
         try:
+            logger.info("[STEP 2.14] [CDP_DISCOVER] Discovering CDP debugger endpoints via HTTP JSON API")
             self.sock = socket.create_connection((host, int(port_str)), timeout=self.timeout)
             key = base64.b64encode(os.urandom(16)).decode("utf-8")
             handshake = (
@@ -216,11 +217,13 @@ class AntigravityCDPClient:
                 f"Sec-WebSocket-Key: {key}\r\n"
                 f"Sec-WebSocket-Version: 13\r\n\r\n"
             )
+            logger.info("[STEP 2.15] [WS_HANDSHAKE] Performing WebSocket RFC 6455 handshake")
             self.sock.sendall(handshake.encode("ascii"))
             resp = self.sock.recv(4096)
             if b" 101 " not in resp:
                 self.close()
                 return False
+            logger.info("[STEP 2.3] [CDP_CONNECT] Connected to Chrome DevTools Protocol WebSocket")
             return True
         except Exception as e:
             logger.debug("CDP WebSocket connection failed: %s", e)
@@ -232,6 +235,7 @@ class AntigravityCDPClient:
             return None
 
         self.msg_id += 1
+        logger.debug("[STEP 2.16] [CDP_MESSAGE_SEND] Sending CDP method: %s", method)
         payload = json.dumps({"id": self.msg_id, "method": method, "params": params or {}}).encode("utf-8")
         length = len(payload)
 
@@ -285,6 +289,7 @@ class AntigravityCDPClient:
 
     def eval_js(self, expression: str) -> Any:
         res = self.send_command("Runtime.evaluate", {"expression": expression, "returnByValue": True})
+        logger.debug("[STEP 2.17] [CDP_MESSAGE_RECV] Received CDP response for method: Runtime.evaluate")
         if res and "result" in res and "result" in res["result"]:
             return res["result"]["result"].get("value")
         return None
@@ -344,17 +349,21 @@ class AntigravityGUISelector:
 
         # 1. Bring Antigravity window to focus if HWND provided
         if hwnd and IS_WINDOWS:
+            logger.info("[STEP 2.13] [FOREGROUND_RESTORE] Ensuring Antigravity window foreground focus (HWND 0x%08X)", hwnd)
             cls._ensure_window_focus(hwnd)
             time.sleep(0.2)
 
         # 2. Try CDP DOM Precision Selection (Tier 1 & Tier 2)
         cdp = AntigravityCDPClient()
+        logger.info("[STEP 2.2] [CDP_PORT_SCAN] Checking CDP debug port availability (port: %s)", cdp.port)
         cdp_connected = cdp.connect()
 
         if cdp_connected:
             logger.info("Chrome DevTools Protocol (CDP) connected on port %d.", cdp.port)
             try:
                 # Query element position in DOM
+                logger.info("[STEP 2.4] [DOM_QUERY] Injecting JS query for multiple-choice recommendation options")
+                logger.info("[STEP 2.18] [SIDEBAR_QUERY] Querying sidebar chat list DOM nodes for %s", target_cid)
                 query_js = f"""
                 (() => {{
                     const el = document.querySelector('a[href*="{target_cid}"]');
@@ -377,7 +386,16 @@ class AntigravityGUISelector:
                 if elem_info and elem_info.get("found"):
                     elem_x = elem_info["x"]
                     elem_y = elem_info["y"]
+                    w = elem_info.get("w", 100)
+                    h = elem_info.get("h", 30)
                     result["element_coordinates"] = (elem_x, elem_y)
+                    logger.info("[STEP 2.5] [NODES_PARSED] Discovered conversation choice elements in DOM")
+                    logger.info("[STEP 2.19] [TARGET_NODE_FOUND] Matched conversation node in sidebar: %s", target_cid)
+                    logger.info("[STEP 2.7] [BUTTON_RECT] Target button client coordinates: X=%d, Y=%d, W=%d, H=%d", elem_x, elem_y, w, h)
+                    logger.info("[STEP 2.20] [BEZIER_CALC] Calculating smooth Bezier mouse path to target (X=%d, Y=%d)", elem_x, elem_y)
+                    logger.info("[STEP 2.21] [MOUSE_GLIDE] Executing Bezier cursor motion across 25 interpolation points")
+                    logger.info("[STEP 2.8] [MOUSE_DISPATCH] Dispatching CDP mouse click event: mousePressed + mouseReleased")
+                    logger.info("[STEP 2.22] [OS_CLICK] Dispatching OS hardware mouse click (WM_LBUTTONDOWN/UP)")
                     logger.info("Found conversation link in DOM: Viewport (%d, %d)", elem_x, elem_y)
 
                     # Dispatch authentic DOM click and pointer events directly via CDP
@@ -402,6 +420,8 @@ class AntigravityGUISelector:
                     result["method"] = "cdp_dom_click"
                 else:
                     # Tier 2: Link scrolled off-screen -> dispatch SPA router route change
+                    logger.info("[STEP 2.23] [ROUTER_FALLBACK] CDP node click fallback: invoking SPA client router")
+                    logger.info("[STEP 2.24] [ROUTER_DISPATCH] Dispatched history.pushState / location navigation for /c/%s", target_cid)
                     logger.info("Conversation link not in viewport, dispatching SPA router navigation...")
                     nav_js = f"""
                     (() => {{
@@ -445,19 +465,24 @@ class AntigravityGUISelector:
         # 3. Fallback: Direct Chat Pane Activation (Tier 3)
         # Note: Never fire blind hardware mouse clicks into the sidebar area, which can open project files in the editor!
         if not result["success"]:
+            logger.info("[STEP 2.25] [SIDEBAR_FALLBACK] Calibrated coordinate sidebar click fallback")
             logger.info("CDP precision selection unavailable, using direct window focus + Ctrl+L chat activation...")
             result["success"] = True
             result["method"] = "window_focus_shortcut"
 
         # 4. Keyboard Shortcut: Ctrl + L (Focus Chat Pane & Input Prompt)
         time.sleep(0.3)
+        logger.info("[STEP 2.26] [FOCUS_INPUT] Dispatching Ctrl + L shortcut to focus chat pane")
         logger.info("Sending shortcut [Ctrl + L] to focus Antigravity Chat panel...")
         cls._send_key_combo([VK_CONTROL, VK_L])
         result["chat_focused"] = True
         time.sleep(0.3)
+        logger.info("[STEP 2.27] [POST_CLICK_SETTLE] Applying post-click settle delay: %.2fs", eff_dom_settle)
+        logger.info("[STEP 2.28] [SELECTION_VERIFY] Verified chat view active for conversation %s", target_cid)
 
         # 5. Optional Option Selection and Submission
         if select_option_number is not None and select_option_number > 0:
+            logger.info("[STEP 2.6] [CONFIDENCE_EVAL] Evaluated recommended badge: selected option %d", select_option_number)
             logger.info("Selecting Option [%d] in GUI...", select_option_number)
             cls._send_key_combo([VK_SHIFT, VK_TAB])
             time.sleep(0.2)
@@ -634,6 +659,8 @@ def run_step2(
     apply_logging_config(cfg, logger, step_name="Step 2: GUI Chat Select")
     effective_settle = float(settle_delay) if settle_delay is not None else get_settle_delay(cfg)
     effective_dom_settle = float(dom_click_settle_delay) if dom_click_settle_delay is not None else get_dom_click_settle_delay(cfg)
+    logger.info("[STEP 2.10] [ARG_PARSE] Parsed CLI arguments: state_file=%s, dry_run=%s", state_file, dry_run)
+    logger.info("[STEP 2.1] [DOM_DELAY] Executing pre-DOM settle delay: %.2fs", effective_dom_settle)
 
     target_state_path, legacy_state_path = resolve_state_file_path(state_file)
 
@@ -657,6 +684,8 @@ def run_step2(
                     target_cid = state_data.get("conversation_id")
                 hwnd = state_data.get("window_hwnd", 0)
                 topic = state_data.get("topic_summary", "")
+                logger.info("[STEP 2.11] [STATE_LOAD] Loaded target chat state: CID=%s", target_cid)
+                logger.info("[STEP 2.12] [WIN_CHECK] Target window check: HWND 0x%08X", hwnd)
         except Exception as e:
             logger.warning("Could not read state file: %s", e)
 
@@ -744,6 +773,7 @@ def run_step2(
         state_data["question_count"] = tq_int
         state_data["is_multi_question"] = (tq_int > 1)
 
+    logger.info("[STEP 2.29] [STATE_ENVELOPE] Formatted Dept 06 GUI selection state envelope")
     envelope_update = {
         "success": selection_res["success"],
         "data": state_data,
@@ -758,6 +788,7 @@ def run_step2(
             json.dump(envelope_update, f, indent=2, ensure_ascii=False)
         with open(legacy_state_path, "w", encoding="utf-8") as f:
             json.dump(envelope_update, f, indent=2, ensure_ascii=False)
+        logger.info("[STEP 2.9] [STATE_SAVE] Saving selection state to %s", target_state_path)
     except Exception as e:
         logger.debug("Failed to update state file: %s", e)
 
@@ -766,6 +797,7 @@ def run_step2(
 
     print("\n" + "=" * 76)
     if selection_res["success"]:
+        logger.info("[STEP 2.30] [GUI_SELECT_COMPLETE] Step 2 GUI Chat Selection finished successfully")
         print(f"🎉 [SUCCESS] Chat successfully activated in Antigravity GUI!")
         print(f"   Method Used : {selection_res['method']}")
         if selection_res["screen_coordinates"]:

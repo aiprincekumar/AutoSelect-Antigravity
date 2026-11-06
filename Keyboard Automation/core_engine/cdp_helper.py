@@ -223,50 +223,92 @@ class AntigravityCDPClient:
                       || document.querySelector('[data-testid="ask-question-header-text"]')?.closest('div.border')
                       || document.querySelector('[data-testid="ask-question-header-text"]')?.parentElement?.parentElement;
 
-            let continueBtn = document.querySelector('[data-testid="interaction-continue-button"]')
-                           || document.querySelector('[data-testid="interaction-submit-button"]');
+            let continueBtn = null;
+            let skipBtn = null;
+            let headerText = null;
+            let labels = [];
+
+            if (card) {
+                continueBtn = card.querySelector('[data-testid="interaction-continue-button"]')
+                           || card.querySelector('[data-testid="interaction-submit-button"]')
+                           || Array.from(card.querySelectorAll('button')).find(b => {
+                               const t = (b.innerText || '').trim();
+                               return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                           });
+                skipBtn = card.querySelector('[data-testid="interaction-skip-button"]')
+                       || Array.from(card.querySelectorAll('button')).find(b => (b.innerText || '').trim().toLowerCase() === 'skip');
+                headerText = card.querySelector('[data-testid="ask-question-header-text"]');
+                labels = Array.from(card.querySelectorAll('[data-testid="ask-question-option"]'));
+                if (labels.length === 0) labels = Array.from(card.querySelectorAll('[role="radio"]'));
+                if (labels.length === 0) labels = Array.from(card.querySelectorAll('label[for*="ask-opt"], label[for*="opt"]'));
+                if (labels.length === 0) labels = Array.from(card.querySelectorAll('input[type="radio"]'));
+            }
+
             if (!continueBtn) {
-                continueBtn = Array.from(document.querySelectorAll('button')).find(b => {
-                    const t = (b.innerText || '').trim();
-                    return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
-                });
+                continueBtn = document.querySelector('[data-testid="interaction-continue-button"]')
+                           || document.querySelector('[data-testid="interaction-submit-button"]')
+                           || Array.from(document.querySelectorAll('button')).find(b => {
+                               const t = (b.innerText || '').trim();
+                               return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                           });
             }
-
-            const skipBtn = document.querySelector('[data-testid="interaction-skip-button"]');
-            const headerText = document.querySelector('[data-testid="ask-question-header-text"]');
-
-            let labels = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
+            if (!skipBtn) {
+                skipBtn = document.querySelector('[data-testid="interaction-skip-button"]')
+                       || Array.from(document.querySelectorAll('button')).find(b => (b.innerText || '').trim().toLowerCase() === 'skip');
+            }
+            if (!headerText) {
+                headerText = document.querySelector('[data-testid="ask-question-header-text"]');
+            }
             if (labels.length === 0) {
-                labels = Array.from(document.querySelectorAll('label[for*="ask-opt"]'));
-            }
-            if (labels.length === 0) {
-                labels = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
-            }
-
-            let currentQ = 1;
-            let totalQ = 1;
-            const fullText = (headerText ? headerText.innerText + ' ' : '') + (card ? card.innerText + ' ' : '') + document.body.innerText;
-            const match = fullText.match(/\\b([1-9]\\d*)\\s*(?:of|\\/)\\s*([1-9]\\d*)\\b/i)
-                       || fullText.match(/\\[.*?\\b([1-9]\\d*)\\s*(?:of|\\/)\\s*([1-9]\\d*)\\b.*?\\]/i);
-            if (match) {
-                currentQ = parseInt(match[1]);
-                totalQ = parseInt(match[2]);
-            } else if (labels.length > 0) {
-                currentQ = 1;
-                totalQ = 1;
+                labels = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
+                if (labels.length === 0) labels = Array.from(document.querySelectorAll('[role="radio"]'));
+                if (labels.length === 0) labels = Array.from(document.querySelectorAll('label[for*="ask-opt"], label[for*="opt"]'));
+                if (labels.length === 0) labels = Array.from(document.querySelectorAll('input[type="radio"]'));
             }
 
             const hasCard = !!card || !!continueBtn || !!skipBtn || labels.length > 0;
+
+            let currentQ = 1;
+            let totalQ = 1;
+            if (hasCard) {
+                const cardText = (headerText ? headerText.innerText + ' ' : '') + (card ? card.innerText : '');
+                const match = cardText ? (
+                    cardText.match(/\\b([1-9]\\d*)\\s*(?:of|\\/)\\s*([1-9]\\d*)\\b/i) ||
+                    cardText.match(/\\[.*?\\b([1-9]\\d*)\\s*(?:of|\\/)\\s*([1-9]\\d*)\\b.*?\\]/i)
+                ) : null;
+                if (match) {
+                    currentQ = parseInt(match[1]);
+                    totalQ = parseInt(match[2]);
+                } else if (labels.length > 0) {
+                    currentQ = 1;
+                    totalQ = 1;
+                }
+            } else {
+                currentQ = 0;
+                totalQ = 0;
+            }
+
             const btnDisabled = continueBtn ? (continueBtn.disabled || continueBtn.classList.contains('pointer-events-none')) : null;
             const btnText = continueBtn ? continueBtn.innerText.replace(/\\n/g, ' ').trim() : null;
 
-            const inputs = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
+            const inputs = card ? Array.from(card.querySelectorAll('input[type="radio"]')) : Array.from(document.querySelectorAll('input[type="radio"]'));
             const hasChecked = inputs.some(i => i.checked);
             const active = document.activeElement;
             const skipFocused = !!active && (
                 active === skipBtn ||
                 active.getAttribute('data-testid') === 'interaction-skip-button' ||
                 (active.innerText || '').trim().toLowerCase() === 'skip'
+            );
+            const chatInputFocused = !!active && (
+                active.tagName === 'TEXTAREA' ||
+                (active.tagName === 'INPUT' && !['radio', 'checkbox', 'button'].includes((active.getAttribute('type') || '').toLowerCase())) ||
+                active.isContentEditable ||
+                active.getAttribute('contenteditable') === 'true' ||
+                !!active.closest?.('[contenteditable="true"]') ||
+                active.getAttribute('role') === 'textbox' ||
+                active.getAttribute('role') === 'combobox' ||
+                (active.getAttribute('data-testid') || '').toLowerCase().includes('input') ||
+                (active.getAttribute('data-testid') || '').toLowerCase().includes('chat')
             );
 
             return {
@@ -278,19 +320,81 @@ class AntigravityCDPClient:
                 has_checked_option: hasChecked,
                 continue_btn_text: btnText,
                 continue_btn_disabled: btnDisabled,
-                skip_focused: skipFocused
+                skip_focused: skipFocused,
+                chat_input_focused: chatInputFocused
             };
         })()
         """
         res = self.eval_js(js)
         return res if isinstance(res, dict) else {
             "has_card": False,
-            "current_question": 1,
-            "total_questions": 1,
+            "current_question": 0,
+            "total_questions": 0,
+            "question_text": None,
+            "options_count": 0,
             "has_checked_option": False,
+            "continue_btn_text": None,
             "continue_btn_disabled": None,
-            "skip_focused": False
+            "skip_focused": False,
+            "chat_input_focused": False
         }
+
+    def is_chat_input_focused(self) -> bool:
+        """
+        Checks if the activeElement in DOM is the chat input box
+        (textarea, contenteditable, role='textbox'/'combobox', or input editor).
+        """
+        js = """
+        (() => {
+            const active = document.activeElement;
+            if (!active) return false;
+            if (active.tagName === 'TEXTAREA') return true;
+            if (active.tagName === 'INPUT') {
+                const type = (active.getAttribute('type') || '').toLowerCase();
+                if (type !== 'radio' && type !== 'checkbox' && type !== 'button') return true;
+            }
+            if (active.isContentEditable || active.getAttribute('contenteditable') === 'true') return true;
+            if (active.closest && !!active.closest('[contenteditable="true"]')) return true;
+            const role = (active.getAttribute('role') || '').toLowerCase();
+            if (role === 'textbox' || role === 'combobox') return true;
+            const testId = (active.getAttribute('data-testid') || '').toLowerCase();
+            if (testId.includes('input') || testId.includes('chat') || testId.includes('editor')) return true;
+            return false;
+        })()
+        """
+        return bool(self.eval_js(js))
+
+    def blur_chat_input(self) -> bool:
+        """
+        Blurs the activeElement if it is a chat input box, textarea, or editable element,
+        preventing stray keystrokes from typing into chat.
+        """
+        js = """
+        (() => {
+            const active = document.activeElement;
+            let blurred = false;
+            if (active && (
+                active.tagName === 'TEXTAREA' ||
+                (active.tagName === 'INPUT' && !['radio', 'checkbox', 'button'].includes((active.getAttribute('type') || '').toLowerCase())) ||
+                active.isContentEditable ||
+                active.getAttribute('contenteditable') === 'true' ||
+                (active.closest && !!active.closest('[contenteditable="true"]')) ||
+                active.getAttribute('role') === 'textbox' ||
+                active.getAttribute('role') === 'combobox' ||
+                (active.getAttribute('data-testid') || '').toLowerCase().includes('input')
+            )) {
+                active.blur();
+                blurred = true;
+            }
+            const ce = document.querySelector('[contenteditable="true"]');
+            if (ce && ce === document.activeElement) {
+                ce.blur();
+                blurred = true;
+            }
+            return blurred;
+        })()
+        """
+        return bool(self.eval_js(js))
 
     def ensure_skip_not_focused(self) -> bool:
         """
@@ -329,13 +433,26 @@ class AntigravityCDPClient:
                 active.blur();
             }
 
-            let btn = document.querySelector('[data-testid="interaction-continue-button"]')
-                   || document.querySelector('[data-testid="interaction-submit-button"]');
+            const card = document.querySelector('[data-testid="interaction-takeover-card"]')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.closest('div.border')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.parentElement?.parentElement;
+
+            let btn = null;
+            if (card) {
+                btn = card.querySelector('[data-testid="interaction-continue-button"]')
+                   || card.querySelector('[data-testid="interaction-submit-button"]')
+                   || Array.from(card.querySelectorAll('button')).find(b => {
+                       const t = (b.innerText || '').trim();
+                       return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                   });
+            }
             if (!btn) {
-                btn = Array.from(document.querySelectorAll('button')).find(b => {
-                    const t = (b.innerText || '').trim();
-                    return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
-                });
+                btn = document.querySelector('[data-testid="interaction-continue-button"]')
+                   || document.querySelector('[data-testid="interaction-submit-button"]')
+                   || Array.from(document.querySelectorAll('button')).find(b => {
+                       const t = (b.innerText || '').trim();
+                       return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                   });
             }
 
             if (btn && !btn.disabled && !btn.classList.contains('pointer-events-none')) {
@@ -351,17 +468,42 @@ class AntigravityCDPClient:
         """
         Selects the specified 1-based option index in the visible questionnaire.
         Dispatches click, pointer events, and change event to update React state immediately.
-        Also ensures Skip button is blurred and option element receives focus.
+        Also ensures Skip button and chat input are blurred and option element receives focus.
         """
         opt_idx = max(0, option_index - 1)
         js = f"""
         (() => {{
-            let options = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
-            if (options.length === 0) {{
-                options = Array.from(document.querySelectorAll('label[for*="ask-opt"]'));
+            // 1. Blur chat input to ensure no focus remains in editor
+            const active = document.activeElement;
+            if (active && (
+                active.tagName === 'TEXTAREA' ||
+                active.isContentEditable ||
+                active.getAttribute('contenteditable') === 'true' ||
+                (active.closest && !!active.closest('[contenteditable="true"]')) ||
+                active.getAttribute('role') === 'textbox' ||
+                active.getAttribute('role') === 'combobox'
+            )) {{
+                active.blur();
+            }}
+
+            // 2. Locate questionnaire card or container
+            const card = document.querySelector('[data-testid="interaction-takeover-card"]')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.closest('div.border')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.parentElement?.parentElement;
+
+            // 3. Find option elements
+            let options = [];
+            if (card) {{
+                options = Array.from(card.querySelectorAll('[data-testid="ask-question-option"]'));
+                if (options.length === 0) options = Array.from(card.querySelectorAll('[role="radio"]'));
+                if (options.length === 0) options = Array.from(card.querySelectorAll('label[for*="ask-opt"], label[for*="opt"]'));
+                if (options.length === 0) options = Array.from(card.querySelectorAll('input[type="radio"]'));
             }}
             if (options.length === 0) {{
-                options = Array.from(document.querySelectorAll('input[type="radio"][id*="ask-opt"]'));
+                options = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
+                if (options.length === 0) options = Array.from(document.querySelectorAll('[role="radio"]'));
+                if (options.length === 0) options = Array.from(document.querySelectorAll('label[for*="ask-opt"], label[for*="opt"]'));
+                if (options.length === 0) options = Array.from(document.querySelectorAll('input[type="radio"]'));
             }}
 
             if (options.length > {opt_idx}) {{
@@ -393,12 +535,12 @@ class AntigravityCDPClient:
                 }}
 
                 // Ensure Skip button is blurred if active
-                const active = document.activeElement;
-                if (active && (
-                    active.getAttribute('data-testid') === 'interaction-skip-button' ||
-                    (active.innerText || '').trim().toLowerCase() === 'skip'
+                const curActive = document.activeElement;
+                if (curActive && (
+                    curActive.getAttribute('data-testid') === 'interaction-skip-button' ||
+                    (curActive.innerText || '').trim().toLowerCase() === 'skip'
                 )) {{
-                    active.blur();
+                    curActive.blur();
                 }}
 
                 target.click();
@@ -422,17 +564,31 @@ class AntigravityCDPClient:
         """
         js = """
         (() => {
-            let btn = document.querySelector('[data-testid="interaction-continue-button"]')
-                   || document.querySelector('[data-testid="interaction-submit-button"]');
+            const card = document.querySelector('[data-testid="interaction-takeover-card"]')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.closest('div.border')
+                      || document.querySelector('[data-testid="ask-question-header-text"]')?.parentElement?.parentElement;
+
+            let btn = null;
+            if (card) {
+                btn = card.querySelector('[data-testid="interaction-continue-button"]')
+                   || card.querySelector('[data-testid="interaction-submit-button"]')
+                   || Array.from(card.querySelectorAll('button')).find(b => {
+                       const t = (b.innerText || '').trim();
+                       return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                   });
+            }
             if (!btn) {
-                btn = Array.from(document.querySelectorAll('button')).find(b => {
-                    const t = (b.innerText || '').trim();
-                    return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
-                });
+                btn = document.querySelector('[data-testid="interaction-continue-button"]')
+                   || document.querySelector('[data-testid="interaction-submit-button"]')
+                   || Array.from(document.querySelectorAll('button')).find(b => {
+                       const t = (b.innerText || '').trim();
+                       return (t.includes('Continue') || t.includes('Submit')) && !t.includes('Skip');
+                   });
             }
 
             if (btn && !btn.disabled && !btn.classList.contains('pointer-events-none')) {
                 btn.scrollIntoView({ block: 'nearest' });
+                btn.focus();
                 btn.click();
                 const opts = { bubbles: true, cancelable: true, view: window, buttons: 1 };
                 btn.dispatchEvent(new PointerEvent('pointerdown', opts));
@@ -457,7 +613,7 @@ class AntigravityCDPClient:
                 curr_q = st.get("current_question", 1)
                 if total_q == 1 or curr_q == expected_question:
                     return True
-            time.sleep(0.1)
+            time.sleep(0.08)
         return False
 
     def wait_for_button_enabled(self, timeout: float = 2.5) -> bool:
@@ -475,17 +631,21 @@ class AntigravityCDPClient:
         """
         Waits for UI wizard to transition after clicking Continue or Submit.
         If is_last: waits for card to disappear.
-        If not is_last: waits for current_question to increment.
+        If not is_last: waits for current_question to increment or card to close.
         """
         deadline = time.time() + timeout
         while time.time() < deadline:
             st = self.get_questionnaire_status()
-            if is_last:
+            if is_last or not st.get("has_card"):
                 if not st.get("has_card"):
                     return True
             else:
                 curr_q = st.get("current_question", 1)
                 if curr_q > previous_question:
                     return True
-            time.sleep(0.1)
-        return True
+            time.sleep(0.08)
+        st = self.get_questionnaire_status()
+        if is_last:
+            return not st.get("has_card")
+        curr_q = st.get("current_question", 1)
+        return curr_q > previous_question or not st.get("has_card")

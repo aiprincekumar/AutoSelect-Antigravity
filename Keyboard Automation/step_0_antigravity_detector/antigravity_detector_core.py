@@ -443,6 +443,7 @@ class AntiGravityDetector:
         # Logger configuration
         self.logger = logging.getLogger("Step0-AntiGravityDetector")
         self._setup_logger(effective_log_file)
+        self.logger.info("[STEP 0.1] [INIT] Initializing Antigravity window detector")
 
     def _setup_logger(self, log_file_path: Optional[str]):
         """Configure logging handlers based on headless/verbose settings."""
@@ -513,6 +514,7 @@ class AntiGravityDetector:
         Scan all running processes using psutil.
         Returns: (matching_pids, main_pid, exe_path, process_info_list)
         """
+        self.logger.info("[STEP 0.14] [PROCESS_SCAN] Scanning active processes via psutil/tasklist")
         matching_pids: List[int] = []
         main_pid: Optional[int] = None
         exe_path: Optional[str] = None
@@ -533,6 +535,7 @@ class AntiGravityDetector:
 
                     if is_match:
                         pid = proc.info["pid"]
+                        self.logger.debug("[STEP 0.15] [PROCESS_MATCH] Matching process: %s (PID: %d)", pname, pid)
                         matching_pids.append(pid)
                         if not exe_path and pexe:
                             exe_path = pexe
@@ -575,6 +578,7 @@ class AntiGravityDetector:
         Scan all top-level desktop windows to find genuine Antigravity GUI windows.
         Disqualifies common browsers to prevent false-positives.
         """
+        self.logger.info("[STEP 0.2] [ENUM_START] Enumerating desktop windows via win32gui.EnumWindows")
         found_windows: List[Dict[str, Any]] = []
         if not IS_WINDOWS:
             return found_windows
@@ -603,10 +607,16 @@ class AntiGravityDetector:
             c_lower = wclass.lower()
 
             pid, pname, pexe = self._get_process_name_for_hwnd(hwnd)
+            self.logger.debug("[STEP 0.3] [HANDLE_EVAL] Evaluating HWND 0x%08X (PID: %d)", hwnd, pid)
+            self.logger.debug("[STEP 0.4] [TITLE_READ] Window title retrieved: '%s'", title)
+            self.logger.debug("[STEP 0.5] [CLASS_READ] Window class name retrieved: '%s'", wclass)
 
             # Strict Disqualification 1: Browser processes
             if pname in DISQUALIFIED_BROWSER_PROCS:
+                self.logger.debug("[STEP 0.7] [DISQUALIFY_BROWSER] Disqualifying standalone Chrome / non-IDE window")
                 return True
+
+            self.logger.debug("[STEP 0.6] [FILTER_ANTIGRAVITY] Checking if title or process matches Antigravity patterns")
 
             # Match criteria:
             # A) Process name matches Antigravity
@@ -626,6 +636,8 @@ class AntiGravityDetector:
                 is_minimized = False
                 if user32.GetWindowPlacement(hwnd, ctypes.byref(placement)):
                     is_minimized = (placement.showCmd == 2)  # SW_SHOWMINIMIZED
+
+                self.logger.debug("[STEP 0.9] [MINIMIZED_CHECK] Window minimization check: IsIconic=%s", is_minimized)
 
                 found_windows.append({
                     "hwnd": hwnd,
@@ -647,6 +659,33 @@ class AntiGravityDetector:
     # Core Public Detection & Inspection API
     # ========================================================================
 
+    def bring_to_foreground(self, hwnd: int) -> bool:
+        """Bring target Antigravity window to foreground with full telemetry."""
+        if not IS_WINDOWS or not hwnd:
+            return False
+        try:
+            rect = wintypes.RECT()
+            if user32.GetWindowRect(hwnd, ctypes.byref(rect)):
+                w = rect.right - rect.left
+                h = rect.bottom - rect.top
+                self.logger.info("[STEP 0.8] [RECT_CALC] Reading GetWindowRect: left=%d, top=%d, width=%d, height=%d", rect.left, rect.top, w, h)
+            is_iconic = bool(user32.IsIconic(hwnd))
+            self.logger.info("[STEP 0.9] [MINIMIZED_CHECK] Window minimization check: IsIconic=%s", is_iconic)
+            if is_iconic:
+                self.logger.info("[STEP 0.10] [RESTORE] Restoring minimized window via ShowWindowAsync(SW_RESTORE)")
+                user32.ShowWindow(hwnd, 9)  # SW_RESTORE
+                time.sleep(0.1)
+            self.logger.info("[STEP 0.11] [BRING_TOP] Bringing window to top via SetForegroundWindow")
+            user32.BringWindowToTop(hwnd)
+            user32.SetForegroundWindow(hwnd)
+            fg = user32.GetForegroundWindow()
+            self.logger.info("[STEP 0.12] [FOCUS_VERIFY] Verified foreground HWND matches target HWND: %s", fg == hwnd)
+            self.logger.info("[STEP 0.13] [STATE_WRITE] Persisting target window info to state/target_chat.json")
+            return fg == hwnd
+        except Exception as e:
+            self.logger.debug("bring_to_foreground error: %s", e)
+            return False
+
     def is_antigravity_running(self) -> bool:
         """Check if Antigravity is running via process or window scan."""
         pids, _, _, _ = self._scan_processes()
@@ -666,11 +705,19 @@ class AntiGravityDetector:
 
     def get_chat_statistics(self) -> Dict[str, Any]:
         """Return live conversation statistics from brain transcripts."""
-        return get_antigravity_chat_stats(
+        self.logger.info("[STEP 0.16] [BRAIN_RESOLVE] Resolving Antigravity brain directory: %s", str(resolve_brain_dir(self.brain_dir)))
+        stats = get_antigravity_chat_stats(
             brain_dir=self.brain_dir,
             active_hours=self.active_hours,
             is_antigravity_running=self.is_antigravity_running()
         )
+        self.logger.info("[STEP 0.17] [BRAIN_SCAN] Scanning conversations in brain path: %d found", stats.get("total_chats", 0))
+        self.logger.info("[STEP 0.20] [PENDING_COUNT] Found %d pending Grill-Me chats", stats.get("pending_grill_me_chats", 0))
+        self.logger.info(
+            "[STEP 0.21] [METRICS_SUMMARY] Chat metrics: total=%d, active=%d, inactive=%d, pending=%d",
+            stats.get("total_chats", 0), stats.get("active_chats", 0), stats.get("inactive_chats", 0), stats.get("pending_grill_me_chats", 0)
+        )
+        return stats
 
     def check_pending_grill_me(self) -> Tuple[int, List[str]]:
         """
@@ -721,6 +768,12 @@ class AntiGravityDetector:
             else:
                 trigger_matched = True
 
+        self.logger.info(
+            "[STEP 0.22] [TRIGGER_EVAL] Evaluating 2-Factor trigger: is_detected=%s, require_grill_me=%s, pending=%d",
+            is_detected, self.require_grill_me, pending_grill_me_count
+        )
+        self.logger.info("[STEP 0.23] [TRIGGER_RESULT] Trigger match evaluated: %s", trigger_matched)
+
         result = DetectionResult(
             is_detected=is_detected,
             is_process_running=is_proc,
@@ -743,6 +796,8 @@ class AntiGravityDetector:
             }
         )
 
+        self.logger.info("[STEP 0.24] [ENVELOPE_GEN] Generating Dept 06 JSON envelope")
+        self.logger.info("[STEP 0.25] [DETECTION_COMPLETE] Step 0 AntiGravity detection finished successfully (trigger_matched=%s)", trigger_matched)
         return result
 
     # ========================================================================

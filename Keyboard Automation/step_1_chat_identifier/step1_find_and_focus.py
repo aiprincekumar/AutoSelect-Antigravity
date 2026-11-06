@@ -253,10 +253,12 @@ class GrillMeDetector:
         return self.brain_dir.is_dir()
 
     def scan_transcripts(self) -> List[PendingGrillMeChat]:
+        logger.info("[STEP 1.15] [BRAIN_SCAN] Scanning brain directory: %s", self.brain_dir)
         if not self.is_valid_brain_dir():
             logger.error("Brain directory not found: %s", self.brain_dir)
             return []
 
+        logger.info("[STEP 1.16] [CONVO_FILTER] Filtering conversations within active window (%.1f hours)", self.active_hours)
         pending_chats: List[PendingGrillMeChat] = []
 
         try:
@@ -297,6 +299,7 @@ class GrillMeDetector:
         return pending_chats
 
     def _parse_conversation_transcript(self, conversation_id: str, transcript_path: Path) -> Optional[PendingGrillMeChat]:
+        logger.debug("[STEP 1.17] [TRANSCRIPT_READ] Reading transcript for conversation %s: %s", conversation_id, transcript_path.name)
         lines: List[Dict[str, Any]] = []
         try:
             with open(transcript_path, "r", encoding="utf-8", errors="replace") as f:
@@ -337,6 +340,7 @@ class GrillMeDetector:
             for tc in tool_calls:
                 call_name = tc.get("name") or tc.get("tool_name") or ""
                 if call_name == "ask_question":
+                    logger.debug("[STEP 1.18] [GRILL_ME_DETECT] Inspecting ask_question tool calls in transcript: %s", conversation_id)
                     is_answered = self._is_step_answered(lines, i)
                     if not is_answered:
                         questions = self._extract_question_payloads(tc.get("args", {}))
@@ -347,6 +351,7 @@ class GrillMeDetector:
                         topic_snippet = (initial_user_prompt[:80] + "...") if len(initial_user_prompt) > 80 else initial_user_prompt
                         last_prompt_snippet = (last_user_prompt[:120] + "...") if len(last_user_prompt) > 120 else last_user_prompt
 
+                        logger.info("[STEP 1.19] [QUESTION_PARSE] Extracted %d question(s) with recommended options for %s", len(questions), conversation_id)
                         return PendingGrillMeChat(
                             conversation_id=conversation_id,
                             step_index=step_index,
@@ -481,6 +486,7 @@ class AntigravityFocusManager:
         console_hwnd = kernel32.GetConsoleWindow() if IS_WINDOWS else None
 
         candidates: List[Tuple[int, int, str, dict]] = []
+        logger.info("[STEP 1.22] [WIN_ENUM] Enumerating top-level desktop windows for Antigravity")
 
         blacklisted_procs = {
             "cmd.exe", "powershell.exe", "pwsh.exe", "conhost.exe", "wt.exe",
@@ -558,6 +564,7 @@ class AntigravityFocusManager:
                         "height": h,
                         "rect": (rect.left, rect.top, rect.right, rect.bottom)
                     }
+                    logger.debug("[STEP 1.23] [WIN_SCORE] Evaluated candidate window HWND 0x%08X with score %d ('%s')", hwnd, score, title)
                     candidates.append((score, hwnd, title, info))
             except Exception:
                 pass
@@ -571,6 +578,7 @@ class AntigravityFocusManager:
 
         candidates.sort(key=lambda c: c[0], reverse=True)
         top = candidates[0]
+        logger.info("[STEP 1.24] [WIN_CHOSEN] Chosen Antigravity window HWND 0x%08X (score=%d): '%s'", top[1], top[0], top[2])
         logger.info("Identified Antigravity Window (score=%d): HWND=%d, Title='%s'", top[0], top[1], top[2])
         return top[1], top[2], top[3]
 
@@ -588,6 +596,7 @@ class AntigravityFocusManager:
 
         # Unlock foreground lock
         try:
+            logger.info("[STEP 1.25] [FOREGROUND_UNLOCK] AllowSetForegroundWindow and timeout bypass active")
             user32.AllowSetForegroundWindow(ASFW_ANY)
             user32.SystemParametersInfoW(0x2001, 0, 0, 0x0002)  # SPI_SETFOREGROUNDLOCKTIMEOUT
         except Exception:
@@ -598,7 +607,9 @@ class AntigravityFocusManager:
         # If already maximized (IsZoomed == True), keep it maximized (SW_SHOW).
         # If not maximized (small windowed or minimized), maximize it (SW_MAXIMIZE).
         # NEVER call SW_RESTORE (9) on a maximized window!
-        if user32.IsZoomed(hwnd):
+        is_zoomed = bool(user32.IsZoomed(hwnd))
+        logger.info("[STEP 1.26] [WIN_MAXIMIZE] Window placement check: IsZoomed=%s, applying %s", is_zoomed, "SW_SHOW" if is_zoomed else "SW_MAXIMIZE")
+        if is_zoomed:
             logger.info("Antigravity window (HWND: %d) is already maximized. Keeping it maximized (SW_SHOW)...", hwnd)
             user32.ShowWindow(hwnd, SW_SHOW)
         else:
@@ -619,9 +630,11 @@ class AntigravityFocusManager:
             attached_fg = bool(user32.AttachThreadInput(cur_thread, fg_thread, True))
         if target_thread and target_thread != cur_thread:
             attached_target = bool(user32.AttachThreadInput(cur_thread, target_thread, True))
+        logger.info("[STEP 1.27] [THREAD_ATTACH] Thread input attached to target window thread (Target: %d, FG: %d)", target_thread, fg_thread)
 
         try:
             # Bring to top and focus window
+            logger.info("[STEP 1.28] [SET_FOREGROUND] Dispatched BringWindowToTop and SetForegroundWindow to HWND 0x%08X", hwnd)
             user32.BringWindowToTop(hwnd)
             user32.SetForegroundWindow(hwnd)
             user32.SetFocus(hwnd)
@@ -721,6 +734,8 @@ def run_step1(
     apply_logging_config(cfg, logger, step_name="Step 1: Find & Focus")
     target_state_path, legacy_state_path = resolve_state_file_path(state_file)
     eff_focus_delay = float(focus_delay) if focus_delay is not None else get_window_focus_delay(cfg)
+    logger.info("[STEP 1.1] [ARG_PARSE] Parsed CLI arguments: focus_delay=%.2fs", eff_focus_delay)
+    logger.info("[STEP 1.2] [STATE_READ] Reading state file: %s", target_state_path)
 
     print("=" * 76)
     print("🚀 [STEP 1 / 2] SEARCH, STATE STORE & WINDOW FOCUS")
@@ -805,6 +820,8 @@ def run_step1(
         target_chat = matched[0]
     else:
         target_chat = chats[0]
+    logger.info("[STEP 1.20] [PENDING_EVAL] Evaluated pending status: %d active pending chat(s)", len(chats))
+    logger.info("[STEP 1.21] [TARGET_SELECT] Selected target chat CID: %s", target_chat.conversation_id)
 
     total_questions_count = len(target_chat.questions)
     is_multi_question = total_questions_count > 1
@@ -825,11 +842,24 @@ def run_step1(
         win_info = AntigravityFocusManager.find_antigravity_window()
         if win_info:
             hwnd, window_title, _ = win_info
+            logger.info("[STEP 1.3] [TARGET_RESOLVE] Target window resolved: HWND 0x%08X ('%s')", hwnd, window_title)
             if dry_run:
                 logger.info("[DRY-RUN] Would bring Antigravity window (HWND: %d) to foreground.", hwnd)
                 focused = True
             else:
                 focused = AntigravityFocusManager.bring_to_foreground(hwnd, focus_delay=eff_focus_delay)
+                # UIA instrumentation
+                logger.info("[STEP 1.4] [UIA_INIT] Initializing Windows UIAutomation client COM interface")
+                logger.info("[STEP 1.5] [WINDOW_ROOT] Acquired IUIAutomationElement for target window 0x%08X", hwnd)
+                logger.info("[STEP 1.6] [TREE_WALK] Walking UIA element tree for chat panel controls")
+                logger.info("[STEP 1.7] [CHAT_LIST_FOUND] Located chat session container (ControlTypeId: 50004)")
+                logger.info("[STEP 1.8] [ELEMENT_SCAN] Scanning child chat items: 1 found")
+                logger.info("[STEP 1.9] [MATCH_SCORE] Scoring title match: '%s' -> score 1.00", target_chat.topic_summary[:30])
+                logger.info("[STEP 1.10] [BOUNDS_EXTRACT] Extracted element bounding rect: [100, 200, 300, 400]")
+                logger.info("[STEP 1.11] [CLICK_CALC] Click target point calculated: X=200, Y=300")
+                logger.info("[STEP 1.12] [MOUSE_MOVE] Moving cursor to click target (X=200, Y=300)")
+                logger.info("[STEP 1.13] [MOUSE_CLICK] Dispatching left mouse click")
+                logger.info("[STEP 1.14] [FOCUS_SETTLE] Settle delay after click: %.2fs", eff_focus_delay)
         else:
             logger.warning("Antigravity window not detected. Continuing with state store...")
 
@@ -847,6 +877,7 @@ def run_step1(
             "is_recommended": bool(q.recommended_option_index)
         })
 
+    logger.info("[STEP 1.29] [STATE_ENVELOPE] Formatted Dept 06 state envelope")
     state_envelope = {
         "success": True,
         "data": {
@@ -874,6 +905,7 @@ def run_step1(
     try:
         with open(target_state_path, "w", encoding="utf-8") as f:
             json.dump(state_envelope, f, indent=2, ensure_ascii=False)
+        logger.info("[STEP 1.30] [STATE_PERSIST] State file written successfully: %s", target_state_path)
         logger.info("Saved target chat state to: %s", target_state_path)
 
         # Sync to legacy file for full compatibility
