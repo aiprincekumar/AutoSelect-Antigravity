@@ -35,6 +35,7 @@ import os
 import sys
 import json
 import time
+import logging
 import argparse
 import subprocess
 from datetime import datetime, timezone
@@ -322,6 +323,7 @@ def main():
         else:
             print(f"\n[STATUS] Antigravity: {'OPEN' if result.is_detected else 'CLOSED'} | Pending Grill-Me: {result.pending_grill_me_chats} chats")
 
+        logging.getLogger("Step0-AntiGravityDetector").info("[STEP 0.25] [DETECTION_COMPLETE] Step 0 AntiGravity detection check finished successfully")
         print("\n" + "=" * 70)
         print("✅ [STEP 0 COMPLETE] AntiGravity detection check finished successfully.")
         print("[*] Step 0 completed and stopped cleanly (No downstream steps chained).")
