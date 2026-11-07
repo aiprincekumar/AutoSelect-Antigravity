@@ -282,6 +282,8 @@ class TimingConfig:
     step0_poll_interval_test_seconds: float = 10.0
     settle_delay_between_steps_seconds: float = 0.8
     user_activity_pause_threshold_seconds: float = 60.0
+    user_activity_pause_threshold_prod_seconds: float = 60.0
+    user_activity_pause_threshold_test_seconds: float = 5.0
     step4_user_activity_delay_seconds: float = 10.0
     step4_poll_interval_seconds: float = 0.1
     step1_window_focus_delay_seconds: float = 0.2
@@ -292,6 +294,61 @@ class TimingConfig:
     step3_inter_question_delay_ms: float = 500.0
     step3_round_completion_pause_ms: float = 1000.0
     continuous_loop_delay_seconds: float = 300.0
+
+    def __post_init__(self):
+        # Backward-compatible sync: if legacy user_activity_pause_threshold_seconds is customized
+        # and specific prod/test fields remain at their defaults, propagate the legacy value.
+        if self.user_activity_pause_threshold_seconds != 60.0:
+            if self.user_activity_pause_threshold_prod_seconds == 60.0:
+                self.user_activity_pause_threshold_prod_seconds = self.user_activity_pause_threshold_seconds
+            if self.user_activity_pause_threshold_test_seconds == 5.0:
+                self.user_activity_pause_threshold_test_seconds = self.user_activity_pause_threshold_seconds
+
+    @classmethod
+    def from_dict(cls, timing_data: Optional[Dict[str, Any]] = None) -> "TimingConfig":
+        """Builds TimingConfig from dictionary with typed defaults and fallback support."""
+        if not timing_data or not isinstance(timing_data, dict):
+            return cls()
+
+        legacy_pause = timing_data.get("user_activity_pause_threshold_seconds")
+        legacy_val = float(legacy_pause) if legacy_pause is not None else 60.0
+
+        prod_val = float(timing_data.get("user_activity_pause_threshold_prod_seconds", legacy_val))
+        test_val = float(
+            timing_data.get(
+                "user_activity_pause_threshold_test_seconds",
+                legacy_val if ("user_activity_pause_threshold_test_seconds" not in timing_data and legacy_pause is not None) else 5.0
+            )
+        )
+
+        return cls(
+            step0_poll_interval_prod_seconds=float(timing_data.get("step0_poll_interval_prod_seconds", 300.0)),
+            step0_poll_interval_test_seconds=float(timing_data.get("step0_poll_interval_test_seconds", 10.0)),
+            settle_delay_between_steps_seconds=float(timing_data.get("settle_delay_between_steps_seconds", 0.8)),
+            user_activity_pause_threshold_seconds=legacy_val,
+            user_activity_pause_threshold_prod_seconds=prod_val,
+            user_activity_pause_threshold_test_seconds=test_val,
+            step4_user_activity_delay_seconds=float(timing_data.get("step4_user_activity_delay_seconds", 10.0)),
+            step4_poll_interval_seconds=float(timing_data.get("step4_poll_interval_seconds", 0.1)),
+            step1_window_focus_delay_seconds=float(timing_data.get("step1_window_focus_delay_seconds", 0.2)),
+            step2_dom_click_settle_delay_seconds=float(timing_data.get("step2_dom_click_settle_delay_seconds", 0.3)),
+            step3_countdown_seconds=float(timing_data.get("step3_countdown_seconds", 3.0)),
+            step3_key_hold_delay_ms=float(timing_data.get("step3_key_hold_delay_ms", 50.0)),
+            step3_post_keypress_delay_ms=float(timing_data.get("step3_post_keypress_delay_ms", 250.0)),
+            step3_inter_question_delay_ms=float(timing_data.get("step3_inter_question_delay_ms", 500.0)),
+            step3_round_completion_pause_ms=float(timing_data.get("step3_round_completion_pause_ms", 1000.0)),
+            continuous_loop_delay_seconds=float(timing_data.get("continuous_loop_delay_seconds", 300.0)),
+        )
+
+    def get_effective_pause_threshold(self, mode: str = "production") -> float:
+        """Returns effective pause threshold based on mode."""
+        if str(mode).strip().lower() == "test":
+            return self.user_activity_pause_threshold_test_seconds
+        return self.user_activity_pause_threshold_prod_seconds
+
+
+# Backward compatibility alias
+AutomationTiming = TimingConfig
 
 
 @dataclass
@@ -312,6 +369,11 @@ class AutomationConfig:
     log_file: str = "complete_automation.log"
     verbose: bool = True
 
+    @property
+    def effective_pause_threshold(self) -> float:
+        """Returns the dynamic user activity pause threshold based on mode."""
+        return self.timing.get_effective_pause_threshold(self.mode)
+
     @classmethod
     def load_from_file(cls, path: Optional[Union[str, Path]] = None) -> "AutomationConfig":
         """Load configuration using canonical core_engine.config_manager."""
@@ -322,22 +384,7 @@ class AutomationConfig:
         ag_data = data.get("antigravity", {})
         log_data = data.get("logging", {})
 
-        timing = TimingConfig(
-            step0_poll_interval_prod_seconds=float(timing_data.get("step0_poll_interval_prod_seconds", 300.0)),
-            step0_poll_interval_test_seconds=float(timing_data.get("step0_poll_interval_test_seconds", 10.0)),
-            settle_delay_between_steps_seconds=float(timing_data.get("settle_delay_between_steps_seconds", 0.8)),
-            user_activity_pause_threshold_seconds=float(timing_data.get("user_activity_pause_threshold_seconds", 60.0)),
-            step4_user_activity_delay_seconds=float(timing_data.get("step4_user_activity_delay_seconds", 10.0)),
-            step4_poll_interval_seconds=float(timing_data.get("step4_poll_interval_seconds", 0.1)),
-            step1_window_focus_delay_seconds=float(timing_data.get("step1_window_focus_delay_seconds", 0.2)),
-            step2_dom_click_settle_delay_seconds=float(timing_data.get("step2_dom_click_settle_delay_seconds", 0.3)),
-            step3_countdown_seconds=float(timing_data.get("step3_countdown_seconds", 3.0)),
-            step3_key_hold_delay_ms=float(timing_data.get("step3_key_hold_delay_ms", 50.0)),
-            step3_post_keypress_delay_ms=float(timing_data.get("step3_post_keypress_delay_ms", 250.0)),
-            step3_inter_question_delay_ms=float(timing_data.get("step3_inter_question_delay_ms", 500.0)),
-            step3_round_completion_pause_ms=float(timing_data.get("step3_round_completion_pause_ms", 1000.0)),
-            continuous_loop_delay_seconds=float(timing_data.get("continuous_loop_delay_seconds", 300.0)),
-        )
+        timing = TimingConfig.from_dict(timing_data)
 
         enabled = EnabledStepsConfig(
             step1_find_and_focus=bool(enabled_data.get("step1_find_and_focus", True)),
@@ -846,7 +893,11 @@ class CompleteAutomationController:
         )
         self.detector.poll_interval = interval
         is_single_shot = bool(once or self.is_test_mode)
-        pause_threshold = self.config.timing.user_activity_pause_threshold_seconds
+        pause_threshold = (
+            self.config.timing.user_activity_pause_threshold_test_seconds
+            if self.is_test_mode
+            else self.config.timing.user_activity_pause_threshold_prod_seconds
+        )
 
         # Record initial process state - respect user activity in all modes
         initial_idle = get_idle_duration_seconds()
