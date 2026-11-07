@@ -58,6 +58,27 @@ except ImportError:
     def apply_logging_config(c=None, l=None, s=""):
         pass
 
+try:
+    from core_engine.constants import (
+        DISQUALIFIED_BROWSER_PROCS,
+        is_browser_window,
+    )
+    from core_engine.win32_api import get_process_info_for_hwnd
+except ImportError:
+    DISQUALIFIED_BROWSER_PROCS = {
+        "chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe", "iexplore.exe", "safari.exe"
+    }
+    def is_browser_window(pname="", pexe="", title=""):
+        p = pname.lower().strip()
+        t = title.lower().strip()
+        return (
+            p in DISQUALIFIED_BROWSER_PROCS
+            or any(b in p for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
+            or any(m in t for m in ("microsoft edge", "google chrome", "mozilla firefox", " - edge", " - chrome"))
+        )
+    def get_process_info_for_hwnd(hwnd):
+        return 0, "", ""
+
 # Reconfigure stdout/stderr for proper UTF-8 handling on Windows
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -471,7 +492,49 @@ class AntigravityGUISelector:
             result["method"] = "window_focus_shortcut"
 
         # 4. Keyboard Shortcut: Ctrl + L (Focus Chat Pane & Input Prompt)
+        # Real-time Pre-Keystroke Active Window Lock & Browser Omnibox Safety Verification
         time.sleep(0.3)
+        if IS_WINDOWS:
+            fg_hwnd = user32.GetForegroundWindow()
+            if not fg_hwnd or not user32.IsWindow(fg_hwnd):
+                logger.error("[ABORT] Step 2 cannot send Ctrl+L: No valid foreground window detected!")
+                result["chat_focused"] = False
+                result["success"] = False
+                return result
+
+            pid, fg_pname, fg_pexe = get_process_info_for_hwnd(fg_hwnd)
+            length = user32.GetWindowTextLengthW(fg_hwnd)
+            buf = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(fg_hwnd, buf, length + 1)
+            fg_title = buf.value.strip()
+
+            if is_browser_window(fg_pname, fg_pexe, fg_title):
+                logger.error(
+                    f"[SECURITY ABORT] Step 2 detected browser window in foreground! "
+                    f"HWND={hex(fg_hwnd)}, Process='{fg_pname}', Title='{fg_title}'. "
+                    f"Aborting Ctrl+L dispatch immediately to prevent Omnibox hijacking and address bar leakage!"
+                )
+                result["chat_focused"] = False
+                result["success"] = False
+                return result
+
+            # Verify foreground matches target Antigravity window
+            is_target = False
+            if hwnd and fg_hwnd == hwnd:
+                is_target = True
+            elif "antigravity" in fg_pname.lower() or "antigravity" in fg_title.lower():
+                is_target = True
+
+            if not is_target:
+                logger.error(
+                    f"[SECURITY ABORT] Step 2 detected non-Antigravity window in foreground! "
+                    f"HWND={hex(fg_hwnd)}, Process='{fg_pname}', Title='{fg_title}'. "
+                    f"Aborting Ctrl+L dispatch to prevent misdirected keystrokes."
+                )
+                result["chat_focused"] = False
+                result["success"] = False
+                return result
+
         logger.info("[STEP 2.26] [FOCUS_INPUT] Dispatching Ctrl + L shortcut to focus chat pane")
         logger.info("Sending shortcut [Ctrl + L] to focus Antigravity Chat panel...")
         cls._send_key_combo([VK_CONTROL, VK_L])
@@ -482,6 +545,17 @@ class AntigravityGUISelector:
 
         # 5. Optional Option Selection and Submission
         if select_option_number is not None and select_option_number > 0:
+            if IS_WINDOWS:
+                fg_hwnd = user32.GetForegroundWindow()
+                pid, fg_pname, fg_pexe = get_process_info_for_hwnd(fg_hwnd)
+                length = user32.GetWindowTextLengthW(fg_hwnd)
+                buf = ctypes.create_unicode_buffer(length + 1)
+                user32.GetWindowTextW(fg_hwnd, buf, length + 1)
+                fg_title = buf.value.strip()
+                if is_browser_window(fg_pname, fg_pexe, fg_title):
+                    logger.error("[SECURITY ABORT] Foreground shifted to browser before option key dispatch! Aborting.")
+                    return result
+
             logger.info("[STEP 2.6] [CONFIDENCE_EVAL] Evaluated recommended badge: selected option %d", select_option_number)
             logger.info("Selecting Option [%d] in GUI...", select_option_number)
             cls._send_key_combo([VK_SHIFT, VK_TAB])
@@ -533,6 +607,14 @@ class AntigravityGUISelector:
             return
         ensure_input_desktop()
         try:
+            pid, pname, pexe = get_process_info_for_hwnd(hwnd)
+            length = user32.GetWindowTextLengthW(hwnd)
+            buf = ctypes.create_unicode_buffer(length + 1)
+            user32.GetWindowTextW(hwnd, buf, length + 1)
+            title = buf.value.strip()
+            if is_browser_window(pname, pexe, title):
+                logger.error("[SECURITY ABORT] Refusing to focus browser window HWND 0x%08X ('%s')!", hwnd, title)
+                return
             # Rule: "विंडोज अगर बड़ा है तो बड़ा रहने दो और छोटा है तो बड़ा करो।"
             # If already maximized (IsZoomed == True), keep it maximized (SW_SHOW).
             # If not maximized (small windowed or minimized), maximize it (SW_MAXIMIZE).

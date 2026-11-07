@@ -611,9 +611,15 @@ class AntiGravityDetector:
             self.logger.debug("[STEP 0.4] [TITLE_READ] Window title retrieved: '%s'", title)
             self.logger.debug("[STEP 0.5] [CLASS_READ] Window class name retrieved: '%s'", wclass)
 
-            # Strict Disqualification 1: Browser processes
-            if pname in DISQUALIFIED_BROWSER_PROCS:
-                self.logger.debug("[STEP 0.7] [DISQUALIFY_BROWSER] Disqualifying standalone Chrome / non-IDE window")
+            # Strict Disqualification 1: Browser processes and browser window titles
+            is_browser = (
+                pname in DISQUALIFIED_BROWSER_PROCS
+                or any(b in pname for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
+                or any(m in t_lower for m in ("microsoft edge", "google chrome", "mozilla firefox", " - edge", " - chrome", " - firefox", " - brave", " - opera", " - vivaldi"))
+                or t_lower.endswith(" edge") or t_lower.endswith(" chrome")
+            )
+            if is_browser:
+                self.logger.debug("[STEP 0.7] [DISQUALIFY_BROWSER] Disqualifying standalone browser / non-IDE window ('%s')", title)
                 return True
 
             self.logger.debug("[STEP 0.6] [FILTER_ANTIGRAVITY] Checking if title or process matches Antigravity patterns")
