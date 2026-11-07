@@ -267,6 +267,15 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(s4["step4_user_activity_delay_seconds"], 15.0)
         s9 = get_step_timing(9, cfg)
         self.assertEqual(s9["settle_delay_between_steps_seconds"], 1.2)
+        self.assertEqual(s9["user_activity_pause_threshold_seconds"], 60.0)
+
+        # In test mode, step 9 returns test threshold
+        cfg_test = dict(cfg)
+        cfg_test["mode"] = "test"
+        cfg_test["timing"] = dict(cfg["timing"])
+        cfg_test["timing"]["user_activity_pause_threshold_test_seconds"] = 5.0
+        s9_test = get_step_timing(9, cfg_test)
+        self.assertEqual(s9_test["user_activity_pause_threshold_seconds"], 5.0)
 
     def test_14_get_state_dir_creation(self):
         """Verify get_state_dir creates and returns the dedicated state directory."""
