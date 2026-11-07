@@ -6670,6 +6670,8 @@
     "step0_poll_interval_test_seconds": 10.0,
     "settle_delay_between_steps_seconds": 0.8,
     "user_activity_pause_threshold_seconds": 60.0,
+    "user_activity_pause_threshold_prod_seconds": 60.0,
+    "user_activity_pause_threshold_test_seconds": 5.0,
     "step4_user_activity_delay_seconds": 10.0,
     "step4_poll_interval_seconds": 0.1,
     "step1_window_focus_delay_seconds": 0.2,
@@ -7165,6 +7167,8 @@
     "step0_poll_interval_test_seconds": 10.0,
     "settle_delay_between_steps_seconds": 0.8,
     "user_activity_pause_threshold_seconds": 60.0,
+    "user_activity_pause_threshold_prod_seconds": 60.0,
+    "user_activity_pause_threshold_test_seconds": 5.0,
     "step4_user_activity_delay_seconds": 10.0,
     "step4_poll_interval_seconds": 0.1,
     "step1_window_focus_delay_seconds": 0.2,
@@ -9105,6 +9109,7 @@
             logLines = lines.length;
 
             if (logBadge) logBadge.textContent = logLines;
+            if (!logsOpen) return;
 
             let colored = '';
 
@@ -9177,14 +9182,23 @@
 
 
       const btnClearLogs = document.getElementById('btn-clear-logs');
-
       if (btnClearLogs) {
-
         btnClearLogs.addEventListener('click', () => {
-
-          if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
-
+          fetch(API_BASE + '/api/logs/clear', { method: 'POST' })
+            .then(res => res.json())
+            .then(d => {
+              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
+              logLines = 0;
+              if (logBadge) logBadge.textContent = '0';
+              showToast('Logs cleared successfully.');
+            })
+            .catch(err => {
+              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared locally.</div>';
+              logLines = 0;
+              if (logBadge) logBadge.textContent = '0';
+            });
         });
+      }
 
       }
 
@@ -9992,24 +10006,43 @@
 
 
 
-      // Auto-refresh countdown
-
-      let count = 10;
-
+      // Auto-refresh countdown (Dynamic based on configuration / #cfg-auto-refresh)
       const countEl = document.getElementById('refresh-countdown');
+      const cfgAutoRefreshSelect = document.getElementById('cfg-auto-refresh');
+      let refreshIntervalSeconds = cfgAutoRefreshSelect ? parseInt(cfgAutoRefreshSelect.value, 10) : 10;
+      let count = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
+
+      if (cfgAutoRefreshSelect) {
+        cfgAutoRefreshSelect.addEventListener('change', () => {
+          refreshIntervalSeconds = parseInt(cfgAutoRefreshSelect.value, 10);
+          count = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
+          if (refreshIntervalSeconds <= 0) {
+            if (countEl) countEl.textContent = 'OFF';
+          } else {
+            if (countEl) countEl.textContent = count + 's';
+          }
+        });
+      }
 
       setInterval(() => {
-
-        count--;
-
-        if (countEl) countEl.textContent = count + 's';
-
-        if (count <= 0) {
-
-          count = 10;
-
+        if (isNaN(refreshIntervalSeconds) || refreshIntervalSeconds <= 0) {
+          if (countEl) countEl.textContent = 'OFF';
+          return;
         }
-
+        count--;
+        if (countEl) countEl.textContent = count + 's';
+        if (count <= 0) {
+          count = refreshIntervalSeconds;
+          showToast('Auto-refreshing dashboard and telemetry...');
+          fetch(API_BASE + '/api/dashboard/refresh', { method: 'POST' })
+            .then(res => res.json())
+            .then(d => {
+              location.reload();
+            })
+            .catch(() => {
+              pollServerStatus();
+            });
+        }
       }, 1000);
 
 

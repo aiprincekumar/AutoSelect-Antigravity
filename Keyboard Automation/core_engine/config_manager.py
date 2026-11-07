@@ -38,6 +38,8 @@ DEFAULT_RUNTIME_CONFIG: Dict[str, Any] = {
         "step0_poll_interval_test_seconds": 10.0,
         "settle_delay_between_steps_seconds": 0.8,
         "user_activity_pause_threshold_seconds": 60.0,
+        "user_activity_pause_threshold_prod_seconds": 60.0,
+        "user_activity_pause_threshold_test_seconds": 5.0,
         "step4_user_activity_delay_seconds": 10.0,
         "step4_poll_interval_seconds": 0.1,
         "step1_window_focus_delay_seconds": 0.2,
@@ -286,6 +288,15 @@ def load_runtime_config(path: Optional[Union[str, Path]] = None) -> Dict[str, An
                     except (ValueError, TypeError):
                         pass
 
+            # Legacy fallback: if user_activity_pause_threshold_seconds was specified in JSON
+            # but specific prod or test thresholds were omitted, fall back to legacy value
+            if "user_activity_pause_threshold_seconds" in timing_data:
+                legacy_val = cfg["timing"]["user_activity_pause_threshold_seconds"]
+                if "user_activity_pause_threshold_prod_seconds" not in timing_data:
+                    cfg["timing"]["user_activity_pause_threshold_prod_seconds"] = legacy_val
+                if "user_activity_pause_threshold_test_seconds" not in timing_data:
+                    cfg["timing"]["user_activity_pause_threshold_test_seconds"] = legacy_val
+
         # Merge enabled_steps section
         enabled_data = data.get("enabled_steps")
         if isinstance(enabled_data, dict):
@@ -373,10 +384,51 @@ def get_user_activity_delay(config_data: Optional[Dict[str, Any]] = None) -> flo
     return float(cfg.get("timing", {}).get("step4_user_activity_delay_seconds", 10.0))
 
 
-def get_user_activity_pause_threshold(config_data: Optional[Dict[str, Any]] = None) -> float:
-    """Returns user activity pause threshold in seconds (default: 60.0s)."""
+def get_effective_user_activity_pause_threshold(config_data: Optional[Dict[str, Any]] = None) -> float:
+    """
+    Returns the effective user activity pause threshold in seconds based on operating mode.
+    - production mode -> user_activity_pause_threshold_prod_seconds (default: 60.0, fallback: user_activity_pause_threshold_seconds)
+    - test mode -> user_activity_pause_threshold_test_seconds (default: 5.0, fallback: user_activity_pause_threshold_seconds)
+    """
     cfg = config_data if config_data is not None else load_runtime_config()
-    return float(cfg.get("timing", {}).get("user_activity_pause_threshold_seconds", 60.0))
+    mode = str(cfg.get("mode", "production")).strip().lower()
+    timing = cfg.get("timing", {})
+    legacy = timing.get("user_activity_pause_threshold_seconds")
+
+    if mode == "test":
+        if "user_activity_pause_threshold_test_seconds" in timing:
+            try:
+                return float(timing["user_activity_pause_threshold_test_seconds"])
+            except (ValueError, TypeError):
+                pass
+        if legacy is not None:
+            try:
+                return float(legacy)
+            except (ValueError, TypeError):
+                pass
+        return 5.0
+
+    # Production mode
+    if "user_activity_pause_threshold_prod_seconds" in timing:
+        try:
+            return float(timing["user_activity_pause_threshold_prod_seconds"])
+        except (ValueError, TypeError):
+            pass
+    if legacy is not None:
+        try:
+            return float(legacy)
+        except (ValueError, TypeError):
+            pass
+    return 60.0
+
+
+def get_user_activity_pause_threshold(config_data: Optional[Dict[str, Any]] = None) -> float:
+    """
+    Returns user activity pause threshold in seconds respecting active mode.
+    - production mode -> 60.0s (or configured prod threshold)
+    - test mode -> 5.0s (or configured test threshold)
+    """
+    return get_effective_user_activity_pause_threshold(config_data)
 
 
 def get_window_focus_delay(config_data: Optional[Dict[str, Any]] = None) -> float:
@@ -456,9 +508,18 @@ def get_step_timing(step_idx: int, config_data: Optional[Dict[str, Any]] = None)
             "step4_user_activity_delay_seconds": float(timing.get("step4_user_activity_delay_seconds", 10.0)),
             "step4_poll_interval_seconds": float(timing.get("step4_poll_interval_seconds", 0.1)),
         }
+    elif step_idx == 9:
+        effective_pause = get_effective_user_activity_pause_threshold(cfg)
+        return {
+            "settle_delay_between_steps_seconds": float(timing.get("settle_delay_between_steps_seconds", 0.8)),
+            "user_activity_pause_threshold_seconds": effective_pause,
+            "user_activity_pause_threshold_prod_seconds": float(timing.get("user_activity_pause_threshold_prod_seconds", 60.0)),
+            "user_activity_pause_threshold_test_seconds": float(timing.get("user_activity_pause_threshold_test_seconds", 5.0)),
+        }
     else:
         return {
             "settle_delay_between_steps_seconds": float(timing.get("settle_delay_between_steps_seconds", 0.8)),
+            "user_activity_pause_threshold_seconds": get_effective_user_activity_pause_threshold(cfg),
         }
 
 

@@ -530,6 +530,22 @@ class AutomationProcessManager:
             err_msg = f"Error reading logs: {e}"
             return [err_msg] if return_list else err_msg
 
+    def clear_logs(self) -> bool:
+        """
+        Safely truncate the active log file.
+        Returns True if successful.
+        """
+        target_log = self.resolve_log_file()
+        try:
+            target_log.parent.mkdir(parents=True, exist_ok=True)
+            with open(target_log, "w", encoding="utf-8") as f:
+                f.write("")
+            logger.info("[STEP 4.34] [LOG_CLEAR] Truncated log file at %s", target_log)
+            return True
+        except Exception as e:
+            logger.error("[STEP 4.34] [LOG_CLEAR] Error clearing log file %s: %s", target_log, e)
+            return False
+
     def get_status(self) -> Dict[str, Any]:
         """Compile a complete status summary dictionary."""
         running = self.is_running()
@@ -836,6 +852,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/automation/stop":
             result = mgr.stop()
             self.send_json_response(result)
+            return
+
+        # 2b. API: Clear Logs
+        if path == "/api/logs/clear":
+            success = mgr.clear_logs()
+            logger.info("[STEP 4.39] [API_LOGS_CLEAR] Cleared log file (success=%s)", success)
+            self.send_json_response({"cleared": success, "message": "Log file cleared successfully." if success else "Failed to clear log file."})
             return
 
         # 3. API: Save Runtime Configuration
