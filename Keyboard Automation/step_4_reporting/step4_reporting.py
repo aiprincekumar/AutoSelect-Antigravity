@@ -7620,7 +7620,18 @@ class Step4ReportingEngine:
       const btnClearLogs = document.getElementById('btn-clear-logs');
       if (btnClearLogs) {{
         btnClearLogs.addEventListener('click', () => {{
-          if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
+          fetch(API_BASE + '/api/logs/clear', {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(d => {{
+              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
+              logLines = 0;
+              if (logBadge) logBadge.textContent = '0';
+            }})
+            .catch(err => {{
+              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared locally.</div>';
+              logLines = 0;
+              if (logBadge) logBadge.textContent = '0';
+            }});
         }});
       }}
 

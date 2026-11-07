@@ -8908,8 +8908,6 @@ def build_modern_dashboard_html(
         }});
       }}
 
-      }}
-
 
 
       // Mode Switch Controls (Ultra-Modern Interactive Lifecycle Standard)
