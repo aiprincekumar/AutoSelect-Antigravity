@@ -482,11 +482,15 @@ class CompleteAutomationController:
             datefmt="%Y-%m-%d %H:%M:%S"
         )
 
-        logs_dir = _this_dir.parent / "logs"
-        if logs_dir.is_dir():
-            log_p = logs_dir / self.config.log_file
-        else:
-            log_p = _this_dir / self.config.log_file
+        try:
+            from core_engine.config_manager import resolve_runtime_log_file
+            log_p = resolve_runtime_log_file(self.config.log_file, base_dir=self.workspace_dir, for_writing=True)
+        except Exception:
+            logs_dir = self.workspace_dir / "logs"
+            if logs_dir.is_dir():
+                log_p = logs_dir / self.config.log_file
+            else:
+                log_p = self.workspace_dir / "step_9_complete_automation" / self.config.log_file
         try:
             fh = logging.FileHandler(str(log_p), encoding="utf-8")
             fh.setFormatter(formatter)
@@ -546,9 +550,14 @@ class CompleteAutomationController:
                 for line in iter(proc.stdout.readline, ""):
                     stripped = line.rstrip("\r\n")
                     if stripped:
-                        self.logger.info(stripped)
-                        for h in self.logger.handlers:
-                            h.flush()
+                        has_ts = len(stripped) > 20 and stripped[4] == "-" and stripped[7] == "-" and stripped[10] == " "
+                        if has_ts:
+                            if not self.headless:
+                                print(stripped)
+                        else:
+                            self.logger.info("[Step %d: %s] %s", step.step_index, step.name, stripped)
+                            for h in self.logger.handlers:
+                                h.flush()
                 proc.stdout.close()
 
             proc.wait()
@@ -599,6 +608,7 @@ class CompleteAutomationController:
             # Build command with explicit config timers
             cmd = [
                 str(self.python_exe),
+                "-u",
                 str(step.script_path),
                 "--state-file",
                 str(self.state_file),
@@ -729,6 +739,7 @@ class CompleteAutomationController:
 
             # Step 1 Exit Code 10 Check: No Pending Grill-Me Chats -> Cleanly cancel remaining steps
             if step.step_index == 1 and retcode == EXIT_CODE_NO_PENDING_CHATS:
+                self.logger.info("[STEP 9.14] [GRACEFUL_EXIT_10] Step 1 reported no pending chats (Exit Code 10). Remaining steps cancelled cleanly.")
                 msg = "Step 1 reported no pending chats (Exit Code 10). Remaining steps cancelled cleanly."
                 self.logger.info(msg)
                 return True, EXIT_CODE_NO_PENDING_CHATS, msg, step_reports
@@ -786,7 +797,7 @@ class CompleteAutomationController:
                 if not was_paused:
                     was_paused = True
                     self.logger.info(
-                        "User activity detected (idle time: %.1fs < %.1fs). Production automation is PAUSED.",
+                        "[STEP 9.11] [USER_IDLE_WAIT] User activity detected (idle time: %.1fs < %.1fs). Production automation is PAUSED.",
                         idle_seconds, pause_threshold
                     )
                     if not self.headless:
@@ -807,6 +818,7 @@ class CompleteAutomationController:
 
     def stop(self):
         """Signal controller loop to stop cleanly."""
+        self.logger.info("[STEP 9.15] [CONTROLLER_SHUTDOWN] Stop requested. Shutting down controller and detector.")
         self._stop_requested = True
         self.detector.stop()
 
@@ -863,12 +875,14 @@ class CompleteAutomationController:
                 break
 
             check_count += 1
+            self.logger.info("[STEP 9.10] [DETECTOR_POLL] Polling Antigravity detector (check #%d, mode=%s, interval=%.1fs)", check_count, self.config.mode, interval)
             res = self.detector.detect()
 
             if self.is_test_mode and not self.headless:
                 display_dashboard(res, chat_stats=res.chat_stats, wipe_screen=True, poll_interval=interval)
 
             if res.trigger_matched:
+                self.logger.info("[STEP 9.12] [TRIGGER_FIRE] Trigger matched: Antigravity open & %d pending Grill-Me chat(s) detected", res.pending_grill_me_chats)
                 # Re-verify user did not begin typing/mouse movement right before pipeline execution
                 self._wait_for_user_idle(pause_threshold)
                 if self._stop_requested:
@@ -911,6 +925,7 @@ class CompleteAutomationController:
             # Safe interval calculation: after pipeline execution, enforce cooldown to prevent rapid looping
             if res.trigger_matched and code == EXIT_CODE_SUCCESS:
                 sleep_remaining = max(interval, getattr(self.config.timing, "continuous_loop_delay_seconds", 300.0))
+                self.logger.info("[STEP 9.13] [COOLDOWN_SLEEP] Enforcing post-pipeline cooldown (%.1fs) before next cycle", sleep_remaining)
             else:
                 sleep_remaining = interval
 

@@ -9076,7 +9076,7 @@
 
         if (!logsOpen) return;
 
-        fetch(API_BASE + '/api/logs/tail?lines=80')
+        fetch(API_BASE + '/api/logs/tail?lines=150')
 
           .then(res => res.json())
 
@@ -9092,13 +9092,13 @@
 
               } else if (typeof data.data.logs === 'string') {
 
-                lines = data.data.logs.split(/?
-/).filter(l => l.trim().length > 0);
+                lines = data.data.logs.split('
+').map(l => l.trim()).filter(l => l.length > 0);
 
               } else if (typeof data.data.raw === 'string') {
 
-                lines = data.data.raw.split(/?
-/).filter(l => l.trim().length > 0);
+                lines = data.data.raw.split('
+').map(l => l.trim()).filter(l => l.length > 0);
 
               }
 

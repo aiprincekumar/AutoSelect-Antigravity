@@ -4393,7 +4393,7 @@ def build_modern_dashboard_html(
 
       function fetchLogs() {{
         if (!logsOpen) return;
-        fetch(API_BASE + '/api/logs/tail?lines=80')
+        fetch(API_BASE + '/api/logs/tail?lines=150')
           .then(res => res.json())
           .then(data => {{
             let lines = [];
@@ -4401,9 +4401,9 @@ def build_modern_dashboard_html(
               if (Array.isArray(data.data.logs)) {{
                 lines = data.data.logs;
               }} else if (typeof data.data.logs === 'string') {{
-                lines = data.data.logs.split(/\r?\n/).filter(l => l.trim().length > 0);
+                lines = data.data.logs.split('\n').map(l => l.trim()).filter(l => l.length > 0);
               }} else if (typeof data.data.raw === 'string') {{
-                lines = data.data.raw.split(/\r?\n/).filter(l => l.trim().length > 0);
+                lines = data.data.raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
               }}
             }}
             logLines = lines.length;

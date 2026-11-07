@@ -277,7 +277,7 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     def setUp(self):
         self.cfg = AutomationConfig(
             mode="test",
-            timing=TimingConfig(step0_poll_interval_test_seconds=0.01)
+            timing=TimingConfig(step0_poll_interval_test_seconds=0.01, user_activity_pause_threshold_seconds=0.0)
         )
         self.controller = CompleteAutomationController(config=self.cfg, headless=True)
 

@@ -206,13 +206,15 @@ class AutomationProcessManager:
         self._recover_state()
 
     def _resolve_python_exe(self) -> Path:
-        """Locate the dedicated .venv pythonw.exe (prefer windowless) or python.exe or fall back to sys.executable."""
-        venv_pyw = self.workspace_dir / ".venv" / "Scripts" / "pythonw.exe"
-        if venv_pyw.is_file():
-            return venv_pyw
+        """Locate python.exe (preferred for valid unbuffered I/O piping with CREATE_NO_WINDOW) or fall back to sys.executable."""
         venv_py = self.workspace_dir / ".venv" / "Scripts" / "python.exe"
         if venv_py.is_file():
             return venv_py
+        if Path(sys.executable).is_file() and not Path(sys.executable).name.lower().startswith("pythonw"):
+            return Path(sys.executable)
+        venv_pyw = self.workspace_dir / ".venv" / "Scripts" / "pythonw.exe"
+        if venv_pyw.is_file():
+            return venv_pyw
         pyw = Path(sys.executable).with_name("pythonw.exe")
         if pyw.is_file():
             return pyw
@@ -349,7 +351,7 @@ class AutomationProcessManager:
                     logger.warning(f"Could not persist mode to config.json: {e}")
 
             # Build command line
-            cmd = [str(self.python_exe), str(self.master_script)]
+            cmd = [str(self.python_exe), "-u", str(self.master_script)]
             if eff_mode:
                 cmd.extend(["--mode", str(eff_mode)])
             if run_pipeline:
@@ -402,7 +404,8 @@ class AutomationProcessManager:
                 with open(self.pid_file, "w", encoding="utf-8") as f:
                     json.dump(state_data, f, indent=2)
 
-                logger.info(f"Automation process launched successfully (PID: {self.proc.pid}, Mode: {eff_mode}).")
+                logger.info("[STEP 4.34] [PROCESS_SPAWN] Spawning master automation process: %s (PID: %d, Mode: %s)", " ".join(cmd), self.proc.pid, eff_mode)
+                logger.info("[STEP 4.35] [PID_TRACK] Persisting process metadata and PID %d to %s", self.proc.pid, self.pid_file)
                 return {
                     "running": True,
                     "pid": self.proc.pid,
@@ -436,7 +439,7 @@ class AutomationProcessManager:
                 }
 
             target_pid = pid or (self.proc.pid if self.proc else None)
-            logger.info(f"Initiating termination for automation process (PID: {target_pid})...")
+            logger.info("[STEP 4.36] [PROCESS_STOP] Initiating termination for automation process (PID: %s)", target_pid)
 
             # 1. Kill entire Windows process tree if on Windows and PID is alive
             if sys.platform == "win32" and target_pid and is_pid_alive(target_pid):
@@ -506,7 +509,7 @@ class AutomationProcessManager:
         self.log_file = target_log
         return target_log
 
-    def get_log_tail(self, max_lines: int = 50, return_list: bool = True) -> Union[List[str], str]:
+    def get_log_tail(self, max_lines: int = 150, return_list: bool = True) -> Union[List[str], str]:
         """
         Retrieve the last N lines of the automation log file.
         If return_list is True, returns a List[str] with line breaks stripped.
@@ -519,6 +522,7 @@ class AutomationProcessManager:
             with open(target_log, "r", encoding="utf-8", errors="replace") as f:
                 lines = f.readlines()
             sliced = lines[-max_lines:] if max_lines > 0 else lines
+            logger.debug("[STEP 4.33] [LOG_TAIL] Retrieved %d lines from %s", len(sliced), target_log)
             if return_list:
                 return [line.rstrip("\r\n") for line in sliced]
             return "".join(sliced)
@@ -646,11 +650,14 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         # 1. API: Process Status
         if path == "/api/automation/status":
             mgr = self.server_manager or AutomationProcessManager(self.workspace_dir)
-            self.send_json_response(mgr.get_status())
+            st = mgr.get_status()
+            logger.info("[STEP 4.29] [API_STATUS] Polled automation status (running=%s, PID=%s)", st.get("running"), st.get("pid"))
+            self.send_json_response(st)
             return
 
         # 1b. API: Server-Sent Events (SSE) Live Status Stream
         if path == "/api/automation/events":
+            logger.info("[STEP 4.39] [API_SSE_CONNECT] Client connected to live SSE event stream")
             mgr = self.server_manager or AutomationProcessManager(self.workspace_dir)
             self.send_response(200)
             self.send_header("Content-Type", "text/event-stream")
@@ -697,6 +704,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/config/get":
             cfg_path = get_canonical_config_path(self.workspace_dir)
             cfg = core_load_runtime_config(cfg_path)
+            logger.info("[STEP 4.30] [API_CONFIG_GET] Retrieved runtime configuration from %s", cfg_path)
             self.send_json_response(cfg)
             return
 
@@ -710,6 +718,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 lines_count = 50
             line_list = mgr.get_log_tail(lines_count, return_list=True)
             raw_str = mgr.get_log_tail(lines_count, return_list=False)
+            logger.info("[STEP 4.32] [API_LOGS_TAIL] Served %d log lines from %s", len(line_list), mgr.log_file)
             payload = {
                 "logs": line_list,
                 "raw": raw_str,
@@ -725,6 +734,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         # 3b. API: Auto-Start Status
         if path == "/api/autostart/status":
             st = get_autostart_status(workspace_dir=self.workspace_dir)
+            logger.info("[STEP 4.38] [API_AUTOSTART_STATUS] Polled Windows auto-start status (enabled=%s)", st.get("enabled"))
             self.send_json_response(st)
             return
 
@@ -849,7 +859,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     mgr.active_mode = new_mode
                     if hasattr(DashboardRequestHandler, "server_manager") and DashboardRequestHandler.server_manager:
                         DashboardRequestHandler.server_manager.active_mode = new_mode
-                logger.info(f"Successfully updated runtime configuration in config.json (mode={mgr.active_mode}).")
+                logger.info("[STEP 4.31] [API_CONFIG_SAVE] Updated runtime configuration in %s (mode=%s)", cfg_path, mgr.active_mode)
                 self.send_json_response({"saved": True, "message": "Configuration successfully saved to config.json on disk.", "mode": mgr.active_mode})
             else:
                 self.send_json_response({"saved": False, "message": "Failed to persist configuration to disk."}, status=500, success=False)
@@ -857,6 +867,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
 
         # 4. API: Synchronous Dashboard HTML Refresh
         if path == "/api/dashboard/refresh":
+            logger.info("[STEP 4.37] [API_DASH_REFRESH] Triggered manual dashboard refresh")
             try:
                 from step_4_reporting.step4_reporting import Step4ReportingEngine
                 engine = Step4ReportingEngine(reports_dir=self.reports_dir)
