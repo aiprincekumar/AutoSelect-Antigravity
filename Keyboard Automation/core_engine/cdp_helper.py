@@ -266,7 +266,23 @@ class AntigravityCDPClient:
                 if (labels.length === 0) labels = Array.from(document.querySelectorAll('input[type="radio"]'));
             }
 
-            const hasCard = !!card || !!continueBtn || !!skipBtn || labels.length > 0;
+            const isVisible = (el) => {
+                if (!el) return false;
+                if (!el.isConnected) return false;
+                try {
+                    const style = window.getComputedStyle(el);
+                    if (style.display === 'none' || style.visibility === 'hidden' || style.opacity === '0') return false;
+                    const rect = el.getBoundingClientRect();
+                    return (rect.width > 0 && rect.height > 0) || el.offsetParent !== null;
+                } catch(e) {
+                    return true;
+                }
+            };
+
+            const hasCard = (!!card && isVisible(card))
+                         || (!!continueBtn && isVisible(continueBtn))
+                         || (!!skipBtn && isVisible(skipBtn))
+                         || (labels.length > 0 && isVisible(labels[0]));
 
             let currentQ = 1;
             let totalQ = 1;
@@ -291,8 +307,9 @@ class AntigravityCDPClient:
             const btnDisabled = continueBtn ? (continueBtn.disabled || continueBtn.classList.contains('pointer-events-none')) : null;
             const btnText = continueBtn ? continueBtn.innerText.replace(/\\n/g, ' ').trim() : null;
 
-            const inputs = card ? Array.from(card.querySelectorAll('input[type="radio"]')) : Array.from(document.querySelectorAll('input[type="radio"]'));
-            const hasChecked = inputs.some(i => i.checked);
+            const inputs = card ? Array.from(card.querySelectorAll('input[type="radio"], input[type="checkbox"]')) : Array.from(document.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
+            const radioRoles = card ? Array.from(card.querySelectorAll('[role="radio"], [role="checkbox"]')) : Array.from(document.querySelectorAll('[role="radio"], [role="checkbox"]'));
+            const hasChecked = inputs.some(i => i.checked) || radioRoles.some(r => r.getAttribute('aria-checked') === 'true' || r.getAttribute('data-state') === 'checked');
             const active = document.activeElement;
             const skipFocused = !!active && (
                 active === skipBtn ||
@@ -470,18 +487,25 @@ class AntigravityCDPClient:
         Dispatches click, pointer events, and change event to update React state immediately.
         Also ensures Skip button and chat input are blurred and option element receives focus.
         """
-        opt_idx = max(0, option_index - 1)
+        try:
+            opt_num = int(option_index)
+        except (ValueError, TypeError):
+            opt_num = 1
+        opt_idx = max(0, opt_num - 1)
         js = f"""
         (() => {{
             // 1. Blur chat input to ensure no focus remains in editor
             const active = document.activeElement;
             if (active && (
                 active.tagName === 'TEXTAREA' ||
+                (active.tagName === 'INPUT' && !['radio', 'checkbox', 'button'].includes((active.getAttribute('type') || '').toLowerCase())) ||
                 active.isContentEditable ||
                 active.getAttribute('contenteditable') === 'true' ||
                 (active.closest && !!active.closest('[contenteditable="true"]')) ||
                 active.getAttribute('role') === 'textbox' ||
-                active.getAttribute('role') === 'combobox'
+                active.getAttribute('role') === 'combobox' ||
+                (active.getAttribute('data-testid') || '').toLowerCase().includes('input') ||
+                (active.getAttribute('data-testid') || '').toLowerCase().includes('chat')
             )) {{
                 active.blur();
             }}
@@ -495,22 +519,22 @@ class AntigravityCDPClient:
             let options = [];
             if (card) {{
                 options = Array.from(card.querySelectorAll('[data-testid="ask-question-option"]'));
-                if (options.length === 0) options = Array.from(card.querySelectorAll('[role="radio"]'));
+                if (options.length === 0) options = Array.from(card.querySelectorAll('[role="radio"], [role="checkbox"]'));
                 if (options.length === 0) options = Array.from(card.querySelectorAll('label[for*="ask-opt"], label[for*="opt"]'));
-                if (options.length === 0) options = Array.from(card.querySelectorAll('input[type="radio"]'));
+                if (options.length === 0) options = Array.from(card.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
             }}
             if (options.length === 0) {{
                 options = Array.from(document.querySelectorAll('[data-testid="ask-question-option"]'));
-                if (options.length === 0) options = Array.from(document.querySelectorAll('[role="radio"]'));
+                if (options.length === 0) options = Array.from(document.querySelectorAll('[role="radio"], [role="checkbox"]'));
                 if (options.length === 0) options = Array.from(document.querySelectorAll('label[for*="ask-opt"], label[for*="opt"]'));
-                if (options.length === 0) options = Array.from(document.querySelectorAll('input[type="radio"]'));
+                if (options.length === 0) options = Array.from(document.querySelectorAll('input[type="radio"], input[type="checkbox"]'));
             }}
 
             if (options.length > {opt_idx}) {{
                 const target = options[{opt_idx}];
                 target.scrollIntoView({{ block: 'nearest' }});
 
-                // Find associated radio input
+                // Find associated radio/checkbox input
                 let input = null;
                 if (target.tagName === 'INPUT') {{
                     input = target;
@@ -534,22 +558,44 @@ class AntigravityCDPClient:
                     try {{ input.focus(); }} catch(e) {{}}
                 }}
 
+                // Update ARIA role elements (Radix UI / custom components)
+                const radioEl = (target.getAttribute('role') === 'radio' || target.getAttribute('role') === 'checkbox')
+                    ? target
+                    : (target.querySelector('[role="radio"], [role="checkbox"]') || target);
+                if (radioEl) {{
+                    try {{
+                        radioEl.setAttribute('aria-checked', 'true');
+                        radioEl.setAttribute('data-state', 'checked');
+                        radioEl.focus();
+                    }} catch(e) {{}}
+                }}
+
                 // Ensure Skip button is blurred if active
                 const curActive = document.activeElement;
                 if (curActive && (
                     curActive.getAttribute('data-testid') === 'interaction-skip-button' ||
+                    curActive.classList.contains('interaction-skip-button') ||
                     (curActive.innerText || '').trim().toLowerCase() === 'skip'
                 )) {{
                     curActive.blur();
                 }}
 
-                target.click();
+                // Dispatch synthetic click & pointer events
                 const opts = {{ bubbles: true, cancelable: true, view: window, buttons: 1 }};
                 target.dispatchEvent(new PointerEvent('pointerdown', opts));
                 target.dispatchEvent(new MouseEvent('mousedown', opts));
                 target.dispatchEvent(new PointerEvent('pointerup', opts));
                 target.dispatchEvent(new MouseEvent('mouseup', opts));
-                target.dispatchEvent(new MouseEvent('click', opts));
+                target.click();
+
+                if (radioEl && radioEl !== target) {{
+                    radioEl.dispatchEvent(new PointerEvent('pointerdown', opts));
+                    radioEl.dispatchEvent(new MouseEvent('mousedown', opts));
+                    radioEl.dispatchEvent(new PointerEvent('pointerup', opts));
+                    radioEl.dispatchEvent(new MouseEvent('mouseup', opts));
+                    radioEl.click();
+                }}
+
                 return true;
             }}
             return false;
@@ -627,19 +673,21 @@ class AntigravityCDPClient:
             time.sleep(0.08)
         return False
 
-    def wait_for_advance_or_close(self, previous_question: int, is_last: bool, timeout: float = 3.5) -> bool:
+    def wait_for_advance_or_close(self, previous_question: int, is_last: bool, timeout: float = 2.0) -> bool:
         """
         Waits for UI wizard to transition after clicking Continue or Submit.
-        If is_last: waits for card to disappear.
+        If is_last: waits for card to disappear (has_card == False).
         If not is_last: waits for current_question to increment or card to close.
         """
         deadline = time.time() + timeout
         while time.time() < deadline:
             st = self.get_questionnaire_status()
-            if is_last or not st.get("has_card"):
+            if is_last:
                 if not st.get("has_card"):
                     return True
             else:
+                if not st.get("has_card"):
+                    return True
                 curr_q = st.get("current_question", 1)
                 if curr_q > previous_question:
                     return True

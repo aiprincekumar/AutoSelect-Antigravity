@@ -654,7 +654,9 @@ class GrillMeAutomator:
             if hasattr(cdp, "ensure_skip_not_focused"):
                 cdp.ensure_skip_not_focused()
 
-            # 4.c: Verify option is selected and button is enabled
+            # 4.c: Settle delay allowing React to enable the action button & verify enabled
+            if not self.dry_run:
+                time.sleep(0.3)
             logger.info("[STEP 3.28] [CDP_ACTION_BTN] Focusing action button via CDP and verifying enabled")
             if hasattr(cdp, "wait_for_button_enabled"):
                 cdp.wait_for_button_enabled(timeout=1.5)
@@ -676,7 +678,7 @@ class GrillMeAutomator:
 
                 logger.info("[STEP 3.13] [INTER_Q_PAUSE] Pausing before next question and waiting for advance in DOM")
                 if hasattr(cdp, "wait_for_advance_or_close"):
-                    cdp.wait_for_advance_or_close(previous_question=q, is_last=False, timeout=self.inter_question_delay + 2.0)
+                    cdp.wait_for_advance_or_close(previous_question=q, is_last=False, timeout=2.0)
                 if not self.dry_run and self.inter_question_delay > 0:
                     time.sleep(self.inter_question_delay)
 
@@ -690,7 +692,7 @@ class GrillMeAutomator:
 
                 logger.info("Waiting for questionnaire card to close cleanly...")
                 if hasattr(cdp, "wait_for_advance_or_close"):
-                    cdp.wait_for_advance_or_close(previous_question=q, is_last=True, timeout=self.round_completion_pause + 3.0)
+                    cdp.wait_for_advance_or_close(previous_question=q, is_last=True, timeout=2.0)
 
         # 5. Round completion pause
         round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
@@ -779,6 +781,20 @@ class GrillMeAutomator:
 
             # Option loop
             for k in range(1, total_option_presses + 1):
+                # Safe keyboard fallback: ensure active window is valid and not a disqualified browser
+                if IS_WINDOWS and not self.dry_run:
+                    curr_hwnd = user32.GetForegroundWindow()
+                    _, curr_pname, _ = get_process_info_for_hwnd(curr_hwnd)
+                    user_wants_browser = any(
+                        any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
+                        for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
+                    )
+                    if curr_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+                        logger.error(
+                            f"[ABORT] Foreground window shifted to disqualified browser '{curr_pname}' during keyboard loop. "
+                            f"Halting immediately to prevent stray keystroke pollution!"
+                        )
+                        return False
                 opt = opts[k - 1] if k <= tq else (opts[-1] if opts else str(self.option))
                 q_num = min(k, tq)
                 step_code = f"OPT.{k}"
