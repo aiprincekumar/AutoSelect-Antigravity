@@ -4613,17 +4613,72 @@ def build_modern_dashboard_html(
       50% {{ transform: scale(1.35); opacity: 0.6; }}
     }}
 
-    /* Header Action Button Active Event State */
+    /* Header Action Button & Dual-State Refresh Control */
+    #btn-header-refresh {{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      transition: all 0.25s ease;
+    }}
+    #refresh-spin-icon {{
+      display: inline-block;
+      line-height: 1;
+      font-size: 1rem;
+      transform-origin: center;
+      transition: transform 0.2s ease;
+    }}
     #btn-header-refresh.btn-event-active {{
-      background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35)) !important;
-      border: 1px solid #ef4444 !important;
-      color: #fee2e2 !important;
-      animation: activeGlowPulse 1.8s infinite ease-in-out;
+      background: linear-gradient(135deg, rgba(16, 185, 129, 0.18), rgba(6, 182, 212, 0.22)) !important;
+      border: 1px solid rgba(16, 185, 129, 0.5) !important;
+      color: #10b981 !important;
+      animation: activeGlowPulse 2s infinite ease-in-out;
       font-weight: 600;
     }}
+    #btn-header-refresh.btn-event-active #refresh-spin-icon {{
+      animation: spin 1.2s linear infinite;
+    }}
     @keyframes activeGlowPulse {{
-      0%, 100% {{ box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }}
-      50% {{ box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }}
+      0%, 100% {{ box-shadow: 0 0 8px rgba(16, 185, 129, 0.25); }}
+      50% {{ box-shadow: 0 0 16px rgba(16, 185, 129, 0.6); }}
+    }}
+
+    /* Thin Horizontal Progress Bar directly under Header (Requirement 3) */
+    .header-progress-bar {{
+      width: 100%;
+      height: 2.8px;
+      position: relative;
+      overflow: hidden;
+      background: transparent;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+      pointer-events: none;
+      z-index: 50;
+      margin-top: -1px;
+    }}
+    .header-progress-bar.active {{
+      opacity: 1;
+      background: rgba(99, 102, 241, 0.12);
+    }}
+    .header-progress-bar.active::after {{
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -50%;
+      height: 100%;
+      width: 50%;
+      background: linear-gradient(90deg, transparent, #6366f1, #06b6d4, #10b981, transparent);
+      animation: indeterminateProgress 1.5s infinite linear;
+      box-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 16px rgba(16, 185, 129, 0.6);
+      border-radius: 2px;
+    }}
+    @keyframes indeterminateProgress {{
+      0% {{
+        left: -50%;
+      }}
+      100% {{
+        left: 100%;
+      }}
     }}
 
     /* Floating Toast */
@@ -4926,8 +4981,6 @@ def build_modern_dashboard_html(
 
             <span id="refresh-spin-icon">🔄</span>
 
-            <span id="refresh-countdown">10s</span>
-
           </button>
 
           <button class="btn" id="btn-help-shortcuts" title="Keyboard Shortcuts Help (?)">⌨️</button>
@@ -4937,6 +4990,12 @@ def build_modern_dashboard_html(
       </div>
 
     </header>
+
+
+
+    <!-- Thin Horizontal Progress Bar directly under Header (Requirement 3) -->
+
+    <div class="header-progress-bar" id="header-progress-bar"></div>
 
 
 
@@ -8717,11 +8776,11 @@ def build_modern_dashboard_html(
 
       function syncHeaderActionButton(running) {{
         const btnHeaderRefresh = document.getElementById('btn-header-refresh');
-        const countEl = document.getElementById('refresh-countdown');
         const spinIcon = document.getElementById('refresh-spin-icon');
         const liveFeedDot = document.getElementById('live-feed-dot');
         const liveFeedBadge = document.getElementById('live-feed-badge');
         const liveFeedCard = document.getElementById('onpage-live-feed-card');
+        const headerProgressBar = document.getElementById('header-progress-bar');
 
         if (liveFeedDot) liveFeedDot.classList.toggle('active', running);
         if (liveFeedCard) liveFeedCard.classList.toggle('active-event', running);
@@ -8731,28 +8790,27 @@ def build_modern_dashboard_html(
           liveFeedBadge.style.borderColor = running ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-subtle)';
         }}
 
+        if (headerProgressBar) {{
+          headerProgressBar.classList.toggle('active', running);
+        }}
+
         if (!btnHeaderRefresh) return;
 
         if (running) {{
           btnHeaderRefresh.classList.add('btn-event-active');
-          btnHeaderRefresh.title = 'Active Automation Running • Click to Stop Process (PID Active)';
+          btnHeaderRefresh.title = 'Automation Running in Background • Click to Refresh Telemetry';
           if (spinIcon) {{
-            spinIcon.textContent = '⏹️';
-            spinIcon.style.animation = 'none';
-          }}
-          if (countEl) {{
-            countEl.textContent = 'Stop';
+            spinIcon.textContent = '🔄';
+            spinIcon.style.display = 'inline-block';
+            spinIcon.style.animation = 'spin 1.2s linear infinite';
           }}
         }} else {{
           btnHeaderRefresh.classList.remove('btn-event-active');
           btnHeaderRefresh.title = 'Synchronous Telemetry Refresh from Disk';
           if (spinIcon) {{
             spinIcon.textContent = '🔄';
-          }}
-          if (countEl) {{
-            const cfgSelect = document.getElementById('cfg-auto-refresh');
-            const sec = cfgSelect ? parseInt(cfgSelect.value, 10) : 10;
-            countEl.textContent = (isNaN(sec) || sec <= 0) ? 'OFF' : (count + 's');
+            spinIcon.style.display = 'inline-block';
+            spinIcon.style.animation = 'none';
           }}
         }}
       }}
@@ -9838,39 +9896,14 @@ def build_modern_dashboard_html(
 
 
 
-      // Context-Aware Header Refresh / Stop Button via Server API
+      // Dual-State Header Refresh Button via Server API
       const btnHeaderRefresh = document.getElementById('btn-header-refresh');
 
       if (btnHeaderRefresh) {{
         btnHeaderRefresh.addEventListener('click', () => {{
-          if (isAutomationActive) {{
-            // Context-Aware Event Action: Terminate active running automation process
-            btnHeaderRefresh.disabled = true;
-            showToast('⏹️ Terminating active automation process...');
-            fetch(API_BASE + '/api/automation/stop', {{
-              method: 'POST',
-              headers: {{ 'Content-Type': 'application/json' }},
-              body: JSON.stringify({{}})
-            }})
-              .then(res => res.json())
-              .then(data => {{
-                btnHeaderRefresh.disabled = false;
-                playChime('stop');
-                showToast(data.message || '⏹️ Automation stopped successfully');
-                pollServerStatus();
-              }})
-              .catch(() => {{
-                btnHeaderRefresh.disabled = false;
-                showToast('❌ Failed to stop automation process');
-              }});
-            return;
-          }}
-
-          // Idle State: Synchronous Telemetry Refresh
           btnHeaderRefresh.disabled = true;
           const spinIcon = document.getElementById('refresh-spin-icon');
           if (spinIcon) {{
-            spinIcon.textContent = '🔄';
             spinIcon.style.display = 'inline-block';
             spinIcon.style.animation = 'spin 0.6s linear infinite';
           }}
@@ -9996,21 +10029,16 @@ def build_modern_dashboard_html(
 
 
 
-      // Auto-refresh countdown (Dynamic based on configuration / #cfg-auto-refresh)
-      const countEl = document.getElementById('refresh-countdown');
+      // Background auto-refresh timer (Dynamic based on configuration / #cfg-auto-refresh)
+      // Note: Button NEVER displays a countdown timer; auto-refresh runs silently in the background.
       const cfgAutoRefreshSelect = document.getElementById('cfg-auto-refresh');
       let refreshIntervalSeconds = cfgAutoRefreshSelect ? parseInt(cfgAutoRefreshSelect.value, 10) : 10;
-      let count = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
+      let refreshTimerSecondsRemaining = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
 
       if (cfgAutoRefreshSelect) {{
         cfgAutoRefreshSelect.addEventListener('change', () => {{
           refreshIntervalSeconds = parseInt(cfgAutoRefreshSelect.value, 10);
-          count = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
-          if (refreshIntervalSeconds <= 0) {{
-            if (countEl) countEl.textContent = 'OFF';
-          }} else {{
-            if (countEl) countEl.textContent = count + 's';
-          }}
+          refreshTimerSecondsRemaining = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
         }});
       }}
 
@@ -10021,13 +10049,11 @@ def build_modern_dashboard_html(
         }}
 
         if (isNaN(refreshIntervalSeconds) || refreshIntervalSeconds <= 0) {{
-          if (countEl) countEl.textContent = 'OFF';
           return;
         }}
-        count--;
-        if (countEl) countEl.textContent = count + 's';
-        if (count <= 0) {{
-          count = refreshIntervalSeconds;
+        refreshTimerSecondsRemaining--;
+        if (refreshTimerSecondsRemaining <= 0) {{
+          refreshTimerSecondsRemaining = refreshIntervalSeconds;
           showToast('Auto-refreshing dashboard and telemetry...');
           fetch(API_BASE + '/api/dashboard/refresh', {{ method: 'POST' }})
             .then(res => res.json())

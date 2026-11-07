@@ -134,6 +134,13 @@ class TestModernDashboardSuite(unittest.TestCase):
         self.assertIn('syncHeaderActionButton', content, "Must implement dynamic syncHeaderActionButton.")
         self.assertIn('appendLiveFeedLines', content, "Must implement appendLiveFeedLines.")
 
+        # 14. Dual-State Refresh Button & Thin Horizontal Header Progress Bar
+        self.assertIn('id="btn-header-refresh"', content, "Must have header refresh button.")
+        self.assertIn('id="refresh-spin-icon"', content, "Must have refresh spin icon.")
+        self.assertNotIn('id="refresh-countdown"', content, "Refresh countdown timer must be completely removed.")
+        self.assertIn('id="header-progress-bar"', content, "Must have thin horizontal header progress bar.")
+        self.assertIn('indeterminateProgress', content, "Must define indeterminateProgress keyframes animation.")
+
     def test_03_server_routes_classic_and_modern(self):
         """Verify dashboard server serves /classic and /modern endpoints cleanly."""
         # Find free ephemeral port

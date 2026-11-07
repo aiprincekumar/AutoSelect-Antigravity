@@ -958,15 +958,15 @@ class TestStep4Reporting(unittest.TestCase):
         self.assertTrue(html_path.is_file())
         content = html_path.read_text(encoding="utf-8")
 
-        # 1. Header Action Controls & Auto-Refresh Tag in Single Clean Row (Config Button Removed, Tab Retained)
+        # 1. Header Action Controls in Single Clean Row (Countdown Timer Removed, Progress Bar Present)
         self.assertNotIn('id="config-toggle-btn"', content)
         self.assertIn('id="tab-btn-config"', content)
         self.assertIn('id="dashboard-status-pill"', content)
         self.assertIn('⚪ Inactive', content)
         self.assertIn('id="automation-toggle-btn"', content)
         self.assertIn('id="btn-header-refresh"', content)
-        self.assertIn('id="auto-refresh-tag"', content)
-        self.assertIn('id="refresh-countdown"', content)
+        self.assertIn('id="header-progress-bar"', content)
+        self.assertNotIn('id="refresh-countdown"', content)
 
         # 2. Modal Backdrop and Content
         self.assertIn('id="config-modal"', content)
