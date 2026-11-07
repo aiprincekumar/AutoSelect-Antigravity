@@ -126,6 +126,14 @@ class TestModernDashboardSuite(unittest.TestCase):
         self.assertIn('id="shortcuts-modal"', content, "Must have shortcuts HUD modal.")
         self.assertIn("targetInput = searchChats", content, "Must focus searchChats when on chats tab with /.")
 
+        # 13. Event-Driven Live Automation Activity & Micro-Step Feed (On-Page)
+        self.assertIn('id="onpage-live-feed-card"', content, "Must have visible on-page live activity feed card.")
+        self.assertIn('id="live-feed-stream"', content, "Must have live feed terminal stream.")
+        self.assertIn('id="live-feed-dot"', content, "Must have live status pulsing dot.")
+        self.assertIn('btn-event-active', content, "Must define active event button CSS state.")
+        self.assertIn('syncHeaderActionButton', content, "Must implement dynamic syncHeaderActionButton.")
+        self.assertIn('appendLiveFeedLines', content, "Must implement appendLiveFeedLines.")
+
     def test_03_server_routes_classic_and_modern(self):
         """Verify dashboard server serves /classic and /modern endpoints cleanly."""
         # Find free ephemeral port

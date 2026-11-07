@@ -4500,7 +4500,131 @@ def build_modern_dashboard_html(
 
     .log-line-ok   {{ color: #34d399; font-weight: 600; }}
 
+    /* On-Page Live Automation Activity & Micro-Step Feed (Event-Driven) */
+    .live-feed-card {{
+      background: var(--bg-surface);
+      border: 1px solid var(--border-subtle);
+      border-radius: var(--radius-md);
+      padding: 14px 18px;
+      margin-bottom: 22px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: border-color var(--transition-fast), box-shadow var(--transition-fast);
+    }}
+    .live-feed-card.active-event {{
+      border-color: rgba(99, 102, 241, 0.45);
+      box-shadow: 0 0 20px rgba(99, 102, 241, 0.18);
+    }}
+    .live-feed-header {{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+    }}
+    .live-feed-title {{
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: var(--text-primary);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }}
+    .live-feed-status-dot {{
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: var(--text-muted);
+      display: inline-block;
+      transition: background 0.3s;
+    }}
+    .live-feed-status-dot.active {{
+      background: #10b981;
+      box-shadow: 0 0 10px #10b981;
+      animation: pulseDot 1.5s infinite ease-in-out;
+    }}
+    .live-feed-actions {{
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }}
+    .live-feed-badge {{
+      font-size: 0.72rem;
+      font-family: var(--font-mono);
+      padding: 2px 8px;
+      border-radius: var(--radius-full);
+      background: rgba(99, 102, 241, 0.12);
+      color: var(--accent-indigo);
+      border: 1px solid rgba(99, 102, 241, 0.25);
+    }}
+    .live-feed-btn {{
+      font-size: 0.72rem;
+      padding: 3px 8px;
+      border-radius: var(--radius-sm);
+      background: var(--bg-surface-elevated);
+      color: var(--text-secondary);
+      border: 1px solid var(--border-subtle);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+      transition: all var(--transition-fast);
+    }}
+    .live-feed-btn:hover {{
+      color: var(--text-primary);
+      border-color: var(--border-strong);
+    }}
+    .live-feed-terminal {{
+      background: #050811;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius-sm);
+      padding: 10px 14px;
+      font-family: var(--font-mono);
+      font-size: 0.78rem;
+      line-height: 1.55;
+      color: #94a3b8;
+      max-height: 140px;
+      overflow-y: auto;
+      white-space: pre-wrap;
+      word-break: break-all;
+    }}
+    .live-feed-item {{
+      padding: 2px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.03);
+      display: flex;
+      align-items: flex-start;
+      gap: 8px;
+    }}
+    .live-feed-item:last-child {{
+      border-bottom: none;
+    }}
+    .live-feed-time {{
+      color: #64748b;
+      font-size: 0.72rem;
+      flex-shrink: 0;
+    }}
+    .live-feed-msg {{
+      flex: 1;
+    }}
+    @keyframes pulseDot {{
+      0%, 100% {{ transform: scale(1); opacity: 1; }}
+      50% {{ transform: scale(1.35); opacity: 0.6; }}
+    }}
 
+    /* Header Action Button Active Event State */
+    #btn-header-refresh.btn-event-active {{
+      background: linear-gradient(135deg, rgba(239, 68, 68, 0.25), rgba(220, 38, 38, 0.35)) !important;
+      border: 1px solid #ef4444 !important;
+      color: #fee2e2 !important;
+      animation: activeGlowPulse 1.8s infinite ease-in-out;
+      font-weight: 600;
+    }}
+    @keyframes activeGlowPulse {{
+      0%, 100% {{ box-shadow: 0 0 8px rgba(239, 68, 68, 0.3); }}
+      50% {{ box-shadow: 0 0 16px rgba(239, 68, 68, 0.7); }}
+    }}
 
     /* Floating Toast */
 
@@ -5055,6 +5179,29 @@ def build_modern_dashboard_html(
     <!-- TAB 1: OVERVIEW (PERMANENTLY OPEN, 100% FULL-WIDTH, NO COLLAPSIBLES) -->
 
     <main id="tab-overview" class="tab-panel active" role="tabpanel" aria-labelledby="tab-btn-overview">
+
+      <!-- Visible On-Page Live Automation Activity & Micro-Step Feed (Event-Driven) -->
+      <section class="live-feed-card" id="onpage-live-feed-card" aria-label="Live Automation Activity Feed">
+        <div class="live-feed-header">
+          <div class="live-feed-title">
+            <span class="live-feed-status-dot" id="live-feed-dot"></span>
+            <span>⚡ Live Automation Activity & Micro-Step Feed</span>
+            <span class="live-feed-badge" id="live-feed-badge">IDLE</span>
+          </div>
+          <div class="live-feed-actions">
+            <span style="font-size: 0.72rem; color: var(--text-muted);" id="live-feed-time">Event Stream Active</span>
+            <button type="button" class="live-feed-btn" id="btn-feed-open-drawer" title="Expand Full Interactive Terminal Drawer">
+              <span>🖥️ View Full Log</span>
+            </button>
+          </div>
+        </div>
+        <div class="live-feed-terminal" id="live-feed-stream" role="log" aria-live="polite">
+          <div class="live-feed-item" style="color: #64748b;">
+            <span class="live-feed-time">Waiting:</span>
+            <span class="live-feed-msg">Connecting to live automation event stream...</span>
+          </div>
+        </div>
+      </section>
 
       <!-- Row 1: Two High-Priority North Star Hero Cards -->
 
@@ -8564,6 +8711,50 @@ def build_modern_dashboard_html(
 
         }}
 
+        syncHeaderActionButton(running);
+
+      }}
+
+      function syncHeaderActionButton(running) {{
+        const btnHeaderRefresh = document.getElementById('btn-header-refresh');
+        const countEl = document.getElementById('refresh-countdown');
+        const spinIcon = document.getElementById('refresh-spin-icon');
+        const liveFeedDot = document.getElementById('live-feed-dot');
+        const liveFeedBadge = document.getElementById('live-feed-badge');
+        const liveFeedCard = document.getElementById('onpage-live-feed-card');
+
+        if (liveFeedDot) liveFeedDot.classList.toggle('active', running);
+        if (liveFeedCard) liveFeedCard.classList.toggle('active-event', running);
+        if (liveFeedBadge) {{
+          liveFeedBadge.textContent = running ? 'RUNNING' : 'IDLE';
+          liveFeedBadge.style.color = running ? '#10b981' : 'var(--text-muted)';
+          liveFeedBadge.style.borderColor = running ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-subtle)';
+        }}
+
+        if (!btnHeaderRefresh) return;
+
+        if (running) {{
+          btnHeaderRefresh.classList.add('btn-event-active');
+          btnHeaderRefresh.title = 'Active Automation Running • Click to Stop Process (PID Active)';
+          if (spinIcon) {{
+            spinIcon.textContent = '⏹️';
+            spinIcon.style.animation = 'none';
+          }}
+          if (countEl) {{
+            countEl.textContent = 'Stop';
+          }}
+        }} else {{
+          btnHeaderRefresh.classList.remove('btn-event-active');
+          btnHeaderRefresh.title = 'Synchronous Telemetry Refresh from Disk';
+          if (spinIcon) {{
+            spinIcon.textContent = '🔄';
+          }}
+          if (countEl) {{
+            const cfgSelect = document.getElementById('cfg-auto-refresh');
+            const sec = cfgSelect ? parseInt(cfgSelect.value, 10) : 10;
+            countEl.textContent = (isNaN(sec) || sec <= 0) ? 'OFF' : (count + 's');
+          }}
+        }}
       }}
 
 
@@ -8652,6 +8843,18 @@ def build_modern_dashboard_html(
 
           }});
 
+          eventSource.addEventListener('log', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              if (payload && Array.isArray(payload.lines) && payload.lines.length > 0) {{
+                appendLiveFeedLines(payload.lines, payload.timestamp, !!payload.initial);
+                if (payload.total_lines !== undefined && logBadge) {{
+                  logBadge.textContent = payload.total_lines;
+                }}
+              }}
+            }} catch (_) {{}}
+          }});
+
           eventSource.onerror = () => {{
 
             // On error or disconnect, EventSource auto-retries while setInterval polling provides fallback
@@ -8729,6 +8932,78 @@ def build_modern_dashboard_html(
       const logBadge = document.getElementById('log-count-badge');
 
       let logsInterval = null;
+
+      // Real-time on-page activity feed elements
+      const liveFeedStream = document.getElementById('live-feed-stream');
+      const liveFeedTime = document.getElementById('live-feed-time');
+      const btnFeedOpenDrawer = document.getElementById('btn-feed-open-drawer');
+      let liveFeedHistory = [];
+
+      if (btnFeedOpenDrawer) {{
+        btnFeedOpenDrawer.addEventListener('click', () => {{
+          toggleLogs(true);
+        }});
+      }}
+
+      function formatLogLineHTML(rawLine) {{
+        let cls = '';
+        const upper = rawLine.toUpperCase();
+        if (upper.includes('[ERROR]') || upper.includes('ERROR:')) cls = 'log-line-err';
+        else if (upper.includes('[WARNING]') || upper.includes('[WARN]')) cls = 'log-line-warn';
+        else if (upper.includes('[SUCCESS]') || upper.includes('PASSED') || upper.includes('SUCCESS:')) cls = 'log-line-ok';
+        else if (upper.includes('[STEP') || upper.includes('STEP 0') || upper.includes('STEP 1') || upper.includes('STEP 2') || upper.includes('STEP 3') || upper.includes('STEP 4') || upper.includes('STEP 9')) cls = 'log-line-step';
+        else if (upper.includes('[INFO]')) cls = 'log-line-info';
+
+        const escaped = rawLine.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+        return `<div class="${{cls}}">${{escaped}}</div>`;
+      }}
+
+      function appendLiveFeedLines(newLines, timestamp, isInitial) {{
+        if (!Array.isArray(newLines) || newLines.length === 0) return;
+
+        if (liveFeedTime) {{
+          const nowStr = timestamp ? (new Date(timestamp).toLocaleTimeString()) : (new Date().toLocaleTimeString());
+          liveFeedTime.textContent = 'Updated ' + nowStr;
+        }}
+
+        if (isInitial) {{
+          liveFeedHistory = newLines.slice(-20);
+        }} else {{
+          newLines.forEach(l => {{
+            liveFeedHistory.push(l);
+            if (liveFeedHistory.length > 80) liveFeedHistory.shift();
+          }});
+        }}
+
+        if (liveFeedStream) {{
+          const recentToShow = liveFeedHistory.slice(-5);
+          let html = '';
+          recentToShow.forEach(l => {{
+            let cls = '';
+            const upper = l.toUpperCase();
+            if (upper.includes('[ERROR]') || upper.includes('ERROR:')) cls = 'log-line-err';
+            else if (upper.includes('[WARNING]') || upper.includes('[WARN]')) cls = 'log-line-warn';
+            else if (upper.includes('[SUCCESS]') || upper.includes('PASSED') || upper.includes('SUCCESS:')) cls = 'log-line-ok';
+            else if (upper.includes('[STEP') || upper.includes('STEP 0') || upper.includes('STEP 1') || upper.includes('STEP 2') || upper.includes('STEP 3') || upper.includes('STEP 4') || upper.includes('STEP 9')) cls = 'log-line-step';
+            else if (upper.includes('[INFO]')) cls = 'log-line-info';
+
+            const escaped = l.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html += `<div class="live-feed-item"><span class="live-feed-msg ${{cls}}">${{escaped}}</span></div>`;
+          }});
+          liveFeedStream.innerHTML = html;
+          liveFeedStream.scrollTop = liveFeedStream.scrollHeight;
+        }}
+
+        if (logsTerminal) {{
+          const wasAtBottom = (logsTerminal.scrollHeight - logsTerminal.scrollTop - logsTerminal.clientHeight) <= 50;
+          let drawerHtml = '';
+          liveFeedHistory.forEach(l => {{
+            drawerHtml += formatLogLineHTML(l);
+          }});
+          logsTerminal.innerHTML = drawerHtml;
+          if (wasAtBottom) logsTerminal.scrollTop = logsTerminal.scrollHeight;
+        }}
+      }}
 
 
 
@@ -8817,6 +9092,7 @@ def build_modern_dashboard_html(
             logLines = lines.length;
 
             if (logBadge) logBadge.textContent = logLines;
+            appendLiveFeedLines(lines, null, true);
             if (!logsOpen) return;
 
             let colored = '';
@@ -9562,46 +9838,54 @@ def build_modern_dashboard_html(
 
 
 
-      // Synchronous Telemetry Refresh via Server API
-
+      // Context-Aware Header Refresh / Stop Button via Server API
       const btnHeaderRefresh = document.getElementById('btn-header-refresh');
 
       if (btnHeaderRefresh) {{
-
         btnHeaderRefresh.addEventListener('click', () => {{
-
-          btnHeaderRefresh.disabled = true;
-
-          const spinIcon = document.getElementById('refresh-spin-icon');
-
-          if (spinIcon) spinIcon.style.display = 'inline-block';
-
-          if (spinIcon) spinIcon.style.animation = 'spin 0.6s linear infinite';
-
-          showToast('🔄 Synchronizing telemetry from disk and regenerating dashboard...');
-
-          fetch(API_BASE + '/api/dashboard/refresh', {{ method: 'POST' }})
-
-            .then(res => res.json())
-
-            .then(d => {{
-
-              playChime('copy');
-
-              showToast('✅ Telemetry synchronized! Reloading...');
-
-              setTimeout(() => location.reload(), 400);
-
+          if (isAutomationActive) {{
+            // Context-Aware Event Action: Terminate active running automation process
+            btnHeaderRefresh.disabled = true;
+            showToast('⏹️ Terminating active automation process...');
+            fetch(API_BASE + '/api/automation/stop', {{
+              method: 'POST',
+              headers: {{ 'Content-Type': 'application/json' }},
+              body: JSON.stringify({{}})
             }})
+              .then(res => res.json())
+              .then(data => {{
+                btnHeaderRefresh.disabled = false;
+                playChime('stop');
+                showToast(data.message || '⏹️ Automation stopped successfully');
+                pollServerStatus();
+              }})
+              .catch(() => {{
+                btnHeaderRefresh.disabled = false;
+                showToast('❌ Failed to stop automation process');
+              }});
+            return;
+          }}
 
+          // Idle State: Synchronous Telemetry Refresh
+          btnHeaderRefresh.disabled = true;
+          const spinIcon = document.getElementById('refresh-spin-icon');
+          if (spinIcon) {{
+            spinIcon.textContent = '🔄';
+            spinIcon.style.display = 'inline-block';
+            spinIcon.style.animation = 'spin 0.6s linear infinite';
+          }}
+          showToast('🔄 Synchronizing telemetry from disk and regenerating dashboard...');
+          fetch(API_BASE + '/api/dashboard/refresh', {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(d => {{
+              playChime('copy');
+              showToast('✅ Telemetry synchronized! Reloading...');
+              setTimeout(() => location.reload(), 400);
+            }})
             .catch(() => {{
-
               location.reload();
-
             }});
-
         }});
-
       }}
 
 
@@ -9731,6 +10015,11 @@ def build_modern_dashboard_html(
       }}
 
       setInterval(() => {{
+        if (isAutomationActive) {{
+          syncHeaderActionButton(true);
+          return;
+        }}
+
         if (isNaN(refreshIntervalSeconds) || refreshIntervalSeconds <= 0) {{
           if (countEl) countEl.textContent = 'OFF';
           return;

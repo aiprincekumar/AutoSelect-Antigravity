@@ -671,7 +671,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
             self.send_json_response(st)
             return
 
-        # 1b. API: Server-Sent Events (SSE) Live Status Stream
+        # 1b. API: Server-Sent Events (SSE) Live Event Stream
         if path == "/api/automation/events":
             logger.info("[STEP 4.39] [API_SSE_CONNECT] Client connected to live SSE event stream")
             mgr = self.server_manager or AutomationProcessManager(self.workspace_dir)
@@ -697,21 +697,105 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(msg.encode("utf-8"))
                 self.wfile.flush()
 
-                # Stream periodic status events
-                while True:
-                    time.sleep(2.0)
-                    status_data = mgr.get_status()
-                    payload = {
-                        "success": True,
-                        "data": status_data,
-                        "meta": {
-                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
-                            "server": "AutoSelect-Dashboard-Control/1.0",
-                        },
+                # 2. Send initial log tail so client immediately has recent activity without waiting for new events
+                log_path = mgr.resolve_log_file()
+                last_mtime = log_path.stat().st_mtime if log_path.is_file() else 0.0
+                last_size = log_path.stat().st_size if log_path.is_file() else 0
+                last_running = status_data.get("running")
+                last_pid = status_data.get("pid")
+                last_heartbeat = time.time()
+                last_status_broadcast = time.time()
+
+                initial_lines = mgr.get_log_tail(50, return_list=True)
+                if initial_lines:
+                    log_payload = {
+                        "lines": initial_lines,
+                        "total_lines": len(initial_lines),
+                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        "log_file": str(log_path),
+                        "initial": True,
                     }
-                    msg = f"event: status\ndata: {json.dumps(payload)}\n\n"
+                    msg = f"event: log\ndata: {json.dumps(log_payload)}\n\n"
                     self.wfile.write(msg.encode("utf-8"))
                     self.wfile.flush()
+
+                # Stream periodic status events
+                while True:
+                    time.sleep(0.3)
+                    now = time.time()
+
+                    # A. Check process status changes (or periodic refresh every 3s if actively running)
+                    status_data = mgr.get_status()
+                    curr_running = status_data.get("running")
+                    curr_pid = status_data.get("pid")
+
+                    state_changed = (curr_running != last_running or curr_pid != last_pid)
+                    periodic_needed = (curr_running and (now - last_status_broadcast >= 3.0))
+
+                    if state_changed or periodic_needed:
+                        payload = {
+                            "success": True,
+                            "data": status_data,
+                            "meta": {
+                                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                                "server": "AutoSelect-Dashboard-Control/1.0",
+                            },
+                        }
+                        msg = f"event: status\ndata: {json.dumps(payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+                        last_running = curr_running
+                        last_pid = curr_pid
+                        last_status_broadcast = now
+
+                    # B. Check log file modifications (event-driven trigger)
+                    log_path = mgr.resolve_log_file()
+                    if log_path.is_file():
+                        try:
+                            stat_info = log_path.stat()
+                            curr_mtime = stat_info.st_mtime
+                            curr_size = stat_info.st_size
+
+                            if curr_size != last_size or curr_mtime != last_mtime:
+                                new_lines = []
+                                if curr_size > last_size and last_size > 0:
+                                    try:
+                                        with open(log_path, "r", encoding="utf-8", errors="replace") as f:
+                                            f.seek(last_size)
+                                            tail_content = f.read()
+                                            new_lines = [l.strip() for l in tail_content.splitlines() if l.strip()]
+                                    except Exception:
+                                        new_lines = mgr.get_log_tail(50, return_list=True)
+                                else:
+                                    new_lines = mgr.get_log_tail(50, return_list=True)
+
+                                last_size = curr_size
+                                last_mtime = curr_mtime
+
+                                if new_lines:
+                                    all_tail = mgr.get_log_tail(200, return_list=True)
+                                    log_payload = {
+                                        "lines": new_lines,
+                                        "total_lines": len(all_tail),
+                                        "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                                        "log_file": str(log_path),
+                                    }
+                                    msg = f"event: log\ndata: {json.dumps(log_payload)}\n\n"
+                                    self.wfile.write(msg.encode("utf-8"))
+                                    self.wfile.flush()
+                        except Exception as e:
+                            logger.debug("Error checking log file changes for SSE: %s", e)
+
+                    # C. Send heartbeat ping every 10 seconds to keep connection alive
+                    if now - last_heartbeat >= 10.0:
+                        ping_payload = {
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "alive": True,
+                        }
+                        msg = f"event: ping\ndata: {json.dumps(ping_payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+                        last_heartbeat = now
             except (BrokenPipeError, ConnectionResetError, Exception):
                 pass
             return
