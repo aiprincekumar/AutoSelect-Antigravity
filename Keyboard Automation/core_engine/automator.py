@@ -1033,10 +1033,16 @@ class GrillMeAutomator:
         try:
             if cdp_active:
                 logger.info("CDP DevTools connection active. Engaging PRIMARY CDP Hybrid Execution Mode.")
-                return self._execute_cdp_hybrid(cdp, tq, opts)
+                res = self._execute_cdp_hybrid(cdp, tq, opts)
+                if res:
+                    logger.info("[STEP 3.40] [STEP3_EXIT_CLEAN] Step 3 subsystem fully complete with exit code 0")
+                return res
             else:
                 logger.info("CDP DevTools connection not available. Engaging Pure Keyboard Fallback Mode.")
-                return self._execute_pure_keyboard(tq, opts)
+                res = self._execute_pure_keyboard(tq, opts)
+                if res:
+                    logger.info("[STEP 3.40] [STEP3_EXIT_CLEAN] Step 3 subsystem fully complete with exit code 0")
+                return res
         finally:
             if opened_cdp and cdp:
                 try:
