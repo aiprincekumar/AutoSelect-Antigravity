@@ -1,0 +1,34 @@
+{
+  "name": "autoselect-antigravity",
+  "version": "1.0.0",
+  "description": "100% Hands-Free Autonomous Keyboard & Visual Mouse Automation Suite with Real-Time Telemetry Dashboard for Antigravity",
+  "main": "./bin/cli.js",
+  "bin": {
+    "autoselect-antigravity": "./bin/cli.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/aiprincekumar/AutoSelect-Antigravity.git"
+  },
+  "keywords": [
+    "antigravity",
+    "automation",
+    "autoselect",
+    "cli",
+    "dashboard",
+    "keyboard-automation",
+    "mouse-automation",
+    "telemetry",
+    "npx"
+  ],
+  "author": "Atul Verma <aiprincekumar010100@gmail.com> (https://github.com/aiprincekumar)",
+  "license": "MIT",
+  "preferGlobal": true,
+  "engines": {
+    "node": ">=16.0.0"
+  },
+  "scripts": {
+    "start": "node ./bin/cli.js",
+    "test": "pytest \"Keyboard Automation\""
+  }
+}
