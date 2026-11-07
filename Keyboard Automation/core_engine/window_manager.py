@@ -28,6 +28,9 @@ from .constants import (
     SWP_SHOWWINDOW,
     ASFW_ANY,
     DISQUALIFIED_BROWSER_PROCS,
+    BROWSER_TITLE_MARKERS,
+    is_browser_window,
+    is_explicit_browser_requested,
     BLACK_LISTED_SHELL_PROCS,
     DEFAULT_TARGET_WINDOW,
 )
@@ -166,9 +169,12 @@ if IS_WINDOWS:
                 w = (rect.right - rect.left) if rect_ok else 0
                 h = (rect.bottom - rect.top) if rect_ok else 0
 
-                # Include if titled or if matching Antigravity/Electron class
+                # Check if this window is a web browser by process OR title markers
+                is_browser = is_browser_window(pname, pexe, title)
+
+                # Include if titled or if matching Antigravity/Electron class (never for browsers)
                 p_lower = pname.lower()
-                is_antigravity = "antigravity" in p_lower or "electron" in p_lower
+                is_antigravity = ("antigravity" in p_lower or "electron" in p_lower) and not is_browser
                 if (title or (is_antigravity and cls_name == "Chrome_WidgetWin_1")) and (visible or iconic):
                     candidates.append({
                         "hwnd": hwnd,
@@ -183,6 +189,7 @@ if IS_WINDOWS:
                         "width": w,
                         "height": h,
                         "rect": (rect.left, rect.top, rect.right, rect.bottom) if rect_ok else (0, 0, 0, 0),
+                        "is_browser": is_browser,
                     })
             except Exception:
                 pass
@@ -255,10 +262,7 @@ if IS_WINDOWS:
         is_custom_filter = not any(k.lower() in default_set for k in keywords)
 
         # Check if the user explicitly requested a web browser by name
-        user_explicitly_requested_browser = any(
-            any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
-            for kw in keywords
-        )
+        user_explicitly_requested_browser = is_explicit_browser_requested(target_keyword)
 
         scored: List[Tuple[int, int, str, dict]] = []  # (score, hwnd, title, candidate_dict)
 
@@ -275,14 +279,11 @@ if IS_WINDOWS:
             if console_hwnd and hwnd == console_hwnd:
                 continue
 
-            # 1. Strict Browser Disqualification
-            is_browser = (
-                p_lower in DISQUALIFIED_BROWSER_PROCS
-                or pexe_base in DISQUALIFIED_BROWSER_PROCS
-                or any(b in p_lower for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
-            )
+            # 1. Strict Browser Disqualification (Process Name, Path, AND Window Title)
+            # Even if process name resolution fails or returns empty "", check window title markers
+            is_browser = c.get("is_browser", False) or is_browser_window(pname, pexe, title)
             if is_browser and not user_explicitly_requested_browser:
-                # Strictly reject / disqualify any web browser
+                # Strictly reject / disqualify any web browser with score -9999
                 continue
 
             # 2. Check shell blacklist
@@ -303,9 +304,8 @@ if IS_WINDOWS:
 
             # 1. Antigravity 2.0 Harness Process Signature (Highest Priority: +1000)
             is_antigravity_proc = (
-                "antigravity.exe" in p_lower
-                or p_lower == "antigravity"
-                or "antigravity" in pexe
+                ("antigravity.exe" in p_lower or p_lower == "antigravity" or "antigravity" in pexe)
+                and not is_browser
             )
             if is_antigravity_proc:
                 score += 1000
@@ -313,7 +313,7 @@ if IS_WINDOWS:
                     score += 100
                 if c["minimized"] or (c["width"] >= 400 and c["height"] >= 300):
                     score += 50
-            elif "electron" in p_lower or "electron" in pexe:
+            elif not is_browser and ("electron" in p_lower or "electron" in pexe):
                 score += 200
                 if cls_name == "Chrome_WidgetWin_1":
                     score += 50
@@ -326,17 +326,19 @@ if IS_WINDOWS:
                     break
 
             # 3. Keyword matching against window title
-            for kw in keywords:
-                kw_l = kw.lower()
-                if kw_l == t_lower:
-                    score += 100
-                elif t_lower.startswith(kw_l):
-                    score += 80
-                elif kw_l in t_lower:
-                    score += 50
+            # NEVER award title-matching points for "Antigravity" if the window is identified as a browser!
+            if not is_browser or user_explicitly_requested_browser:
+                for kw in keywords:
+                    kw_l = kw.lower()
+                    if kw_l == t_lower:
+                        score += 100
+                    elif t_lower.startswith(kw_l):
+                        score += 80
+                    elif kw_l in t_lower:
+                        score += 50
 
             # 4. Window Class weighting - ONLY for verified Antigravity or Electron apps!
-            # Never assign points for Chrome_WidgetWin_1 to arbitrary or unverified windows.
+            # Never assign points for Chrome_WidgetWin_1 to arbitrary, unverified, or browser windows.
             if is_antigravity_proc and cls_name == "Chrome_WidgetWin_1":
                 score += 20
 
@@ -364,6 +366,7 @@ if IS_WINDOWS:
         if scored and scored[0][0] > 0:
             top_score, top_hwnd, top_title, top_c = scored[0]
             proc_name = top_c.get("process_name", "")
+            top_pexe = top_c.get("process_exe", "")
             pid = top_c.get("pid", 0)
             cls_name = top_c.get("class", "")
 
@@ -372,9 +375,9 @@ if IS_WINDOWS:
                 f"Title='{top_title}', Class={cls_name} [Score: {top_score}]"
             )
 
-            # Defensive verification: Ensure candidate is NEVER a browser
-            if proc_name.lower() in DISQUALIFIED_BROWSER_PROCS and not user_explicitly_requested_browser:
-                logger.error(f"[SECURITY ALERT] Candidate is browser '{proc_name}'. Rejected!")
+            # Defensive verification: Ensure candidate is NEVER a browser (by process name, path, or title)
+            if is_browser_window(proc_name, top_pexe, top_title) and not user_explicitly_requested_browser:
+                logger.error(f"[SECURITY ALERT] Candidate is browser '{proc_name}' (Title: '{top_title}'). Rejected!")
                 return None
 
             return (top_hwnd, top_title)

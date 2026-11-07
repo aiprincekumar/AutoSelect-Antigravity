@@ -31,6 +31,35 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.test_dir = Path(tempfile.mkdtemp(prefix="test_boundary_"))
         self.state_file = self.test_dir / "target_chat.json"
 
+        # Root Cause 3 Hermetic Mock Isolation: Ensure NO physical keystrokes reach live OS windows
+        self._patcher_send_single = patch("core_engine.automator.send_single_key", autospec=True)
+        self._patcher_send_combo = patch("core_engine.automator.send_key_combo", autospec=True)
+        self._patcher_inj_single = patch("core_engine.input_injector.send_single_key", autospec=True)
+        self._patcher_inj_combo = patch("core_engine.input_injector.send_key_combo", autospec=True)
+        self._patcher_inj_event = patch("core_engine.input_injector._send_key_event", return_value=True)
+
+        self.mock_send_single_key = self._patcher_send_single.start()
+        self.mock_send_key_combo = self._patcher_send_combo.start()
+        self.mock_inj_send_single = self._patcher_inj_single.start()
+        self.mock_inj_send_combo = self._patcher_inj_combo.start()
+        self.mock_inj_send_event = self._patcher_inj_event.start()
+
+        self.addCleanup(self._patcher_send_single.stop)
+        self.addCleanup(self._patcher_send_combo.stop)
+        self.addCleanup(self._patcher_inj_single.stop)
+        self.addCleanup(self._patcher_inj_combo.stop)
+        self.addCleanup(self._patcher_inj_event.stop)
+
+        from core_engine.win32_api import user32
+        if hasattr(user32, "SendInput"):
+            self._patcher_user32_send = patch.object(user32, "SendInput", return_value=1)
+            self._patcher_user32_send.start()
+            self.addCleanup(self._patcher_user32_send.stop)
+        if hasattr(user32, "keybd_event"):
+            self._patcher_user32_kbd = patch.object(user32, "keybd_event", return_value=None)
+            self._patcher_user32_kbd.start()
+            self.addCleanup(self._patcher_user32_kbd.stop)
+
     def tearDown(self):
         import shutil
         if self.test_dir.exists():
@@ -144,7 +173,7 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(automator.options_list, ["1", "1", "1"])
 
     def test_execute_multi_question_n1_exact_keystroke_boundary(self):
-        """Verify N=1 executes: FOCUS.1, FOCUS.2, OPT.1, OPT.2 (total 4 steps, zero Enter/Space)."""
+        """Verify N=1 executes: FOCUS.1, FOCUS.2, OPT.1 (total 3 steps, zero Enter/Space, zero trailing leak)."""
         automator = GrillMeAutomator(
             questions=1,
             options_list=["1"],
@@ -165,18 +194,17 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertTrue(ok)
 
         step_codes = [s[0] for s in executed_steps]
-        self.assertEqual(step_codes, ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2"])
-        self.assertEqual(len(executed_steps), 4)
+        self.assertEqual(step_codes, ["FOCUS.1", "FOCUS.2", "OPT.1"])
+        self.assertEqual(len(executed_steps), 3)
         self.assertIn("Ctrl + L", executed_steps[0][1])
         self.assertIn("Shift + Tab", executed_steps[1][1])
-        self.assertIn("Option press 1/2", executed_steps[2][1])
-        self.assertIn("Option press 2/2", executed_steps[3][1])
+        self.assertIn("Option press 1/1", executed_steps[2][1])
         for sc, d in executed_steps:
             self.assertNotIn("enter", d.lower())
             self.assertNotIn("space", d.lower())
 
     def test_execute_multi_question_n2_exact_keystroke_boundary(self):
-        """Verify N=2 executes: FOCUS.1, FOCUS.2, OPT.1, OPT.2, OPT.3 (total 5 steps, zero Enter/Space)."""
+        """Verify N=2 executes: FOCUS.1, FOCUS.2, OPT.1, OPT.2 (total 4 steps, zero Enter/Space)."""
         automator = GrillMeAutomator(
             questions=2,
             options_list=["1", "2"],
@@ -197,18 +225,17 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertTrue(ok)
 
         step_codes = [s[0] for s in executed_steps]
-        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3"]
+        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2"]
         self.assertEqual(step_codes, expected_codes)
-        self.assertEqual(len(executed_steps), 5)
-        self.assertIn("Option press 1/3", executed_steps[2][1])
-        self.assertIn("Option press 2/3", executed_steps[3][1])
-        self.assertIn("Option press 3/3", executed_steps[4][1])
+        self.assertEqual(len(executed_steps), 4)
+        self.assertIn("Option press 1/2", executed_steps[2][1])
+        self.assertIn("Option press 2/2", executed_steps[3][1])
         for sc, d in executed_steps:
             self.assertNotIn("enter", d.lower())
             self.assertNotIn("space", d.lower())
 
     def test_execute_multi_question_n3_exact_keystroke_boundary(self):
-        """Verify N=3 executes: FOCUS.1, FOCUS.2, OPT.1, OPT.2, OPT.3, OPT.4 (total 6 steps, zero Enter/Space)."""
+        """Verify N=3 executes: FOCUS.1, FOCUS.2, OPT.1, OPT.2, OPT.3 (total 5 steps, zero Enter/Space)."""
         automator = GrillMeAutomator(
             questions=3,
             options_list=["1", "2", "3"],
@@ -229,13 +256,12 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertTrue(ok)
 
         step_codes = [s[0] for s in executed_steps]
-        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3", "OPT.4"]
+        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3"]
         self.assertEqual(step_codes, expected_codes)
-        self.assertEqual(len(executed_steps), 6)
-        self.assertIn("Option press 1/4", executed_steps[2][1])
-        self.assertIn("Option press 2/4", executed_steps[3][1])
-        self.assertIn("Option press 3/4", executed_steps[4][1])
-        self.assertIn("Option press 4/4", executed_steps[5][1])
+        self.assertEqual(len(executed_steps), 5)
+        self.assertIn("Option press 1/3", executed_steps[2][1])
+        self.assertIn("Option press 2/3", executed_steps[3][1])
+        self.assertIn("Option press 3/3", executed_steps[4][1])
         for sc, d in executed_steps:
             self.assertNotIn("enter", d.lower())
             self.assertNotIn("space", d.lower())
@@ -259,7 +285,7 @@ class TestAutomatorBoundary(unittest.TestCase):
 
 
     def test_execute_multi_question_n4_exact_keystroke_boundary(self):
-        """Verify N=4 dynamically executes FOCUS.1, FOCUS.2, OPT.1..OPT.5: total 7 steps, zero Enter/Space."""
+        """Verify N=4 dynamically executes FOCUS.1, FOCUS.2, OPT.1..OPT.4: total 6 steps, zero Enter/Space."""
         automator = GrillMeAutomator(
             questions=4,
             options_list=["1", "2", "1", "3"],
@@ -274,21 +300,20 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=4, options=["1", "2", "1", "3"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 7)
+        self.assertEqual(len(executed_steps), 6)
         step_codes = [s[0] for s in executed_steps]
-        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3", "OPT.4", "OPT.5"]
+        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3", "OPT.4"]
         self.assertEqual(step_codes, expected_codes)
-        self.assertIn("Option press 1/5", executed_steps[2][1])
-        self.assertIn("Option press 2/5", executed_steps[3][1])
-        self.assertIn("Option press 3/5", executed_steps[4][1])
-        self.assertIn("Option press 4/5", executed_steps[5][1])
-        self.assertIn("Option press 5/5", executed_steps[6][1])
+        self.assertIn("Option press 1/4", executed_steps[2][1])
+        self.assertIn("Option press 2/4", executed_steps[3][1])
+        self.assertIn("Option press 3/4", executed_steps[4][1])
+        self.assertIn("Option press 4/4", executed_steps[5][1])
         for sc, d in executed_steps:
             self.assertNotIn("enter", d.lower())
             self.assertNotIn("space", d.lower())
 
     def test_execute_multi_question_n5_exact_keystroke_boundary(self):
-        """Verify N=5 dynamically executes FOCUS.1, FOCUS.2, OPT.1..OPT.6: total 8 steps, zero Enter/Space."""
+        """Verify N=5 dynamically executes FOCUS.1, FOCUS.2, OPT.1..OPT.5: total 7 steps, zero Enter/Space."""
         automator = GrillMeAutomator(
             questions=5,
             options_list=["1", "1", "2", "2", "1"],
@@ -303,12 +328,12 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=5, options=["1", "1", "2", "2", "1"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 8)
+        self.assertEqual(len(executed_steps), 7)
         step_codes = [s[0] for s in executed_steps]
-        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3", "OPT.4", "OPT.5", "OPT.6"]
+        expected_codes = ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3", "OPT.4", "OPT.5"]
         self.assertEqual(step_codes, expected_codes)
-        self.assertIn("Option press 1/6", executed_steps[2][1])
-        self.assertIn("Option press 6/6", executed_steps[7][1])
+        self.assertIn("Option press 1/5", executed_steps[2][1])
+        self.assertIn("Option press 5/5", executed_steps[6][1])
         for sc, d in executed_steps:
             self.assertNotIn("enter", d.lower())
             self.assertNotIn("space", d.lower())
@@ -405,7 +430,7 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(automator.options_list, ["1", "1"])
 
     def test_multi_question_sequence_exact_keys_without_space(self):
-        """Verify exact sequence: N=2 executes single focus (Ctrl+L, Shift+Tab) followed by 3 option presses, with zero Enter and zero Space."""
+        """Verify exact sequence: N=2 executes single focus (Ctrl+L, Shift+Tab) followed by 2 option presses, with zero Enter and zero Space."""
         automator = GrillMeAutomator(
             questions=2,
             options_list=["1", "1"],
@@ -420,17 +445,16 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=2, options=["1", "1"])
         self.assertTrue(ok)
-        # 2 focus steps + 3 option press steps = 5 steps
-        self.assertEqual(len(executed_steps), 5)
+        # 2 focus steps + 2 option press steps = 4 steps
+        self.assertEqual(len(executed_steps), 4)
 
         # Verify initial focus sequence (1st time only)
         self.assertIn("Ctrl + L", executed_steps[0][1])
         self.assertIn("Shift + Tab", executed_steps[1][1])
 
-        # Verify option presses (2+1 = 3 presses)
+        # Verify option presses (exactly 2 presses for N=2)
         self.assertIn("[1]", executed_steps[2][1])
         self.assertIn("[1]", executed_steps[3][1])
-        self.assertIn("[1]", executed_steps[4][1])
 
         # Verify NO step executed Enter or Space
         for sc, d in executed_steps:
@@ -468,8 +492,8 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(dispatched_keys, [])
 
         # Verify option presses logged without any Enter prompt
-        self.assertTrue(any("Option press 1/4" in m for m in logged_messages))
-        self.assertTrue(any("Option press 4/4" in m for m in logged_messages))
+        self.assertTrue(any("Option press 1/3" in m for m in logged_messages))
+        self.assertTrue(any("Option press 3/3" in m for m in logged_messages))
         self.assertFalse(any("enter" in m.lower() for m in logged_messages))
 
         # Ensure dispatch_key helper itself still functions if called directly
@@ -477,7 +501,7 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(dispatched_keys, [VK_RETURN])
 
     def test_single_question_n1_selects_option_and_submits_without_skipping(self):
-        """Verify single question (N=1) flow executes FOCUS.1, FOCUS.2, OPT.1, OPT.2 without triggering Skip button, Enter, or Space."""
+        """Verify single question (N=1) flow executes FOCUS.1, FOCUS.2, OPT.1 without triggering Skip button, Enter, or Space."""
         automator = GrillMeAutomator(
             questions=1,
             options_list=["1"],
@@ -492,13 +516,11 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=1, options=["1"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 4)
+        self.assertEqual(len(executed_steps), 3)
         self.assertEqual(executed_steps[0][0], "FOCUS.1")
         self.assertEqual(executed_steps[1][0], "FOCUS.2")
         self.assertEqual(executed_steps[2][0], "OPT.1")
         self.assertIn("[1]", executed_steps[2][1])
-        self.assertEqual(executed_steps[3][0], "OPT.2")
-        self.assertIn("[1]", executed_steps[3][1])
 
         # Verify none of the steps activate or target Skip, Enter, or Space
         for sc, desc in executed_steps:
@@ -507,7 +529,7 @@ class TestAutomatorBoundary(unittest.TestCase):
             self.assertNotIn("space", desc.lower())
 
     def test_execute_multi_question_n5_option_sequence_and_no_enter(self):
-        """Verify N=5 flow executes FOCUS.1, FOCUS.2, and OPT.1..OPT.6 with 0 Enter/Space."""
+        """Verify N=5 flow executes FOCUS.1, FOCUS.2, and OPT.1..OPT.5 with 0 Enter/Space."""
         automator = GrillMeAutomator(
             questions=5,
             options_list=["1", "2", "3", "1", "2"],
@@ -522,18 +544,16 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=5, options=["1", "2", "3", "1", "2"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 8)
+        self.assertEqual(len(executed_steps), 7)
 
         step_map = {sc: d for sc, d in executed_steps}
         self.assertIn("Focus chat box", step_map["FOCUS.1"])
         self.assertIn("Move backward to question options", step_map["FOCUS.2"])
-        self.assertIn("[1] (Option press 1/6)", step_map["OPT.1"])
-        self.assertIn("[2] (Option press 2/6)", step_map["OPT.2"])
-        self.assertIn("[3] (Option press 3/6)", step_map["OPT.3"])
-        self.assertIn("[1] (Option press 4/6)", step_map["OPT.4"])
-        self.assertIn("[2] (Option press 5/6)", step_map["OPT.5"])
-        # (N+1)-th press repeats last option
-        self.assertIn("[2] (Option press 6/6)", step_map["OPT.6"])
+        self.assertIn("[1] (Option press 1/5)", step_map["OPT.1"])
+        self.assertIn("[2] (Option press 2/5)", step_map["OPT.2"])
+        self.assertIn("[3] (Option press 3/5)", step_map["OPT.3"])
+        self.assertIn("[1] (Option press 4/5)", step_map["OPT.4"])
+        self.assertIn("[2] (Option press 5/5)", step_map["OPT.5"])
 
         # Check zero Enter or Space
         for sc, d in executed_steps:
@@ -557,10 +577,9 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         ok = automator.execute_multi_question(total_questions=1, options=["1"])
         self.assertTrue(ok)
-        self.assertEqual(len(executed_steps), 3)
+        self.assertEqual(len(executed_steps), 2)
         self.assertEqual(executed_steps[0][0], "FOCUS.2")
         self.assertEqual(executed_steps[1][0], "OPT.1")
-        self.assertEqual(executed_steps[2][0], "OPT.2")
 
     @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(1234, "Antigravity.exe", "Antigravity"))
     def test_hybrid_cdp_helper_interaction_when_available(self, mock_proc_info):
@@ -619,12 +638,11 @@ class TestAutomatorBoundary(unittest.TestCase):
 
             ok = automator.execute_multi_question(total_questions=1, options=["1"])
             self.assertTrue(ok)
-            self.assertEqual(len(executed_steps), 4)
+            self.assertEqual(len(executed_steps), 3)
             self.assertEqual(executed_steps[0][0], "FOCUS.1")
             self.assertEqual(executed_steps[1][0], "FOCUS.2")
             self.assertEqual(executed_steps[2][0], "OPT.1")
-            self.assertEqual(executed_steps[3][0], "OPT.2")
-            self.assertIn("Option press 2/2", executed_steps[3][1])
+            self.assertIn("Option press 1/1", executed_steps[2][1])
 
     @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(1234, "Antigravity.exe", "Antigravity"))
     def test_cdp_hybrid_multi_question_intermediate_continue_and_submit(self, mock_proc_info):
@@ -822,6 +840,155 @@ class TestAutomatorBoundary(unittest.TestCase):
             target_window="msedge.exe",
         )
         self.assertTrue(automator._is_foreground_window_target_and_safe())
+
+    def test_pure_keyboard_stops_immediately_when_card_closed_before_focus(self):
+        """Verify _execute_pure_keyboard halts cleanly (return True, exit code 0) if questionnaire card is closed before FOCUS.1."""
+        mock_cdp = MagicMock()
+        mock_cdp.get_questionnaire_status.return_value = {"has_card": False}
+
+        automator = GrillMeAutomator(
+            questions=2,
+            options_list=["1", "2"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append(sc)
+
+        ret = automator._execute_pure_keyboard(total_questions=2, options=["1", "2"], cdp=mock_cdp)
+        self.assertTrue(ret)
+        self.assertEqual(len(executed_steps), 0)
+
+    def test_pure_keyboard_stops_immediately_when_card_closed_after_focus(self):
+        """Verify _execute_pure_keyboard halts cleanly after FOCUS.2 if card closes before option loop."""
+        mock_cdp = MagicMock()
+        # Card present before FOCUS.1, closed after FOCUS.2
+        mock_cdp.get_questionnaire_status.side_effect = [
+            {"has_card": True, "chat_input_focused": False},  # before FOCUS.1
+            {"has_card": False, "chat_input_focused": False}, # after FOCUS.2
+        ]
+
+        automator = GrillMeAutomator(
+            questions=2,
+            options_list=["1", "2"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append(sc)
+
+        ret = automator._execute_pure_keyboard(total_questions=2, options=["1", "2"], cdp=mock_cdp)
+        self.assertTrue(ret)
+        self.assertEqual(executed_steps, ["FOCUS.1", "FOCUS.2"])
+
+    def test_pure_keyboard_stops_immediately_when_card_closed_prior_to_option_k(self):
+        """Verify _execute_pure_keyboard halts cleanly before option press 2 if card closed after option 1."""
+        mock_cdp = MagicMock()
+        # Present before FOCUS.1, after FOCUS.2, before opt 1, then closed before opt 2
+        mock_cdp.get_questionnaire_status.side_effect = [
+            {"has_card": True, "chat_input_focused": False},  # before FOCUS.1
+            {"has_card": True, "chat_input_focused": False},  # after FOCUS.2
+            {"has_card": True, "chat_input_focused": False},  # prior to opt 1
+            {"has_card": False, "chat_input_focused": False}, # prior to opt 2
+        ]
+
+        automator = GrillMeAutomator(
+            questions=2,
+            options_list=["1", "2"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append(sc)
+
+        ret = automator._execute_pure_keyboard(total_questions=2, options=["1", "2"], cdp=mock_cdp)
+        self.assertTrue(ret)
+        self.assertEqual(executed_steps, ["FOCUS.1", "FOCUS.2", "OPT.1"])
+
+    def test_pure_keyboard_chat_input_pollution_guard_blurs_and_proceeds(self):
+        """Verify _execute_pure_keyboard blurs chat input if focused and proceeds safely when unblurred."""
+        mock_cdp = MagicMock()
+        mock_cdp.get_questionnaire_status.return_value = {"has_card": True}
+        # First reported focused, then blurred
+        mock_cdp.is_chat_input_focused.side_effect = [True, False, False, False, False, False]
+
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append(sc)
+
+        ret = automator._execute_pure_keyboard(total_questions=1, options=["1"], cdp=mock_cdp)
+        self.assertTrue(ret)
+        mock_cdp.blur_chat_input.assert_called()
+        self.assertEqual(executed_steps, ["FOCUS.1", "FOCUS.2", "OPT.1"])
+
+    def test_pure_keyboard_chat_input_pollution_guard_aborts_when_trapped(self):
+        """Verify _execute_pure_keyboard aborts (returns False) if active focus is trapped in chat input and cannot be blurred."""
+        mock_cdp = MagicMock()
+        mock_cdp.get_questionnaire_status.return_value = {"has_card": True}
+        # Trapped in chat input (remains True after blur)
+        mock_cdp.is_chat_input_focused.return_value = True
+
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+            cdp_client=mock_cdp,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append(sc)
+
+        ret = automator._execute_pure_keyboard(total_questions=1, options=["1"], cdp=mock_cdp)
+        self.assertFalse(ret)
+        mock_cdp.blur_chat_input.assert_called()
+        self.assertEqual(len(executed_steps), 0)
+
+    def test_strict_option_selection_option_1_recommended_default(self):
+        """Verify Option 1 (Recommended) is strictly respected by default across multi-question resolution."""
+        state = {
+            "success": True,
+            "data": {
+                "conversation_id": "strict_opt_test",
+                "questions": [
+                    {"question": "Q1", "recommended_option_index": 1},
+                    {"question": "Q2", "recommended_option_index": 1},
+                    {"question": "Q3", "recommended_option_index": 1},
+                ],
+            }
+        }
+        with open(self.state_file, "w", encoding="utf-8") as f:
+            import json
+            json.dump(state, f)
+
+        automator = GrillMeAutomator(
+            questions="auto",
+            state_file=str(self.state_file),
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        self.assertEqual(automator.total_questions, 3)
+        self.assertEqual(automator.options_list, ["1", "1", "1"])
 
 if __name__ == "__main__":
     unittest.main()

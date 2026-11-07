@@ -51,6 +51,26 @@ except ImportError:
     def apply_logging_config(c=None, l=None, s=""):
         pass
 
+try:
+    from core_engine.constants import (
+        DISQUALIFIED_BROWSER_PROCS,
+        BROWSER_TITLE_MARKERS,
+        is_browser_window,
+    )
+except ImportError:
+    DISQUALIFIED_BROWSER_PROCS = {
+        "chrome.exe", "msedge.exe", "firefox.exe", "brave.exe", "opera.exe", "vivaldi.exe", "iexplore.exe", "safari.exe"
+    }
+    BROWSER_TITLE_MARKERS = ("microsoft edge", "google chrome", "mozilla firefox", " - edge", " - chrome")
+    def is_browser_window(pname="", pexe="", title=""):
+        p = pname.lower().strip()
+        t = title.lower().strip()
+        return (
+            p in DISQUALIFIED_BROWSER_PROCS
+            or any(b in p for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
+            or any(m in t for m in BROWSER_TITLE_MARKERS)
+        )
+
 # Reconfigure stdout/stderr for proper UTF-8 handling on Windows
 if hasattr(sys.stdout, "reconfigure"):
     try:
@@ -507,14 +527,20 @@ class AntigravityFocusManager:
                     return True
 
                 pname = cls.get_process_name_for_hwnd(hwnd)
-                if pname in blacklisted_procs:
-                    return True
 
                 # Title
                 length = user32.GetWindowTextLengthW(hwnd)
                 buf = ctypes.create_unicode_buffer(length + 1)
                 user32.GetWindowTextW(hwnd, buf, length + 1)
                 title = buf.value.strip()
+
+                # Strict Browser Disqualification Gatekeeper (by process name AND window title)
+                # Even if pname resolution returns empty "", check title markers
+                if is_browser_window(pname=pname, title=title):
+                    return True
+
+                if pname in blacklisted_procs:
+                    return True
 
                 # Class
                 cls_buf = ctypes.create_unicode_buffer(256)
@@ -535,7 +561,7 @@ class AntigravityFocusManager:
                         h = wp.rcNormalPosition.top - wp.rcNormalPosition.bottom
 
                 score = 0
-                is_antigravity_proc = any(target in pname for target in cls.TARGET_PROCESSES)
+                is_antigravity_proc = any(target in pname.lower() for target in cls.TARGET_PROCESSES) and not is_browser_window(pname=pname, title=title)
                 if is_antigravity_proc:
                     score += 150
                     if cls_name == cls.TARGET_CLASS:
@@ -543,14 +569,18 @@ class AntigravityFocusManager:
                     if (w >= 400 and h >= 300) or iconic:
                         score += 30
 
-                if cls_name == cls.TARGET_CLASS:
+                # Window Class weighting - ONLY for verified Antigravity process!
+                # Never assign points for Chrome_WidgetWin_1 to unverified or arbitrary windows.
+                if is_antigravity_proc and cls_name == cls.TARGET_CLASS:
                     score += 20
 
                 t_lower = title.lower()
-                if "antigravity" in t_lower:
-                    score += 100
-                elif any(kw in t_lower for kw in ["autoselect-commander", "grill", "chat", "workspace"]):
-                    score += 40
+                # NEVER award title-matching points for "Antigravity" if the window is identified as a browser!
+                if not is_browser_window(pname=pname, title=title):
+                    if "antigravity" in t_lower:
+                        score += 100
+                    elif any(kw in t_lower for kw in ["autoselect-commander", "grill", "chat", "workspace"]):
+                        score += 40
 
                 if score >= 100:
                     info = {
@@ -590,6 +620,16 @@ class AntigravityFocusManager:
         ensure_input_desktop()
         if not user32.IsWindow(hwnd):
             logger.error("Invalid window handle: %d", hwnd)
+            return False
+
+        # Verify target is not a disqualified browser before bringing to foreground
+        pname = cls.get_process_name_for_hwnd(hwnd)
+        length = user32.GetWindowTextLengthW(hwnd)
+        buf = ctypes.create_unicode_buffer(length + 1)
+        user32.GetWindowTextW(hwnd, buf, length + 1)
+        win_title = buf.value.strip()
+        if is_browser_window(pname=pname, title=win_title):
+            logger.error("[SECURITY ABORT] Refusing to bring browser window HWND 0x%08X ('%s') to foreground!", hwnd, win_title)
             return False
 
         logger.info("Restoring and focusing Antigravity window (HWND: %d)...", hwnd)

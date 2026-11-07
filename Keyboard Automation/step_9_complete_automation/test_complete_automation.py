@@ -457,7 +457,7 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         self.controller.stop()
         self.assertTrue(self.controller._stop_requested)
 
-    @patch("time.sleep")
+    @patch("complete_automation.time.sleep")
     @patch("complete_automation.get_idle_duration_seconds")
     def test_wait_for_user_idle_pauses_and_resumes(self, mock_idle, mock_sleep):
         """Verify _wait_for_user_idle pauses while idle < 60s and resumes when idle >= 60s."""
@@ -472,7 +472,7 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         self.assertTrue(any("Production automation is PAUSED" in msg for msg in log_cm.output))
         self.assertTrue(any("Production automation is ACTIVE. Resuming normal monitoring" in msg for msg in log_cm.output))
 
-    @patch("time.sleep")
+    @patch("complete_automation.time.sleep")
     @patch("complete_automation.get_idle_duration_seconds")
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
@@ -502,7 +502,7 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         self.assertTrue(any("Production automation is ACTIVE" in msg for msg in log_cm.output))
 
 
-    @patch("time.sleep")
+    @patch("complete_automation.time.sleep")
     @patch("complete_automation.get_idle_duration_seconds")
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")

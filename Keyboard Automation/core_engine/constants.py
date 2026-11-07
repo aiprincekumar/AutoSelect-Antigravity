@@ -9,7 +9,9 @@ Defines Virtual-Key codes, Win32 window positioning and sizing flags,
 disqualified browser processes, shell blacklists, and default settings.
 """
 
+import os
 import sys
+from typing import Optional
 
 # Step Identification & Pipeline Metadata
 STEP_ID = "step3"
@@ -80,10 +82,102 @@ DISQUALIFIED_BROWSER_PROCS = {
     "firefox.exe",
     "brave.exe",
     "opera.exe",
+    "opera_gx.exe",
     "vivaldi.exe",
     "iexplore.exe",
     "safari.exe",
+    "chromium.exe",
+    "waterfox.exe",
+    "tor.exe",
 }
+
+# Browser Process Substring Markers
+DISQUALIFIED_BROWSER_PROC_SUBSTRINGS = (
+    "chrome",
+    "msedge",
+    "firefox",
+    "brave",
+    "opera",
+    "vivaldi",
+    "safari",
+    "iexplore",
+    "chromium",
+    "waterfox",
+)
+
+# Browser Window Title Markers - Substrings that explicitly identify web browsers
+BROWSER_TITLE_MARKERS = (
+    "microsoft edge",
+    "google chrome",
+    "mozilla firefox",
+    "brave browser",
+    "opera gx",
+    "tor browser",
+    "waterfox",
+    "chromium",
+    " - edge",
+    " - chrome",
+    " - firefox",
+    " - brave",
+    " - vivaldi",
+    " - opera",
+    " - chromium",
+)
+
+# Browser Window Title Endings
+BROWSER_TITLE_SUFFIXES = (
+    " edge",
+    " chrome",
+    " firefox",
+    " brave",
+    " vivaldi",
+    " opera",
+    " chromium",
+)
+
+
+def is_browser_window(pname: str = "", pexe: str = "", title: str = "") -> bool:
+    """
+    Determines whether a window is a web browser by checking both process metadata
+    and window title against known browser signatures.
+    Returns True if either process or title indicates a browser, even if pname is empty.
+    """
+    p_lower = pname.lower().strip() if pname else ""
+    pexe_base = os.path.basename(pexe).lower().strip() if pexe else ""
+    t_lower = title.lower().strip() if title else ""
+
+    # 1. Process name / executable check
+    if p_lower in DISQUALIFIED_BROWSER_PROCS or pexe_base in DISQUALIFIED_BROWSER_PROCS:
+        return True
+    if any(b in p_lower for b in DISQUALIFIED_BROWSER_PROC_SUBSTRINGS):
+        return True
+    if any(b in pexe_base for b in DISQUALIFIED_BROWSER_PROC_SUBSTRINGS):
+        return True
+
+    # 2. Standalone exact title match
+    if t_lower in ("edge", "chrome", "firefox", "brave", "opera", "vivaldi", "chromium", "microsoft edge", "google chrome"):
+        return True
+
+    # 3. Window title markers check
+    if any(bm in t_lower for bm in BROWSER_TITLE_MARKERS):
+        return True
+    if any(t_lower.endswith(suffix) for suffix in BROWSER_TITLE_SUFFIXES):
+        return True
+
+    return False
+
+
+def is_explicit_browser_requested(target_keyword: Optional[str]) -> bool:
+    """Checks whether the user explicitly requested a web browser by name in target keywords."""
+    if not target_keyword:
+        return False
+    raw = target_keyword.replace("|", ",").split(",")
+    browser_names = ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore", "safari", "chromium")
+    for kw in raw:
+        kw_clean = kw.strip().lower()
+        if any(b in kw_clean for b in browser_names):
+            return True
+    return False
 
 # Blacklisted Shells & Script Interpreters - Must NEVER be targeted
 BLACK_LISTED_SHELL_PROCS = {

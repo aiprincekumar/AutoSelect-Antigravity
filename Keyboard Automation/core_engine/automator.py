@@ -31,6 +31,9 @@ from .constants import (
     VK_RETURN,
     VK_ESCAPE,
     DISQUALIFIED_BROWSER_PROCS,
+    BROWSER_TITLE_MARKERS,
+    is_browser_window,
+    is_explicit_browser_requested,
 )
 from .win32_api import (
     user32,
@@ -78,8 +81,8 @@ class GrillMeAutomator:
     6. Execute sequence via pure native Win32 SendInput physical keystrokes on the active GUI window:
        * Focus 1: Ctrl + L    -> Focus chat input (executed 1st time only; settle pause 0.2s - 0.25s)
        * Focus 2: Shift + Tab -> Shift focus to option select buttons (executed 1st time only; settle pause 0.2s - 0.25s)
-       * Option Loop: Option key (e.g. '1') pressed (total_questions + 1) times with ample registration delay (0.45s - 0.5s)
-       * Complete: No Enter, Space, or other keys needed; (N+1)-th option press completes registration/submission
+       * Option Loop: Option key (e.g. '1') pressed exactly total_questions times with ample registration delay (0.45s - 0.5s)
+       * Complete: No Enter, Space, or trailing keys; N-th option press completes registration/submission
     """
 
     DEFAULT_TARGET = DEFAULT_TARGET_WINDOW
@@ -409,30 +412,30 @@ class GrillMeAutomator:
         logger.info(f"Scanning for target window matching: '{self.target_window}'...")
         match = select_target_window(self.target_window)
         if not match:
-            logger.warning(
-                f"Target window matching '{self.target_window}' not found! "
-                "Will proceed using active foreground window."
+            logger.error(
+                f"[FAIL CLOSED] Target window matching '{self.target_window}' not found! "
+                "Refusing blind fallback to active foreground window."
             )
+            self.target_hwnd = None
+            self.target_title = None
             return False
 
         hwnd, title = match
         self.target_hwnd = hwnd
         self.target_title = title
         info = get_window_info(hwnd)
-        pname_lower = info.get("process_name", "").lower()
+        pname = info.get("process_name", "")
+        pexe = info.get("process_exe", "")
         logger.info(
             f"Selected Window: HWND={hex(hwnd)}, Process={info['process_name']} (PID={info['pid']}), "
             f"Title='{title}', Class={info['class']}"
         )
 
-        # Strict browser disqualification gatekeeper
-        user_wants_browser = any(
-            any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi"))
-            for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
-        )
-        if pname_lower in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+        # Strict browser disqualification gatekeeper (process name, exe, and window title)
+        user_wants_browser = is_explicit_browser_requested(self.target_window)
+        if is_browser_window(pname, pexe, title) and not user_wants_browser:
             logger.error(
-                f"[REJECTED] Selected window belongs to disqualified browser '{pname_lower}'. "
+                f"[REJECTED] Selected window belongs to disqualified browser (Process='{pname}', Title='{title}'). "
                 f"Refusing to focus or send keystrokes to browser!"
             )
             self.target_hwnd = None
@@ -486,8 +489,8 @@ class GrillMeAutomator:
         """
         Real-time verification of the current foreground window before key injection:
         1. Checks that a valid foreground window exists.
-        2. Strictly blocks any disqualified browser processes (msedge.exe, chrome.exe, etc.)
-           unless explicitly requested by user in target_window keywords.
+        2. Strictly blocks any disqualified browser processes or window titles
+           (msedge.exe, chrome.exe, "Microsoft Edge", etc.) unless explicitly requested.
         3. Verifies that the foreground window matches the target Antigravity window
            (by matching HWND, PID, or target keyword in process name/window title).
         Returns True if safe and matches target, False otherwise.
@@ -502,26 +505,16 @@ class GrillMeAutomator:
 
         pid, fg_pname, fg_pexe = get_process_info_for_hwnd(fg_hwnd)
         fg_pname_lower = fg_pname.lower() if fg_pname else ""
-        pexe_base = os.path.basename(fg_pexe).lower() if fg_pexe else ""
+        fg_title = get_active_window_title()
 
-        # Check if user explicitly requested browser by name
-        raw_target = self.target_window or ""
-        target_keywords = [k.strip().lower() for k in raw_target.replace("|", ",").split(",") if k.strip()]
-        user_wants_browser = any(
-            any(browser in kw for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore", "safari"))
-            for kw in target_keywords
-        )
+        user_wants_browser = is_explicit_browser_requested(self.target_window)
 
-        # 1. Disqualified browser check: NEVER send keystrokes to browser address bar
-        is_browser = (
-            fg_pname_lower in DISQUALIFIED_BROWSER_PROCS
-            or pexe_base in DISQUALIFIED_BROWSER_PROCS
-            or any(b in fg_pname_lower for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
-        )
-        if is_browser and not user_wants_browser:
+        # 1. Disqualified browser check: NEVER send keystrokes to browser address bar / omnibox
+        # Must check BOTH process name AND window title markers (even if process name is empty)
+        if is_browser_window(fg_pname, fg_pexe, fg_title) and not user_wants_browser:
             logger.error(
-                f"[ABORT] Foreground window (HWND: {hex(fg_hwnd)}, Process: '{fg_pname}') belongs to disqualified browser! "
-                f"Aborting step immediately to prevent browser hijacking and accidental address bar search!"
+                f"[ABORT] Foreground window (HWND: {hex(fg_hwnd)}, Process: '{fg_pname}', Title: '{fg_title}') "
+                f"belongs to disqualified browser! Aborting step immediately to prevent browser hijacking and omnibox leak!"
             )
             return False
 
@@ -536,17 +529,15 @@ class GrillMeAutomator:
             if target_pid and target_pid == pid:
                 return True
 
-        # Match if process name or window title contains any target keyword
-        title = get_active_window_title().lower()
-        if any(kw in fg_pname_lower or kw in title for kw in target_keywords):
-            return True
-
-        # If user explicitly requested browser and browser was targeted
-        if user_wants_browser and any(kw in fg_pname_lower for kw in target_keywords):
+        # Match if process name or window title contains any target keyword,
+        # but ONLY for verified non-browser windows!
+        target_keywords = [k.strip().lower() for k in (self.target_window or "").replace("|", ",").split(",") if k.strip()]
+        title_lower = fg_title.lower()
+        if any(kw in fg_pname_lower or kw in title_lower for kw in target_keywords):
             return True
 
         logger.error(
-            f"[ABORT] Foreground window (HWND: {hex(fg_hwnd)}, Process: '{fg_pname}', Title: '{title}') "
+            f"[ABORT] Foreground window (HWND: {hex(fg_hwnd)}, Process: '{fg_pname}', Title: '{fg_title}') "
             f"is not the target Antigravity window ('{self.target_window}')! Aborting step to prevent misdirected keystrokes."
         )
         return False
@@ -605,33 +596,28 @@ class GrillMeAutomator:
 
         # Find target window if not yet identified
         if not self.target_hwnd:
-            self.prepare_target_window()
-
-        if not self.target_hwnd:
-            # Fallback to current foreground window if match wasn't found
-            fg = user32.GetForegroundWindow()
-            if fg and user32.IsWindow(fg):
-                self.target_hwnd = fg
-                info = get_window_info(fg)
-                self.target_title = info.get("title", "")
+            if not self.prepare_target_window():
+                logger.error("[FAIL CLOSED] Target window could not be verified as Antigravity. Refusing blind foreground fallback.")
+                return False
 
         if not self.target_hwnd or not user32.IsWindow(self.target_hwnd):
-            logger.warning("No target window HWND available to focus. Proceeding with active window.")
+            logger.error("[FAIL CLOSED] No valid target window handle available. Aborting to prevent blind key injection.")
             return False
 
-        # Guard against disqualified browser windows
+        # Guard against disqualified browser windows (process name, exe, and window title)
         info = get_window_info(self.target_hwnd)
-        pname_lower = info.get("process_name", "").lower()
-        user_wants_browser = any(
-            any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
-            for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
-        )
-        if pname_lower in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
+        pname = info.get("process_name", "")
+        pexe = info.get("process_exe", "")
+        title = info.get("title", "")
+        user_wants_browser = is_explicit_browser_requested(self.target_window)
+
+        if is_browser_window(pname, pexe, title) and not user_wants_browser:
             logger.error(
-                f"[REJECTED] Selected window belongs to disqualified browser '{pname_lower}'. "
+                f"[REJECTED] Target window belongs to disqualified browser (Process='{pname}', Title='{title}'). "
                 f"Refusing to focus or send keystrokes to browser!"
             )
             self.target_hwnd = None
+            self.target_title = None
             return False
 
         if self.dry_run:
@@ -798,18 +784,91 @@ class GrillMeAutomator:
         logger.info(f"[SUCCESS] Multi-question CDP Hybrid sequence finished successfully for all {tq} question(s)!")
         return True
 
+    def _guard_card_and_chat_focus(self, cdp: Optional[Any], stage: str) -> Optional[bool]:
+        """
+        Chat input pollution guard and card closure detection helper for pure keyboard sequence.
+        Returns:
+          - True: Card is closed/completed (clean exit 0).
+          - False: Active focus is trapped in chat input and cannot be blurred (abort).
+          - None: Safe to proceed with keystrokes.
+        """
+        if cdp is None:
+            return None
+
+        # 1. Card status inspection: reuse st so get_questionnaire_status is queried once per checkpoint
+        st = None
+        if hasattr(cdp, "get_questionnaire_status"):
+            try:
+                res = cdp.get_questionnaire_status()
+                if isinstance(res, dict):
+                    st = res
+            except Exception as e:
+                logger.debug(f"Card status check bypassed {stage}: {e}")
+
+        # 1.a Card closure detection: if questionnaire card is closed or not present, halt cleanly
+        if isinstance(st, dict) and not st.get("has_card", True):
+            logger.info(
+                f"[STEP 3.A] [CARD_CLOSED] Questionnaire card is closed or completed (has_card=False) {stage}. "
+                "Immediately halting pure keyboard execution cleanly with return True."
+            )
+            return True
+
+        # 2. Chat input pollution guard: verify active focus is not trapped in chat input
+        chat_focused = False
+        if isinstance(st, dict) and st.get("chat_input_focused") is True:
+            chat_focused = True
+        elif hasattr(cdp, "is_chat_input_focused"):
+            try:
+                chat_focused = (cdp.is_chat_input_focused() == True)
+            except Exception:
+                chat_focused = False
+
+        if chat_focused:
+            logger.warning(f"[SAFETY] Chat input box is focused {stage}! Blurring to prevent keystroke pollution.")
+            if hasattr(cdp, "blur_chat_input"):
+                try:
+                    cdp.blur_chat_input()
+                except Exception as e:
+                    logger.debug(f"CDP blur_chat_input failed: {e}")
+
+            # Re-verify if still trapped
+            still_trapped = False
+            if hasattr(cdp, "is_chat_input_focused"):
+                try:
+                    still_trapped = (cdp.is_chat_input_focused() == True)
+                except Exception:
+                    still_trapped = False
+            elif hasattr(cdp, "get_questionnaire_status"):
+                try:
+                    st2 = cdp.get_questionnaire_status()
+                    if isinstance(st2, dict):
+                        still_trapped = (st2.get("chat_input_focused") is True)
+                except Exception:
+                    still_trapped = False
+
+            if still_trapped:
+                logger.error(
+                    f"[ABORT] Active focus is trapped in chat input {stage}! "
+                    "Aborting pure keyboard execution to guarantee zero keystrokes leak into chat input."
+                )
+                return False
+
+        return None
+
     def _execute_pure_keyboard(
         self,
         total_questions: int,
         options: List[str],
+        cdp: Optional[Any] = None,
     ) -> bool:
         """
         Executes calibrated fallback keystroke sequence via pure native Win32 SendInput:
           - Step FOCUS.1: Ctrl + L (Focus chat box) - skipped if skip_ctrl_l is True
           - Step FOCUS.2: Shift + Tab (Move backward to question options)
-          - Option Loop: Send option keys (total_questions + 1) times with post-delay
-          - Zero Enter / Space keys dispatched
-          - Safety check: verifies window is not a browser before each step
+          - Option Loop: Send option keys exactly total_questions times with post-delay (OPT.1..OPT.N)
+          - Zero Enter / Space keys dispatched; N-th option press completes submission
+          - Real-time safety verification: ensures window is target Antigravity window and not browser
+          - Chat input pollution guard and card closure detection: checks before FOCUS.1, after FOCUS.2, and prior to each option press
         """
         if self.engine == "none":
             logger.error("No valid automation engine available on this platform.")
@@ -817,7 +876,7 @@ class GrillMeAutomator:
 
         tq = total_questions
         opts = list(options)
-        total_option_presses = tq + 1
+        total_option_presses = tq
         logger.info(f"Initiating fallback keyboard automation sequence: {tq} question(s) -> {total_option_presses} option key press(es) | Options: {opts}")
         logger.info("Executing via Pure Native Physical Keystroke Injection (Win32 SendInput)...")
 
@@ -825,20 +884,40 @@ class GrillMeAutomator:
         option_press_delay = max(0.45, self.post_keypress_delay) if not self.dry_run else 0.001
         round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
 
-        # Pre-execution check: verify foreground window before sending any keys
-        if IS_WINDOWS and not self.dry_run:
-            if not self._is_foreground_window_target_and_safe():
-                logger.error("[ABORT] Cannot execute pure keyboard sequence: foreground window is not target Antigravity window or is a browser!")
+        # Resolve CDP helper if available for card closure and chat pollution guards
+        cdp_client = cdp if cdp is not None else getattr(self, "cdp_client", None)
+        opened_pure_cdp = False
+        try:
+            if cdp_client is None and not self.dry_run:
+                try:
+                    from .cdp_helper import AntigravityCDPClient
+                    client = AntigravityCDPClient()
+                    if client.is_available() and client.connect():
+                        cdp_client = client
+                        opened_pure_cdp = True
+                except Exception:
+                    pass
+
+            # Pre-execution check: verify foreground window before sending any keys
+            if IS_WINDOWS and not self.dry_run:
+                if not self._is_foreground_window_target_and_safe():
+                    logger.error("[ABORT] Cannot execute pure keyboard sequence: foreground window is not target Antigravity window or is a browser!")
+                    return False
+
+            if IS_WINDOWS and not self.dry_run:
+                try:
+                    send_single_key(VK_ESCAPE, hold_delay=0.01)
+                    time.sleep(0.05)
+                except Exception:
+                    pass
+            # Guard before FOCUS.1: check card closure and chat input pollution
+            guard_before_f1 = self._guard_card_and_chat_focus(cdp_client, "before FOCUS.1")
+            if guard_before_f1 is True:
+                logger.info("[SUCCESS] Questionnaire card closed/completed before FOCUS.1. Clean exit 0.")
+                return True
+            if guard_before_f1 is False:
                 return False
 
-        if IS_WINDOWS and not self.dry_run:
-            try:
-                send_single_key(VK_ESCAPE, hold_delay=0.01)
-                time.sleep(0.05)
-            except Exception:
-                pass
-
-        try:
             # Step FOCUS.1: Focus chat input (Ctrl + L)
             if not self.skip_ctrl_l:
                 if IS_WINDOWS and not self.dry_run and not self._is_foreground_window_target_and_safe():
@@ -890,8 +969,24 @@ class GrillMeAutomator:
             if not self.dry_run:
                 time.sleep(settle_pause)
 
-            # Option loop
+            # Guard after FOCUS.2: check card closure and chat input pollution
+            guard_after_f2 = self._guard_card_and_chat_focus(cdp_client, "after FOCUS.2")
+            if guard_after_f2 is True:
+                logger.info("[SUCCESS] Questionnaire card closed/completed after FOCUS.2. Clean exit 0.")
+                return True
+            if guard_after_f2 is False:
+                return False
+
+            # Option loop: exactly tq option presses for tq questions
             for k in range(1, total_option_presses + 1):
+                # Guard prior to each option press k in [1..tq]
+                guard_opt_k = self._guard_card_and_chat_focus(cdp_client, f"prior to option press {k}")
+                if guard_opt_k is True:
+                    logger.info(f"[SUCCESS] Questionnaire card closed/completed prior to option press {k}. Clean exit 0.")
+                    return True
+                if guard_opt_k is False:
+                    return False
+
                 # Verify foreground window before each option key press
                 if IS_WINDOWS and not self.dry_run and not self._is_foreground_window_target_and_safe():
                     logger.error(
@@ -899,7 +994,7 @@ class GrillMeAutomator:
                         "Halting immediately to prevent stray keystroke pollution!"
                     )
                     return False
-                opt = opts[k - 1] if k <= tq else (opts[-1] if opts else "1")
+                opt = opts[k - 1] if k <= len(opts) else (getattr(self, "option", "1") or "1")
                 q_num = min(k, tq)
                 step_code = f"OPT.{k}"
                 step_desc = f"Press [{opt}] (Option press {k}/{total_option_presses})"
@@ -935,7 +1030,7 @@ class GrillMeAutomator:
                     time.sleep(option_press_delay)
 
                 if k < tq:
-                    logger.info("[STEP 3.11] [NAV_KEY] Pressing navigation / continue to next question")
+                    logger.info("[STEP 3.11] [NAV_KEY] Advancing to next question (Question %d -> %d)", k, k + 1)
                     logger.info("[STEP 3.13] [INTER_Q_PAUSE] Pausing %.1f ms before next question", self.inter_question_delay * 1000.0)
                     logger.info("[STEP 3.30] [ADVANCE_NEXT] Advancing to next question")
                 elif k == tq:
@@ -958,6 +1053,12 @@ class GrillMeAutomator:
         except Exception as e:
             logger.error(f"[ERROR] Pure keyboard fallback automation failed with error: {e}", exc_info=True)
             return False
+        finally:
+            if opened_pure_cdp and cdp_client:
+                try:
+                    cdp_client.close()
+                except Exception:
+                    pass
 
     def execute_multi_question(
         self,
@@ -1039,7 +1140,7 @@ class GrillMeAutomator:
                 return res
             else:
                 logger.info("CDP DevTools connection not available. Engaging Pure Keyboard Fallback Mode.")
-                res = self._execute_pure_keyboard(tq, opts)
+                res = self._execute_pure_keyboard(tq, opts, cdp=cdp)
                 if res:
                     logger.info("[STEP 3.40] [STEP3_EXIT_CLEAN] Step 3 subsystem fully complete with exit code 0")
                 return res
