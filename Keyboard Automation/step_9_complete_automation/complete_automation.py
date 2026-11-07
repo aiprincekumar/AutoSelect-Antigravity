@@ -831,9 +831,9 @@ class CompleteAutomationController:
         self.detector.poll_interval = interval
         pause_threshold = self.config.timing.user_activity_pause_threshold_seconds
 
-        # Record initial process state
-        initial_idle = get_idle_duration_seconds() if not self.is_test_mode else 0.0
-        initial_paused = (initial_idle < pause_threshold) if not self.is_test_mode else False
+        # Record initial process state - respect user activity in all modes
+        initial_idle = get_idle_duration_seconds()
+        initial_paused = (initial_idle < pause_threshold)
         self._update_process_state(is_paused=initial_paused, idle_seconds=initial_idle)
 
         if not self.headless:
@@ -853,12 +853,12 @@ class CompleteAutomationController:
             print("=" * 78 + "\n")
 
         check_count = 0
+        code: Optional[int] = None
         while not self._stop_requested:
-            # In Production Mode: check and wait for user to become idle before proceeding
-            if not self.is_test_mode:
-                self._wait_for_user_idle(pause_threshold)
-                if self._stop_requested:
-                    break
+            # Respect user activity in all modes: wait for user to become idle before proceeding
+            self._wait_for_user_idle(pause_threshold)
+            if self._stop_requested:
+                break
 
             check_count += 1
             res = self.detector.detect()
@@ -867,11 +867,10 @@ class CompleteAutomationController:
                 display_dashboard(res, chat_stats=res.chat_stats, wipe_screen=True, poll_interval=interval)
 
             if res.trigger_matched:
-                # In Production Mode: re-verify user did not begin typing/mouse movement right before pipeline
-                if not self.is_test_mode:
-                    self._wait_for_user_idle(pause_threshold)
-                    if self._stop_requested:
-                        break
+                # Re-verify user did not begin typing/mouse movement right before pipeline execution
+                self._wait_for_user_idle(pause_threshold)
+                if self._stop_requested:
+                    break
 
                 if not self.headless:
                     now_str = datetime.now().strftime("%H:%M:%S")
@@ -907,16 +906,20 @@ class CompleteAutomationController:
             if once:
                 return 0 if res.is_detected else 1
 
-            # Sleep in 0.5s chunks for prompt Ctrl+C interrupt; halt timer if user is active in production mode
-            sleep_remaining = interval
+            # Safe interval calculation: after pipeline execution, enforce cooldown to prevent rapid looping
+            if res.trigger_matched and code == EXIT_CODE_SUCCESS:
+                sleep_remaining = max(interval, self.config.timing.continuous_loop_delay_seconds)
+            else:
+                sleep_remaining = interval
+
+            # Sleep in 0.5s chunks for prompt Ctrl+C interrupt; halt timer if user is active in all modes
             while sleep_remaining > 0 and not self._stop_requested:
-                if not self.is_test_mode:
-                    idle_sec = get_idle_duration_seconds()
-                    if idle_sec < pause_threshold:
-                        self._wait_for_user_idle(pause_threshold)
-                        if self._stop_requested:
-                            break
-                        self._update_process_state(is_paused=False, idle_seconds=get_idle_duration_seconds())
+                idle_sec = get_idle_duration_seconds()
+                if idle_sec < pause_threshold:
+                    self._wait_for_user_idle(pause_threshold)
+                    if self._stop_requested:
+                        break
+                    self._update_process_state(is_paused=False, idle_seconds=get_idle_duration_seconds())
                 time.sleep(min(0.5, sleep_remaining))
                 sleep_remaining -= 0.5
 
