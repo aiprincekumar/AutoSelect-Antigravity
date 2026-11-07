@@ -167,9 +167,9 @@ class QuestionPayload:
                 self.recommended_option_index = idx
                 self.recommended_option_text = opt
                 break
-        if self.recommended_option_index is None and self.options:
+        if self.recommended_option_index is None:
             self.recommended_option_index = 1
-            self.recommended_option_text = self.options[0]
+            self.recommended_option_text = self.options[0] if self.options else "(Recommended)"
 
     def to_dict(self) -> Dict[str, Any]:
         return asdict(self)
@@ -870,7 +870,7 @@ def run_step1(
         selections.append({
             "question_index": q.question_index,
             "question": q.question,
-            "selected_option_index": q.recommended_option_index,
+            "selected_option_index": q.recommended_option_index if q.recommended_option_index is not None else 1,
             "selected_option_text": q.recommended_option_text,
             "is_multi_select": q.is_multi_select,
             "total_options": len(q.options),

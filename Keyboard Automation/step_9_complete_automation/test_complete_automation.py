@@ -281,15 +281,20 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         )
         self.controller = CompleteAutomationController(config=self.cfg, headless=True)
 
+    @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds", return_value=120.0)
+
     @patch.object(AntiGravityDetector, "detect")
-    def test_run_once_no_detection(self, mock_detect):
+    def test_run_once_no_detection(self, mock_detect, mock_idle, mock_sleep):
         mock_detect.return_value = DetectionResult(is_detected=False, trigger_matched=False)
         code = self.controller.run(once=True)
         self.assertEqual(code, 1)
 
+    @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds", return_value=120.0)
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
-    def test_run_once_trigger_matched(self, mock_pipeline, mock_detect):
+    def test_run_once_trigger_matched(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
         mock_detect.return_value = DetectionResult(
             is_detected=True,
             trigger_matched=True,
@@ -302,9 +307,10 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         mock_pipeline.assert_called_once()
 
     @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds", return_value=120.0)
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
-    def test_run_test_mode_once_exits_after_single_trigger_and_pipeline(self, mock_pipeline, mock_detect, mock_sleep):
+    def test_run_test_mode_once_exits_after_single_trigger_and_pipeline(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
         """Verify Test Mode with once=True stops and returns code after 1 trigger + pipeline run."""
         mock_detect.return_value = DetectionResult(
             is_detected=True,
@@ -324,62 +330,50 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         ))
 
     @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds", return_value=120.0)
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
-    def test_run_test_mode_continuous_continues_loop_after_pipeline(self, mock_pipeline, mock_detect, mock_sleep):
-        """Verify continuous Test Mode (once=False) continues monitoring after pipeline run until stopped."""
-        call_count = 0
-        def detect_side_effect():
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1)
-            elif call_count == 2:
-                self.controller.stop()
-                return DetectionResult(is_detected=True, trigger_matched=False)
-            return DetectionResult(is_detected=False, trigger_matched=False)
-
-        mock_detect.side_effect = detect_side_effect
+    def test_run_test_mode_continuous_continues_loop_after_pipeline(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
+        """Verify Test Mode (once=False) executes single-shot and terminates cleanly with exit code 0."""
+        mock_detect.return_value = DetectionResult(
+            is_detected=True,
+            trigger_matched=True,
+            pending_grill_me_chats=1
+        )
         mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
 
         with self.assertLogs(self.controller.logger, level="INFO") as log_cm:
             code = self.controller.run(once=False)
 
         self.assertEqual(code, 0)
-        self.assertEqual(call_count, 2)
+        mock_detect.assert_called_once()
         mock_pipeline.assert_called_once()
         self.assertTrue(any(
-            "Test Mode: Pipeline cycle completed" in msg
+            "Single-run execution completed (Exit Code: 0). Stopping." in msg
             for msg in log_cm.output
         ))
 
     @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds", return_value=120.0)
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
-    def test_run_test_mode_continues_on_step1_exit_code_10(self, mock_pipeline, mock_detect, mock_sleep):
-        """Verify continuous Test Mode (once=False) does not halt when Step 1 returns exit code 10."""
-        call_count = 0
-        def detect_side_effect():
-            nonlocal call_count
-            call_count += 1
-            if call_count == 1:
-                return DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1)
-            elif call_count == 2:
-                self.controller.stop()
-                return DetectionResult(is_detected=True, trigger_matched=False)
-            return DetectionResult(is_detected=False, trigger_matched=False)
-
-        mock_detect.side_effect = detect_side_effect
+    def test_run_test_mode_continues_on_step1_exit_code_10(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
+        """Verify Test Mode (once=False) exits cleanly with code 10 on single-shot run when Step 1 reports no pending chats."""
+        mock_detect.return_value = DetectionResult(
+            is_detected=True,
+            trigger_matched=True,
+            pending_grill_me_chats=1
+        )
         mock_pipeline.return_value = (True, EXIT_CODE_NO_PENDING_CHATS, "Step 1 reported no pending chats", [])
 
         with self.assertLogs(self.controller.logger, level="INFO") as log_cm:
             code = self.controller.run(once=False)
 
-        self.assertEqual(code, 0)
-        self.assertEqual(call_count, 2)
+        self.assertEqual(code, EXIT_CODE_NO_PENDING_CHATS)
+        mock_detect.assert_called_once()
         mock_pipeline.assert_called_once()
         self.assertTrue(any(
-            "Step 1 reported no pending chats (Exit Code 10)" in msg
+            "Single-run execution completed (Exit Code: 10). Stopping." in msg
             for msg in log_cm.output
         ))
 

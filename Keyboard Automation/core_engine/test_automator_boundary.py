@@ -141,6 +141,7 @@ class TestAutomatorBoundary(unittest.TestCase):
 
         self.assertEqual(automator.total_questions, 3)
         self.assertEqual(len(automator.options_list), 3)
+        self.assertEqual(automator.options_list, ["1", "1", "1"])
 
     def test_execute_multi_question_n1_exact_keystroke_boundary(self):
         """Verify N=1 executes: FOCUS.1, FOCUS.2, OPT.1, OPT.2 (total 4 steps, zero Enter/Space)."""
@@ -336,6 +337,7 @@ class TestAutomatorBoundary(unittest.TestCase):
             )
             self.assertEqual(automator.total_questions, count)
             self.assertEqual(len(automator.options_list), count)
+            self.assertEqual(automator.options_list, ["1"] * count)
 
     def test_convenience_execute_multi_question_auto_default(self):
         """Verify execute_multi_question() functional interface defaults to auto detection instead of forcing 1."""

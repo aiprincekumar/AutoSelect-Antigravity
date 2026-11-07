@@ -242,7 +242,7 @@ class GrillMeAutomator:
         if explicit_questions is not None and parsed_options is not None:
             opts = list(parsed_options)
             while len(opts) < explicit_questions:
-                opts.append(str(self.option))
+                opts.append("1")
             return explicit_questions, opts[:explicit_questions]
 
         # Attempt to inspect state file for auto-detection
@@ -331,13 +331,13 @@ class GrillMeAutomator:
             if isinstance(sels, list) and sels:
                 for item in sels:
                     if isinstance(item, dict):
-                        idx = item.get("selected_option_index") or item.get("recommended_option_index")
+                        idx = item.get("selected_option_index") or item.get("recommended_option_index") or "1"
                         if idx is not None:
                             detected_options.append(str(idx))
             elif isinstance(qs, list) and qs:
                 for item in qs:
                     if isinstance(item, dict):
-                        idx = item.get("recommended_option_index") or item.get("selected_option_index")
+                        idx = item.get("recommended_option_index") or item.get("selected_option_index") or "1"
                         if idx is not None:
                             detected_options.append(str(idx))
 
@@ -376,14 +376,14 @@ class GrillMeAutomator:
         elif detected_options:
             final_options = list(detected_options)
         else:
-            final_options = [str(self.option)] * final_questions
+            final_options = ["1"] * final_questions
 
         # Dynamically scale / pad / truncate to exactly final_questions elements
         if len(final_options) > final_questions:
             final_options = final_options[:final_questions]
         else:
             while len(final_options) < final_questions:
-                final_options.append(str(self.option))
+                final_options.append("1")
 
         logger.info(f"[STEP 3.1] [INPUT_VERIFY] Verifying input arguments: questions={final_questions}, options={final_options}")
         logger.info(
@@ -708,7 +708,7 @@ class GrillMeAutomator:
 
         # 4. Question loop from 1 to tq
         for q in range(1, tq + 1):
-            opt = opts[q - 1] if q <= len(opts) else (opts[-1] if opts else str(self.option))
+            opt = opts[q - 1] if q <= len(opts) else (opts[-1] if opts else "1")
             try:
                 opt_num = int(opt)
             except (ValueError, TypeError):
@@ -899,7 +899,7 @@ class GrillMeAutomator:
                         "Halting immediately to prevent stray keystroke pollution!"
                     )
                     return False
-                opt = opts[k - 1] if k <= tq else (opts[-1] if opts else str(self.option))
+                opt = opts[k - 1] if k <= tq else (opts[-1] if opts else "1")
                 q_num = min(k, tq)
                 step_code = f"OPT.{k}"
                 step_desc = f"Press [{opt}] (Option press {k}/{total_option_presses})"
@@ -981,7 +981,7 @@ class GrillMeAutomator:
             opts = opts[:tq]
         else:
             while len(opts) < tq:
-                opts.append(str(self.option))
+                opts.append("1")
 
         # Ensure target window is restored, maximized, and in foreground before proceeding
         if IS_WINDOWS and (self.auto_focus or self.auto_maximize):

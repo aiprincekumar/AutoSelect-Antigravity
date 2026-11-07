@@ -665,19 +665,21 @@ class CompleteAutomationController:
                             if isinstance(sels, list) and sels:
                                 for item in sels:
                                     if isinstance(item, dict):
-                                        idx = item.get("selected_option_index") or item.get("recommended_option_index")
+                                        idx = item.get("selected_option_index") or item.get("recommended_option_index") or "1"
                                         if idx is not None:
                                             opts.append(str(idx))
                             elif isinstance(qs, list) and qs:
                                 for item in qs:
                                     if isinstance(item, dict):
-                                        idx = item.get("recommended_option_index") or item.get("selected_option_index")
+                                        idx = item.get("recommended_option_index") or item.get("selected_option_index") or "1"
                                         if idx is not None:
                                             opts.append(str(idx))
 
                             if q_cnt is not None and q_cnt > 0:
                                 cmd.extend(["--questions", str(q_cnt)])
-                                if not has_custom_ol and opts:
+                                if not has_custom_ol:
+                                    if not opts:
+                                        opts = ["1"] * q_cnt
                                     while len(opts) < q_cnt:
                                         opts.append("1")
                                     cmd.extend(["--options-list", ",".join(opts[:q_cnt])])
@@ -843,6 +845,7 @@ class CompleteAutomationController:
             else self.config.timing.step0_poll_interval_prod_seconds
         )
         self.detector.poll_interval = interval
+        is_single_shot = bool(once or self.is_test_mode)
         pause_threshold = self.config.timing.user_activity_pause_threshold_seconds
 
         # Record initial process state - respect user activity in all modes
@@ -895,7 +898,7 @@ class CompleteAutomationController:
 
                 ok, code, msg, _ = self.execute_pipeline(capture_output=self.headless)
 
-                if once:
+                if is_single_shot:
                     if not self.headless:
                         print(f"\n[RESULT] {msg} (Exit Code: {code})")
                     self.logger.info("Single-run execution completed (Exit Code: %d). Stopping.", code)
@@ -910,7 +913,7 @@ class CompleteAutomationController:
                         print(f"\n[INFO] {msg}")
                         print(f"Waiting for next monitoring check in {interval:.1f}s...")
                 else:
-                    mode_label = "Test" if self.is_test_mode else "Production"
+                    mode_label = "Production"
                     self.logger.info(
                         "%s Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.",
                         mode_label
@@ -919,8 +922,12 @@ class CompleteAutomationController:
                         print(f"\n[RESULT] {msg} (Exit Code: {code})")
                         print(f"{mode_label} Mode: Pipeline cycle completed successfully. Continuing continuous autonomous background monitoring until manually stopped by user.")
 
-            if once:
-                return 0 if res.is_detected else 1
+            if is_single_shot:
+                if not res.is_detected:
+                    return 1
+                if not res.trigger_matched or res.pending_grill_me_chats == 0:
+                    return EXIT_CODE_NO_PENDING_CHATS
+                return 0
 
             # Safe interval calculation: after pipeline execution, enforce cooldown to prevent rapid looping
             if res.trigger_matched and code == EXIT_CODE_SUCCESS:
@@ -957,6 +964,11 @@ def parse_args():
         choices=["production", "test"],
         default=None,
         help="Override operating mode: 'production' (5-minute poll) or 'test' (10-second poll)"
+    )
+    parser.add_argument(
+        "--test",
+        action="store_true",
+        help="Run in test mode (alias for --mode test with single-shot execution)"
     )
     parser.add_argument(
         "--run-pipeline",
@@ -996,7 +1008,9 @@ def main() -> int:
     args = parse_args()
 
     config = AutomationConfig.load_from_file(args.config)
-    if args.mode:
+    if getattr(args, "test", False):
+        config.mode = "test"
+    elif args.mode:
         config.mode = args.mode
     if args.interval:
         if config.mode == "test":
