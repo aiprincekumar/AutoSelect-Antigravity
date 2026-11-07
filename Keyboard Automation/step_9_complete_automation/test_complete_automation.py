@@ -49,11 +49,17 @@ class TestAutomationConfig(unittest.TestCase):
         self.assertEqual(cfg.timing.step0_poll_interval_test_seconds, 10.0)
         self.assertEqual(cfg.timing.settle_delay_between_steps_seconds, 0.8)
         self.assertEqual(cfg.timing.user_activity_pause_threshold_seconds, 60.0)
+        self.assertEqual(cfg.timing.user_activity_pause_threshold_prod_seconds, 60.0)
+        self.assertEqual(cfg.timing.user_activity_pause_threshold_test_seconds, 5.0)
+        self.assertEqual(cfg.effective_pause_threshold, 60.0)
         self.assertEqual(cfg.timing.step4_user_activity_delay_seconds, 10.0)
         self.assertTrue(cfg.enabled_steps.step1_find_and_focus)
         self.assertTrue(cfg.enabled_steps.step2_gui_chat_select)
         self.assertTrue(cfg.enabled_steps.step3_keyboard_automation)
         self.assertTrue(cfg.enabled_steps.step4_reporting)
+
+        cfg_test = AutomationConfig(mode="test")
+        self.assertEqual(cfg_test.effective_pause_threshold, 5.0)
 
     def test_config_load_from_json(self):
         with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
@@ -81,9 +87,35 @@ class TestAutomationConfig(unittest.TestCase):
             self.assertEqual(cfg.timing.step0_poll_interval_test_seconds, 5.0)
             self.assertEqual(cfg.timing.settle_delay_between_steps_seconds, 0.5)
             self.assertEqual(cfg.timing.user_activity_pause_threshold_seconds, 45.0)
+            self.assertEqual(cfg.timing.user_activity_pause_threshold_test_seconds, 45.0)
+            self.assertEqual(cfg.effective_pause_threshold, 45.0)
             self.assertFalse(cfg.enabled_steps.step2_gui_chat_select)
             self.assertFalse(cfg.enabled_steps.step4_reporting)
             self.assertTrue(cfg.enabled_steps.step1_find_and_focus)
+        finally:
+            os.remove(temp_path)
+
+    def test_config_dynamic_pause_threshold_prod_and_test(self):
+        """Verify dynamic pause threshold loads custom test (5.0s) and prod (60.0s) values."""
+        with tempfile.NamedTemporaryFile("w", suffix=".json", delete=False, encoding="utf-8") as f:
+            f.write(json.dumps({
+                "mode": "test",
+                "timing": {
+                    "user_activity_pause_threshold_prod_seconds": 60.0,
+                    "user_activity_pause_threshold_test_seconds": 5.0,
+                }
+            }))
+            temp_path = f.name
+
+        try:
+            cfg = AutomationConfig.load_from_file(temp_path)
+            self.assertEqual(cfg.mode, "test")
+            self.assertEqual(cfg.timing.user_activity_pause_threshold_prod_seconds, 60.0)
+            self.assertEqual(cfg.timing.user_activity_pause_threshold_test_seconds, 5.0)
+            self.assertEqual(cfg.effective_pause_threshold, 5.0)
+
+            cfg.mode = "production"
+            self.assertEqual(cfg.effective_pause_threshold, 60.0)
         finally:
             os.remove(temp_path)
 
@@ -277,7 +309,12 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     def setUp(self):
         self.cfg = AutomationConfig(
             mode="test",
-            timing=TimingConfig(step0_poll_interval_test_seconds=0.01, user_activity_pause_threshold_seconds=0.0)
+            timing=TimingConfig(
+                step0_poll_interval_test_seconds=0.01,
+                user_activity_pause_threshold_seconds=0.0,
+                user_activity_pause_threshold_test_seconds=0.0,
+                user_activity_pause_threshold_prod_seconds=0.0,
+            )
         )
         self.controller = CompleteAutomationController(config=self.cfg, headless=True)
 
@@ -440,12 +477,16 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
     def test_run_production_mode_auto_pauses_on_user_activity(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
-        """Verify run() in production mode halts execution while user is active, and proceeds once idle."""
+        """Verify run() in production mode halts execution while user is active, and proceeds once idle (60.0s)."""
         prod_cfg = AutomationConfig(
             mode="production",
-            timing=TimingConfig(user_activity_pause_threshold_seconds=60.0)
+            timing=TimingConfig(
+                user_activity_pause_threshold_prod_seconds=60.0,
+                user_activity_pause_threshold_test_seconds=5.0,
+            )
         )
         prod_controller = CompleteAutomationController(config=prod_cfg, headless=True)
+        self.assertEqual(prod_controller.config.effective_pause_threshold, 60.0)
 
         idle_sequence = [5.0, 5.0, 75.0]
         mock_idle.side_effect = lambda: idle_sequence.pop(0) if idle_sequence else 80.0
@@ -466,14 +507,18 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
     @patch.object(AntiGravityDetector, "detect")
     @patch.object(CompleteAutomationController, "execute_pipeline")
     def test_run_test_mode_auto_pauses_on_user_activity(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
-        """Verify run() in test mode halts execution while user is active, respecting user activity."""
+        """Verify run() in test mode halts execution while user is active, respecting dynamic test threshold (5.0s)."""
         test_cfg = AutomationConfig(
             mode="test",
-            timing=TimingConfig(user_activity_pause_threshold_seconds=60.0)
+            timing=TimingConfig(
+                user_activity_pause_threshold_prod_seconds=60.0,
+                user_activity_pause_threshold_test_seconds=5.0,
+            )
         )
         test_controller = CompleteAutomationController(config=test_cfg, headless=True)
+        self.assertEqual(test_controller.config.effective_pause_threshold, 5.0)
 
-        idle_sequence = [5.0, 10.0, 75.0]
+        idle_sequence = [2.0, 3.5, 6.0]
         mock_idle.side_effect = lambda: idle_sequence.pop(0) if idle_sequence else 80.0
         mock_detect.return_value = DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1)
         mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
