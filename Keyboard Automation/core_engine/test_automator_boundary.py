@@ -1125,6 +1125,138 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertFalse(res["success"])
         self.assertFalse(res["chat_focused"])
 
+
+    def test_multi_question_defaults_option_1_for_all_n(self):
+        """Verify for N=1..5, all questions select Option 1, with zero option 2 on last question and zero '3 3'."""
+        for n in range(1, 6):
+            automator = GrillMeAutomator(
+                questions=n,
+                dry_run=True,
+                auto_focus=False,
+                auto_maximize=False,
+            )
+            self.assertEqual(automator.total_questions, n)
+            self.assertEqual(automator.options_list, ["1"] * n)
+
+            executed_steps = []
+            automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+            automator.engine = "ctypes"
+
+            ok = automator.execute_multi_question(total_questions=n, options=automator.options_list)
+            self.assertTrue(ok)
+
+            opt_steps = [s[1] for s in executed_steps if s[0].startswith("OPT.")]
+            self.assertEqual(len(opt_steps), n)
+            for opt_desc in opt_steps:
+                self.assertIn("[1]", opt_desc)
+                self.assertNotIn("[2]", opt_desc)
+                self.assertNotIn("[3]", opt_desc)
+
+    def test_padding_strictly_with_1_never_repeats_last_option(self):
+        """Verify padding strictly appends '1', never repeating last option (e.g. ['1', '3'] -> ['1', '3', '1', '1'])."""
+        automator = GrillMeAutomator(
+            questions=4,
+            options_list=["1", "3"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+        self.assertEqual(automator.options_list, ["1", "3", "1", "1"])
+        self.assertNotEqual(automator.options_list, ["1", "3", "3", "3"])
+
+        # Also verify in _execute_pure_keyboard
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator._execute_pure_keyboard(total_questions=4, options=["1", "3"])
+        self.assertTrue(ok)
+        opt_steps = [s[1] for s in executed_steps if s[0].startswith("OPT.")]
+        self.assertEqual(len(opt_steps), 4)
+        self.assertIn("[1]", opt_steps[0])
+        self.assertIn("[3]", opt_steps[1])
+        self.assertIn("[1]", opt_steps[2])  # Strictly '1', NEVER repeated '3'
+        self.assertIn("[1]", opt_steps[3])  # Strictly '1', NEVER repeated '3'
+
+    def test_cdp_hybrid_strictly_pads_with_1_never_repeats_last_option(self):
+        """Verify _execute_cdp_hybrid pads with '1' and never repeats opts[-1] (prevents '3 3' repeats)."""
+        automator = GrillMeAutomator(
+            questions=4,
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+        mock_cdp = MagicMock()
+        mock_cdp.get_questionnaire_status.return_value = {"has_card": True}
+        mock_cdp.is_chat_input_focused.return_value = False
+
+        selected_options = []
+        mock_cdp.select_option.side_effect = lambda idx: selected_options.append(idx)
+
+        # Pass options with fewer items than tq=4: e.g. ['1', '2']
+        ok = automator._execute_cdp_hybrid(mock_cdp, total_questions=4, options=["1", "2"])
+        self.assertTrue(ok)
+        # Must select 1, 2, 1, 1 (NOT 1, 2, 2, 2!)
+        self.assertEqual(selected_options, [1, 2, 1, 1])
+
+    def test_step2_preserves_transcript_question_count_against_dom_inflation(self):
+        """Verify Step 2 preserves ground truth questions list count and does not let DOM inflate it."""
+        from step_2_chat_and_focus.step2_gui_chat_select import run_step2
+        import tempfile
+
+        with tempfile.TemporaryDirectory() as tmpdir:
+            st_path = Path(tmpdir) / "target_chat.json"
+            initial_state = {
+                "success": True,
+                "data": {
+                    "conversation_id": "test_ground_truth_cid",
+                    "questions_count": 2,
+                    "total_questions_count": 2,
+                    "questions": [
+                        {"question_index": 1, "question": "Q1", "options": ["(Recommended) A", "B"]},
+                        {"question_index": 2, "question": "Q2", "options": ["(Recommended) X", "Y"]},
+                    ],
+                    "selections": [
+                        {"question_index": 1, "selected_option_index": 1},
+                        {"question_index": 2, "selected_option_index": 1},
+                    ]
+                }
+            }
+            with open(st_path, "w", encoding="utf-8") as f:
+                json.dump(initial_state, f)
+
+            with patch("step_2_chat_and_focus.step2_gui_chat_select.AntigravityGUISelector.select_chat") as mock_sel:
+                # Simulate DOM reporting 5 questions (e.g. falsely inflated DOM count)
+                mock_sel.return_value = {
+                    "success": True,
+                    "method": "cdp_mock",
+                    "total_questions": 5,
+                    "options_count": 3,
+                    "current_question": 1,
+                    "screen_coordinates": None,
+                }
+                ret = run_step2(state_file=str(st_path), dry_run=True)
+                self.assertEqual(ret, 0)
+
+            with open(st_path, "r", encoding="utf-8") as f:
+                saved = json.load(f)
+                saved_data = saved["data"]
+
+            # Ground truth 2 questions must NOT be overwritten by DOM's 5!
+            self.assertEqual(saved_data["total_questions_count"], 2)
+            self.assertEqual(saved_data["questions_count"], 2)
+
+    def test_step1_question_payload_strict_default_option_1(self):
+        """Verify QuestionPayload defaults recommended_option_index to 1 when no option is marked recommended."""
+        from step_1_chat_identifier.step1_find_and_focus import QuestionPayload
+        payload = QuestionPayload(
+            question_index=1,
+            question="Unmarked Question",
+            options=["Option A (Normal)", "Option B (Another)", "Option C (Third)"]
+        )
+        self.assertEqual(payload.recommended_option_index, 1)
+        self.assertEqual(payload.recommended_option_text, "Option A (Normal)")
+
 if __name__ == "__main__":
     unittest.main()
 
