@@ -734,5 +734,93 @@ class TestAutomatorBoundary(unittest.TestCase):
         mock_cdp.blur_chat_input.assert_called()
         self.assertEqual(len(dispatched_keys), 0)
 
+    @patch("core_engine.automator.user32.GetForegroundWindow", return_value=0x1111)
+    @patch("core_engine.automator.user32.IsWindow", return_value=True)
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(9999, "msedge.exe", r"C:\Program Files\Microsoft\Edge\Application\msedge.exe"))
+    @patch("core_engine.automator.get_active_window_title", return_value="New Tab - Microsoft Edge")
+    def test_foreground_disqualified_browser_aborts_execute_step(self, mock_title, mock_proc, mock_is_win, mock_fg):
+        """Verify _execute_step immediately aborts and returns False without calling action when foreground is a browser."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        mock_action = MagicMock()
+        ret = automator._execute_step("FOCUS.1", "Press Ctrl+L", mock_action)
+
+        self.assertFalse(ret)
+        mock_action.assert_not_called()
+
+    @patch("core_engine.automator.user32.GetForegroundWindow", return_value=0x2222)
+    @patch("core_engine.automator.user32.IsWindow", return_value=True)
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(8888, "chrome.exe", r"C:\Program Files\Google\Chrome\Application\chrome.exe"))
+    @patch("core_engine.automator.get_active_window_title", return_value="Google - Google Chrome")
+    def test_foreground_chrome_browser_aborts_pure_keyboard(self, mock_title, mock_proc, mock_is_win, mock_fg):
+        """Verify _execute_pure_keyboard aborts immediately when foreground window is Chrome browser."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        dispatched_steps = []
+        automator._execute_step = lambda sc, d, fn: dispatched_steps.append(sc)
+
+        ret = automator._execute_pure_keyboard(total_questions=1, options=["1"])
+        self.assertFalse(ret)
+        self.assertEqual(len(dispatched_steps), 0)
+
+    @patch("core_engine.automator.user32.GetForegroundWindow", return_value=0x3333)
+    @patch("core_engine.automator.user32.IsWindow", return_value=True)
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(7777, "notepad.exe", r"C:\Windows\notepad.exe"))
+    @patch("core_engine.automator.get_active_window_title", return_value="Untitled - Notepad")
+    def test_foreground_unrelated_process_not_target_aborts(self, mock_title, mock_proc, mock_is_win, mock_fg):
+        """Verify _is_foreground_window_target_and_safe returns False when foreground window is an unrelated process."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+        self.assertFalse(automator._is_foreground_window_target_and_safe())
+
+    @patch("core_engine.automator.user32.GetForegroundWindow", return_value=0x4444)
+    @patch("core_engine.automator.user32.IsWindow", return_value=True)
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(6666, "Antigravity.exe", r"C:\Program Files\Antigravity\Antigravity.exe"))
+    @patch("core_engine.automator.get_active_window_title", return_value="Antigravity 2.0 Harness")
+    def test_foreground_antigravity_target_succeeds(self, mock_title, mock_proc, mock_is_win, mock_fg):
+        """Verify _is_foreground_window_target_and_safe returns True when foreground is Antigravity."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+        self.assertTrue(automator._is_foreground_window_target_and_safe())
+
+    @patch("core_engine.automator.user32.GetForegroundWindow", return_value=0x5555)
+    @patch("core_engine.automator.user32.IsWindow", return_value=True)
+    @patch("core_engine.automator.get_process_info_for_hwnd", return_value=(5555, "msedge.exe", r"C:\Program Files\Microsoft\Edge\msedge.exe"))
+    @patch("core_engine.automator.get_active_window_title", return_value="Microsoft Edge")
+    def test_foreground_browser_allowed_only_when_explicitly_requested(self, mock_title, mock_proc, mock_is_win, mock_fg):
+        """Verify browser is allowed only when user explicitly specifies it in target_window."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=False,
+            auto_maximize=False,
+            target_window="msedge.exe",
+        )
+        self.assertTrue(automator._is_foreground_window_target_and_safe())
+
 if __name__ == "__main__":
     unittest.main()
+

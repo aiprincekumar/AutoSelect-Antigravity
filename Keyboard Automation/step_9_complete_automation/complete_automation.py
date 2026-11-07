@@ -291,6 +291,7 @@ class TimingConfig:
     step3_post_keypress_delay_ms: float = 250.0
     step3_inter_question_delay_ms: float = 500.0
     step3_round_completion_pause_ms: float = 1000.0
+    continuous_loop_delay_seconds: float = 300.0
 
 
 @dataclass
@@ -335,6 +336,7 @@ class AutomationConfig:
             step3_post_keypress_delay_ms=float(timing_data.get("step3_post_keypress_delay_ms", 250.0)),
             step3_inter_question_delay_ms=float(timing_data.get("step3_inter_question_delay_ms", 500.0)),
             step3_round_completion_pause_ms=float(timing_data.get("step3_round_completion_pause_ms", 1000.0)),
+            continuous_loop_delay_seconds=float(timing_data.get("continuous_loop_delay_seconds", 300.0)),
         )
 
         enabled = EnabledStepsConfig(
@@ -908,7 +910,7 @@ class CompleteAutomationController:
 
             # Safe interval calculation: after pipeline execution, enforce cooldown to prevent rapid looping
             if res.trigger_matched and code == EXIT_CODE_SUCCESS:
-                sleep_remaining = max(interval, self.config.timing.continuous_loop_delay_seconds)
+                sleep_remaining = max(interval, getattr(self.config.timing, "continuous_loop_delay_seconds", 300.0))
             else:
                 sleep_remaining = interval
 

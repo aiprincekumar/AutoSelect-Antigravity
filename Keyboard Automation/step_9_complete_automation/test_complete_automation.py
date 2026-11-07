@@ -467,5 +467,32 @@ class TestCompleteAutomationControllerLifecycle(unittest.TestCase):
         self.assertTrue(any("Production automation is ACTIVE" in msg for msg in log_cm.output))
 
 
+    @patch("time.sleep")
+    @patch("complete_automation.get_idle_duration_seconds")
+    @patch.object(AntiGravityDetector, "detect")
+    @patch.object(CompleteAutomationController, "execute_pipeline")
+    def test_run_test_mode_auto_pauses_on_user_activity(self, mock_pipeline, mock_detect, mock_idle, mock_sleep):
+        """Verify run() in test mode halts execution while user is active, respecting user activity."""
+        test_cfg = AutomationConfig(
+            mode="test",
+            timing=TimingConfig(user_activity_pause_threshold_seconds=60.0)
+        )
+        test_controller = CompleteAutomationController(config=test_cfg, headless=True)
+
+        idle_sequence = [5.0, 10.0, 75.0]
+        mock_idle.side_effect = lambda: idle_sequence.pop(0) if idle_sequence else 80.0
+        mock_detect.return_value = DetectionResult(is_detected=True, trigger_matched=True, pending_grill_me_chats=1)
+        mock_pipeline.return_value = (True, 0, "Pipeline completed", [])
+
+        with self.assertLogs(test_controller.logger, level="INFO") as log_cm:
+            code = test_controller.run(once=True)
+
+        self.assertEqual(code, 0)
+        mock_pipeline.assert_called_once()
+        self.assertTrue(any("Production automation is PAUSED" in msg for msg in log_cm.output))
+        self.assertTrue(any("Production automation is ACTIVE" in msg for msg in log_cm.output))
+
+
 if __name__ == "__main__":
     unittest.main()
+

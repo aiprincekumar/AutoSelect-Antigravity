@@ -4418,9 +4418,9 @@
 
           </span>
 
-          <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); cursor: pointer; user-select: none; font-weight: 700;" title="Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE">
+          <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); cursor: pointer; user-select: none; font-weight: 700;" title="Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST">
 
-            🧪 TEST
+            ⚡ LIVE
 
           </span>
 
@@ -5864,15 +5864,15 @@
 
             <div class="modes-switcher-label" id="modes-active-mode-label">
 
-              <span id="modes-active-dot" style="color: #f59e0b;">●</span>
+              <span id="modes-active-dot" style="color: #10b981;">●</span>
 
-              <span id="modes-active-text">Active Operating Mode: <strong>TEST (परीक्षण मोड)</strong></span>
+              <span id="modes-active-text">Active Operating Mode: <strong>PRODUCTION (उत्पादन मोड)</strong></span>
 
             </div>
 
             <div class="modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
 
-              <button type="button" class="banner-mode-btn " id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+              <button type="button" class="banner-mode-btn active" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
 
                 <span>🛡️ Production</span>
 
@@ -5880,7 +5880,7 @@
 
               </button>
 
-              <button type="button" class="banner-mode-btn active" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+              <button type="button" class="banner-mode-btn " id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
 
                 <span>🧪 Test Mode</span>
 
@@ -5900,7 +5900,7 @@
 
             <!-- 1. Production Mode Card -->
 
-            <div class="lifecycle-card card-production " id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
+            <div class="lifecycle-card card-production active-mode-card" id="mode-card-prod" role="button" tabindex="0" title="Click to activate Production Mode">
 
               <div class="lifecycle-card-top">
 
@@ -5922,7 +5922,7 @@
 
                   <span>●</span>
 
-                  <span id="mode-badge-text-prod">Continuous Loop</span>
+                  <span id="mode-badge-text-prod">CURRENT ACTIVE</span>
 
                 </span>
 
@@ -5946,9 +5946,9 @@
 
               </div>
 
-              <button type="button" class="lifecycle-card-btn btn" id="btn-set-prod">
+              <button type="button" class="lifecycle-card-btn btn-automation" id="btn-set-prod">
 
-                ⚡ Switch to Production Mode
+                ✓ Active in Production
 
               </button>
 
@@ -5958,7 +5958,7 @@
 
             <!-- 2. Test Mode Card -->
 
-            <div class="lifecycle-card card-test active-mode-card" id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
+            <div class="lifecycle-card card-test " id="mode-card-test" role="button" tabindex="0" title="Click to activate Test Mode">
 
               <div class="lifecycle-card-top">
 
@@ -5980,7 +5980,7 @@
 
                   <span>●</span>
 
-                  <span id="mode-badge-text-test">CURRENT ACTIVE</span>
+                  <span id="mode-badge-text-test">Single-Run Auto-Stop</span>
 
                 </span>
 
@@ -6004,9 +6004,9 @@
 
               </div>
 
-              <button type="button" class="lifecycle-card-btn btn-automation" id="btn-set-test" style="background: #d97706; color: #ffffff;">
+              <button type="button" class="lifecycle-card-btn btn" id="btn-set-test" style="background: rgba(245,158,11,0.18); color: #fbbf24; border-color: rgba(245,158,11,0.4);">
 
-                ✓ Active in Test Mode
+                ⚡ Switch to Test Mode
 
               </button>
 
@@ -6664,7 +6664,7 @@
 
           <div class="json-preview-box" id="json-preview-container" style="display: none;">{
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "test",
+  "mode": "production",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,
     "step0_poll_interval_test_seconds": 10.0,
@@ -7159,7 +7159,7 @@
 
 {
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "test",
+  "mode": "production",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,
     "step0_poll_interval_test_seconds": 10.0,
@@ -9212,7 +9212,7 @@
 
       let lastUserModeChangeTime = 0;
 
-      let currentExecutionMode = localStorage.getItem('asc_execution_mode') || 'test';
+      let currentExecutionMode = localStorage.getItem('asc_execution_mode') || 'production';
 
 
 

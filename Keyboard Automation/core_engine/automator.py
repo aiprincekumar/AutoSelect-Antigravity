@@ -10,6 +10,7 @@ browser safety aborts, pure native Win32 SendInput physical keystroke execution,
 and dynamic multi-question step execution.
 """
 
+import os
 import sys
 import time
 import json
