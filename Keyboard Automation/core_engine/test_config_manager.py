@@ -36,6 +36,8 @@ from core_engine.config_manager import (
     get_effective_poll_interval,
     get_settle_delay,
     get_user_activity_delay,
+    get_user_activity_pause_threshold,
+    get_effective_user_activity_pause_threshold,
     get_window_focus_delay,
     get_dom_click_settle_delay,
     get_step4_poll_interval,
@@ -80,6 +82,9 @@ class TestConfigManager(unittest.TestCase):
         self.assertEqual(cfg["timing"]["step0_poll_interval_prod_seconds"], 300.0)
         self.assertEqual(cfg["timing"]["step0_poll_interval_test_seconds"], 10.0)
         self.assertEqual(cfg["timing"]["settle_delay_between_steps_seconds"], 0.8)
+        self.assertEqual(cfg["timing"]["user_activity_pause_threshold_seconds"], 60.0)
+        self.assertEqual(cfg["timing"]["user_activity_pause_threshold_prod_seconds"], 60.0)
+        self.assertEqual(cfg["timing"]["user_activity_pause_threshold_test_seconds"], 5.0)
         self.assertEqual(cfg["timing"]["step4_user_activity_delay_seconds"], 10.0)
         self.assertEqual(cfg["timing"]["step4_poll_interval_seconds"], 0.1)
         self.assertEqual(cfg["timing"]["step1_window_focus_delay_seconds"], 0.2)
@@ -135,6 +140,55 @@ class TestConfigManager(unittest.TestCase):
 
         test_cfg = {"mode": "test", "timing": {"step0_poll_interval_prod_seconds": 240.0, "step0_poll_interval_test_seconds": 8.0}}
         self.assertEqual(get_effective_poll_interval(test_cfg), 8.0)
+
+    def test_05b_effective_user_activity_pause_threshold(self):
+        """Verify user activity pause threshold changes dynamically based on mode and falls back."""
+        # Dynamic threshold test mode vs prod mode
+        prod_cfg = {
+            "mode": "production",
+            "timing": {
+                "user_activity_pause_threshold_prod_seconds": 60.0,
+                "user_activity_pause_threshold_test_seconds": 5.0,
+            }
+        }
+        self.assertEqual(get_effective_user_activity_pause_threshold(prod_cfg), 60.0)
+        self.assertEqual(get_user_activity_pause_threshold(prod_cfg), 60.0)
+
+        test_cfg = {
+            "mode": "test",
+            "timing": {
+                "user_activity_pause_threshold_prod_seconds": 60.0,
+                "user_activity_pause_threshold_test_seconds": 5.0,
+            }
+        }
+        self.assertEqual(get_effective_user_activity_pause_threshold(test_cfg), 5.0)
+        self.assertEqual(get_user_activity_pause_threshold(test_cfg), 5.0)
+
+        # Legacy fallback when specific keys are omitted
+        legacy_cfg_test = {
+            "mode": "test",
+            "timing": {
+                "user_activity_pause_threshold_seconds": 25.0,
+            }
+        }
+        self.assertEqual(get_effective_user_activity_pause_threshold(legacy_cfg_test), 25.0)
+        self.assertEqual(get_user_activity_pause_threshold(legacy_cfg_test), 25.0)
+
+        legacy_cfg_prod = {
+            "mode": "production",
+            "timing": {
+                "user_activity_pause_threshold_seconds": 40.0,
+            }
+        }
+        self.assertEqual(get_effective_user_activity_pause_threshold(legacy_cfg_prod), 40.0)
+        self.assertEqual(get_user_activity_pause_threshold(legacy_cfg_prod), 40.0)
+
+        # Defaults when timing dict is empty
+        empty_cfg_test = {"mode": "test", "timing": {}}
+        self.assertEqual(get_effective_user_activity_pause_threshold(empty_cfg_test), 5.0)
+
+        empty_cfg_prod = {"mode": "production", "timing": {}}
+        self.assertEqual(get_effective_user_activity_pause_threshold(empty_cfg_prod), 60.0)
 
     def test_06_timing_helpers(self):
         """Verify settle delay and user activity delay helper functions."""
