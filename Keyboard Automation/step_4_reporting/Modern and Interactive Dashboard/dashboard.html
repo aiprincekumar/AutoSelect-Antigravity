@@ -9092,13 +9092,11 @@
 
               } else if (typeof data.data.logs === 'string') {
 
-                lines = data.data.logs.split('
-').map(l => l.trim()).filter(l => l.length > 0);
+                lines = data.data.logs.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
               } else if (typeof data.data.raw === 'string') {
 
-                lines = data.data.raw.split('
-').map(l => l.trim()).filter(l => l.length > 0);
+                lines = data.data.raw.split(/\r?\n/).map(l => l.trim()).filter(l => l.length > 0);
 
               }
 

@@ -4401,9 +4401,9 @@ def build_modern_dashboard_html(
               if (Array.isArray(data.data.logs)) {{
                 lines = data.data.logs;
               }} else if (typeof data.data.logs === 'string') {{
-                lines = data.data.logs.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                lines = data.data.logs.split(/\\r?\\n/).map(l => l.trim()).filter(l => l.length > 0);
               }} else if (typeof data.data.raw === 'string') {{
-                lines = data.data.raw.split('\n').map(l => l.trim()).filter(l => l.length > 0);
+                lines = data.data.raw.split(/\\r?\\n/).map(l => l.trim()).filter(l => l.length > 0);
               }}
             }}
             logLines = lines.length;
