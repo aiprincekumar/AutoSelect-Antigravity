@@ -990,6 +990,141 @@ class TestAutomatorBoundary(unittest.TestCase):
         self.assertEqual(automator.total_questions, 3)
         self.assertEqual(automator.options_list, ["1", "1", "1"])
 
+    def test_browser_disqualification_by_window_title_with_empty_process_name(self):
+        """Verify is_browser_window detects browser by title even when process name is empty."""
+        from core_engine.constants import is_browser_window
+        self.assertTrue(is_browser_window(pname="", pexe="", title="Antigravity - Microsoft Edge"))
+        self.assertTrue(is_browser_window(pname="", pexe="", title="Google - Google Chrome"))
+        self.assertTrue(is_browser_window(pname="", pexe="", title="Mozilla Firefox"))
+        self.assertTrue(is_browser_window(pname="", pexe="", title="New Tab - Edge"))
+        self.assertTrue(is_browser_window(pname="", pexe="", title="GitHub - Brave"))
+        # Non-browser window with 'knowledge' or 'antigravity' should NOT be false-positived
+        self.assertFalse(is_browser_window(pname="Antigravity.exe", pexe=r"C:\Apps\Antigravity\Antigravity.exe", title="knowledge_base.py - Antigravity"))
+        self.assertFalse(is_browser_window(pname="Antigravity.exe", pexe=r"C:\Apps\Antigravity\Antigravity.exe", title="Antigravity 2.0 Harness"))
+
+    def test_select_target_window_disqualifies_browser_with_antigravity_in_title(self):
+        """Verify select_target_window never selects browser tab even if title contains 'Antigravity'."""
+        from core_engine.window_manager import select_target_window
+
+        fake_candidates = [
+            {
+                "hwnd": 0x9999,
+                "title": "Antigravity Project Docs - Microsoft Edge",
+                "class": "Chrome_WidgetWin_1",
+                "pid": 5555,
+                "process_name": "",  # Empty process name simulation
+                "process_exe": "",
+                "visible": True,
+                "minimized": False,
+                "maximized": True,
+                "width": 1920,
+                "height": 1080,
+                "rect": (0, 0, 1920, 1080),
+                "is_browser": True,
+            }
+        ]
+
+        with patch("core_engine.window_manager.find_all_candidate_windows", return_value=fake_candidates):
+            matched = select_target_window("Antigravity")
+            self.assertIsNone(matched, "Browser tab with 'Antigravity' in title MUST be disqualified!")
+
+    def test_prepare_target_window_fails_closed_when_window_not_found(self):
+        """Verify prepare_target_window returns False and target_hwnd is None when no match found (fail-closed)."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=True,
+            auto_maximize=True,
+        )
+
+        with patch("core_engine.automator.select_target_window", return_value=None):
+            result = automator.prepare_target_window()
+            self.assertFalse(result)
+            self.assertIsNone(automator.target_hwnd)
+            self.assertIsNone(automator.target_title)
+
+    def test_ensure_window_ready_fails_closed_without_blind_fallback(self):
+        """Verify _ensure_window_ready returns False when target window cannot be verified as Antigravity."""
+        automator = GrillMeAutomator(
+            questions=1,
+            options_list=["1"],
+            dry_run=False,
+            auto_focus=True,
+            auto_maximize=True,
+        )
+
+        with patch.object(automator, "prepare_target_window", return_value=False):
+            result = automator._ensure_window_ready()
+            self.assertFalse(result)
+            self.assertIsNone(automator.target_hwnd)
+
+    def test_execute_multi_question_aborts_when_ensure_window_ready_fails(self):
+        """Verify execute_multi_question aborts immediately with 0 keystrokes when _ensure_window_ready returns False."""
+        automator = GrillMeAutomator(
+            questions=3,
+            options_list=["1", "2", "3"],
+            dry_run=False,
+            auto_focus=True,
+            auto_maximize=True,
+        )
+
+        dispatched_keys = []
+        automator.dispatch_key = lambda vk: dispatched_keys.append(vk)
+
+        with patch.object(automator, "_ensure_window_ready", return_value=False):
+            ok = automator.execute_multi_question(total_questions=3, options=["1", "2", "3"])
+            self.assertFalse(ok)
+            self.assertEqual(len(dispatched_keys), 0)
+
+    def test_pure_keyboard_exact_3_presses_for_3_questions_no_1233(self):
+        """Verify fix for '1233' defect: 3 questions dispatch exactly ['1', '2', '3'] with 0 repeated last option."""
+        automator = GrillMeAutomator(
+            questions=3,
+            options_list=["1", "2", "3"],
+            dry_run=True,
+            auto_focus=False,
+            auto_maximize=False,
+        )
+
+        executed_steps = []
+        automator._execute_step = lambda sc, d, fn: executed_steps.append((sc, d))
+        automator.engine = "ctypes"
+
+        ok = automator.execute_multi_question(total_questions=3, options=["1", "2", "3"])
+        self.assertTrue(ok)
+
+        # Expected: FOCUS.1, FOCUS.2, OPT.1 ('1'), OPT.2 ('2'), OPT.3 ('3') -> exactly 5 steps
+        step_codes = [s[0] for s in executed_steps]
+        self.assertEqual(step_codes, ["FOCUS.1", "FOCUS.2", "OPT.1", "OPT.2", "OPT.3"])
+        self.assertEqual(len(executed_steps), 5)
+
+        opt_descriptions = [s[1] for s in executed_steps if s[0].startswith("OPT.")]
+        self.assertEqual(len(opt_descriptions), 3)
+        self.assertIn("[1]", opt_descriptions[0])
+        self.assertIn("[2]", opt_descriptions[1])
+        self.assertIn("[3]", opt_descriptions[2])
+
+        # Verify NO 4th press exists (which would have repeated [3])
+        self.assertFalse(any("OPT.4" in s[0] for s in executed_steps))
+        self.assertFalse(any("Option press 4" in s[1] for s in executed_steps))
+
+    @patch("step_2_chat_and_focus.step2_gui_chat_select.user32.GetForegroundWindow", return_value=0x9999)
+    @patch("step_2_chat_and_focus.step2_gui_chat_select.user32.IsWindow", return_value=True)
+    @patch("step_2_chat_and_focus.step2_gui_chat_select.get_process_info_for_hwnd", return_value=(9999, "msedge.exe", r"C:\Edge\msedge.exe"))
+    def test_step2_gui_chat_select_blocks_ctrl_l_on_browser_window(self, mock_proc, mock_is_win, mock_fg):
+        """Verify Step 2 select_chat aborts and refuses to dispatch Ctrl+L when foreground is a browser."""
+        from step_2_chat_and_focus.step2_gui_chat_select import AntigravityGUISelector
+
+        res = AntigravityGUISelector.select_chat(
+            target_cid="test_cid",
+            hwnd=0x1234,  # Antigravity HWND
+            dry_run=False,
+        )
+
+        self.assertFalse(res["success"])
+        self.assertFalse(res["chat_focused"])
+
 if __name__ == "__main__":
     unittest.main()
 
