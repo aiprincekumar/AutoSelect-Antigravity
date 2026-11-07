@@ -134,12 +134,16 @@ class TestModernDashboardSuite(unittest.TestCase):
         self.assertIn('syncHeaderActionButton', content, "Must implement dynamic syncHeaderActionButton.")
         self.assertIn('appendLiveFeedLines', content, "Must implement appendLiveFeedLines.")
 
-        # 14. Dual-State Refresh Button & Thin Horizontal Header Progress Bar
+        # 14. Dual-State Refresh Button & Embedded Step-Wise Header Progress Bar
         self.assertIn('id="btn-header-refresh"', content, "Must have header refresh button.")
         self.assertIn('id="refresh-spin-icon"', content, "Must have refresh spin icon.")
         self.assertNotIn('id="refresh-countdown"', content, "Refresh countdown timer must be completely removed.")
-        self.assertIn('id="header-progress-bar"', content, "Must have thin horizontal header progress bar.")
-        self.assertIn('indeterminateProgress', content, "Must define indeterminateProgress keyframes animation.")
+        self.assertIn('id="header-progress-bar"', content, "Must have embedded header progress bar fill.")
+        self.assertIn('id="header-progress-track"', content, "Must have embedded header progress track.")
+        self.assertIn('header-embedded-progress-track', content, "Must have embedded header progress track styling.")
+        self.assertNotIn('indeterminateProgress', content, "Indeterminate looping animation must be completely removed.")
+        self.assertIn('updateStepProgress', content, "Must implement updateStepProgress function.")
+        self.assertIn('detectStepFromLogLine', content, "Must implement detectStepFromLogLine function.")
 
     def test_03_server_routes_classic_and_modern(self):
         """Verify dashboard server serves /classic and /modern endpoints cleanly."""
@@ -185,6 +189,24 @@ class TestModernDashboardSuite(unittest.TestCase):
         self.assertIn("headerModeBadge.innerHTML", content, "Must dynamically bind headerModeBadge in JS.")
         self.assertIn("/api/automation/events", content, "Must have Server-Sent Events (SSE) stream endpoint.")
         self.assertIn("EventSource", content, "Must initialize EventSource for real-time mode reflection.")
+
+    def test_05_event_driven_refresh_and_zero_idle_reload(self):
+        """Verify that auto-refresh is event-driven and zero periodic page reloads occur when idle."""
+        content = (self.modern_dir / "dashboard.html").read_text(encoding="utf-8")
+
+        # 1. Option for event-driven mode exists and is default
+        self.assertIn('value="event"', content, "cfg-auto-refresh must support event-driven mode.")
+        self.assertIn("Event-Driven", content, "Event-Driven option text must be present.")
+
+        # 2. SSE Event handlers registered
+        self.assertIn("task_start", content, "Must listen for task_start SSE event.")
+        self.assertIn("stage_transition", content, "Must listen for stage_transition SSE event.")
+        self.assertIn("active_wip", content, "Must listen for active_wip SSE event.")
+        self.assertIn("task_complete", content, "Must listen for task_complete SSE event.")
+
+        # 3. Guard against idle reload loop
+        self.assertIn("!isAutomationActive || refreshMode === 'event'", content,
+                      "Must strictly guard against idle reload loop when no task is active.")
 
 
 if __name__ == "__main__":

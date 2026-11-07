@@ -1571,7 +1571,7 @@ class Step4ReportingEngine:
     }}
 
     /* Header */
-    header {{
+    header, .app-header {{
       display: flex;
       justify-content: space-between;
       align-items: center;
@@ -1581,6 +1581,8 @@ class Step4ReportingEngine:
       border-radius: var(--radius-lg);
       margin-bottom: 24px;
       box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+      position: relative;
+      overflow: hidden;
     }}
 
     .header-left {{
@@ -3622,42 +3624,32 @@ class Step4ReportingEngine:
       100% {{ transform: rotate(360deg); }}
     }}
 
-    /* Thin Horizontal Progress Bar directly under Header (Requirement 3) */
-    .header-progress-bar {{
-      width: 100%;
-      height: 2.8px;
-      position: relative;
-      overflow: hidden;
-      background: transparent;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-      z-index: 50;
-      margin-top: -1px;
-    }}
-    .header-progress-bar.active {{
-      opacity: 1;
-      background: rgba(99, 102, 241, 0.12);
-    }}
-    .header-progress-bar.active::after {{
-      content: '';
+    /* Embedded Step-Wise Horizontal Progress Bar inside Header */
+    .header-embedded-progress-track {{
       position: absolute;
-      top: 0;
-      left: -50%;
-      height: 100%;
-      width: 50%;
-      background: linear-gradient(90deg, transparent, #6366f1, #06b6d4, #10b981, transparent);
-      animation: indeterminateProgress 1.5s infinite linear;
-      box-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 16px rgba(16, 185, 129, 0.6);
-      border-radius: 2px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      pointer-events: auto;
+      z-index: 20;
     }}
-    @keyframes indeterminateProgress {{
-      0% {{
-        left: -50%;
-      }}
-      100% {{
-        left: 100%;
-      }}
+
+    .header-embedded-progress-fill {{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6366f1 0%, #06b6d4 50%, #10b981 100%);
+      box-shadow: 0 0 8px rgba(6, 182, 212, 0.7);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      border-radius: 0 2px 2px 0;
+      opacity: 0;
+    }}
+
+    .header-embedded-progress-fill.active {{
+      opacity: 1;
     }}
 
     /* Tab 4: Config Panel Layout (Department 04 & 05 Standard) */
@@ -4546,7 +4538,7 @@ class Step4ReportingEngine:
 <body>
   <div class="container">
     <!-- Header -->
-    <header>
+    <header class="app-header">
       <div class="header-left">
         <div class="logo-badge">⚡</div>
         <div class="header-titles">
@@ -4579,10 +4571,12 @@ class Step4ReportingEngine:
           <span class="log-unread-badge" id="log-count-badge">0</span>
         </button>
       </div>
-    </header>
 
-    <!-- Thin Horizontal Progress Bar directly under the Header (Requirement 3) -->
-    <div class="header-progress-bar" id="header-progress-bar"></div>
+      <!-- Embedded Step-Wise Horizontal Progress Bar inside Header -->
+      <div class="header-embedded-progress-track" id="header-progress-track" title="Pipeline Progress: Idle (0%)">
+        <div class="header-embedded-progress-fill" id="header-progress-bar" style="width: 0%;"></div>
+      </div>
+    </header>
 
     <!-- Horizontal Tab Navigation Bar (Single-word intuitive names: Overview, Chats, Questions, Config) -->
     <nav class="tab-nav" role="tablist" aria-label="Dashboard Tabs">
@@ -5624,9 +5618,8 @@ class Step4ReportingEngine:
                       <span class="config-hint">Automatically reload live telemetry without manual page refresh</span>
                     </div>
                     <select id="cfg-auto-refresh" class="config-select">
+                      <option value="event" selected>⚡ Event-Driven (Real-Time &amp; Stage Transitions)</option>
                       <option value="0">Off (Manual Refresh Only)</option>
-                      <option value="5">Every 5 Seconds</option>
-                      <option value="10">Every 10 Seconds</option>
                       <option value="30">Every 30 Seconds</option>
                       <option value="60">Every 60 Seconds</option>
                     </select>
@@ -6334,7 +6327,7 @@ class Step4ReportingEngine:
       }}
 
       const DEFAULT_CONFIG = {{
-        autoRefresh: 0,
+        autoRefresh: 'event',
         activityDelay: 10,
         defaultTab: 'overview',
         selectionPolicy: 'option1_auto',
@@ -6397,7 +6390,9 @@ class Step4ReportingEngine:
           clearInterval(refreshTimer);
           refreshTimer = null;
         }}
+        if (!intervalSeconds || intervalSeconds <= 0) return;
         refreshTimer = setInterval(() => {{
+          if (!isAutomationActive) return;
           try {{
             sessionStorage.setItem('asc_scroll_y', String(window.scrollY));
           }} catch (e) {{}}
@@ -6437,9 +6432,9 @@ class Step4ReportingEngine:
           document.documentElement.classList.remove('reduced-motion');
         }}
 
-        // Full page reload timer ONLY if explicitly enabled by user (> 0)
+        // Full page reload timer ONLY if explicitly enabled by user with a numeric interval > 0 AND active
         const configuredRefresh = parseInt(cfg.autoRefresh, 10);
-        if (configuredRefresh > 0) {{
+        if (!isNaN(configuredRefresh) && configuredRefresh > 0 && isAutomationActive) {{
           startLivePolling(configuredRefresh);
         }} else {{
           stopLivePolling();
@@ -6603,10 +6598,126 @@ class Step4ReportingEngine:
         startServerHealthPolling(3000);
       }}
 
+      function updateStepProgress(step, isRunning, customPercent, customTitle) {{
+        const progressBar = document.getElementById('header-progress-bar');
+        const progressTrack = document.getElementById('header-progress-track');
+        if (!progressBar) return;
+
+        let pct = 0;
+        let titleText = 'Pipeline Progress: Idle (0%)';
+
+        if (!isRunning) {{
+          pct = 0;
+          titleText = 'Pipeline Progress: Idle (0%)';
+          progressBar.classList.remove('active');
+          progressBar.style.width = '0%';
+          progressBar.style.opacity = '0';
+          if (progressTrack) progressTrack.title = titleText;
+          return;
+        }}
+
+        if (customPercent !== undefined && customPercent !== null) {{
+          pct = Number(customPercent);
+          titleText = customTitle || `Pipeline Progress: ${{pct}}%`;
+        }} else {{
+          // Default 4-step pipeline percentages
+          switch (step) {{
+            case 0:
+              pct = 10;
+              titleText = 'Step 0/4 Running: AntiGravity Detector (10%)';
+              break;
+            case 0.5:
+              pct = 25;
+              titleText = 'Step 0/4 Complete: AntiGravity Detected (25%)';
+              break;
+            case 1:
+              pct = 35;
+              titleText = 'Step 1/4 Running: Chat Identifier & Focus (35%)';
+              break;
+            case 1.5:
+              pct = 50;
+              titleText = 'Step 1/4 Complete: Chat Identifier & Focus (50%)';
+              break;
+            case 2:
+              pct = 60;
+              titleText = 'Step 2/4 Running: GUI Chat Select & Focus (60%)';
+              break;
+            case 2.5:
+              pct = 75;
+              titleText = 'Step 2/4 Complete: GUI Chat Select & Focus (75%)';
+              break;
+            case 3:
+              pct = 85;
+              titleText = 'Step 3/4 Running: Keyboard Automation (85%)';
+              break;
+            case 3.5:
+            case 4:
+              pct = 100;
+              titleText = 'Step 3/4 Complete: Pipeline Finished (100%)';
+              break;
+            default:
+              pct = 10;
+              titleText = 'Pipeline Active • Step 0/4 (10%)';
+              break;
+          }}
+        }}
+
+        pct = Math.max(0, Math.min(100, pct));
+        progressBar.classList.add('active');
+        progressBar.style.width = pct + '%';
+        progressBar.style.opacity = pct > 0 ? '1' : '0';
+        if (progressTrack) progressTrack.title = customTitle || titleText;
+      }}
+
+      function detectStepFromLogLine(line) {{
+        if (!line || typeof line !== 'string') return null;
+        const upper = line.toUpperCase();
+
+        if (upper.includes('PIPELINE COMPLETED SUCCESSFULLY') || upper.includes('[STEP 9.9]') || upper.includes('CYCLE COMPLETED')) {{
+          return {{ step: 4, pct: 100, title: 'Pipeline Complete (100%)' }};
+        }}
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 3')) || upper.includes('STEP 3 COMPLETED') || upper.includes('KEYBOARD AUTOMATION COMPLETED')) {{
+          return {{ step: 3.5, pct: 100, title: 'Step 3/4 Complete: Keyboard Automation (100%)' }};
+        }}
+        if (upper.includes('[STEP 3.') || upper.includes('[STEP 3:') || upper.includes('KEYBOARD AUTOMATION')) {{
+          return {{ step: 3, pct: 85, title: 'Step 3/4 Running: Keyboard Automation (85%)' }};
+        }}
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 2')) || upper.includes('STEP 2 COMPLETED') || upper.includes('CHAT SELECTED')) {{
+          return {{ step: 2.5, pct: 75, title: 'Step 2/4 Complete: GUI Chat Select & Focus (75%)' }};
+        }}
+        if (upper.includes('[STEP 2.') || upper.includes('[STEP 2:') || upper.includes('GUI CHAT SELECT') || upper.includes('SELECTING TARGET CHAT')) {{
+          return {{ step: 2, pct: 60, title: 'Step 2/4 Running: GUI Chat Select & Focus (60%)' }};
+        }}
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 1')) || upper.includes('STEP 1 COMPLETED') || upper.includes('[STEP 9.14]')) {{
+          return {{ step: 1.5, pct: 50, title: 'Step 1/4 Complete: Chat Identifier & Focus (50%)' }};
+        }}
+        if (upper.includes('[STEP 1.') || upper.includes('[STEP 1:') || upper.includes('CHAT IDENTIFIER') || upper.includes('IDENTIFYING ACTIVE CHAT')) {{
+          return {{ step: 1, pct: 35, title: 'Step 1/4 Running: Chat Identifier & Focus (35%)' }};
+        }}
+        if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('ANTIGRAVITY DETECTED')) {{
+          return {{ step: 0.5, pct: 25, title: 'Step 0/4 Complete: AntiGravity Detected (25%)' }};
+        }}
+        if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY')) {{
+          return {{ step: 0, pct: 10, title: 'Step 0/4 Running: AntiGravity Detector (10%)' }};
+        }}
+        if (upper.includes('[STEP 9.')) {{
+          return {{ step: 0, pct: 10, title: 'Pipeline Active • Step 0/4 (10%)' }};
+        }}
+        return null;
+      }}
+
       function updateAutomationUI(isRunning, triggerToast = false, statusData = null) {{
         const modesAutomationToggleBtn = document.getElementById('modes-automation-toggle-btn');
         const modesControlIconEl = document.getElementById('modes-control-icon');
         const modesControlLabelEl = document.getElementById('modes-control-label');
+
+        if (!isRunning) {{
+          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
+        }} else if (statusData && statusData.step_percent !== undefined && statusData.step_percent !== null) {{
+          updateStepProgress(statusData.current_step, true, statusData.step_percent, statusData.step_title);
+        }} else {{
+          updateStepProgress(0, true, 10, 'Step 0/4 Running: AntiGravity Detector (10%)');
+        }}
 
         if (isRunning) {{
           if (automationToggleBtn) {{
@@ -6657,8 +6768,9 @@ class Step4ReportingEngine:
         }}
 
         const classicSpinIcon = document.getElementById('classic-spin-icon') || (btnHeaderRefresh ? btnHeaderRefresh.querySelector('.spin-icon') : null);
-        const headerProgressBar = document.getElementById('header-progress-bar');
-        if (headerProgressBar) headerProgressBar.classList.toggle('active', isRunning);
+        if (!isRunning) {{
+          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
+        }}
         if (btnHeaderRefresh) {{
           btnHeaderRefresh.classList.toggle('is-running-active', isRunning);
           btnHeaderRefresh.title = isRunning ? 'Automation Running in Background • Click to Refresh Telemetry' : 'Synchronous Telemetry Refresh from Disk';
@@ -6927,8 +7039,9 @@ class Step4ReportingEngine:
 
       if (configSaveBtn) {{
         configSaveBtn.addEventListener('click', () => {{
+          const rawRefreshVal = cfgAutoRefresh ? cfgAutoRefresh.value : 'event';
           currentConfig = {{
-            autoRefresh: parseInt(cfgAutoRefresh ? cfgAutoRefresh.value : 0, 10),
+            autoRefresh: rawRefreshVal === 'event' ? 'event' : (parseInt(rawRefreshVal, 10) || 0),
             activityDelay: parseInt(cfgActivityDelay ? cfgActivityDelay.value : 10, 10),
             defaultTab: cfgDefaultTab ? cfgDefaultTab.value : 'overview',
             selectionPolicy: cfgSelectionPolicy ? cfgSelectionPolicy.value : 'option1_auto',
@@ -6976,6 +7089,64 @@ class Step4ReportingEngine:
       updateAutomationUI(getAutomationRunning(), false);
       applyDynamicSettings(currentConfig);
       checkProcessStatus();
+
+      // Server-Sent Events (SSE) Live Status & Reactive Event Stream
+      try {{
+        if (typeof EventSource !== 'undefined') {{
+          const eventSource = new EventSource(API_BASE + '/api/automation/events');
+          eventSource.addEventListener('status', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              if (payload && payload.success && payload.data) {{
+                isServerBridgeOnline = true;
+                updateServerBridgeUI(true);
+                updateProcessStatusUI(payload.data);
+                const running = !!payload.data.running;
+                if (running !== isAutomationActive) {{
+                  isAutomationActive = running;
+                  localStorage.setItem('asc_automation_running', String(running));
+                  updateAutomationUI(running, false, payload.data);
+                }}
+              }}
+            }} catch (_) {{}}
+          }});
+
+          eventSource.addEventListener('task_start', (e) => {{
+            try {{
+              isAutomationActive = true;
+              localStorage.setItem('asc_automation_running', 'true');
+              updateAutomationUI(true, true);
+              showToast('🚀 Automation task started!', 'success');
+            }} catch (_) {{}}
+          }});
+
+          eventSource.addEventListener('stage_transition', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              const stageName = payload.stage_name || `Stage ${{payload.stage}}`;
+              showToast(`⚡ ${{stageName}} in progress...`, 'info');
+              updateAutomationUI(true, false);
+            }} catch (_) {{}}
+          }});
+
+          eventSource.addEventListener('active_wip', (e) => {{
+            try {{
+              isAutomationActive = true;
+              updateAutomationUI(true, false);
+            }} catch (_) {{}}
+          }});
+
+          eventSource.addEventListener('task_complete', (e) => {{
+            try {{
+              isAutomationActive = false;
+              localStorage.setItem('asc_automation_running', 'false');
+              updateAutomationUI(false, true);
+              showToast('✅ Automation completed! Updating telemetry...', 'success');
+              setTimeout(() => location.reload(), 800);
+            }} catch (_) {{}}
+          }});
+        }}
+      }} catch (_) {{}}
 
       // Seamlessly restore scroll position if reloaded
       try {{
@@ -7630,6 +7801,15 @@ class Step4ReportingEngine:
             const count = lines.length;
             if (logBadge) logBadge.textContent = count;
             if (floatingLogBadge) floatingLogBadge.textContent = count;
+
+            if (Array.isArray(lines) && lines.length > 0) {{
+              for (let i = 0; i < lines.length; i++) {{
+                const detected = detectStepFromLogLine(lines[i]);
+                if (detected) {{
+                  updateStepProgress(detected.step, true, detected.pct, detected.title);
+                }}
+              }}
+            }}
             let colored = '';
             lines.forEach(l => {{
               let cls = '';
@@ -7682,6 +7862,38 @@ class Step4ReportingEngine:
             }});
         }});
       }}
+
+      // Server-Sent Events (SSE) Live Status & Log Stream
+      try {{
+        if (typeof EventSource !== 'undefined') {{
+          const eventSource = new EventSource(API_BASE + '/api/automation/events');
+          eventSource.addEventListener('status', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              if (payload && payload.success && payload.data) {{
+                const d = payload.data;
+                const isNowRunning = !!d.running;
+                isAutomationActive = isNowRunning;
+                localStorage.setItem('asc_automation_running', String(isNowRunning));
+                updateAutomationUI(isNowRunning, false, d);
+              }}
+            }} catch (_) {{}}
+          }});
+          eventSource.addEventListener('log', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              if (payload && Array.isArray(payload.lines) && payload.lines.length > 0) {{
+                for (let i = 0; i < payload.lines.length; i++) {{
+                  const detected = detectStepFromLogLine(payload.lines[i]);
+                  if (detected) {{
+                    updateStepProgress(detected.step, true, detected.pct, detected.title);
+                  }}
+                }}
+              }}
+            }} catch (_) {{}}
+          }});
+        }}
+      }} catch (_) {{}}
 
       // Keyboard shortcuts
       document.addEventListener('keydown', (e) => {{

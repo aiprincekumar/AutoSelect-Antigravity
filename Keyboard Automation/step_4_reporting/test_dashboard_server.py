@@ -190,6 +190,10 @@ class TestDashboardServer(unittest.TestCase):
         self.assertFalse(body["data"]["is_paused"])
         self.assertIn("user_idle_seconds", body["data"])
         self.assertEqual(body["data"]["status_text"], "Inactive")
+        self.assertIn("current_step", body["data"])
+        self.assertIsNone(body["data"]["current_step"])
+        self.assertIn("step_percent", body["data"])
+        self.assertEqual(body["data"]["step_percent"], 0)
         self.assertEqual(headers.get("Access-Control-Allow-Origin"), "*")
 
     def test_05_options_cors_preflight(self):
@@ -430,6 +434,95 @@ class TestDashboardServer(unittest.TestCase):
                 data_json = json.loads(data_line.replace("data:", "").strip())
                 self.assertTrue(data_json["success"])
                 self.assertIn("mode", data_json["data"])
+
+
+    def test_17_pipeline_step_progress_parsing(self):
+        """Verify parse_pipeline_step_progress maps log lines to deterministic percentages."""
+        from step_4_reporting.dashboard_server import parse_pipeline_step_progress
+
+        # Stopped / Inactive
+        res = parse_pipeline_step_progress([], running=False)
+        self.assertIsNone(res["current_step"])
+        self.assertEqual(res["step_percent"], 0)
+
+        # Running but empty logs (initial startup)
+        res = parse_pipeline_step_progress([], running=True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 10)
+
+        # Step 0: Polling
+        res = parse_pipeline_step_progress(["[STEP 0.1] Polling Antigravity detector"], running=True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 10)
+
+        # Step 0: Completed (Trigger matched)
+        res = parse_pipeline_step_progress(["[STEP 9.12] [TRIGGER_FIRE] Trigger matched: Antigravity open"], running=True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 25)
+
+        # Step 1: Running
+        res = parse_pipeline_step_progress(["[STEP 1.1] Identifying active chat window"], running=True)
+        self.assertEqual(res["current_step"], 1)
+        self.assertEqual(res["step_percent"], 35)
+
+        # Step 1: Completed
+        res = parse_pipeline_step_progress(["[STEP 9.8] [STEP_FINISH] Step 1 process completed with exit code 0"], running=True)
+        self.assertEqual(res["current_step"], 1)
+        self.assertEqual(res["step_percent"], 50)
+
+        # Step 2: Running
+        res = parse_pipeline_step_progress(["[STEP 2.1] GUI Chat select in progress"], running=True)
+        self.assertEqual(res["current_step"], 2)
+        self.assertEqual(res["step_percent"], 60)
+
+        # Step 2: Completed
+        res = parse_pipeline_step_progress(["[STEP 9.8] [STEP_FINISH] Step 2 process completed with exit code 0"], running=True)
+        self.assertEqual(res["current_step"], 2)
+        self.assertEqual(res["step_percent"], 75)
+
+        # Step 3: Running
+        res = parse_pipeline_step_progress(["[STEP 3.1] Keyboard Automation pressing options"], running=True)
+        self.assertEqual(res["current_step"], 3)
+        self.assertEqual(res["step_percent"], 85)
+
+        # Step 3: Completed
+        res = parse_pipeline_step_progress(["[STEP 9.8] [STEP_FINISH] Step 3 process completed with exit code 0"], running=True)
+        self.assertEqual(res["current_step"], 3)
+        self.assertEqual(res["step_percent"], 100)
+
+        # Overall Pipeline Complete
+        res = parse_pipeline_step_progress(["[STEP 9.9] [PIPELINE_SUMMARY] Complete Automation Pipeline completed successfully"], running=True)
+        self.assertEqual(res["current_step"], 3)
+        self.assertEqual(res["step_percent"], 100)
+
+    def test_18_stage_extraction_and_dashboard_regeneration(self):
+        """Verify extract_stage_from_line and trigger_dashboard_regeneration."""
+        from step_4_reporting.dashboard_server import extract_stage_from_line, STAGE_NAMES
+
+        # Verify stage markers
+        self.assertEqual(extract_stage_from_line("[STEP 0] Pre-flight check"), 0)
+        self.assertEqual(extract_stage_from_line("[STEP 1.2] Scanning windows"), 1)
+        self.assertEqual(extract_stage_from_line("[Step 2: Navigation] Focus chat"), 2)
+        self.assertEqual(extract_stage_from_line("[STEP 3] Keystroke injection"), 3)
+        self.assertEqual(extract_stage_from_line("[STEP 4.1] Generating report"), 4)
+        self.assertEqual(extract_stage_from_line("[STEP 9.1] Master orchestrator"), 9)
+        self.assertIsNone(extract_stage_from_line("Normal log line with no step marker"))
+
+        # Verify stage names map
+        self.assertIn(0, STAGE_NAMES)
+        self.assertIn(1, STAGE_NAMES)
+        self.assertIn(2, STAGE_NAMES)
+        self.assertIn(3, STAGE_NAMES)
+        self.assertIn(4, STAGE_NAMES)
+        self.assertIn(9, STAGE_NAMES)
+
+        # Verify trigger_dashboard_regeneration on handler
+        from step_4_reporting.dashboard_server import DashboardRequestHandler
+        handler = DashboardRequestHandler.__new__(DashboardRequestHandler)
+        handler.workspace_dir = self.workspace_dir
+        handler.reports_dir = self.reports_dir
+        regen = handler.trigger_dashboard_regeneration()
+        self.assertTrue(regen.get("success", False))
 
 
 if __name__ == "__main__":

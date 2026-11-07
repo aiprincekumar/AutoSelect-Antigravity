@@ -496,7 +496,7 @@ def build_modern_dashboard_html(
 
        ======================================================================== */
 
-    header {{
+    header, .app-header {{
 
       display: flex;
 
@@ -519,6 +519,8 @@ def build_modern_dashboard_html(
       box-shadow: var(--shadow-md);
 
       position: relative;
+
+      overflow: hidden;
 
       gap: 16px;
 
@@ -4643,42 +4645,32 @@ def build_modern_dashboard_html(
       50% {{ box-shadow: 0 0 16px rgba(16, 185, 129, 0.6); }}
     }}
 
-    /* Thin Horizontal Progress Bar directly under Header (Requirement 3) */
-    .header-progress-bar {{
-      width: 100%;
-      height: 2.8px;
-      position: relative;
-      overflow: hidden;
-      background: transparent;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-      pointer-events: none;
-      z-index: 50;
-      margin-top: -1px;
-    }}
-    .header-progress-bar.active {{
-      opacity: 1;
-      background: rgba(99, 102, 241, 0.12);
-    }}
-    .header-progress-bar.active::after {{
-      content: '';
+    /* Embedded Step-Wise Horizontal Progress Bar inside Header */
+    .header-embedded-progress-track {{
       position: absolute;
-      top: 0;
-      left: -50%;
-      height: 100%;
-      width: 50%;
-      background: linear-gradient(90deg, transparent, #6366f1, #06b6d4, #10b981, transparent);
-      animation: indeterminateProgress 1.5s infinite linear;
-      box-shadow: 0 0 10px rgba(6, 182, 212, 0.8), 0 0 16px rgba(16, 185, 129, 0.6);
-      border-radius: 2px;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      width: 100%;
+      height: 3px;
+      background: rgba(255, 255, 255, 0.05);
+      overflow: hidden;
+      pointer-events: auto;
+      z-index: 20;
     }}
-    @keyframes indeterminateProgress {{
-      0% {{
-        left: -50%;
-      }}
-      100% {{
-        left: 100%;
-      }}
+
+    .header-embedded-progress-fill {{
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, #6366f1 0%, #06b6d4 50%, #10b981 100%);
+      box-shadow: 0 0 8px rgba(6, 182, 212, 0.7);
+      transition: width 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+      border-radius: 0 2px 2px 0;
+      opacity: 0;
+    }}
+
+    .header-embedded-progress-fill.active {{
+      opacity: 1;
     }}
 
     /* Floating Toast */
@@ -4881,7 +4873,7 @@ def build_modern_dashboard_html(
 
     <!-- Header with Dual Cluster Architecture -->
 
-    <header>
+    <header class="app-header">
 
       <div class="header-left">
 
@@ -4989,13 +4981,12 @@ def build_modern_dashboard_html(
 
       </div>
 
+      <!-- Embedded Step-Wise Horizontal Progress Bar inside Header -->
+      <div class="header-embedded-progress-track" id="header-progress-track" title="Pipeline Progress: Idle (0%)">
+        <div class="header-embedded-progress-fill" id="header-progress-bar" style="width: 0%;"></div>
+      </div>
+
     </header>
-
-
-
-    <!-- Thin Horizontal Progress Bar directly under Header (Requirement 3) -->
-
-    <div class="header-progress-bar" id="header-progress-bar"></div>
 
 
 
@@ -6676,19 +6667,19 @@ def build_modern_dashboard_html(
 
             <div class="cfg-field">
 
-              <label class="cfg-label" for="cfg-auto-refresh">Auto-Refresh Frequency</label>
+              <label class="cfg-label" for="cfg-auto-refresh">Auto-Refresh Strategy &amp; Cadence</label>
 
-              <div class="cfg-desc">Interval for automatic client data reload</div>
+              <div class="cfg-desc">Reactive event-driven synchronization or manual reload</div>
 
               <select id="cfg-auto-refresh" class="filter-select">
 
-                <option value="10">10 Seconds (Recommended)</option>
+                <option value="event" selected>⚡ Event-Driven (Real-Time &amp; Stage Transitions)</option>
 
-                <option value="30">30 Seconds</option>
+                <option value="0">🛑 Manual Refresh Only (Refresh Button)</option>
 
-                <option value="60">60 Seconds</option>
+                <option value="30">⏱️ Periodic Fallback (30 Seconds)</option>
 
-                <option value="0">Disabled (Manual Only)</option>
+                <option value="60">⏱️ Periodic Fallback (60 Seconds)</option>
 
               </select>
 
@@ -8648,9 +8639,123 @@ def build_modern_dashboard_html(
 
 
 
-      function updateStatusUI(running, isPaused, idleSec, threshold) {{
+      function updateStepProgress(step, isRunning, customPercent, customTitle) {{
+        const progressBar = document.getElementById('header-progress-bar');
+        const progressTrack = document.getElementById('header-progress-track');
+        if (!progressBar) return;
+
+        let pct = 0;
+        let titleText = 'Pipeline Progress: Idle (0%)';
+
+        if (!isRunning) {{
+          pct = 0;
+          titleText = 'Pipeline Progress: Idle (0%)';
+          progressBar.classList.remove('active');
+          progressBar.style.width = '0%';
+          progressBar.style.opacity = '0';
+          if (progressTrack) progressTrack.title = titleText;
+          return;
+        }}
+
+        if (customPercent !== undefined && customPercent !== null) {{
+          pct = Number(customPercent);
+          titleText = customTitle || `Pipeline Progress: ${{pct}}%`;
+        }} else {{
+          // Default 4-step pipeline percentages
+          switch (step) {{
+            case 0:
+              pct = 10;
+              titleText = 'Step 0/4 Running: AntiGravity Detector (10%)';
+              break;
+            case 0.5:
+              pct = 25;
+              titleText = 'Step 0/4 Complete: AntiGravity Detected (25%)';
+              break;
+            case 1:
+              pct = 35;
+              titleText = 'Step 1/4 Running: Chat Identifier & Focus (35%)';
+              break;
+            case 1.5:
+              pct = 50;
+              titleText = 'Step 1/4 Complete: Chat Identifier & Focus (50%)';
+              break;
+            case 2:
+              pct = 60;
+              titleText = 'Step 2/4 Running: GUI Chat Select & Focus (60%)';
+              break;
+            case 2.5:
+              pct = 75;
+              titleText = 'Step 2/4 Complete: GUI Chat Select & Focus (75%)';
+              break;
+            case 3:
+              pct = 85;
+              titleText = 'Step 3/4 Running: Keyboard Automation (85%)';
+              break;
+            case 3.5:
+            case 4:
+              pct = 100;
+              titleText = 'Step 3/4 Complete: Pipeline Finished (100%)';
+              break;
+            default:
+              pct = 10;
+              titleText = 'Pipeline Active • Step 0/4 (10%)';
+              break;
+          }}
+        }}
+
+        pct = Math.max(0, Math.min(100, pct));
+        progressBar.classList.add('active');
+        progressBar.style.width = pct + '%';
+        progressBar.style.opacity = pct > 0 ? '1' : '0';
+        if (progressTrack) progressTrack.title = customTitle || titleText;
+      }}
+
+      function detectStepFromLogLine(line) {{
+        if (!line || typeof line !== 'string') return null;
+        const upper = line.toUpperCase();
+
+        if (upper.includes('PIPELINE COMPLETED SUCCESSFULLY') || upper.includes('[STEP 9.9]') || upper.includes('CYCLE COMPLETED')) {{
+          return {{ step: 4, pct: 100, title: 'Pipeline Complete (100%)' }};
+        }}
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 3')) || upper.includes('STEP 3 COMPLETED') || upper.includes('KEYBOARD AUTOMATION COMPLETED')) {{
+          return {{ step: 3.5, pct: 100, title: 'Step 3/4 Complete: Keyboard Automation (100%)' }};
+        }}
+        if (upper.includes('[STEP 3.') || upper.includes('[STEP 3:') || upper.includes('KEYBOARD AUTOMATION')) {{
+          return {{ step: 3, pct: 85, title: 'Step 3/4 Running: Keyboard Automation (85%)' }};
+        }}
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 2')) || upper.includes('STEP 2 COMPLETED') || upper.includes('CHAT SELECTED')) {{
+          return {{ step: 2.5, pct: 75, title: 'Step 2/4 Complete: GUI Chat Select & Focus (75%)' }};
+        }}
+        if (upper.includes('[STEP 2.') || upper.includes('[STEP 2:') || upper.includes('GUI CHAT SELECT') || upper.includes('SELECTING TARGET CHAT')) {{
+          return {{ step: 2, pct: 60, title: 'Step 2/4 Running: GUI Chat Select & Focus (60%)' }};
+        }}
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 1')) || upper.includes('STEP 1 COMPLETED') || upper.includes('[STEP 9.14]')) {{
+          return {{ step: 1.5, pct: 50, title: 'Step 1/4 Complete: Chat Identifier & Focus (50%)' }};
+        }}
+        if (upper.includes('[STEP 1.') || upper.includes('[STEP 1:') || upper.includes('CHAT IDENTIFIER') || upper.includes('IDENTIFYING ACTIVE CHAT')) {{
+          return {{ step: 1, pct: 35, title: 'Step 1/4 Running: Chat Identifier & Focus (35%)' }};
+        }}
+        if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('ANTIGRAVITY DETECTED')) {{
+          return {{ step: 0.5, pct: 25, title: 'Step 0/4 Complete: AntiGravity Detected (25%)' }};
+        }}
+        if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY')) {{
+          return {{ step: 0, pct: 10, title: 'Step 0/4 Running: AntiGravity Detector (10%)' }};
+        }}
+        if (upper.includes('[STEP 9.')) {{
+          return {{ step: 0, pct: 10, title: 'Pipeline Active • Step 0/4 (10%)' }};
+        }}
+        return null;
+      }}
+
+      function updateStatusUI(running, isPaused, idleSec, threshold, currentStep, stepPercent, stepTitle) {{
 
         isAutomationActive = running;
+
+        if (!running) {{
+          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
+        }} else if (stepPercent !== undefined && stepPercent !== null) {{
+          updateStepProgress(currentStep, true, stepPercent, stepTitle);
+        }}
 
         if (toggleBtn) {{
 
@@ -8790,8 +8895,8 @@ def build_modern_dashboard_html(
           liveFeedBadge.style.borderColor = running ? 'rgba(16, 185, 129, 0.4)' : 'var(--border-subtle)';
         }}
 
-        if (headerProgressBar) {{
-          headerProgressBar.classList.toggle('active', running);
+        if (!running) {{
+          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
         }}
 
         if (!btnHeaderRefresh) return;
@@ -8829,7 +8934,7 @@ def build_modern_dashboard_html(
 
               const d = data.data;
 
-              updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold);
+              updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title);
 
               if (d.mode && typeof d.mode === 'string') {{
 
@@ -8879,7 +8984,7 @@ def build_modern_dashboard_html(
 
                 const d = payload.data;
 
-                updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold);
+                updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title);
 
                 if (d.mode && typeof d.mode === 'string') {{
 
@@ -8910,6 +9015,89 @@ def build_modern_dashboard_html(
                   logBadge.textContent = payload.total_lines;
                 }}
               }}
+            }} catch (_) {{}}
+          }});
+
+          // 1. Task Start Event: Wire active WIP UI state immediately
+          eventSource.addEventListener('task_start', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              const d = payload.data || {{}};
+              isAutomationActive = true;
+              syncHeaderActionButton(true);
+              updateStatusUI(true, false, d.idle_seconds || 0, d.pause_threshold || 60, 0, 10, 'Stage 0: Pre-Flight');
+              const tickerStatusMsg = document.getElementById('ticker-status-msg');
+              if (tickerStatusMsg) {{
+                tickerStatusMsg.textContent = '🚀 Task Started • AutoSelect Antigravity Automation Active';
+              }}
+              showToast('🚀 Automation task started!', 'success');
+              playChime('start');
+            }} catch (_) {{}}
+          }});
+
+          // 2. Stage Transition Event: Update stage progress and ticker reactively
+          eventSource.addEventListener('stage_transition', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              const stageNum = payload.stage;
+              const stageName = payload.stage_name || `Stage ${{stageNum}}`;
+              isAutomationActive = true;
+              syncHeaderActionButton(true);
+              const tickerStatusMsg = document.getElementById('ticker-status-msg');
+              if (tickerStatusMsg) {{
+                tickerStatusMsg.textContent = `⚡ ${{stageName}} • Active`;
+              }}
+              let pct = 10;
+              if (stageNum === 1) pct = 25;
+              else if (stageNum === 2) pct = 50;
+              else if (stageNum === 3) pct = 75;
+              else if (stageNum === 4) pct = 95;
+              else if (stageNum === 9) pct = 15;
+              updateStepProgress(stageNum, true, pct, `${{stageName}} (${{pct}}%)`);
+              showToast(`⚡ ${{stageName}} in progress...`, 'info');
+            }} catch (_) {{}}
+          }});
+
+          // 3. Active WIP Telemetry Event: Update elapsed time & status without page reload
+          eventSource.addEventListener('active_wip', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              const d = payload.data || {{}};
+              const stageName = payload.stage_name || 'Active Execution';
+              isAutomationActive = true;
+              syncHeaderActionButton(true);
+              const tickerStatusMsg = document.getElementById('ticker-status-msg');
+              if (tickerStatusMsg && !d.is_paused) {{
+                const elapsed = payload.elapsed_seconds ? ` (${{payload.elapsed_seconds}}s elapsed)` : '';
+                tickerStatusMsg.textContent = `🔄 ${{stageName}}${{elapsed}} • Automation Running`;
+              }}
+              if (d.mode && typeof d.mode === 'string') {{
+                const serverMode = d.mode.trim().toLowerCase();
+                if (serverMode !== currentExecutionMode.toLowerCase()) {{
+                  currentExecutionMode = serverMode;
+                  applyExecutionModeUI(currentExecutionMode);
+                }}
+              }}
+            }} catch (_) {{}}
+          }});
+
+          // 4. Task Complete Event: Stop spinner, update status pill, cleanly sync history
+          eventSource.addEventListener('task_complete', (e) => {{
+            try {{
+              const payload = JSON.parse(e.data);
+              isAutomationActive = false;
+              syncHeaderActionButton(false);
+              updateStepProgress(null, false, 0, 'Pipeline Progress: Completed (100%)');
+              updateStatusUI(false, false, 0, 60);
+              const tickerStatusMsg = document.getElementById('ticker-status-msg');
+              if (tickerStatusMsg) {{
+                tickerStatusMsg.textContent = '✅ Automation Task Completed • Telemetry Synced';
+              }}
+              showToast('✅ Automation completed! Updating telemetry...', 'success');
+              playChime('stop');
+              setTimeout(() => {{
+                location.reload();
+              }}, 800);
             }} catch (_) {{}}
           }});
 
@@ -9018,6 +9206,13 @@ def build_modern_dashboard_html(
 
       function appendLiveFeedLines(newLines, timestamp, isInitial) {{
         if (!Array.isArray(newLines) || newLines.length === 0) return;
+
+        for (let i = 0; i < newLines.length; i++) {{
+          const detected = detectStepFromLogLine(newLines[i]);
+          if (detected) {{
+            updateStepProgress(detected.step, true, detected.pct, detected.title);
+          }}
+        }}
 
         if (liveFeedTime) {{
           const nowStr = timestamp ? (new Date(timestamp).toLocaleTimeString()) : (new Date().toLocaleTimeString());
@@ -10029,40 +10224,46 @@ def build_modern_dashboard_html(
 
 
 
-      // Background auto-refresh timer (Dynamic based on configuration / #cfg-auto-refresh)
-      // Note: Button NEVER displays a countdown timer; auto-refresh runs silently in the background.
+      // Reactive Event-Driven Refresh Configuration (#cfg-auto-refresh)
+      // When idle (no task running), ZERO automatic periodic page reloads occur!
+      // Telemetry updates in real-time via SSE (/api/automation/events) on task_start, stage_transition, active_wip, and task_complete.
       const cfgAutoRefreshSelect = document.getElementById('cfg-auto-refresh');
-      let refreshIntervalSeconds = cfgAutoRefreshSelect ? parseInt(cfgAutoRefreshSelect.value, 10) : 10;
-      let refreshTimerSecondsRemaining = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
+      let refreshMode = cfgAutoRefreshSelect ? cfgAutoRefreshSelect.value : 'event';
+      let refreshIntervalSeconds = (cfgAutoRefreshSelect && !isNaN(parseInt(cfgAutoRefreshSelect.value, 10))) ? parseInt(cfgAutoRefreshSelect.value, 10) : 0;
+      let refreshTimerSecondsRemaining = refreshIntervalSeconds;
 
       if (cfgAutoRefreshSelect) {{
         cfgAutoRefreshSelect.addEventListener('change', () => {{
-          refreshIntervalSeconds = parseInt(cfgAutoRefreshSelect.value, 10);
-          refreshTimerSecondsRemaining = isNaN(refreshIntervalSeconds) ? 10 : refreshIntervalSeconds;
+          refreshMode = cfgAutoRefreshSelect.value;
+          const parsed = parseInt(cfgAutoRefreshSelect.value, 10);
+          refreshIntervalSeconds = isNaN(parsed) ? 0 : parsed;
+          refreshTimerSecondsRemaining = refreshIntervalSeconds;
+          if (refreshMode === 'event') {{
+            showToast('⚡ Event-Driven Mode active: Zero idle reloads, live SSE updates on task activity.');
+          }} else if (refreshIntervalSeconds > 0) {{
+            showToast(`⏱️ Periodic refresh fallback set to ${{refreshIntervalSeconds}}s.`);
+          }} else {{
+            showToast('🛑 Manual refresh mode active. Use the Refresh button to sync.');
+          }}
         }});
       }}
 
+      // Background watchdog: Keeps header action button in sync while active.
+      // Strictly guards against any idle periodic reloads!
       setInterval(() => {{
         if (isAutomationActive) {{
           syncHeaderActionButton(true);
+        }}
+
+        // Strict Guard: Idle state or Event-Driven / Manual mode -> Never reload automatically!
+        if (!isAutomationActive || refreshMode === 'event' || isNaN(refreshIntervalSeconds) || refreshIntervalSeconds <= 0) {{
           return;
         }}
 
-        if (isNaN(refreshIntervalSeconds) || refreshIntervalSeconds <= 0) {{
-          return;
-        }}
         refreshTimerSecondsRemaining--;
         if (refreshTimerSecondsRemaining <= 0) {{
           refreshTimerSecondsRemaining = refreshIntervalSeconds;
-          showToast('Auto-refreshing dashboard and telemetry...');
-          fetch(API_BASE + '/api/dashboard/refresh', {{ method: 'POST' }})
-            .then(res => res.json())
-            .then(d => {{
-              location.reload();
-            }})
-            .catch(() => {{
-              pollServerStatus();
-            }});
+          pollServerStatus();
         }}
       }}, 1000);
 
@@ -10141,6 +10342,11 @@ def generate_and_save_modern_dashboard(workspace_dir: Optional[Path] = None) -> 
 
 
 generate_modern_dashboard = generate_and_save_modern_dashboard
+
+
+if __name__ == "__main__":
+    out_path = generate_and_save_modern_dashboard()
+    print(f"Modern dashboard successfully generated at: {out_path}")
 
 
 

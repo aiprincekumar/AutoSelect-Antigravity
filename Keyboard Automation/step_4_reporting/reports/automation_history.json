@@ -1,19 +1,19 @@
 {
   "success": true,
   "data": {
-    "total_pipeline_runs": 27,
-    "total_questions_answered": 77,
-    "total_runtime_seconds": 511.67,
+    "total_pipeline_runs": 28,
+    "total_questions_answered": 82,
+    "total_runtime_seconds": 529.93,
     "total_unique_chats": 6,
-    "last_updated": "2026-11-07T02:48:13.149727+00:00",
+    "last_updated": "2026-11-07T04:43:56.797099+00:00",
     "chats": {
       "e0645f63-cc82-41f8-8385-2538e9e8f6bf": {
         "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
         "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...",
         "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 5 multiple question at once",
-        "run_count": 19,
-        "total_questions": 69,
-        "last_run_timestamp": "2026-11-07T02:48:13.148728+00:00",
+        "run_count": 20,
+        "total_questions": 74,
+        "last_run_timestamp": "2026-11-07T04:43:56.796100+00:00",
         "runs": [
           {
             "run_id": "run_20261104_061022",
@@ -1107,6 +1107,81 @@
             ],
             "status": "COMPLETED",
             "selected_at": "2026-11-07T02:47:56.822769+00:00"
+          },
+          {
+            "run_id": "run_20261107_101356",
+            "timestamp": "2026-11-07T04:43:56.796100+00:00",
+            "duration_seconds": 18.26,
+            "questions_count": 5,
+            "questions": [
+              {
+                "question_index": 1,
+                "question": "1. [एनवायरनमेंट] स्क्रिप्ट टेस्टिंग के लिए आप कौन सा रनटाइम एनवायरनमेंट सेटअप करना चाहते हैं?",
+                "options": [
+                  "(Recommended) लोकल आइसोलेटेड सैंडबॉक्स (वर्चुअल एनवायरनमेंट)",
+                  "डॉकर कंटेनर आधारित एनवायरनमेंट",
+                  "डायरेक्ट होस्ट ओएस एग्जीक्यूशन"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) लोकल आइसोलेटेड सैंडबॉक्स (वर्चुअल एनवायरनमेंट)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 2,
+                "question": "2. [फ्रेमवर्क] टेस्ट सूट चलाने के लिए कौन सा टेस्टिंग फ्रेमवर्क इस्तेमाल करना है?",
+                "options": [
+                  "(Recommended) Pytest / Jest आधारित ऑटोमेटेड टेस्ट सूट",
+                  "कस्टम स्क्रिप्ट / शेल वैलिडेटर",
+                  "डायरेक्ट रन और एग्जिट कोड चेकर"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) Pytest / Jest आधारित ऑटोमेटेड टेस्ट सूट",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 3,
+                "question": "3. [एरर हैंडलिंग] टेस्ट फेलियर होने की स्थिति में स्क्रिप्ट को क्या प्रतिक्रिया देनी चाहिए?",
+                "options": [
+                  "(Recommended) फेल-फास्ट (पहले एरर पर तुरंत रुकें और डायग्नोस्टिक रिपोर्ट जनरेट करें)",
+                  "ऑटो-रिट्राय (फेलियर पर 3 बार पुनः प्रयास करें)",
+                  "कंटिन्यू-ऑन-एरर (सभी टेस्ट केस पूरे होने तक टेस्ट जारी रखें)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) फेल-फास्ट (पहले एरर पर तुरंत रुकें और डायग्नोस्टिक रिपोर्ट जनरेट करें)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 4,
+                "question": "4. [लॉगिंग] लॉग्स और आउटपुट रिपोर्टिंग का स्तर क्या होना चाहिए?",
+                "options": [
+                  "(Recommended) विस्तृत डीबग लॉग्स (कंसोल और फ़ाइल दोनों में टाइमस्टैम्प सहित)",
+                  "न्यूनतम समरी रिपोर्ट (केवल पास/फेल काउंट)",
+                  "साइलेंट मोड (केवल फ़ाइनल एग्जिट कोड)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) विस्तृत डीबग लॉग्स (कंसोल और फ़ाइल दोनों में टाइमस्टैम्प सहित)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 5,
+                "question": "5. [गिट स्टेट] टेस्टिंग के दौरान वर्जन कंट्रोल और चेकपॉइंट बिहेवियर क्या होना चाहिए?",
+                "options": [
+                  "(Recommended) प्रत्येक स्टेज के बाद ऑटो-कमिट (लोकल चेकपॉइंट हिस्ट्री)",
+                  "सभी टेस्ट पास होने पर सिंगल फ़ाइनल कमिट",
+                  "कोई कमिट नहीं (गिट स्टेट में कोई बदलाव न करें)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) प्रत्येक स्टेज के बाद ऑटो-कमिट (लोकल चेकपॉइंट हिस्ट्री)",
+                "is_multi_select": false,
+                "is_recommended": true
+              }
+            ],
+            "status": "COMPLETED",
+            "selected_at": "2026-11-07T04:43:38.531265+00:00"
           }
         ]
       },
@@ -1339,7 +1414,7 @@
     }
   },
   "meta": {
-    "timestamp": "2026-11-07T02:48:13.149727+00:00",
+    "timestamp": "2026-11-07T04:43:56.797099+00:00",
     "step": "step_4_reporting",
     "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
     "format_version": "1.0.0"

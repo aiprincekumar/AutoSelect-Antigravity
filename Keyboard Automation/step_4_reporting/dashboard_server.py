@@ -28,6 +28,7 @@ from __future__ import annotations
 import os
 import sys
 import io
+import re
 import json
 import time
 import signal
@@ -181,6 +182,126 @@ def is_pid_alive(pid: int) -> bool:
 # ============================================================================
 # Automation Process Lifecycle Manager
 # ============================================================================
+
+def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[str, Any]:
+    """
+    Analyze log lines to determine current pipeline step index (0, 1, 2, 3),
+    step percentage (0, 10, 25, 35, 50, 60, 75, 85, 100), and tooltip status:
+      - Idle / Inactive / Stopped: 0%
+      - Step 0 (AntiGravity Detector): Running = 10%, Completed = 25%
+      - Step 1 (Chat Identifier & Focus): Running = 35%, Completed = 50%
+      - Step 2 (GUI Chat Select & Focus): Running = 60%, Completed = 75%
+      - Step 3 (Keyboard Automation): Running = 85%, Completed = 100%
+      - Finished / Success: 100%
+    """
+    if not running:
+        return {
+            "current_step": None,
+            "step_percent": 0,
+            "step_title": "Pipeline Progress: Idle (0%)",
+            "step_name": "Idle",
+        }
+
+    if not log_lines:
+        return {
+            "current_step": 0,
+            "step_percent": 10,
+            "step_title": "Step 0/4 Running: AntiGravity Detector (10%)",
+            "step_name": "AntiGravity Detector",
+        }
+
+    # Inspect from newest to oldest
+    for line in reversed(log_lines):
+        upper = line.upper()
+
+        # Step 4 / Overall Complete
+        if "PIPELINE COMPLETED SUCCESSFULLY" in upper or "[STEP 9.9]" in upper or "CYCLE COMPLETED" in upper:
+            return {
+                "current_step": 3,
+                "step_percent": 100,
+                "step_title": "Pipeline Complete (100%)",
+                "step_name": "Complete",
+            }
+
+        # Step 3 Keyboard Automation
+        if ("[STEP 9.8]" in upper and "STEP 3" in upper) or "STEP 3 COMPLETED" in upper or "KEYBOARD AUTOMATION COMPLETED" in upper:
+            return {
+                "current_step": 3,
+                "step_percent": 100,
+                "step_title": "Step 3/4 Complete: Keyboard Automation (100%)",
+                "step_name": "Keyboard Automation Complete",
+            }
+        if "[STEP 3." in upper or "[STEP 3:" in upper or "KEYBOARD AUTOMATION" in upper or "ROUND COMPLETED" in upper:
+            return {
+                "current_step": 3,
+                "step_percent": 85,
+                "step_title": "Step 3/4 Running: Keyboard Automation (85%)",
+                "step_name": "Keyboard Automation",
+            }
+
+        # Step 2 GUI Chat Select & Focus
+        if ("[STEP 9.8]" in upper and "STEP 2" in upper) or "STEP 2 COMPLETED" in upper or "CHAT SELECTED" in upper:
+            return {
+                "current_step": 2,
+                "step_percent": 75,
+                "step_title": "Step 2/4 Complete: GUI Chat Select & Focus (75%)",
+                "step_name": "GUI Chat Select Complete",
+            }
+        if "[STEP 2." in upper or "[STEP 2:" in upper or "GUI CHAT SELECT" in upper or "SELECTING TARGET CHAT" in upper:
+            return {
+                "current_step": 2,
+                "step_percent": 60,
+                "step_title": "Step 2/4 Running: GUI Chat Select & Focus (60%)",
+                "step_name": "GUI Chat Select",
+            }
+
+        # Step 1 Chat Identifier & Focus
+        if ("[STEP 9.8]" in upper and "STEP 1" in upper) or "STEP 1 COMPLETED" in upper or "[STEP 9.14]" in upper:
+            return {
+                "current_step": 1,
+                "step_percent": 50,
+                "step_title": "Step 1/4 Complete: Chat Identifier & Focus (50%)",
+                "step_name": "Chat Identifier Complete",
+            }
+        if "[STEP 1." in upper or "[STEP 1:" in upper or "CHAT IDENTIFIER" in upper or "IDENTIFYING ACTIVE CHAT" in upper:
+            return {
+                "current_step": 1,
+                "step_percent": 35,
+                "step_title": "Step 1/4 Running: Chat Identifier & Focus (35%)",
+                "step_name": "Chat Identifier",
+            }
+
+        # Step 0 AntiGravity Detector
+        if "TRIGGER MATCHED" in upper or "[STEP 9.12]" in upper or "ANTIGRAVITY DETECTED" in upper:
+            return {
+                "current_step": 0,
+                "step_percent": 25,
+                "step_title": "Step 0/4 Complete: AntiGravity Detected (25%)",
+                "step_name": "AntiGravity Detected",
+            }
+        if "[STEP 0." in upper or "DETECTOR_POLL" in upper or "[STEP 9.10]" in upper or "POLLING ANTIGRAVITY" in upper:
+            return {
+                "current_step": 0,
+                "step_percent": 10,
+                "step_title": "Step 0/4 Running: AntiGravity Detector (10%)",
+                "step_name": "AntiGravity Detector",
+            }
+
+        if "[STEP 9." in upper:
+            return {
+                "current_step": 0,
+                "step_percent": 10,
+                "step_title": "Pipeline Active • Step 0/4 (10%)",
+                "step_name": "Pipeline Active",
+            }
+
+    return {
+        "current_step": 0,
+        "step_percent": 10,
+        "step_title": "Step 0/4 Running: AntiGravity Detector (10%)",
+        "step_name": "AntiGravity Detector",
+    }
+
 
 class AutomationProcessManager:
     """
@@ -588,6 +709,9 @@ class AutomationProcessManager:
             except Exception:
                 pass
 
+        recent_logs = self.get_log_tail(60, return_list=True) if running else []
+        step_meta = parse_pipeline_step_progress(recent_logs, running)
+
         return {
             "running": running,
             "pid": pid,
@@ -596,11 +720,39 @@ class AutomationProcessManager:
             "status_text": status_text,
             "is_paused": is_paused,
             "user_idle_seconds": round(idle_seconds, 1),
+            "current_step": step_meta["current_step"],
+            "step_percent": step_meta["step_percent"],
+            "step_title": step_meta["step_title"],
+            "step_name": step_meta["step_name"],
             "python_exe": str(self.python_exe),
             "master_script": str(self.master_script),
             "log_file": str(self.log_file),
             "last_log": self.get_log_tail(15, return_list=False),
         }
+
+
+# ============================================================================
+# Stage Mapping & Event Extraction Standards
+# ============================================================================
+
+STAGE_NAMES: Dict[int, str] = {
+    0: "Stage 0: Pre-Flight & Health Verification",
+    1: "Stage 1: Window Detection & Discovery",
+    2: "Stage 2: Target Navigation & Focusing",
+    3: "Stage 3: Keystroke Injection & Execution",
+    4: "Stage 4: Telemetry Reporting & Synthesis",
+    9: "Stage 9: Master Orchestrator Pipeline",
+}
+
+def extract_stage_from_line(line: str) -> Optional[int]:
+    """Parse log line for step/stage markers like [STEP 0], [STEP 1], [Step 2], etc."""
+    m = re.search(r'\[(?:STEP|Step)\s*(\d+)(?:\.|\:|\s|\])', line)
+    if m:
+        try:
+            return int(m.group(1))
+        except ValueError:
+            return None
+    return None
 
 
 # ============================================================================
@@ -617,6 +769,39 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
     workspace_dir: Path = _WORKSPACE_DIR
     reports_dir: Path = _WORKSPACE_DIR / "step_4_reporting" / "reports"
     dashboard_file: Path = _WORKSPACE_DIR / "step_4_reporting" / "reports" / "dashboard.html"
+
+    def trigger_dashboard_regeneration(self) -> Dict[str, Any]:
+        """Regenerate both Simple/Classic and Modern/Interactive dashboard HTML files."""
+        res = {"success": True, "generated": []}
+        try:
+            from step_4_reporting.step4_reporting import Step4ReportingEngine
+            engine = Step4ReportingEngine(reports_dir=self.reports_dir)
+            gen_path = engine.generate_html_dashboard()
+            res["generated"].append(str(gen_path))
+        except Exception as e:
+            logger.error("[STEP 4.40] [DASH_GEN_CLASSIC_ERR] Classic dashboard generation failed: %s", e)
+            res["classic_error"] = str(e)
+
+        try:
+            import importlib.util
+            step4_dir = self.reports_dir.parent if self.reports_dir else (self.workspace_dir / "step_4_reporting")
+            modern_gen_path = step4_dir / "Modern and Interactive Dashboard" / "generate_modern_dashboard.py"
+            if modern_gen_path.is_file():
+                spec = importlib.util.spec_from_file_location("modern_gen_server", str(modern_gen_path))
+                if spec and spec.loader:
+                    mod = importlib.util.module_from_spec(spec)
+                    spec.loader.exec_module(mod)
+                    if hasattr(mod, "generate_modern_dashboard"):
+                        m_path = mod.generate_modern_dashboard(self.workspace_dir)
+                        res["generated"].append(str(m_path))
+                    elif hasattr(mod, "generate_and_save_modern_dashboard"):
+                        m_path = mod.generate_and_save_modern_dashboard(self.workspace_dir)
+                        res["generated"].append(str(m_path))
+        except Exception as e:
+            logger.error("[STEP 4.41] [DASH_GEN_MODERN_ERR] Modern dashboard generation failed: %s", e)
+            res["modern_error"] = str(e)
+
+        return res
 
     def log_message(self, format: str, *args: Any) -> None:
         """Silence standard console noise for clean terminal output; log only errors."""
@@ -701,13 +886,22 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 log_path = mgr.resolve_log_file()
                 last_mtime = log_path.stat().st_mtime if log_path.is_file() else 0.0
                 last_size = log_path.stat().st_size if log_path.is_file() else 0
-                last_running = status_data.get("running")
+                last_running = bool(status_data.get("running"))
                 last_pid = status_data.get("pid")
                 last_heartbeat = time.time()
                 last_status_broadcast = time.time()
+                last_wip_broadcast = time.time()
+                current_stage: Optional[int] = None
 
                 initial_lines = mgr.get_log_tail(50, return_list=True)
                 if initial_lines:
+                    if last_running:
+                        for l in reversed(initial_lines):
+                            stg = extract_stage_from_line(l)
+                            if stg is not None:
+                                current_stage = stg
+                                break
+
                     log_payload = {
                         "lines": initial_lines,
                         "total_lines": len(initial_lines),
@@ -719,16 +913,72 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     self.wfile.write(msg.encode("utf-8"))
                     self.wfile.flush()
 
-                # Stream periodic status events
+                # Stream periodic status events & reactive event dispatch
                 while True:
                     time.sleep(0.3)
                     now = time.time()
 
-                    # A. Check process status changes (or periodic refresh every 3s if actively running)
                     status_data = mgr.get_status()
-                    curr_running = status_data.get("running")
+                    curr_running = bool(status_data.get("running"))
                     curr_pid = status_data.get("pid")
 
+                    # 1. Detect task_start transition (running: False -> True)
+                    if not last_running and curr_running:
+                        logger.info("[STEP 4.42] [SSE_TASK_START] Process started (PID: %s)", curr_pid)
+                        current_stage = 0
+                        start_payload = {
+                            "success": True,
+                            "event": "task_start",
+                            "data": status_data,
+                            "stage": 0,
+                            "stage_name": STAGE_NAMES.get(0, "Stage 0: Pre-Flight & Health Verification"),
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "message": f"Automation task started (PID: {curr_pid}).",
+                        }
+                        msg = f"event: task_start\ndata: {json.dumps(start_payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+
+                    # 2. Detect task_complete transition (running: True -> False)
+                    elif last_running and not curr_running:
+                        logger.info("[STEP 4.43] [SSE_TASK_COMPLETE] Process completed/terminated")
+                        complete_payload = {
+                            "success": True,
+                            "event": "task_complete",
+                            "data": status_data,
+                            "stage": 4,
+                            "stage_name": STAGE_NAMES.get(4, "Stage 4: Telemetry Reporting & Synthesis"),
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "message": "Automation task completed.",
+                        }
+                        msg = f"event: task_complete\ndata: {json.dumps(complete_payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+
+                        # Auto-regenerate dashboards on task_complete
+                        try:
+                            self.trigger_dashboard_regeneration()
+                            logger.info("[STEP 4.44] [AUTO_DASH_REGEN] Auto-regenerated dashboards upon task_complete")
+                        except Exception as e:
+                            logger.error("[STEP 4.44] [AUTO_DASH_REGEN_ERR] Error auto-regenerating dashboards: %s", e)
+
+                    # 3. Emit active_wip periodically (every 2.5s) while running
+                    if curr_running and (now - last_wip_broadcast >= 2.5):
+                        wip_payload = {
+                            "success": True,
+                            "event": "active_wip",
+                            "data": status_data,
+                            "stage": current_stage,
+                            "stage_name": STAGE_NAMES.get(current_stage, "Active Execution") if current_stage is not None else "Active Execution",
+                            "elapsed_seconds": status_data.get("uptime_seconds", 0),
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                        }
+                        msg = f"event: active_wip\ndata: {json.dumps(wip_payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+                        last_wip_broadcast = now
+
+                    # 4. Check status changes (or periodic refresh every 3s if actively running)
                     state_changed = (curr_running != last_running or curr_pid != last_pid)
                     periodic_needed = (curr_running and (now - last_status_broadcast >= 3.0))
 
@@ -748,7 +998,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                         last_pid = curr_pid
                         last_status_broadcast = now
 
-                    # B. Check log file modifications (event-driven trigger)
+                    # 5. Check log file modifications & parse for stage transitions
                     log_path = mgr.resolve_log_file()
                     if log_path.is_file():
                         try:
@@ -773,6 +1023,23 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                                 last_mtime = curr_mtime
 
                                 if new_lines:
+                                    # Detect stage transitions
+                                    for nl in new_lines:
+                                        detected_stage = extract_stage_from_line(nl)
+                                        if detected_stage is not None and detected_stage != current_stage:
+                                            current_stage = detected_stage
+                                            stg_payload = {
+                                                "success": True,
+                                                "event": "stage_transition",
+                                                "stage": current_stage,
+                                                "stage_name": STAGE_NAMES.get(current_stage, f"Stage {current_stage}"),
+                                                "marker": nl,
+                                                "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                                            }
+                                            msg = f"event: stage_transition\ndata: {json.dumps(stg_payload)}\n\n"
+                                            self.wfile.write(msg.encode("utf-8"))
+                                            self.wfile.flush()
+
                                     all_tail = mgr.get_log_tail(200, return_list=True)
                                     log_payload = {
                                         "lines": new_lines,
@@ -786,7 +1053,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                         except Exception as e:
                             logger.debug("Error checking log file changes for SSE: %s", e)
 
-                    # C. Send heartbeat ping every 10 seconds to keep connection alive
+                    # 6. Send heartbeat ping every 10 seconds to keep connection alive
                     if now - last_heartbeat >= 10.0:
                         ping_payload = {
                             "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
@@ -975,27 +1242,13 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         # 4. API: Synchronous Dashboard HTML Refresh
         if path == "/api/dashboard/refresh":
             logger.info("[STEP 4.37] [API_DASH_REFRESH] Triggered manual dashboard refresh")
-            try:
-                from step_4_reporting.step4_reporting import Step4ReportingEngine
-                engine = Step4ReportingEngine(reports_dir=self.reports_dir)
-                gen_path = engine.generate_html_dashboard()
-
-                import importlib.util
-                step4_dir = self.reports_dir.parent if self.reports_dir else (self.workspace_dir / "step_4_reporting")
-                modern_gen_path = step4_dir / "Modern and Interactive Dashboard" / "generate_modern_dashboard.py"
-                if modern_gen_path.is_file():
-                    spec = importlib.util.spec_from_file_location("modern_gen_server", str(modern_gen_path))
-                    if spec and spec.loader:
-                        mod = importlib.util.module_from_spec(spec)
-                        spec.loader.exec_module(mod)
-                        if hasattr(mod, "generate_modern_dashboard"):
-                            mod.generate_modern_dashboard(self.workspace_dir)
-                        elif hasattr(mod, "generate_and_save_modern_dashboard"):
-                            mod.generate_and_save_modern_dashboard(self.workspace_dir)
-
-                self.send_json_response({"refreshed": True, "path": str(gen_path)})
-            except Exception as e:
-                self.send_json_response({"refreshed": False, "message": f"Refresh failed: {e}"}, status=500, success=False)
+            regen_res = self.trigger_dashboard_regeneration()
+            gen_path = regen_res["generated"][0] if regen_res.get("generated") else None
+            self.send_json_response({
+                "refreshed": True,
+                "path": str(gen_path) if gen_path else "",
+                "generated": regen_res.get("generated", [])
+            })
             return
 
         # 5. API: Enable Windows Auto-Start
