@@ -474,14 +474,94 @@ class GrillMeAutomator:
             logger.info("[STEP 3.3] [COUNTDOWN_BYPASS] --no-countdown active: proceeding immediately")
             print("  [+] Executing immediately (countdown bypassed).\n")
 
-    def _execute_step(self, step_num: Union[int, str], description: str, action_func):
-        """Helper to run a step with formatted logging and configurable delays."""
+    def _is_foreground_window_target_and_safe(self) -> bool:
+        """
+        Real-time verification of the current foreground window before key injection:
+        1. Checks that a valid foreground window exists.
+        2. Strictly blocks any disqualified browser processes (msedge.exe, chrome.exe, etc.)
+           unless explicitly requested by user in target_window keywords.
+        3. Verifies that the foreground window matches the target Antigravity window
+           (by matching HWND, PID, or target keyword in process name/window title).
+        Returns True if safe and matches target, False otherwise.
+        """
+        if not IS_WINDOWS:
+            return True
+
+        fg_hwnd = user32.GetForegroundWindow()
+        if not fg_hwnd or not user32.IsWindow(fg_hwnd):
+            logger.error("[ABORT] No active foreground window detected! Aborting step to prevent blind key injection.")
+            return False
+
+        pid, fg_pname, fg_pexe = get_process_info_for_hwnd(fg_hwnd)
+        fg_pname_lower = fg_pname.lower() if fg_pname else ""
+        pexe_base = os.path.basename(fg_pexe).lower() if fg_pexe else ""
+
+        # Check if user explicitly requested browser by name
+        raw_target = self.target_window or ""
+        target_keywords = [k.strip().lower() for k in raw_target.replace("|", ",").split(",") if k.strip()]
+        user_wants_browser = any(
+            any(browser in kw for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore", "safari"))
+            for kw in target_keywords
+        )
+
+        # 1. Disqualified browser check: NEVER send keystrokes to browser address bar
+        is_browser = (
+            fg_pname_lower in DISQUALIFIED_BROWSER_PROCS
+            or pexe_base in DISQUALIFIED_BROWSER_PROCS
+            or any(b in fg_pname_lower for b in ("chrome", "msedge", "firefox", "brave", "opera", "vivaldi"))
+        )
+        if is_browser and not user_wants_browser:
+            logger.error(
+                f"[ABORT] Foreground window (HWND: {hex(fg_hwnd)}, Process: '{fg_pname}') belongs to disqualified browser! "
+                f"Aborting step immediately to prevent browser hijacking and accidental address bar search!"
+            )
+            return False
+
+        # 2. Target Antigravity window check
+        # Match if HWND matches target_hwnd
+        if self.target_hwnd and fg_hwnd == self.target_hwnd:
+            return True
+
+        # Match if target_hwnd is set and fg_hwnd belongs to the same PID
+        if self.target_hwnd:
+            target_pid, _, _ = get_process_info_for_hwnd(self.target_hwnd)
+            if target_pid and target_pid == pid:
+                return True
+
+        # Match if process name or window title contains any target keyword
+        title = get_active_window_title().lower()
+        if any(kw in fg_pname_lower or kw in title for kw in target_keywords):
+            return True
+
+        # If user explicitly requested browser and browser was targeted
+        if user_wants_browser and any(kw in fg_pname_lower for kw in target_keywords):
+            return True
+
+        logger.error(
+            f"[ABORT] Foreground window (HWND: {hex(fg_hwnd)}, Process: '{fg_pname}', Title: '{title}') "
+            f"is not the target Antigravity window ('{self.target_window}')! Aborting step to prevent misdirected keystrokes."
+        )
+        return False
+
+    def _execute_step(self, step_num: Union[int, str], description: str, action_func) -> bool:
+        """Helper to run a step with formatted logging, real-time safety verification, and configurable delays."""
         logger.info(f"Step {step_num}: {description}")
         if self.dry_run:
             logger.info(f"  [DRY RUN] Would execute: {description}")
-        else:
-            action_func()
+            time.sleep(self.step_delay)
+            return True
+
+        # Real-time check of current foreground window before invoking action_func
+        if IS_WINDOWS and not self._is_foreground_window_target_and_safe():
+            logger.error(
+                f"[ABORT] Step {step_num} ({description}) aborted: "
+                "Foreground window is not the target Antigravity window or belongs to a disqualified browser!"
+            )
+            return False
+
+        action_func()
         time.sleep(self.step_delay)
+        return True
 
     def log(self, message: str) -> None:
         """Log an informational message through the standard logger."""
@@ -734,6 +814,12 @@ class GrillMeAutomator:
         option_press_delay = max(0.45, self.post_keypress_delay) if not self.dry_run else 0.001
         round_pause = max(0.0, self.round_completion_pause) if not self.dry_run else 0.0
 
+        # Pre-execution check: verify foreground window before sending any keys
+        if IS_WINDOWS and not self.dry_run:
+            if not self._is_foreground_window_target_and_safe():
+                logger.error("[ABORT] Cannot execute pure keyboard sequence: foreground window is not target Antigravity window or is a browser!")
+                return False
+
         if IS_WINDOWS and not self.dry_run:
             try:
                 send_single_key(VK_ESCAPE, hold_delay=0.01)
@@ -744,57 +830,64 @@ class GrillMeAutomator:
         try:
             # Step FOCUS.1: Focus chat input (Ctrl + L)
             if not self.skip_ctrl_l:
+                if IS_WINDOWS and not self.dry_run and not self._is_foreground_window_target_and_safe():
+                    logger.error("[ABORT] Cannot execute Ctrl+L: foreground window is not target Antigravity window or is a browser!")
+                    return False
                 logger.info("[STEP 3.22] [FOCUS_CTRL_L] Pressing Ctrl+L (focus chat box)")
                 if self.engine == "ctypes":
-                    self._execute_step(
+                    if self._execute_step(
                         "FOCUS.1",
                         "Press [Ctrl + L] (Focus chat box)",
                         lambda: send_key_combo([VK_CONTROL, VK_L], hold_delay=self.hold_delay)
-                    )
+                    ) is False:
+                        logger.error("[ABORT] Step FOCUS.1 (Ctrl+L) was aborted by safety check.")
+                        return False
                 elif self.engine == "pyautogui":
-                    self._execute_step(
+                    if self._execute_step(
                         "FOCUS.1",
                         "Press [Ctrl + L] (Focus chat box)",
                         lambda: pyautogui.hotkey("ctrl", "l")
-                    )
+                    ) is False:
+                        logger.error("[ABORT] Step FOCUS.1 (Ctrl+L) was aborted by safety check.")
+                        return False
                 if not self.dry_run:
                     time.sleep(settle_pause)
             else:
                 logger.info("Step FOCUS.1: Skipping Ctrl + L (as requested)")
 
             # Step FOCUS.2: Reverse tab into option button group (Shift + Tab)
+            if IS_WINDOWS and not self.dry_run and not self._is_foreground_window_target_and_safe():
+                logger.error("[ABORT] Cannot execute Shift+Tab: foreground window is not target Antigravity window or is a browser!")
+                return False
             logger.info("[STEP 3.23] [FOCUS_SHIFT_TAB] Pressing Shift+Tab (focus question options)")
             if self.engine == "ctypes":
-                self._execute_step(
+                if self._execute_step(
                     "FOCUS.2",
                     "Press [Shift + Tab] (Move backward to question options)",
                     lambda: send_key_combo([VK_SHIFT, VK_TAB], hold_delay=self.hold_delay)
-                )
+                ) is False:
+                    logger.error("[ABORT] Step FOCUS.2 (Shift+Tab) was aborted by safety check.")
+                    return False
             elif self.engine == "pyautogui":
-                self._execute_step(
+                if self._execute_step(
                     "FOCUS.2",
                     "Press [Shift + Tab] (Move backward to question options)",
                     lambda: pyautogui.hotkey("shift", "tab")
-                )
+                ) is False:
+                    logger.error("[ABORT] Step FOCUS.2 (Shift+Tab) was aborted by safety check.")
+                    return False
             if not self.dry_run:
                 time.sleep(settle_pause)
 
             # Option loop
             for k in range(1, total_option_presses + 1):
-                # Safe keyboard fallback: ensure active window is valid and not a disqualified browser
-                if IS_WINDOWS and not self.dry_run:
-                    curr_hwnd = user32.GetForegroundWindow()
-                    _, curr_pname, _ = get_process_info_for_hwnd(curr_hwnd)
-                    user_wants_browser = any(
-                        any(browser in kw.lower() for browser in ("chrome", "msedge", "edge", "firefox", "brave", "opera", "vivaldi", "iexplore"))
-                        for kw in (self.target_window.replace("|", ",").split(",") if self.target_window else [])
+                # Verify foreground window before each option key press
+                if IS_WINDOWS and not self.dry_run and not self._is_foreground_window_target_and_safe():
+                    logger.error(
+                        f"[ABORT] Foreground window shifted away from target Antigravity window or to a browser before option press {k}. "
+                        "Halting immediately to prevent stray keystroke pollution!"
                     )
-                    if curr_pname.lower() in DISQUALIFIED_BROWSER_PROCS and not user_wants_browser:
-                        logger.error(
-                            f"[ABORT] Foreground window shifted to disqualified browser '{curr_pname}' during keyboard loop. "
-                            f"Halting immediately to prevent stray keystroke pollution!"
-                        )
-                        return False
+                    return False
                 opt = opts[k - 1] if k <= tq else (opts[-1] if opts else str(self.option))
                 q_num = min(k, tq)
                 step_code = f"OPT.{k}"
@@ -807,17 +900,21 @@ class GrillMeAutomator:
                 logger.info("[STEP 3.7] [KEY_PRESS] Pressing option key [%s] (VK 0x%02X)", opt, vk_opt)
                 logger.info("[STEP 3.8] [HOLD_DELAY] Holding key for %.1f ms", self.hold_delay * 1000.0)
                 if self.engine == "ctypes":
-                    self._execute_step(
+                    if self._execute_step(
                         step_code,
                         step_desc,
                         lambda vk=vk_opt: send_single_key(vk, hold_delay=self.hold_delay)
-                    )
+                    ) is False:
+                        logger.error(f"[ABORT] Step {step_code} ({opt}) was aborted by safety check.")
+                        return False
                 elif self.engine == "pyautogui":
-                    self._execute_step(
+                    if self._execute_step(
                         step_code,
                         step_desc,
                         lambda o=opt: pyautogui.press(str(o))
-                    )
+                    ) is False:
+                        logger.error(f"[ABORT] Step {step_code} ({opt}) was aborted by safety check.")
+                        return False
                 logger.info("[STEP 3.9] [KEY_RELEASE] Released key [%s]", opt)
                 logger.info("[STEP 3.10] [POST_DELAY] Post-keypress delay: %.1f ms", self.post_keypress_delay * 1000.0)
                 logger.info("[STEP 3.25] [OPTION_KEY] Sending option key %s (press %d of %d)", opt, k, total_option_presses)
