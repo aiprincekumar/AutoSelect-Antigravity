@@ -659,7 +659,12 @@ class GrillMeAutomator:
         6. Absolute zero chat pollution: never dispatch stray keystrokes ('1', Enter) into chat input.
         """
         tq = total_questions
-        opts = list(options)
+        opts = list(options) if options else []
+        if len(opts) > tq:
+            opts = opts[:tq]
+        else:
+            while len(opts) < tq:
+                opts.append("1")
         logger.info(f"[STEP 3.CDP] Starting CDP Hybrid questionnaire execution for {tq} question(s) | Options: {opts}")
         logger.info("Executing via Precision DOM Chrome DevTools Protocol (CDP Hybrid)...")
 
@@ -694,7 +699,7 @@ class GrillMeAutomator:
 
         # 4. Question loop from 1 to tq
         for q in range(1, tq + 1):
-            opt = opts[q - 1] if q <= len(opts) else (opts[-1] if opts else "1")
+            opt = opts[q - 1] if (opts and q <= len(opts)) else "1"
             try:
                 opt_num = int(opt)
             except (ValueError, TypeError):

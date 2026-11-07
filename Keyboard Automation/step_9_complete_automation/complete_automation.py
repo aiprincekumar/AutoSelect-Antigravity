@@ -704,8 +704,11 @@ class CompleteAutomationController:
                                         except (ValueError, TypeError):
                                             pass
 
-                            if s_inner.get("is_multi_question") is True and (q_cnt is None or q_cnt < 2):
-                                q_cnt = 2
+                            if q_cnt is None:
+                                if s_inner.get("is_multi_question") is True:
+                                    q_cnt = 2
+                                else:
+                                    q_cnt = 1
 
                             # Resolve options sequence
                             opts = []
@@ -713,14 +716,20 @@ class CompleteAutomationController:
                                 for item in sels:
                                     if isinstance(item, dict):
                                         idx = item.get("selected_option_index") or item.get("recommended_option_index") or "1"
-                                        if idx is not None:
-                                            opts.append(str(idx))
+                                        try:
+                                            idx_str = str(int(idx))
+                                        except (ValueError, TypeError):
+                                            idx_str = "1"
+                                        opts.append(idx_str)
                             elif isinstance(qs, list) and qs:
                                 for item in qs:
                                     if isinstance(item, dict):
                                         idx = item.get("recommended_option_index") or item.get("selected_option_index") or "1"
-                                        if idx is not None:
-                                            opts.append(str(idx))
+                                        try:
+                                            idx_str = str(int(idx))
+                                        except (ValueError, TypeError):
+                                            idx_str = "1"
+                                        opts.append(idx_str)
 
                             if q_cnt is not None and q_cnt > 0:
                                 cmd.extend(["--questions", str(q_cnt)])
@@ -729,10 +738,11 @@ class CompleteAutomationController:
                                         opts = ["1"] * q_cnt
                                     while len(opts) < q_cnt:
                                         opts.append("1")
-                                    cmd.extend(["--options-list", ",".join(opts[:q_cnt])])
+                                    opts = opts[:q_cnt]
+                                    cmd.extend(["--options-list", ",".join(opts)])
                                 self.logger.info(
                                     "Step 9 forwarded state ground truth to Step 3: %d question(s), options=%s",
-                                    q_cnt, opts[:q_cnt] if opts else ["1"] * q_cnt
+                                    q_cnt, opts if opts else ["1"] * q_cnt
                                 )
                     except Exception as s_err:
                         self.logger.warning("Could not pre-read state file in Step 9: %s", s_err)

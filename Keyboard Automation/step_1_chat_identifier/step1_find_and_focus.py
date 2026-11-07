@@ -182,12 +182,18 @@ class QuestionPayload:
     recommended_option_text: Optional[str] = None
 
     def __post_init__(self):
+        matched_idx = None
+        matched_text = None
         for idx, opt in enumerate(self.options, start=1):
-            if opt.strip().startswith("(Recommended)") or "[Recommended]" in opt:
-                self.recommended_option_index = idx
-                self.recommended_option_text = opt
+            opt_str = str(opt).strip()
+            if opt_str.startswith("(Recommended)") or "[Recommended]" in opt_str or "(recommended)" in opt_str.lower() or "[recommended]" in opt_str.lower():
+                matched_idx = idx
+                matched_text = opt
                 break
-        if self.recommended_option_index is None:
+        if matched_idx is not None:
+            self.recommended_option_index = matched_idx
+            self.recommended_option_text = matched_text
+        else:
             self.recommended_option_index = 1
             self.recommended_option_text = self.options[0] if self.options else "(Recommended)"
 
@@ -907,14 +913,20 @@ def run_step1(
     timestamp_now = datetime.now(timezone.utc).isoformat()
     selections = []
     for q in target_chat.questions:
+        rec_idx = q.recommended_option_index if (q.recommended_option_index and q.recommended_option_index > 0) else 1
+        rec_text = q.recommended_option_text or (q.options[0] if q.options else "(Recommended)")
+        is_rec = any(
+            str(opt).strip().startswith("(Recommended)") or "[Recommended]" in str(opt) or "(recommended)" in str(opt).lower() or "[recommended]" in str(opt).lower()
+            for opt in q.options
+        )
         selections.append({
             "question_index": q.question_index,
             "question": q.question,
-            "selected_option_index": q.recommended_option_index if q.recommended_option_index is not None else 1,
-            "selected_option_text": q.recommended_option_text,
+            "selected_option_index": rec_idx,
+            "selected_option_text": rec_text,
             "is_multi_select": q.is_multi_select,
             "total_options": len(q.options),
-            "is_recommended": bool(q.recommended_option_index)
+            "is_recommended": is_rec
         })
 
     logger.info("[STEP 1.29] [STATE_ENVELOPE] Formatted Dept 06 state envelope")

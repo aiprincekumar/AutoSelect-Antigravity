@@ -822,38 +822,51 @@ def run_step2(
     state_data["gui_selected_at"] = timestamp_now
     state_data["status"] = "SUCCESS_SELECTED" if selection_res["success"] else "FAILED_SELECTION"
 
-    # Prioritize live CDP DOM inspection for question count if available
-    live_tq = selection_res.get("total_questions")
-    if live_tq is not None and live_tq > 0:
-        state_data["total_questions_count"] = live_tq
-        state_data["questions_count"] = live_tq
-        state_data["total_questions"] = live_tq
-        state_data["question_count"] = live_tq
-        state_data["is_multi_question"] = (live_tq > 1)
-        state_data["live_questionnaire_detected"] = True
+    # Ground Truth Preservation: If state_data['questions'] exists with items,
+    # transcript question count is ground truth and must NOT be overwritten or inflated by DOM counts.
+    qs_authoritative = state_data.get("questions")
+    if isinstance(qs_authoritative, list) and len(qs_authoritative) > 0:
+        auth_tq = len(qs_authoritative)
+        state_data["total_questions_count"] = auth_tq
+        state_data["questions_count"] = auth_tq
+        state_data["total_questions"] = auth_tq
+        state_data["question_count"] = auth_tq
+        state_data["is_multi_question"] = (auth_tq > 1)
         if selection_res.get("options_count"):
             state_data["detected_options_count"] = selection_res.get("options_count")
         if selection_res.get("current_question"):
             state_data["current_question_index"] = selection_res.get("current_question")
     else:
-        # Preserve existing questions count or scalar count from state
-        tq = (
-            state_data.get("total_questions_count")
-            or state_data.get("questions_count")
-            or state_data.get("total_questions")
-            or (len(state_data.get("questions", [])) if isinstance(state_data.get("questions"), list) and state_data.get("questions") else None)
-            or (len(state_data.get("selections", [])) if isinstance(state_data.get("selections"), list) and state_data.get("selections") else None)
-            or 1
-        )
-        try:
-            tq_int = max(0, int(tq))
-        except (ValueError, TypeError):
-            tq_int = 1
-        state_data["total_questions_count"] = tq_int
-        state_data["questions_count"] = tq_int
-        state_data["total_questions"] = tq_int
-        state_data["question_count"] = tq_int
-        state_data["is_multi_question"] = (tq_int > 1)
+        live_tq = selection_res.get("total_questions")
+        if live_tq is not None and live_tq > 0:
+            state_data["total_questions_count"] = live_tq
+            state_data["questions_count"] = live_tq
+            state_data["total_questions"] = live_tq
+            state_data["question_count"] = live_tq
+            state_data["is_multi_question"] = (live_tq > 1)
+            state_data["live_questionnaire_detected"] = True
+            if selection_res.get("options_count"):
+                state_data["detected_options_count"] = selection_res.get("options_count")
+            if selection_res.get("current_question"):
+                state_data["current_question_index"] = selection_res.get("current_question")
+        else:
+            # Preserve existing questions count or scalar count from state
+            tq = (
+                state_data.get("total_questions_count")
+                or state_data.get("questions_count")
+                or state_data.get("total_questions")
+                or (len(state_data.get("selections", [])) if isinstance(state_data.get("selections"), list) and state_data.get("selections") else None)
+                or 1
+            )
+            try:
+                tq_int = max(0, int(tq))
+            except (ValueError, TypeError):
+                tq_int = 1
+            state_data["total_questions_count"] = tq_int
+            state_data["questions_count"] = tq_int
+            state_data["total_questions"] = tq_int
+            state_data["question_count"] = tq_int
+            state_data["is_multi_question"] = (tq_int > 1)
 
     logger.info("[STEP 2.29] [STATE_ENVELOPE] Formatted Dept 06 GUI selection state envelope")
     envelope_update = {
