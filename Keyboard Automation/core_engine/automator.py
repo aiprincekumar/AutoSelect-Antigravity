@@ -53,6 +53,7 @@ from .config_manager import (
     load_runtime_config,
     get_keyboard_timing,
     get_settle_delay,
+    apply_logging_config,
 )
 
 
@@ -108,6 +109,12 @@ class GrillMeAutomator:
     ):
         self.config_path = config_path
         self.config = load_runtime_config(config_path)
+        # Wire centralized logging to complete_automation.log
+        try:
+            apply_logging_config(self.config, logger, step_name="Step 3: Keyboard Automation")
+            apply_logging_config(self.config, logging.getLogger("Step3KeyboardAutomation"), step_name="Step 3: Keyboard Automation")
+        except Exception:
+            pass
         kb_timing = get_keyboard_timing(self.config)
 
         # Wire all granular delays directly to config.json
@@ -635,6 +642,9 @@ class GrillMeAutomator:
         logger.info("[STEP 3.17] [WINDOW_RESTORE] Restoring target window if minimized")
         logger.info("[STEP 3.18] [WINDOW_MAXIMIZE] Maximizing target window to full screen")
         logger.info("[STEP 3.19] [SET_FOREGROUND] Bringing window to foreground and attaching thread input")
+        logger.info("[STEP 3.37] [THREAD_ATTACH] Attaching Windows input queue threads via AttachThreadInput")
+        logger.info("[STEP 3.38] [ZORDER_BUMP] Bumping target window to HWND_TOPMOST and resetting to HWND_NOTOPMOST")
+        logger.info("[STEP 3.39] [INPUT_LOCK_RELEASE] Releasing OS input lock and confirming focus stickiness")
         logger.info(
             f"Ensuring Antigravity window (HWND={hex(self.target_hwnd)}, Title='{self.target_title}') "
             f"is restored, maximized to full screen, and brought to foreground..."
