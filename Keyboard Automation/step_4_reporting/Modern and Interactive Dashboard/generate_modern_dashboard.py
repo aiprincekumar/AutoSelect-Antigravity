@@ -7128,6 +7128,7 @@ def build_modern_dashboard_html(
 
 
       let isAutomationActive = false;
+      let isAutomationPaused = false;
 
       let logsOpen = false;
 
@@ -8642,7 +8643,7 @@ def build_modern_dashboard_html(
       let activeRunStepProgress = 0;
       let currentRunPid = null;
 
-      function updateStepProgress(step, isRunning, customPercent, customTitle, runPid) {{
+      function updateStepProgress(step, isRunning, customPercent, customTitle, runPid, forceUpdate) {{
         const progressBar = document.getElementById('header-progress-bar');
         const progressTrack = document.getElementById('header-progress-track');
         if (!progressBar) return;
@@ -8716,13 +8717,21 @@ def build_modern_dashboard_html(
 
         targetPct = Math.max(0, Math.min(100, targetPct));
 
-        // When a new cycle begins in continuous background mode (after reaching 100%)
-        if (activeRunStepProgress >= 100 && targetPct <= 25) {{
+        // When a new cycle begins (targetPct <= 25) after a previous stage was higher
+        if (targetPct <= 25 && activeRunStepProgress > 25) {{
           activeRunStepProgress = 0;
         }}
 
-        // Strict monotonic progression: ONLY advance forward during active run
-        if (targetPct >= activeRunStepProgress) {{
+        // If automation is paused, strictly clamp to Step 0 (10% or 25%)
+        if (isAutomationPaused && targetPct > 25) {{
+          targetPct = 10;
+          titleText = 'Step 0 of 4 paused: Waiting for User Inactivity (10%)';
+        }}
+
+        // Strict monotonic progression: advance forward during active run,
+        // or accept authoritative updates (forceUpdate === true),
+        // or reset on new cycle (targetPct <= 25) / paused state.
+        if (forceUpdate || targetPct >= activeRunStepProgress || (targetPct <= 25 && activeRunStepProgress > 25) || (isAutomationPaused && targetPct <= 25)) {{
           activeRunStepProgress = targetPct;
           progressBar.classList.add('active');
           progressBar.style.width = activeRunStepProgress + '%';
@@ -8734,6 +8743,11 @@ def build_modern_dashboard_html(
       function detectStepFromLogLine(line) {{
         if (!line || typeof line !== 'string') return null;
         const upper = line.toUpperCase();
+
+        // 1. Step 0 Paused / Inactivity Wait (must be checked first so it never falls through to historical step lines)
+        if (upper.includes('[PAUSED]') || upper.includes('[USER_IDLE_WAIT]') || upper.includes('USER ACTIVITY DETECTED') || upper.includes('[STEP 9.11]') || upper.includes('SLEEPING UNTIL')) {{
+          return {{ step: 0, pct: 10, title: 'Step 0 of 4 paused: Waiting for User Inactivity (10%)' }};
+        }}
 
         if (upper.includes('PIPELINE COMPLETED SUCCESSFULLY') || upper.includes('[STEP 9.9]') || upper.includes('CYCLE COMPLETED')) {{
           return {{ step: 4, pct: 100, title: 'Pipeline Complete: All 4 steps completed (100%)' }};
@@ -8759,7 +8773,7 @@ def build_modern_dashboard_html(
         if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('[TRIGGER_FIRE]') || upper.includes('ANTIGRAVITY DETECTED')) {{
           return {{ step: 0.5, pct: 25, title: 'Step 0 of 4 completed: AntiGravity Detected (25%)' }};
         }}
-        if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY')) {{
+        if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY') || upper.includes('POLLING FOR ANTIGRAVITY')) {{
           return {{ step: 0, pct: 10, title: 'Step 0 of 4 running: AntiGravity Detector (10%)' }};
         }}
         if (upper.includes('[STEP 9.') || upper.includes('DASHBOARD SERVER SPAWN:')) {{
@@ -8771,16 +8785,20 @@ def build_modern_dashboard_html(
       function updateStatusUI(running, isPaused, idleSec, threshold, currentStep, stepPercent, stepTitle, pid) {{
 
         isAutomationActive = running;
+        isAutomationPaused = running && !!isPaused;
 
         if (!running) {{
-          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
+          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)', null, true);
+        }} else if (isPaused) {{
+          // Strictly clamp to Step 0: 10% (or 25% if triggered) when paused waiting for user idle
+          const pausedPct = (stepPercent !== undefined && Number(stepPercent) === 25) ? 25 : 10;
+          const pausedTitle = stepTitle || (pausedPct === 25 ? 'Step 0 of 4 completed: AntiGravity Detected (25%)' : 'Step 0 of 4 paused: Waiting for User Inactivity (10%)');
+          updateStepProgress(0, true, pausedPct, pausedTitle, pid, true);
         }} else if (stepPercent !== undefined && stepPercent !== null) {{
-          if (Number(stepPercent) <= 25 && activeRunStepProgress > 25 && pid && pid !== currentRunPid) {{
-            activeRunStepProgress = 0;
-          }}
-          updateStepProgress(currentStep, true, stepPercent, stepTitle, pid);
+          // Server provides authoritative step progress
+          updateStepProgress(currentStep, true, Number(stepPercent), stepTitle, pid, true);
         }} else {{
-          updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', pid);
+          updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', pid, true);
         }}
 
         if (toggleBtn) {{
@@ -9073,14 +9091,18 @@ def build_modern_dashboard_html(
               if (tickerStatusMsg) {{
                 tickerStatusMsg.textContent = `⚡ ${{stageName}} • Active`;
               }}
-              let pct = 10;
-              let title = 'Step 0 of 4 running: AntiGravity Detector (10%)';
-              if (stageNum === 1) {{ pct = 35; title = 'Step 1 of 4 running: Chat Identifier & Focus (35%)'; }}
-              else if (stageNum === 2) {{ pct = 60; title = 'Step 2 of 4 running: GUI Chat Select & Focus (60%)'; }}
-              else if (stageNum === 3) {{ pct = 85; title = 'Step 3 of 4 running: Keyboard Automation (85%)'; }}
-              else if (stageNum === 4) {{ pct = 100; title = 'Step 3 of 4 completed: Pipeline Finished (100%)'; }}
-              else if (stageNum === 9) {{ pct = 10; title = 'Step 0 of 4 running: AntiGravity Detector (10%)'; }}
-              updateStepProgress(stageNum, true, pct, title, currentRunPid);
+              if (isAutomationPaused) {{
+                updateStepProgress(0, true, 10, 'Step 0 of 4 paused: Waiting for User Inactivity (10%)', currentRunPid, true);
+              }} else {{
+                let pct = 10;
+                let title = 'Step 0 of 4 running: AntiGravity Detector (10%)';
+                if (stageNum === 1) {{ pct = 35; title = 'Step 1 of 4 running: Chat Identifier & Focus (35%)'; }}
+                else if (stageNum === 2) {{ pct = 60; title = 'Step 2 of 4 running: GUI Chat Select & Focus (60%)'; }}
+                else if (stageNum === 3) {{ pct = 85; title = 'Step 3 of 4 running: Keyboard Automation (85%)'; }}
+                else if (stageNum === 4) {{ pct = 100; title = 'Step 3 of 4 completed: Pipeline Finished (100%)'; }}
+                else if (stageNum === 9) {{ pct = 10; title = 'Step 0 of 4 running: AntiGravity Detector (10%)'; }}
+                updateStepProgress(stageNum, true, pct, title, currentRunPid);
+              }}
               showToast(`⚡ ${{stageName}} in progress...`, 'info');
             }} catch (_) {{}}
           }});
@@ -9266,8 +9288,15 @@ def build_modern_dashboard_html(
             break;
           }}
         }}
-        if (!isInitial && isAutomationActive && latestDetected && latestDetected.pct > activeRunStepProgress) {{
-          updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+        if (!isInitial && isAutomationActive && latestDetected) {{
+          if (isAutomationPaused) {{
+            // While paused, strictly clamp to Step 0 progress (<=25%)
+            if (latestDetected.pct <= 25) {{
+              updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+            }}
+          }} else if (latestDetected.pct > activeRunStepProgress) {{
+            updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+          }}
         }}
 
         if (liveFeedTime) {{

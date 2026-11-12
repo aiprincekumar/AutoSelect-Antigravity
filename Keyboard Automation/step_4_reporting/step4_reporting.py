@@ -5889,6 +5889,7 @@ class Step4ReportingEngine:
 
       let statusPollTimer = null;
       let isAutomationActive = false;
+      let isAutomationPaused = false;
 
       const rawData = JSON.parse(document.getElementById('history-data').textContent);
       const chats = rawData.chats || {{}};
@@ -6601,7 +6602,7 @@ class Step4ReportingEngine:
       let activeRunStepProgress = 0;
       let currentRunPid = null;
 
-      function updateStepProgress(step, isRunning, customPercent, customTitle, runPid) {{
+      function updateStepProgress(step, isRunning, customPercent, customTitle, runPid, forceUpdate) {{
         const progressBar = document.getElementById('header-progress-bar');
         const progressTrack = document.getElementById('header-progress-track');
         if (!progressBar) return;
@@ -6675,13 +6676,21 @@ class Step4ReportingEngine:
 
         targetPct = Math.max(0, Math.min(100, targetPct));
 
-        // When a new cycle begins in continuous background mode (after reaching 100%)
-        if (activeRunStepProgress >= 100 && targetPct <= 25) {{
+        // When a new cycle begins (targetPct <= 25) after a previous stage was higher
+        if (targetPct <= 25 && activeRunStepProgress > 25) {{
           activeRunStepProgress = 0;
         }}
 
-        // Strict monotonic progression: ONLY advance forward during active run
-        if (targetPct >= activeRunStepProgress) {{
+        // If automation is paused, strictly clamp to Step 0 (10% or 25%)
+        if (isAutomationPaused && targetPct > 25) {{
+          targetPct = 10;
+          titleText = 'Step 0 of 4 paused: Waiting for User Inactivity (10%)';
+        }}
+
+        // Strict monotonic progression: advance forward during active run,
+        // or accept authoritative updates (forceUpdate === true),
+        // or reset on new cycle (targetPct <= 25) / paused state.
+        if (forceUpdate || targetPct >= activeRunStepProgress || (targetPct <= 25 && activeRunStepProgress > 25) || (isAutomationPaused && targetPct <= 25)) {{
           activeRunStepProgress = targetPct;
           progressBar.classList.add('active');
           progressBar.style.width = activeRunStepProgress + '%';
@@ -6693,6 +6702,11 @@ class Step4ReportingEngine:
       function detectStepFromLogLine(line) {{
         if (!line || typeof line !== 'string') return null;
         const upper = line.toUpperCase();
+
+        // 1. Step 0 Paused / Inactivity Wait (must be checked first so it never falls through to historical step lines)
+        if (upper.includes('[PAUSED]') || upper.includes('[USER_IDLE_WAIT]') || upper.includes('USER ACTIVITY DETECTED') || upper.includes('[STEP 9.11]') || upper.includes('SLEEPING UNTIL')) {{
+          return {{ step: 0, pct: 10, title: 'Step 0 of 4 paused: Waiting for User Inactivity (10%)' }};
+        }}
 
         if (upper.includes('PIPELINE COMPLETED SUCCESSFULLY') || upper.includes('[STEP 9.9]') || upper.includes('CYCLE COMPLETED')) {{
           return {{ step: 4, pct: 100, title: 'Pipeline Complete: All 4 steps completed (100%)' }};
@@ -6718,7 +6732,7 @@ class Step4ReportingEngine:
         if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('[TRIGGER_FIRE]') || upper.includes('ANTIGRAVITY DETECTED')) {{
           return {{ step: 0.5, pct: 25, title: 'Step 0 of 4 completed: AntiGravity Detected (25%)' }};
         }}
-        if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY')) {{
+        if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY') || upper.includes('POLLING FOR ANTIGRAVITY')) {{
           return {{ step: 0, pct: 10, title: 'Step 0 of 4 running: AntiGravity Detector (10%)' }};
         }}
         if (upper.includes('[STEP 9.') || upper.includes('DASHBOARD SERVER SPAWN:')) {{
@@ -6732,15 +6746,21 @@ class Step4ReportingEngine:
         const modesControlIconEl = document.getElementById('modes-control-icon');
         const modesControlLabelEl = document.getElementById('modes-control-label');
 
+        const isPaused = isRunning && !!(statusData && statusData.is_paused);
+        isAutomationActive = isRunning;
+        isAutomationPaused = isPaused;
+
         if (!isRunning) {{
-          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
+          updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)', null, true);
+        }} else if (isPaused) {{
+          // Strictly clamp to Step 0: 10% (or 25% if triggered) when paused waiting for user idle
+          const pausedPct = (statusData && statusData.step_percent !== undefined && Number(statusData.step_percent) === 25) ? 25 : 10;
+          const pausedTitle = (statusData && statusData.step_title) || (pausedPct === 25 ? 'Step 0 of 4 completed: AntiGravity Detected (25%)' : 'Step 0 of 4 paused: Waiting for User Inactivity (10%)');
+          updateStepProgress(0, true, pausedPct, pausedTitle, statusData ? statusData.pid : null, true);
         }} else if (statusData && statusData.step_percent !== undefined && statusData.step_percent !== null) {{
-          if (Number(statusData.step_percent) <= 25 && activeRunStepProgress > 25 && statusData.pid && statusData.pid !== currentRunPid) {{
-            activeRunStepProgress = 0;
-          }}
-          updateStepProgress(statusData.current_step, true, statusData.step_percent, statusData.step_title, statusData.pid);
+          updateStepProgress(statusData.current_step, true, Number(statusData.step_percent), statusData.step_title, statusData.pid, true);
         }} else {{
-          updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', statusData ? statusData.pid : null);
+          updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', statusData ? statusData.pid : null, true);
         }}
 
         if (isRunning) {{
@@ -7849,8 +7869,14 @@ class Step4ReportingEngine:
                   break;
                 }}
               }}
-              if (isAutomationActive && latestDetected && latestDetected.pct > activeRunStepProgress) {{
-                updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+              if (isAutomationActive && latestDetected) {{
+                if (isAutomationPaused) {{
+                  if (latestDetected.pct <= 25) {{
+                    updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                  }}
+                }} else if (latestDetected.pct > activeRunStepProgress) {{
+                  updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                }}
               }}
             }}
             let colored = '';
@@ -7943,8 +7969,14 @@ class Step4ReportingEngine:
                     break;
                   }}
                 }}
-                if (isAutomationActive && latestDetected && !payload.initial && latestDetected.pct > activeRunStepProgress) {{
-                  updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                if (isAutomationActive && latestDetected && !payload.initial) {{
+                  if (isAutomationPaused) {{
+                    if (latestDetected.pct <= 25) {{
+                      updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                    }}
+                  }} else if (latestDetected.pct > activeRunStepProgress) {{
+                    updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                  }}
                 }}
               }}
             }} catch (_) {{}}

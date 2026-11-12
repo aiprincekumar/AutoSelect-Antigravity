@@ -580,6 +580,115 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(status["current_step"], 0)
         self.assertEqual(status["step_name"], "AntiGravity Detector")
 
+    def test_20_progress_bar_monotonic_steps(self):
+        """Verify strict monotonic progression percentages across all pipeline steps."""
+        from step_4_reporting.dashboard_server import parse_pipeline_step_progress
+
+        # Step 0 Running (10%)
+        res = parse_pipeline_step_progress(["[STEP 0.1] Polling for AntiGravity prompt..."], True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 10)
+
+        # Step 0 Completed / Trigger Matched (25%)
+        res = parse_pipeline_step_progress(["[STEP 9.12] Trigger matched for AntiGravity"], True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 25)
+
+        # Step 1 Running (35%)
+        res = parse_pipeline_step_progress(["[STEP 1.1] Identifying active chat window"], True)
+        self.assertEqual(res["current_step"], 1)
+        self.assertEqual(res["step_percent"], 35)
+
+        # Step 1 Completed (50%)
+        res = parse_pipeline_step_progress(["[STEP 9.8] Step 1 process completed with exit code 0"], True)
+        self.assertEqual(res["current_step"], 1)
+        self.assertEqual(res["step_percent"], 50)
+
+        # Step 2 Running (60%)
+        res = parse_pipeline_step_progress(["[STEP 2.1] Selecting target chat and focusing"], True)
+        self.assertEqual(res["current_step"], 2)
+        self.assertEqual(res["step_percent"], 60)
+
+        # Step 2 Completed (75%)
+        res = parse_pipeline_step_progress(["[STEP 9.8] Step 2 process completed with exit code 0"], True)
+        self.assertEqual(res["current_step"], 2)
+        self.assertEqual(res["step_percent"], 75)
+
+        # Step 3 Running (85%)
+        res = parse_pipeline_step_progress(["[STEP 3.1] Injecting keystroke sequence"], True)
+        self.assertEqual(res["current_step"], 3)
+        self.assertEqual(res["step_percent"], 85)
+
+        # Step 3 Completed / Pipeline Complete (100%)
+        res = parse_pipeline_step_progress(["PIPELINE COMPLETED SUCCESSFULLY"], True)
+        self.assertEqual(res["current_step"], 3)
+        self.assertEqual(res["step_percent"], 100)
+
+    def test_21_progress_bar_paused_user_activity_clamped_to_10_not_75(self):
+        """Verify that when paused waiting for user idle, progress is strictly 10% even with old Step 2 lines."""
+        from step_4_reporting.dashboard_server import parse_pipeline_step_progress
+
+        historical_logs_with_step2 = [
+            "[STEP 9.1] Master orchestrator started",
+            "[STEP 9.8] Step 2 process completed with exit code 0",
+            "[STEP 2.30] GUI chat select completed successfully",
+            "[PAUSED] User activity detected (idle: 0s < 60s) • Automation sleeping until 60s inactivity",
+        ]
+        res = parse_pipeline_step_progress(historical_logs_with_step2, True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 10)
+        self.assertIn("Paused", res["step_name"])
+
+        # Also test explicit is_paused flag
+        res_flag = parse_pipeline_step_progress(["[STEP 9.8] Step 2 process completed with exit code 0"], True, is_paused=True)
+        self.assertEqual(res_flag["current_step"], 0)
+        self.assertEqual(res_flag["step_percent"], 10)
+
+    def test_22_progress_bar_stopped_idle_returns_zero(self):
+        """Verify that when automation is stopped/not running, progress is strictly 0%."""
+        from step_4_reporting.dashboard_server import parse_pipeline_step_progress
+
+        res = parse_pipeline_step_progress(["[STEP 9.8] Step 2 completed", "PIPELINE COMPLETED"], False)
+        self.assertEqual(res["step_percent"], 0)
+        self.assertIsNone(res["current_step"])
+        self.assertEqual(res["step_name"], "Idle")
+
+    def test_23_get_status_clamps_paused_state_even_if_state_file_has_stale_75(self):
+        """Verify get_status clamps step_percent to 10% when is_paused is True, even if pid_file has 75%."""
+        manager = AutomationProcessManager(self.workspace_dir)
+        manager.is_running = lambda: True
+        manager.get_pid = lambda: 88888
+        manager.start_time = time.time()
+
+        # Write state file with stale Step 2 completed (75%)
+        state_data = {
+            "pid": 88888,
+            "mode": "production",
+            "is_paused": True,
+            "user_idle_seconds": 5.0,
+            "current_step": 2,
+            "step_percent": 75,
+            "step_title": "Step 2 of 4 completed: GUI Chat Select & Focus (75%)",
+            "step_name": "GUI Chat Select Complete",
+        }
+        manager.pid_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(manager.pid_file, "w", encoding="utf-8") as f:
+            json.dump(state_data, f)
+
+        # Force is_paused in get_status by mocking idle_seconds < threshold
+        import core_engine.win32_api as w32
+        orig_get_idle = getattr(w32, "get_idle_duration_seconds", None)
+        w32.get_idle_duration_seconds = lambda: 5.0
+        try:
+            status = manager.get_status()
+            self.assertTrue(status["is_paused"])
+            self.assertEqual(status["current_step"], 0)
+            self.assertEqual(status["step_percent"], 10)
+            self.assertIn("Paused", status["step_name"])
+        finally:
+            if orig_get_idle is not None:
+                w32.get_idle_duration_seconds = orig_get_idle
+
 
 if __name__ == "__main__":
     unittest.main()

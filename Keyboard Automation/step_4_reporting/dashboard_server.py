@@ -183,11 +183,12 @@ def is_pid_alive(pid: int) -> bool:
 # Automation Process Lifecycle Manager
 # ============================================================================
 
-def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[str, Any]:
+def parse_pipeline_step_progress(log_lines: List[str], running: bool, is_paused: bool = False) -> Dict[str, Any]:
     """
     Analyze log lines to determine current pipeline step index (0, 1, 2, 3),
     step percentage (0, 10, 25, 35, 50, 60, 75, 85, 100), and tooltip status:
       - Idle / Inactive / Stopped: 0%
+      - Step 0 Paused (User Inactivity Wait): 10%
       - Step 0 (AntiGravity Detector): Running = 10%, Completed = 25%
       - Step 1 (Chat Identifier & Focus): Running = 35%, Completed = 50%
       - Step 2 (GUI Chat Select & Focus): Running = 60%, Completed = 75%
@@ -203,6 +204,14 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
             "step_percent": 0,
             "step_title": "Pipeline Progress: Idle (0%)",
             "step_name": "Idle",
+        }
+
+    if is_paused:
+        return {
+            "current_step": 0,
+            "step_percent": 10,
+            "step_title": "Step 0 of 4 paused: Waiting for User Inactivity (10%)",
+            "step_name": "AntiGravity Detector (Paused)",
         }
 
     if not log_lines:
@@ -246,6 +255,21 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
     # 3. Inspect scoped lines from newest to oldest
     for line in reversed(run_lines):
         upper = line.upper()
+
+        # Step 0 Paused / Waiting for User Inactivity (10%) - Check early so paused state is never skipped!
+        if (
+            "[PAUSED]" in upper
+            or "USER ACTIVITY DETECTED" in upper
+            or "[USER_IDLE_WAIT]" in upper
+            or "[STEP 9.11]" in upper
+            or "SLEEPING UNTIL" in upper
+        ):
+            return {
+                "current_step": 0,
+                "step_percent": 10,
+                "step_title": "Step 0 of 4 paused: Waiting for User Inactivity (10%)",
+                "step_name": "AntiGravity Detector (Paused)",
+            }
 
         # Step 4 / Overall Complete (100%)
         if "PIPELINE COMPLETED SUCCESSFULLY" in upper or "[STEP 9.9]" in upper or "CYCLE COMPLETED" in upper:
@@ -367,6 +391,7 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
             or "DETECTOR_POLL" in upper
             or "[STEP 9.10]" in upper
             or "POLLING ANTIGRAVITY" in upper
+            or "POLLING FOR ANTIGRAVITY" in upper
             or "[STEP 9." in upper
             or "DASHBOARD SERVER SPAWN:" in upper
         ):
@@ -834,7 +859,22 @@ class AutomationProcessManager:
 
         if step_meta is None:
             recent_logs = self.get_log_tail(300, return_list=True) if running else []
-            step_meta = parse_pipeline_step_progress(recent_logs, running)
+            step_meta = parse_pipeline_step_progress(recent_logs, running, is_paused=is_paused)
+
+        if not running:
+            step_meta = {
+                "current_step": None,
+                "step_percent": 0,
+                "step_title": "Pipeline Progress: Idle (0%)",
+                "step_name": "Idle",
+            }
+        elif is_paused:
+            # Strict Clamping: When paused in Step 0 waiting for user idle, progress is strictly 10% (or 25% if trigger matched)
+            if step_meta.get("current_step") is None or step_meta.get("current_step") != 0 or step_meta.get("step_percent", 10) > 25:
+                step_meta["current_step"] = 0
+                step_meta["step_percent"] = 10
+                step_meta["step_title"] = "Step 0 of 4 paused: Waiting for User Inactivity (10%)"
+                step_meta["step_name"] = "AntiGravity Detector (Paused)"
 
         return {
             "running": running,
