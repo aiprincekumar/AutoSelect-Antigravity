@@ -1,23 +1,23 @@
 {
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "production",
+  "mode": "test",
   "timing": {
-    "step0_poll_interval_prod_seconds": 300.0,
-    "step0_poll_interval_test_seconds": 10.0,
+    "step0_poll_interval_prod_seconds": 300,
+    "step0_poll_interval_test_seconds": 10,
     "settle_delay_between_steps_seconds": 0.8,
-    "user_activity_pause_threshold_seconds": 60.0,
+    "user_activity_pause_threshold_seconds": 60,
     "user_activity_pause_threshold_prod_seconds": 60.0,
     "user_activity_pause_threshold_test_seconds": 5.0,
-    "step4_user_activity_delay_seconds": 10.0,
+    "step4_user_activity_delay_seconds": 10,
     "step4_poll_interval_seconds": 0.1,
     "step1_window_focus_delay_seconds": 0.2,
     "step2_dom_click_settle_delay_seconds": 0.3,
-    "step3_countdown_seconds": 3.0,
-    "step3_key_hold_delay_ms": 50.0,
-    "step3_post_keypress_delay_ms": 250.0,
-    "step3_inter_question_delay_ms": 500.0,
-    "step3_round_completion_pause_ms": 1000.0,
-    "continuous_loop_delay_seconds": 300.0
+    "step3_countdown_seconds": 3,
+    "step3_key_hold_delay_ms": 50,
+    "step3_post_keypress_delay_ms": 250,
+    "step3_inter_question_delay_ms": 500,
+    "step3_round_completion_pause_ms": 1000,
+    "continuous_loop_delay_seconds": 300
   },
   "enabled_steps": {
     "step1_find_and_focus": true,
@@ -27,7 +27,7 @@
   },
   "antigravity": {
     "require_grill_me": true,
-    "active_hours": 12.0
+    "active_hours": 12
   },
   "logging": {
     "log_file": "complete_automation.log",

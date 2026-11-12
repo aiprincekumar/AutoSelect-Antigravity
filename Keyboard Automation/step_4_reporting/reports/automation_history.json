@@ -1,19 +1,19 @@
 {
   "success": true,
   "data": {
-    "total_pipeline_runs": 28,
-    "total_questions_answered": 82,
-    "total_runtime_seconds": 529.93,
+    "total_pipeline_runs": 29,
+    "total_questions_answered": 87,
+    "total_runtime_seconds": 548.32,
     "total_unique_chats": 6,
-    "last_updated": "2026-11-07T04:43:56.797099+00:00",
+    "last_updated": "2026-11-12T20:24:19.583371+00:00",
     "chats": {
       "e0645f63-cc82-41f8-8385-2538e9e8f6bf": {
         "conversation_id": "e0645f63-cc82-41f8-8385-2538e9e8f6bf",
         "topic_summary": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। multip...",
         "last_user_prompt": "मुझे डेमो के लिए ग्रिड मी ऑप्शन ऑन करके दो। मुझे स्क्रिप्ट टेस्ट करना है। 5 multiple question at once",
-        "run_count": 20,
-        "total_questions": 74,
-        "last_run_timestamp": "2026-11-07T04:43:56.796100+00:00",
+        "run_count": 21,
+        "total_questions": 79,
+        "last_run_timestamp": "2026-11-12T20:24:19.583371+00:00",
         "runs": [
           {
             "run_id": "run_20261104_061022",
@@ -1182,6 +1182,82 @@
             ],
             "status": "COMPLETED",
             "selected_at": "2026-11-07T04:43:38.531265+00:00"
+          },
+          {
+            "run_id": "run_20261113_015419",
+            "timestamp": "2026-11-12T20:24:19.583371+00:00",
+            "duration_seconds": 18.39,
+            "questions_count": 5,
+            "questions": [
+              {
+                "question_index": 1,
+                "question": "[प्रश्न 1/5] स्क्रिप्ट टेस्टिंग का प्राइमरी रनटाइम/एन्वायरनमेंट क्या होना चाहिए?",
+                "options": [
+                  "(Recommended) Node.js / TypeScript (NPM/PNPM)",
+                  "Python 3.11+ (Virtualenv)",
+                  "PowerShell / Windows Native Shell",
+                  "Docker Container Sandbox"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) Node.js / TypeScript (NPM/PNPM)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 2,
+                "question": "[प्रश्न 2/5] लॉगिंग और डिबगिंग का लेवल क्या सेट करना है?",
+                "options": [
+                  "(Recommended) Detailed Verbose Logging (कंसोल और फ़ाइल दोनों में ट्रेसेस)",
+                  "Standard Summary Output (केवल महत्वपूर्ण परिणाम)",
+                  "JSON Structured Logs (ऑटोमेटेड पार्सिंग हेतु)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) Detailed Verbose Logging (कंसोल और फ़ाइल दोनों में ट्रेसेस)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 3,
+                "question": "[प्रश्न 3/5] टेस्ट फेलियर होने पर स्क्रिप्ट का व्यवहार क्या हो?",
+                "options": [
+                  "(Recommended) Fail-Fast & Diagnostic Report (एरर आने पर तुरंत रोकें और डायग्नोसिस दें)",
+                  "Continue-on-Error (सारे टेस्ट पूरे होने दें, अंत में समरी दिखाएं)",
+                  "Auto-Retry Logic (3 बार रिट्राई के बाद रिपोर्ट करें)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) Fail-Fast & Diagnostic Report (एरर आने पर तुरंत रोकें और डायग्नोसिस दें)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 4,
+                "question": "[प्रश्न 4/5] टेस्ट रिपोर्ट्स और आर्टिफैक्ट्स को कहाँ सेव करना है?",
+                "options": [
+                  "(Recommended) Brain Artifacts डायरेक्टरी (<appDataDir>\\brain\\<conversation-id>)",
+                  "लोकल प्रोजेक्ट Logs फोल्डर (./test_results/)",
+                  "केवल टर्मिनल स्क्रीन (नो फ़ाइल राइट)"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) Brain Artifacts डायरेक्टरी (<appDataDir>\\brain\\<conversation-id>)",
+                "is_multi_select": false,
+                "is_recommended": true
+              },
+              {
+                "question_index": 5,
+                "question": "[प्रश्न 5/5] टेस्ट पूरा होने के बाद रिपोर्टिंग का फॉर्मेट क्या हो?",
+                "options": [
+                  "(Recommended) चैट समरी + विस्तृत मार्कडाउन आर्टिफैक्ट रिपोर्ट",
+                  "केवल संक्षिप्त चैट मैसेज (One-line status)",
+                  "विस्तृत JSON डेटा डंप"
+                ],
+                "selected_option_index": 1,
+                "selected_option_text": "(Recommended) चैट समरी + विस्तृत मार्कडाउन आर्टिफैक्ट रिपोर्ट",
+                "is_multi_select": false,
+                "is_recommended": true
+              }
+            ],
+            "status": "COMPLETED",
+            "selected_at": "2026-11-12T20:24:01.194119+00:00"
           }
         ]
       },
@@ -1414,7 +1490,7 @@
     }
   },
   "meta": {
-    "timestamp": "2026-11-07T04:43:56.797099+00:00",
+    "timestamp": "2026-11-12T20:24:19.583371+00:00",
     "step": "step_4_reporting",
     "department": "Dept 06 - Backend & API Engineering & Dept 04 - UI/UX Design System",
     "format_version": "1.0.0"
