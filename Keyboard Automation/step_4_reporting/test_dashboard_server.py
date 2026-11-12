@@ -495,6 +495,30 @@ class TestDashboardServer(unittest.TestCase):
         self.assertEqual(res["current_step"], 3)
         self.assertEqual(res["step_percent"], 100)
 
+        # Multi-run isolation: Old lines completed Step 2 (75%), but new run just started ([STEP 9.1])
+        # MUST return 10% (Step 0 running) and NEVER 75%!
+        multi_run_logs = [
+            "[STEP 9.8] [STEP_FINISH] Step 2 process completed with exit code 0",
+            "[STEP 9.1] [CFG_LOAD] Reading runtime configuration from config.json",
+        ]
+        res = parse_pipeline_step_progress(multi_run_logs, running=True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 10)
+        self.assertIn("10%", res["step_title"])
+
+        # Multi-run isolation: Spawn marker should also isolate old Step 2 lines
+        spawn_logs = [
+            "[STEP 9.8] [STEP_FINISH] Step 2 process completed with exit code 0",
+            "--- Dashboard Server Spawn: python.exe -u step_9_complete_automation/complete_automation.py ---",
+        ]
+        res = parse_pipeline_step_progress(spawn_logs, running=True)
+        self.assertEqual(res["current_step"], 0)
+        self.assertEqual(res["step_percent"], 10)
+
+        # Loose "CHAT SELECTED" must NOT falsely trigger 75%
+        res = parse_pipeline_step_progress(["Random chat selected by user in editor"], running=True)
+        self.assertEqual(res["step_percent"], 10)
+
     def test_18_stage_extraction_and_dashboard_regeneration(self):
         """Verify extract_stage_from_line and trigger_dashboard_regeneration."""
         from step_4_reporting.dashboard_server import extract_stage_from_line, STAGE_NAMES

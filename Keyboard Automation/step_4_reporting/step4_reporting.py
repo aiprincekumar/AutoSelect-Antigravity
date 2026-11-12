@@ -6697,31 +6697,31 @@ class Step4ReportingEngine:
         if (upper.includes('PIPELINE COMPLETED SUCCESSFULLY') || upper.includes('[STEP 9.9]') || upper.includes('CYCLE COMPLETED')) {{
           return {{ step: 4, pct: 100, title: 'Pipeline Complete: All 4 steps completed (100%)' }};
         }}
-        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 3')) || upper.includes('STEP 3 COMPLETED') || upper.includes('KEYBOARD AUTOMATION COMPLETED')) {{
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 3')) || upper.includes('STEP 3 COMPLETED') || upper.includes('KEYBOARD AUTOMATION COMPLETED') || upper.includes('[STEP 3.20]')) {{
           return {{ step: 3.5, pct: 100, title: 'Step 3 of 4 completed: Keyboard Automation (100%)' }};
         }}
-        if (upper.includes('[STEP 3.') || upper.includes('[STEP 3:') || upper.includes('KEYBOARD AUTOMATION') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 3'))) {{
+        if (upper.includes('[STEP 3.') || upper.includes('[STEP 3:') || (upper.includes('KEYBOARD AUTOMATION') && !upper.includes('COMPLETED')) || upper.includes('ROUND COMPLETED') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 3')) || (upper.includes('[STEP 9.6]') && upper.includes('STEP 3'))) {{
           return {{ step: 3, pct: 85, title: 'Step 3 of 4 running: Keyboard Automation (85%)' }};
         }}
-        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 2')) || upper.includes('STEP 2 COMPLETED') || upper.includes('CHAT SELECTED')) {{
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 2')) || upper.includes('STEP 2 COMPLETED') || upper.includes('STEP 2: GUI CHAT SELECT COMPLETED') || upper.includes('[GUI_SELECT_COMPLETE]') || upper.includes('[STEP 2.30]')) {{
           return {{ step: 2.5, pct: 75, title: 'Step 2 of 4 completed: GUI Chat Select & Focus (75%)' }};
         }}
-        if (upper.includes('[STEP 2.') || upper.includes('[STEP 2:') || upper.includes('GUI CHAT SELECT') || upper.includes('SELECTING TARGET CHAT') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 2'))) {{
+        if (upper.includes('[STEP 2.') || upper.includes('[STEP 2:') || upper.includes('GUI CHAT SELECT') || upper.includes('SELECTING TARGET CHAT') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 2')) || (upper.includes('[STEP 9.6]') && upper.includes('STEP 2'))) {{
           return {{ step: 2, pct: 60, title: 'Step 2 of 4 running: GUI Chat Select & Focus (60%)' }};
         }}
-        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 1')) || upper.includes('STEP 1 COMPLETED') || upper.includes('[STEP 9.14]')) {{
+        if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 1')) || upper.includes('STEP 1 COMPLETED') || upper.includes('[STEP 1 COMPLETE]') || upper.includes('[STEP 9.14]')) {{
           return {{ step: 1.5, pct: 50, title: 'Step 1 of 4 completed: Chat Identifier & Focus (50%)' }};
         }}
-        if (upper.includes('[STEP 1.') || upper.includes('[STEP 1:') || upper.includes('CHAT IDENTIFIER') || upper.includes('IDENTIFYING ACTIVE CHAT') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 1'))) {{
+        if (upper.includes('[STEP 1.') || upper.includes('[STEP 1:') || (upper.includes('CHAT IDENTIFIER') && !upper.includes('COMPLETED')) || upper.includes('IDENTIFYING ACTIVE CHAT') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 1')) || (upper.includes('[STEP 9.6]') && upper.includes('STEP 1'))) {{
           return {{ step: 1, pct: 35, title: 'Step 1 of 4 running: Chat Identifier & Focus (35%)' }};
         }}
-        if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('ANTIGRAVITY DETECTED')) {{
+        if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('[TRIGGER_FIRE]') || upper.includes('ANTIGRAVITY DETECTED')) {{
           return {{ step: 0.5, pct: 25, title: 'Step 0 of 4 completed: AntiGravity Detected (25%)' }};
         }}
         if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY')) {{
           return {{ step: 0, pct: 10, title: 'Step 0 of 4 running: AntiGravity Detector (10%)' }};
         }}
-        if (upper.includes('[STEP 9.')) {{
+        if (upper.includes('[STEP 9.') || upper.includes('DASHBOARD SERVER SPAWN:')) {{
           return {{ step: 0, pct: 10, title: 'Step 0 of 4 running: AntiGravity Detector (10%)' }};
         }}
         return null;
@@ -6876,7 +6876,9 @@ class Step4ReportingEngine:
                 const isNowRunning = !!res.data.running;
                 isAutomationActive = isNowRunning;
                 localStorage.setItem('asc_automation_running', String(isNowRunning));
-                updateAutomationUI(isNowRunning, true);
+                activeRunStepProgress = 0;
+                currentRunPid = res.data.pid || null;
+                updateAutomationUI(isNowRunning, true, res.data);
                 return;
               }} else {{
                 showToast(`❌ Action failed: ${{res.error?.message || res.message || 'Server error'}}`, 'error');
@@ -7824,16 +7826,29 @@ class Step4ReportingEngine:
             if (floatingLogBadge) floatingLogBadge.textContent = count;
 
             if (Array.isArray(lines) && lines.length > 0) {{
-              let latestDetected = null;
+              let startIdx = 0;
               for (let i = lines.length - 1; i >= 0; i--) {{
-                const detected = detectStepFromLogLine(lines[i]);
+                const u = lines[i].toUpperCase();
+                if (u.includes('[STEP 9.1]') || u.includes('DASHBOARD SERVER SPAWN:') || u.includes('[PROCESS_SPAWN]') || u.includes('[STEP 4.34]')) {{
+                  startIdx = i;
+                  break;
+                }}
+              }}
+              const scopedLines = lines.slice(startIdx);
+              let latestDetected = null;
+              for (let i = scopedLines.length - 1; i >= 0; i--) {{
+                const detected = detectStepFromLogLine(scopedLines[i]);
                 if (detected) {{
                   latestDetected = detected;
                   break;
                 }}
               }}
-              if (latestDetected && isAutomationActive) {{
-                updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+              if (isAutomationActive) {{
+                if (latestDetected) {{
+                  updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                }} else {{
+                  updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', currentRunPid);
+                }}
               }}
             }}
             let colored = '';
@@ -7909,16 +7924,29 @@ class Step4ReportingEngine:
             try {{
               const payload = JSON.parse(e.data);
               if (payload && Array.isArray(payload.lines) && payload.lines.length > 0) {{
-                let latestDetected = null;
+                let startIdx = 0;
                 for (let i = payload.lines.length - 1; i >= 0; i--) {{
-                  const detected = detectStepFromLogLine(payload.lines[i]);
+                  const u = payload.lines[i].toUpperCase();
+                  if (u.includes('[STEP 9.1]') || u.includes('DASHBOARD SERVER SPAWN:') || u.includes('[PROCESS_SPAWN]') || u.includes('[STEP 4.34]')) {{
+                    startIdx = i;
+                    break;
+                  }}
+                }}
+                const scopedLines = payload.lines.slice(startIdx);
+                let latestDetected = null;
+                for (let i = scopedLines.length - 1; i >= 0; i--) {{
+                  const detected = detectStepFromLogLine(scopedLines[i]);
                   if (detected) {{
                     latestDetected = detected;
                     break;
                   }}
                 }}
-                if (latestDetected && isAutomationActive) {{
-                  updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                if (isAutomationActive) {{
+                  if (latestDetected) {{
+                    updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
+                  }} else {{
+                    updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', currentRunPid);
+                  }}
                 }}
               }}
             }} catch (_) {{}}

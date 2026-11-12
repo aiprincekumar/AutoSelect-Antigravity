@@ -193,6 +193,9 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
       - Step 2 (GUI Chat Select & Focus): Running = 60%, Completed = 75%
       - Step 3 (Keyboard Automation): Running = 85%, Completed = 100%
       - Finished / Success: 100%
+
+    Scopes parsing strictly to the current active execution run / cycle to prevent
+    legacy lines from prior runs corrupting the real-time progress state.
     """
     if not running:
         return {
@@ -210,11 +213,41 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
             "step_name": "AntiGravity Detector",
         }
 
-    # Inspect from newest to oldest
-    for line in reversed(log_lines):
+    # 1. Isolate the current run boundary from historical log lines
+    current_run_idx = -1
+    for idx in range(len(log_lines) - 1, -1, -1):
+        line_upper = log_lines[idx].upper()
+        if (
+            "[STEP 9.1]" in line_upper
+            or "DASHBOARD SERVER SPAWN:" in line_upper
+            or "[PROCESS_SPAWN]" in line_upper
+            or "[STEP 4.34]" in line_upper
+        ):
+            current_run_idx = idx
+            break
+
+    run_lines = log_lines[current_run_idx:] if current_run_idx != -1 else log_lines
+
+    # 2. Within the current run, detect if a subsequent cycle restarted after a pipeline completion
+    cycle_start_idx = -1
+    for idx in range(len(run_lines) - 1, -1, -1):
+        line_upper = run_lines[idx].upper()
+        if "[STEP 9.9]" in line_upper or "PIPELINE COMPLETED SUCCESSFULLY" in line_upper:
+            break
+        if "[STEP 9.10]" in line_upper or "[STEP 9.3]" in line_upper or "[STEP 9.12]" in line_upper:
+            cycle_start_idx = idx
+
+    if cycle_start_idx != -1:
+        for idx in range(cycle_start_idx, -1, -1):
+            if "[STEP 9.9]" in run_lines[idx].upper() or "PIPELINE COMPLETED SUCCESSFULLY" in run_lines[idx].upper():
+                run_lines = run_lines[idx + 1:]
+                break
+
+    # 3. Inspect scoped lines from newest to oldest
+    for line in reversed(run_lines):
         upper = line.upper()
 
-        # Step 4 / Overall Complete
+        # Step 4 / Overall Complete (100%)
         if "PIPELINE COMPLETED SUCCESSFULLY" in upper or "[STEP 9.9]" in upper or "CYCLE COMPLETED" in upper:
             return {
                 "current_step": 3,
@@ -223,15 +256,29 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
                 "step_name": "Complete",
             }
 
-        # Step 3 Keyboard Automation
-        if ("[STEP 9.8]" in upper and "STEP 3" in upper) or "STEP 3 COMPLETED" in upper or "KEYBOARD AUTOMATION COMPLETED" in upper:
+        # Step 3 Keyboard Automation Complete (100%)
+        if (
+            ("[STEP 9.8]" in upper and "STEP 3" in upper)
+            or "STEP 3 COMPLETED" in upper
+            or "KEYBOARD AUTOMATION COMPLETED" in upper
+            or "[STEP 3.20]" in upper
+        ):
             return {
                 "current_step": 3,
                 "step_percent": 100,
                 "step_title": "Step 3 of 4 completed: Keyboard Automation (100%)",
                 "step_name": "Keyboard Automation Complete",
             }
-        if "[STEP 3." in upper or "[STEP 3:" in upper or "KEYBOARD AUTOMATION" in upper or "ROUND COMPLETED" in upper or ("[STEP 9.3]" in upper and "STEP 3" in upper):
+
+        # Step 3 Keyboard Automation Running (85%)
+        if (
+            "[STEP 3." in upper
+            or "[STEP 3:" in upper
+            or ("KEYBOARD AUTOMATION" in upper and not "COMPLETED" in upper)
+            or "ROUND COMPLETED" in upper
+            or ("[STEP 9.3]" in upper and "STEP 3" in upper)
+            or ("[STEP 9.6]" in upper and "STEP 3" in upper)
+        ):
             return {
                 "current_step": 3,
                 "step_percent": 85,
@@ -239,15 +286,30 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
                 "step_name": "Keyboard Automation",
             }
 
-        # Step 2 GUI Chat Select & Focus
-        if ("[STEP 9.8]" in upper and "STEP 2" in upper) or "STEP 2 COMPLETED" in upper or "CHAT SELECTED" in upper:
+        # Step 2 GUI Chat Select & Focus Complete (75%)
+        if (
+            ("[STEP 9.8]" in upper and "STEP 2" in upper)
+            or "STEP 2 COMPLETED" in upper
+            or "STEP 2: GUI CHAT SELECT COMPLETED" in upper
+            or "[GUI_SELECT_COMPLETE]" in upper
+            or "[STEP 2.30]" in upper
+        ):
             return {
                 "current_step": 2,
                 "step_percent": 75,
                 "step_title": "Step 2 of 4 completed: GUI Chat Select & Focus (75%)",
                 "step_name": "GUI Chat Select Complete",
             }
-        if "[STEP 2." in upper or "[STEP 2:" in upper or "GUI CHAT SELECT" in upper or "SELECTING TARGET CHAT" in upper or ("[STEP 9.3]" in upper and "STEP 2" in upper):
+
+        # Step 2 GUI Chat Select & Focus Running (60%)
+        if (
+            "[STEP 2." in upper
+            or "[STEP 2:" in upper
+            or "GUI CHAT SELECT" in upper
+            or "SELECTING TARGET CHAT" in upper
+            or ("[STEP 9.3]" in upper and "STEP 2" in upper)
+            or ("[STEP 9.6]" in upper and "STEP 2" in upper)
+        ):
             return {
                 "current_step": 2,
                 "step_percent": 60,
@@ -255,15 +317,29 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
                 "step_name": "GUI Chat Select",
             }
 
-        # Step 1 Chat Identifier & Focus
-        if ("[STEP 9.8]" in upper and "STEP 1" in upper) or "STEP 1 COMPLETED" in upper or "[STEP 9.14]" in upper:
+        # Step 1 Chat Identifier & Focus Complete (50%)
+        if (
+            ("[STEP 9.8]" in upper and "STEP 1" in upper)
+            or "STEP 1 COMPLETED" in upper
+            or "[STEP 1 COMPLETE]" in upper
+            or "[STEP 9.14]" in upper
+        ):
             return {
                 "current_step": 1,
                 "step_percent": 50,
                 "step_title": "Step 1 of 4 completed: Chat Identifier & Focus (50%)",
                 "step_name": "Chat Identifier Complete",
             }
-        if "[STEP 1." in upper or "[STEP 1:" in upper or "CHAT IDENTIFIER" in upper or "IDENTIFYING ACTIVE CHAT" in upper or ("[STEP 9.3]" in upper and "STEP 1" in upper):
+
+        # Step 1 Chat Identifier & Focus Running (35%)
+        if (
+            "[STEP 1." in upper
+            or "[STEP 1:" in upper
+            or ("CHAT IDENTIFIER" in upper and not "COMPLETED" in upper)
+            or "IDENTIFYING ACTIVE CHAT" in upper
+            or ("[STEP 9.3]" in upper and "STEP 1" in upper)
+            or ("[STEP 9.6]" in upper and "STEP 1" in upper)
+        ):
             return {
                 "current_step": 1,
                 "step_percent": 35,
@@ -271,28 +347,34 @@ def parse_pipeline_step_progress(log_lines: List[str], running: bool) -> Dict[st
                 "step_name": "Chat Identifier",
             }
 
-        # Step 0 AntiGravity Detector
-        if "TRIGGER MATCHED" in upper or "[STEP 9.12]" in upper or "ANTIGRAVITY DETECTED" in upper:
+        # Step 0 AntiGravity Detector Complete (25%)
+        if (
+            "TRIGGER MATCHED" in upper
+            or "[STEP 9.12]" in upper
+            or "[TRIGGER_FIRE]" in upper
+            or "ANTIGRAVITY DETECTED" in upper
+        ):
             return {
                 "current_step": 0,
                 "step_percent": 25,
                 "step_title": "Step 0 of 4 completed: AntiGravity Detected (25%)",
                 "step_name": "AntiGravity Detected",
             }
-        if "[STEP 0." in upper or "DETECTOR_POLL" in upper or "[STEP 9.10]" in upper or "POLLING ANTIGRAVITY" in upper:
+
+        # Step 0 AntiGravity Detector Running (10%)
+        if (
+            "[STEP 0." in upper
+            or "DETECTOR_POLL" in upper
+            or "[STEP 9.10]" in upper
+            or "POLLING ANTIGRAVITY" in upper
+            or "[STEP 9." in upper
+            or "DASHBOARD SERVER SPAWN:" in upper
+        ):
             return {
                 "current_step": 0,
                 "step_percent": 10,
                 "step_title": "Step 0 of 4 running: AntiGravity Detector (10%)",
                 "step_name": "AntiGravity Detector",
-            }
-
-        if "[STEP 9." in upper:
-            return {
-                "current_step": 0,
-                "step_percent": 10,
-                "step_title": "Step 0 of 4 running: AntiGravity Detector (10%)",
-                "step_name": "Pipeline Active",
             }
 
     return {
@@ -532,6 +614,10 @@ class AutomationProcessManager:
                     "pid": self.proc.pid,
                     "message": f"Automation process started successfully (PID: {self.proc.pid}).",
                     "mode": eff_mode,
+                    "current_step": 0,
+                    "step_percent": 10,
+                    "step_title": "Step 0 of 4 running: AntiGravity Detector (10%)",
+                    "step_name": "AntiGravity Detector",
                 }
             except Exception as e:
                 logger.error(f"Failed to spawn automation process: {e}")
@@ -595,6 +681,10 @@ class AutomationProcessManager:
                 "running": False,
                 "pid": None,
                 "message": f"Automation process (PID: {target_pid}) stopped successfully.",
+                "current_step": None,
+                "step_percent": 0,
+                "step_title": "Pipeline Progress: Idle (0%)",
+                "step_name": "Idle",
             }
 
     def resolve_log_file(self) -> Path:
@@ -709,7 +799,7 @@ class AutomationProcessManager:
             except Exception:
                 pass
 
-        recent_logs = self.get_log_tail(60, return_list=True) if running else []
+        recent_logs = self.get_log_tail(300, return_list=True) if running else []
         step_meta = parse_pipeline_step_progress(recent_logs, running)
 
         return {
