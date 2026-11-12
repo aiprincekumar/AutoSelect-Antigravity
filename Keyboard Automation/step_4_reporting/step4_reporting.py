@@ -6735,6 +6735,9 @@ class Step4ReportingEngine:
         if (!isRunning) {{
           updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
         }} else if (statusData && statusData.step_percent !== undefined && statusData.step_percent !== null) {{
+          if (Number(statusData.step_percent) <= 25 && activeRunStepProgress > 25 && statusData.pid && statusData.pid !== currentRunPid) {{
+            activeRunStepProgress = 0;
+          }}
           updateStepProgress(statusData.current_step, true, statusData.step_percent, statusData.step_title, statusData.pid);
         }} else {{
           updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', statusData ? statusData.pid : null);
@@ -6857,6 +6860,9 @@ class Step4ReportingEngine:
             if (!currentlyRunning) {{
               localStorage.setItem('asc_automation_last_mode', selectedMode);
               userInitiatedStop = false;
+              activeRunStepProgress = 0;
+              currentRunPid = null;
+              updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', null);
             }}
 
             const controller = new AbortController();
@@ -7843,12 +7849,8 @@ class Step4ReportingEngine:
                   break;
                 }}
               }}
-              if (isAutomationActive) {{
-                if (latestDetected) {{
-                  updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
-                }} else {{
-                  updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', currentRunPid);
-                }}
+              if (isAutomationActive && latestDetected && latestDetected.pct > activeRunStepProgress) {{
+                updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
               }}
             }}
             let colored = '';
@@ -7941,12 +7943,8 @@ class Step4ReportingEngine:
                     break;
                   }}
                 }}
-                if (isAutomationActive) {{
-                  if (latestDetected) {{
-                    updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
-                  }} else {{
-                    updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', currentRunPid);
-                  }}
+                if (isAutomationActive && latestDetected && !payload.initial && latestDetected.pct > activeRunStepProgress) {{
+                  updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
                 }}
               }}
             }} catch (_) {{}}

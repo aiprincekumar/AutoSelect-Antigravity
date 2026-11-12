@@ -602,6 +602,10 @@ class AutomationProcessManager:
                     "cmd": cmd,
                     "is_paused": False,
                     "user_idle_seconds": 0.0,
+                    "current_step": 0,
+                    "step_percent": 10,
+                    "step_title": "Step 0 of 4 running: AntiGravity Detector (10%)",
+                    "step_name": "AntiGravity Detector",
                 }
                 self.pid_file.parent.mkdir(parents=True, exist_ok=True)
                 with open(self.pid_file, "w", encoding="utf-8") as f:
@@ -743,19 +747,33 @@ class AutomationProcessManager:
 
     def clear_logs(self) -> bool:
         """
-        Safely truncate the active log file.
+        Safely truncate the active log file and any candidate log files so stale logs do not pollute anything.
         Returns True if successful.
         """
+        success = True
+        candidates = [
+            self.workspace_dir / "logs" / "complete_automation.log",
+            self.workspace_dir / "step_9_complete_automation" / "complete_automation.log",
+            self.workspace_dir / "complete_automation.log",
+        ]
+        for cand in candidates:
+            try:
+                if cand.is_file():
+                    with open(cand, "w", encoding="utf-8") as f:
+                        f.write("")
+                    logger.info("[STEP 4.34] [LOG_CLEAR] Truncated log file at %s", cand)
+            except Exception as e:
+                logger.error("[STEP 4.34] [LOG_CLEAR] Error clearing log file %s: %s", cand, e)
+                success = False
+
         target_log = self.resolve_log_file()
         try:
             target_log.parent.mkdir(parents=True, exist_ok=True)
             with open(target_log, "w", encoding="utf-8") as f:
                 f.write("")
-            logger.info("[STEP 4.34] [LOG_CLEAR] Truncated log file at %s", target_log)
-            return True
-        except Exception as e:
-            logger.error("[STEP 4.34] [LOG_CLEAR] Error clearing log file %s: %s", target_log, e)
-            return False
+        except Exception:
+            pass
+        return success
 
     def get_status(self) -> Dict[str, Any]:
         """Compile a complete status summary dictionary."""
@@ -799,8 +817,24 @@ class AutomationProcessManager:
             except Exception:
                 pass
 
-        recent_logs = self.get_log_tail(300, return_list=True) if running else []
-        step_meta = parse_pipeline_step_progress(recent_logs, running)
+        step_meta = None
+        if running and self.pid_file.is_file():
+            try:
+                with open(self.pid_file, "r", encoding="utf-8") as f:
+                    proc_state = json.load(f)
+                if isinstance(proc_state, dict) and "step_percent" in proc_state and proc_state["step_percent"] is not None:
+                    step_meta = {
+                        "current_step": proc_state.get("current_step", 0),
+                        "step_percent": proc_state.get("step_percent", 10),
+                        "step_title": proc_state.get("step_title", "Step 0 of 4 running: AntiGravity Detector (10%)"),
+                        "step_name": proc_state.get("step_name", "AntiGravity Detector"),
+                    }
+            except Exception as e:
+                logger.debug("Could not read step state from pid_file: %s", e)
+
+        if step_meta is None:
+            recent_logs = self.get_log_tail(300, return_list=True) if running else []
+            step_meta = parse_pipeline_step_progress(recent_logs, running)
 
         return {
             "running": running,

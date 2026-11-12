@@ -8775,6 +8775,9 @@ def build_modern_dashboard_html(
         if (!running) {{
           updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
         }} else if (stepPercent !== undefined && stepPercent !== null) {{
+          if (Number(stepPercent) <= 25 && activeRunStepProgress > 25 && pid && pid !== currentRunPid) {{
+            activeRunStepProgress = 0;
+          }}
           updateStepProgress(currentStep, true, stepPercent, stepTitle, pid);
         }} else {{
           updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', pid);
@@ -9147,6 +9150,12 @@ def build_modern_dashboard_html(
 
           const bodyPayload = isAutomationActive ? {{}} : {{ mode: currentExecutionMode }};
 
+          if (!isAutomationActive) {{
+            activeRunStepProgress = 0;
+            currentRunPid = null;
+            updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', null);
+          }}
+
           fetch(API_BASE + endpoint, {{
 
             method: 'POST',
@@ -9257,12 +9266,8 @@ def build_modern_dashboard_html(
             break;
           }}
         }}
-        if (isAutomationActive) {{
-          if (latestDetected) {{
-            updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
-          }} else {{
-            updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', currentRunPid);
-          }}
+        if (!isInitial && isAutomationActive && latestDetected && latestDetected.pct > activeRunStepProgress) {{
+          updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
         }}
 
         if (liveFeedTime) {{

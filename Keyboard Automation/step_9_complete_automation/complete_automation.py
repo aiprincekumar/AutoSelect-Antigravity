@@ -454,6 +454,13 @@ class CompleteAutomationController:
         self.python_exe = self._resolve_python_exe(python_exe_path)
         self.pipeline_steps = discover_pipeline_steps(root_dir=self.workspace_dir, include_future=True)
 
+        self.current_step: Optional[int] = 0
+        self.step_percent: int = 10
+        self.step_title: str = "Step 0 of 4 running: AntiGravity Detector (10%)"
+        self.step_name: str = "AntiGravity Detector"
+        self.is_paused: bool = False
+        self.user_idle_seconds: float = 0.0
+
         # Mode determination
         self._is_test_mode_override: Optional[bool] = None
         if headless is None:
@@ -652,6 +659,29 @@ class CompleteAutomationController:
                 self.logger.debug("Applying settle delay (%.2fs) before Step %d...", settle_delay, step.step_index)
                 time.sleep(settle_delay)
 
+            # Update live process state before spawning step
+            if step.step_index == 1:
+                self._update_process_state(
+                    current_step=1,
+                    step_percent=35,
+                    step_title="Step 1 of 4 running: Chat Identifier & Focus (35%)",
+                    step_name="Chat Identifier",
+                )
+            elif step.step_index == 2:
+                self._update_process_state(
+                    current_step=2,
+                    step_percent=60,
+                    step_title="Step 2 of 4 running: GUI Chat Select & Focus (60%)",
+                    step_name="GUI Chat Select",
+                )
+            elif step.step_index == 3:
+                self._update_process_state(
+                    current_step=3,
+                    step_percent=85,
+                    step_title="Step 3 of 4 running: Keyboard Automation (85%)",
+                    step_name="Keyboard Automation",
+                )
+
             # Build command with explicit config timers
             cmd = [
                 str(self.python_exe),
@@ -785,6 +815,28 @@ class CompleteAutomationController:
 
             executed_count += 1
             self.logger.info("[STEP 9.8] [STEP_FINISH] Step %d (%s) process completed with exit code %d", step.step_index, step.name, retcode)
+            if step.step_index == 1:
+                self._update_process_state(
+                    current_step=1,
+                    step_percent=50,
+                    step_title="Step 1 of 4 completed: Chat Identifier & Focus (50%)",
+                    step_name="Chat Identifier Complete",
+                )
+            elif step.step_index == 2:
+                self._update_process_state(
+                    current_step=2,
+                    step_percent=75,
+                    step_title="Step 2 of 4 completed: GUI Chat Select & Focus (75%)",
+                    step_name="GUI Chat Select Complete",
+                )
+            elif step.step_index == 3:
+                self._update_process_state(
+                    current_step=3,
+                    step_percent=100,
+                    step_title="Step 3 of 4 completed: Keyboard Automation (100%)",
+                    step_name="Keyboard Automation Complete",
+                )
+
             step_report = {
                 "step_index": step.step_index,
                 "key": step.key,
@@ -815,11 +867,38 @@ class CompleteAutomationController:
 
         summary = f"[STEP 9.9] [PIPELINE_SUMMARY] Complete Automation Pipeline completed successfully ({executed_count} steps executed)."
         self.logger.info(summary)
+        self._update_process_state(
+            current_step=3,
+            step_percent=100,
+            step_title="Pipeline Complete: All 4 steps completed (100%)",
+            step_name="Complete",
+        )
         return True, EXIT_CODE_SUCCESS, summary, step_reports
 
-    def _update_process_state(self, is_paused: bool, idle_seconds: float) -> None:
+    def _update_process_state(
+        self,
+        is_paused: Optional[bool] = None,
+        idle_seconds: Optional[float] = None,
+        current_step: Optional[int] = None,
+        step_percent: Optional[int] = None,
+        step_title: Optional[str] = None,
+        step_name: Optional[str] = None,
+    ) -> None:
         """Atomically persist live state to .automation_process.json."""
         try:
+            if is_paused is not None:
+                self.is_paused = bool(is_paused)
+            if idle_seconds is not None:
+                self.user_idle_seconds = float(idle_seconds)
+            if current_step is not None:
+                self.current_step = current_step
+            if step_percent is not None:
+                self.step_percent = int(step_percent)
+            if step_title is not None:
+                self.step_title = str(step_title)
+            if step_name is not None:
+                self.step_name = str(step_name)
+
             self.pid_file.parent.mkdir(parents=True, exist_ok=True)
             data: Dict[str, Any] = {}
             if self.pid_file.is_file():
@@ -830,8 +909,12 @@ class CompleteAutomationController:
                     data = {}
             data["pid"] = os.getpid()
             data["mode"] = self.config.mode
-            data["is_paused"] = is_paused
-            data["user_idle_seconds"] = round(idle_seconds, 1)
+            data["is_paused"] = self.is_paused
+            data["user_idle_seconds"] = round(self.user_idle_seconds, 1)
+            data["current_step"] = self.current_step
+            data["step_percent"] = self.step_percent
+            data["step_title"] = self.step_title
+            data["step_name"] = self.step_name
             data["last_updated"] = time.time()
 
             tmp = self.pid_file.with_suffix(".tmp")
@@ -912,7 +995,14 @@ class CompleteAutomationController:
         # Record initial process state - respect user activity in all modes
         initial_idle = get_idle_duration_seconds()
         initial_paused = (initial_idle < pause_threshold)
-        self._update_process_state(is_paused=initial_paused, idle_seconds=initial_idle)
+        self._update_process_state(
+            is_paused=initial_paused,
+            idle_seconds=initial_idle,
+            current_step=0,
+            step_percent=10,
+            step_title="Step 0 of 4 running: AntiGravity Detector (10%)",
+            step_name="AntiGravity Detector",
+        )
 
         if not self.headless:
             print("\n" + "=" * 78)
@@ -939,6 +1029,13 @@ class CompleteAutomationController:
                 break
 
             check_count += 1
+            if self.step_percent >= 100 or (self.current_step is not None and self.current_step > 0):
+                self._update_process_state(
+                    current_step=0,
+                    step_percent=10,
+                    step_title="Step 0 of 4 running: AntiGravity Detector (10%)",
+                    step_name="AntiGravity Detector",
+                )
             self.logger.info("[STEP 9.10] [DETECTOR_POLL] Polling Antigravity detector (check #%d, mode=%s, interval=%.1fs)", check_count, self.config.mode, interval)
             res = self.detector.detect()
 
@@ -947,6 +1044,12 @@ class CompleteAutomationController:
 
             if res.trigger_matched:
                 self.logger.info("[STEP 9.12] [TRIGGER_FIRE] Trigger matched: Antigravity open & %d pending Grill-Me chat(s) detected", res.pending_grill_me_chats)
+                self._update_process_state(
+                    current_step=0,
+                    step_percent=25,
+                    step_title="Step 0 of 4 completed: AntiGravity Detected (25%)",
+                    step_name="AntiGravity Detected",
+                )
                 # Re-verify user did not begin typing/mouse movement right before pipeline execution
                 self._wait_for_user_idle(pause_threshold)
                 if self._stop_requested:

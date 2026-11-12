@@ -548,6 +548,38 @@ class TestDashboardServer(unittest.TestCase):
         regen = handler.trigger_dashboard_regeneration()
         self.assertTrue(regen.get("success", False))
 
+    def test_19_get_status_prefers_process_state_file_ground_truth(self):
+        """Verify get_status uses ground truth from .automation_process.json even if old logs exist."""
+        manager = AutomationProcessManager(self.workspace_dir)
+        manager.is_running = lambda: True
+        manager.get_pid = lambda: 99999
+        manager.start_time = time.time()
+
+        # Write state file with step 0 (10%)
+        state_data = {
+            "pid": 99999,
+            "mode": "production",
+            "is_paused": False,
+            "user_idle_seconds": 120.0,
+            "current_step": 0,
+            "step_percent": 10,
+            "step_title": "Step 0 of 4 running: AntiGravity Detector (10%)",
+            "step_name": "AntiGravity Detector",
+        }
+        manager.pid_file.parent.mkdir(parents=True, exist_ok=True)
+        with open(manager.pid_file, "w", encoding="utf-8") as f:
+            json.dump(state_data, f)
+
+        # Write log file with stale Step 2 completion line that would parse as 75%
+        manager.resolve_log_file().parent.mkdir(parents=True, exist_ok=True)
+        with open(manager.resolve_log_file(), "w", encoding="utf-8") as f:
+            f.write("[STEP 9.8] [STEP_FINISH] Step 2 process completed with exit code 0\n")
+
+        status = manager.get_status()
+        self.assertEqual(status["step_percent"], 10)
+        self.assertEqual(status["current_step"], 0)
+        self.assertEqual(status["step_name"], "AntiGravity Detector")
+
 
 if __name__ == "__main__":
     unittest.main()
