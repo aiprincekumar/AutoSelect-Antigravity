@@ -1355,6 +1355,11 @@ class DashboardServer:
                 self.httpd.server_close()
             except Exception:
                 pass
+            if getattr(self, "_thread", None) and self._thread.is_alive():
+                try:
+                    self._thread.join(timeout=2.0)
+                except Exception:
+                    pass
             self.httpd = None
             logger.info("Dashboard server shutdown complete.")
 
