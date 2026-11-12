@@ -1091,7 +1091,9 @@ class GrillMeAutomator:
 
         # Ensure target window is restored, maximized, and in foreground before proceeding
         if IS_WINDOWS and (self.auto_focus or self.auto_maximize):
-            self._ensure_window_ready()
+            if not self._ensure_window_ready():
+                logger.error("[ABORT] Target window could not be focused or maximized.")
+                return False
 
         active_window = get_active_window_title()
         logger.info("[STEP 3.4] [FOREGROUND_CHECK] Foreground window verified before execution: '%s'", active_window)

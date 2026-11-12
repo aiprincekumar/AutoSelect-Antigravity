@@ -8932,75 +8932,96 @@
 
 
 
-      function updateStepProgress(step, isRunning, customPercent, customTitle) {
+      let activeRunStepProgress = 0;
+      let currentRunPid = null;
+
+      function updateStepProgress(step, isRunning, customPercent, customTitle, runPid) {
         const progressBar = document.getElementById('header-progress-bar');
         const progressTrack = document.getElementById('header-progress-track');
         if (!progressBar) return;
 
-        let pct = 0;
-        let titleText = 'Pipeline Progress: Idle (0%)';
-
+        // Process is stopped / idle: reset to 0% with smooth fade
         if (!isRunning) {
-          pct = 0;
-          titleText = 'Pipeline Progress: Idle (0%)';
+          activeRunStepProgress = 0;
+          currentRunPid = null;
           progressBar.classList.remove('active');
           progressBar.style.width = '0%';
           progressBar.style.opacity = '0';
-          if (progressTrack) progressTrack.title = titleText;
+          if (progressTrack) progressTrack.title = 'Pipeline Progress: Idle (0%)';
           return;
         }
 
+        // Check if process restarted (PID changed)
+        if (runPid !== undefined && runPid !== null) {
+          if (currentRunPid !== null && runPid !== currentRunPid) {
+            activeRunStepProgress = 0;
+          }
+          currentRunPid = runPid;
+        }
+
+        let targetPct = 0;
+        let titleText = 'Step 0 of 4 running: AntiGravity Detector (10%)';
+
         if (customPercent !== undefined && customPercent !== null) {
-          pct = Number(customPercent);
-          titleText = customTitle || `Pipeline Progress: ${pct}%`;
+          targetPct = Number(customPercent);
+          titleText = customTitle || `Pipeline Progress: ${targetPct}%`;
         } else {
-          // Default 4-step pipeline percentages
           switch (step) {
             case 0:
-              pct = 10;
-              titleText = 'Step 0/4 Running: AntiGravity Detector (10%)';
+              targetPct = 10;
+              titleText = 'Step 0 of 4 running: AntiGravity Detector (10%)';
               break;
             case 0.5:
-              pct = 25;
-              titleText = 'Step 0/4 Complete: AntiGravity Detected (25%)';
+              targetPct = 25;
+              titleText = 'Step 0 of 4 completed: AntiGravity Detected (25%)';
               break;
             case 1:
-              pct = 35;
-              titleText = 'Step 1/4 Running: Chat Identifier & Focus (35%)';
+              targetPct = 35;
+              titleText = 'Step 1 of 4 running: Chat Identifier & Focus (35%)';
               break;
             case 1.5:
-              pct = 50;
-              titleText = 'Step 1/4 Complete: Chat Identifier & Focus (50%)';
+              targetPct = 50;
+              titleText = 'Step 1 of 4 completed: Chat Identifier & Focus (50%)';
               break;
             case 2:
-              pct = 60;
-              titleText = 'Step 2/4 Running: GUI Chat Select & Focus (60%)';
+              targetPct = 60;
+              titleText = 'Step 2 of 4 running: GUI Chat Select & Focus (60%)';
               break;
             case 2.5:
-              pct = 75;
-              titleText = 'Step 2/4 Complete: GUI Chat Select & Focus (75%)';
+              targetPct = 75;
+              titleText = 'Step 2 of 4 completed: GUI Chat Select & Focus (75%)';
               break;
             case 3:
-              pct = 85;
-              titleText = 'Step 3/4 Running: Keyboard Automation (85%)';
+              targetPct = 85;
+              titleText = 'Step 3 of 4 running: Keyboard Automation (85%)';
               break;
             case 3.5:
             case 4:
-              pct = 100;
-              titleText = 'Step 3/4 Complete: Pipeline Finished (100%)';
+              targetPct = 100;
+              titleText = 'Step 3 of 4 completed: Keyboard Automation (100%)';
               break;
             default:
-              pct = 10;
-              titleText = 'Pipeline Active • Step 0/4 (10%)';
+              targetPct = 10;
+              titleText = 'Step 0 of 4 running: AntiGravity Detector (10%)';
               break;
           }
         }
 
-        pct = Math.max(0, Math.min(100, pct));
-        progressBar.classList.add('active');
-        progressBar.style.width = pct + '%';
-        progressBar.style.opacity = pct > 0 ? '1' : '0';
-        if (progressTrack) progressTrack.title = customTitle || titleText;
+        targetPct = Math.max(0, Math.min(100, targetPct));
+
+        // When a new cycle begins in continuous background mode (after reaching 100%)
+        if (activeRunStepProgress >= 100 && targetPct <= 25) {
+          activeRunStepProgress = 0;
+        }
+
+        // Strict monotonic progression: ONLY advance forward during active run
+        if (targetPct >= activeRunStepProgress) {
+          activeRunStepProgress = targetPct;
+          progressBar.classList.add('active');
+          progressBar.style.width = activeRunStepProgress + '%';
+          progressBar.style.opacity = activeRunStepProgress > 0 ? '1' : '0';
+          if (progressTrack) progressTrack.title = customTitle || titleText;
+        }
       }
 
       function detectStepFromLogLine(line) {
@@ -9008,46 +9029,48 @@
         const upper = line.toUpperCase();
 
         if (upper.includes('PIPELINE COMPLETED SUCCESSFULLY') || upper.includes('[STEP 9.9]') || upper.includes('CYCLE COMPLETED')) {
-          return { step: 4, pct: 100, title: 'Pipeline Complete (100%)' };
+          return { step: 4, pct: 100, title: 'Pipeline Complete: All 4 steps completed (100%)' };
         }
         if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 3')) || upper.includes('STEP 3 COMPLETED') || upper.includes('KEYBOARD AUTOMATION COMPLETED')) {
-          return { step: 3.5, pct: 100, title: 'Step 3/4 Complete: Keyboard Automation (100%)' };
+          return { step: 3.5, pct: 100, title: 'Step 3 of 4 completed: Keyboard Automation (100%)' };
         }
-        if (upper.includes('[STEP 3.') || upper.includes('[STEP 3:') || upper.includes('KEYBOARD AUTOMATION')) {
-          return { step: 3, pct: 85, title: 'Step 3/4 Running: Keyboard Automation (85%)' };
+        if (upper.includes('[STEP 3.') || upper.includes('[STEP 3:') || upper.includes('KEYBOARD AUTOMATION') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 3'))) {
+          return { step: 3, pct: 85, title: 'Step 3 of 4 running: Keyboard Automation (85%)' };
         }
         if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 2')) || upper.includes('STEP 2 COMPLETED') || upper.includes('CHAT SELECTED')) {
-          return { step: 2.5, pct: 75, title: 'Step 2/4 Complete: GUI Chat Select & Focus (75%)' };
+          return { step: 2.5, pct: 75, title: 'Step 2 of 4 completed: GUI Chat Select & Focus (75%)' };
         }
-        if (upper.includes('[STEP 2.') || upper.includes('[STEP 2:') || upper.includes('GUI CHAT SELECT') || upper.includes('SELECTING TARGET CHAT')) {
-          return { step: 2, pct: 60, title: 'Step 2/4 Running: GUI Chat Select & Focus (60%)' };
+        if (upper.includes('[STEP 2.') || upper.includes('[STEP 2:') || upper.includes('GUI CHAT SELECT') || upper.includes('SELECTING TARGET CHAT') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 2'))) {
+          return { step: 2, pct: 60, title: 'Step 2 of 4 running: GUI Chat Select & Focus (60%)' };
         }
         if ((upper.includes('[STEP 9.8]') && upper.includes('STEP 1')) || upper.includes('STEP 1 COMPLETED') || upper.includes('[STEP 9.14]')) {
-          return { step: 1.5, pct: 50, title: 'Step 1/4 Complete: Chat Identifier & Focus (50%)' };
+          return { step: 1.5, pct: 50, title: 'Step 1 of 4 completed: Chat Identifier & Focus (50%)' };
         }
-        if (upper.includes('[STEP 1.') || upper.includes('[STEP 1:') || upper.includes('CHAT IDENTIFIER') || upper.includes('IDENTIFYING ACTIVE CHAT')) {
-          return { step: 1, pct: 35, title: 'Step 1/4 Running: Chat Identifier & Focus (35%)' };
+        if (upper.includes('[STEP 1.') || upper.includes('[STEP 1:') || upper.includes('CHAT IDENTIFIER') || upper.includes('IDENTIFYING ACTIVE CHAT') || (upper.includes('[STEP 9.3]') && upper.includes('STEP 1'))) {
+          return { step: 1, pct: 35, title: 'Step 1 of 4 running: Chat Identifier & Focus (35%)' };
         }
         if (upper.includes('TRIGGER MATCHED') || upper.includes('[STEP 9.12]') || upper.includes('ANTIGRAVITY DETECTED')) {
-          return { step: 0.5, pct: 25, title: 'Step 0/4 Complete: AntiGravity Detected (25%)' };
+          return { step: 0.5, pct: 25, title: 'Step 0 of 4 completed: AntiGravity Detected (25%)' };
         }
         if (upper.includes('[STEP 0.') || upper.includes('DETECTOR_POLL') || upper.includes('[STEP 9.10]') || upper.includes('POLLING ANTIGRAVITY')) {
-          return { step: 0, pct: 10, title: 'Step 0/4 Running: AntiGravity Detector (10%)' };
+          return { step: 0, pct: 10, title: 'Step 0 of 4 running: AntiGravity Detector (10%)' };
         }
         if (upper.includes('[STEP 9.')) {
-          return { step: 0, pct: 10, title: 'Pipeline Active • Step 0/4 (10%)' };
+          return { step: 0, pct: 10, title: 'Step 0 of 4 running: AntiGravity Detector (10%)' };
         }
         return null;
       }
 
-      function updateStatusUI(running, isPaused, idleSec, threshold, currentStep, stepPercent, stepTitle) {
+      function updateStatusUI(running, isPaused, idleSec, threshold, currentStep, stepPercent, stepTitle, pid) {
 
         isAutomationActive = running;
 
         if (!running) {
           updateStepProgress(null, false, 0, 'Pipeline Progress: Idle (0%)');
         } else if (stepPercent !== undefined && stepPercent !== null) {
-          updateStepProgress(currentStep, true, stepPercent, stepTitle);
+          updateStepProgress(currentStep, true, stepPercent, stepTitle, pid);
+        } else {
+          updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', pid);
         }
 
         if (toggleBtn) {
@@ -9227,7 +9250,7 @@
 
               const d = data.data;
 
-              updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title);
+              updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title, d.pid);
 
               if (d.mode && typeof d.mode === 'string') {
 
@@ -9277,7 +9300,7 @@
 
                 const d = payload.data;
 
-                updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title);
+                updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title, d.pid);
 
                 if (d.mode && typeof d.mode === 'string') {
 
@@ -9318,7 +9341,7 @@
               const d = payload.data || {};
               isAutomationActive = true;
               syncHeaderActionButton(true);
-              updateStatusUI(true, false, d.idle_seconds || 0, d.pause_threshold || 60, 0, 10, 'Stage 0: Pre-Flight');
+              updateStatusUI(true, false, d.idle_seconds || 0, d.pause_threshold || 60, 0, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', d.pid);
               const tickerStatusMsg = document.getElementById('ticker-status-msg');
               if (tickerStatusMsg) {
                 tickerStatusMsg.textContent = '🚀 Task Started • AutoSelect Antigravity Automation Active';
@@ -9341,12 +9364,13 @@
                 tickerStatusMsg.textContent = `⚡ ${stageName} • Active`;
               }
               let pct = 10;
-              if (stageNum === 1) pct = 25;
-              else if (stageNum === 2) pct = 50;
-              else if (stageNum === 3) pct = 75;
-              else if (stageNum === 4) pct = 95;
-              else if (stageNum === 9) pct = 15;
-              updateStepProgress(stageNum, true, pct, `${stageName} (${pct}%)`);
+              let title = 'Step 0 of 4 running: AntiGravity Detector (10%)';
+              if (stageNum === 1) { pct = 35; title = 'Step 1 of 4 running: Chat Identifier & Focus (35%)'; }
+              else if (stageNum === 2) { pct = 60; title = 'Step 2 of 4 running: GUI Chat Select & Focus (60%)'; }
+              else if (stageNum === 3) { pct = 85; title = 'Step 3 of 4 running: Keyboard Automation (85%)'; }
+              else if (stageNum === 4) { pct = 100; title = 'Step 3 of 4 completed: Pipeline Finished (100%)'; }
+              else if (stageNum === 9) { pct = 10; title = 'Step 0 of 4 running: AntiGravity Detector (10%)'; }
+              updateStepProgress(stageNum, true, pct, title, currentRunPid);
               showToast(`⚡ ${stageName} in progress...`, 'info');
             } catch (_) {}
           });
@@ -9500,11 +9524,17 @@
       function appendLiveFeedLines(newLines, timestamp, isInitial) {
         if (!Array.isArray(newLines) || newLines.length === 0) return;
 
-        for (let i = 0; i < newLines.length; i++) {
+        // Scan from newest to oldest in this batch to find the latest valid step
+        let latestDetected = null;
+        for (let i = newLines.length - 1; i >= 0; i--) {
           const detected = detectStepFromLogLine(newLines[i]);
           if (detected) {
-            updateStepProgress(detected.step, true, detected.pct, detected.title);
+            latestDetected = detected;
+            break;
           }
+        }
+        if (latestDetected && isAutomationActive) {
+          updateStepProgress(latestDetected.step, true, latestDetected.pct, latestDetected.title, currentRunPid);
         }
 
         if (liveFeedTime) {
