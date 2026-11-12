@@ -3047,8 +3047,8 @@
       <div class="header-actions">
         <span class="status-pill status-bridge-online" id="server-bridge-pill" title="Control Server active on port 8501">🟢 Server Online</span>
         <span class="status-pill status-idle" id="dashboard-status-pill">⚪ Inactive</span>
-        <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" title="Operating in Single-Run Test Mode (Auto-Stop on Completion) • Click to toggle to LIVE" style="background: rgba(245, 158, 11, 0.15); color: #fbbf24; border: 1px solid rgba(245, 158, 11, 0.35); cursor: pointer; font-weight: 700; user-select: none;">
-          🧪 TEST
+        <span class="status-pill status-mode-badge" id="header-mode-badge" role="button" tabindex="0" title="Operating in Continuous Live Mode (Continuous Loop) • Click to toggle to TEST" style="background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.35); cursor: pointer; font-weight: 700; user-select: none;">
+          ⚡ LIVE
         </span>
         <button class="btn btn-automation-toggle state-stopped" id="automation-toggle-btn" title="Toggle AutoSelect Antigravity Automation">
           <span class="control-icon" id="control-icon">▶️</span>
@@ -3095,7 +3095,7 @@
       <button class="tab-btn" id="tab-btn-modes" role="tab" aria-selected="false" aria-controls="tab-modes" data-tab="modes">
         <span class="tab-icon">🎛️</span>
         <span class="tab-label">Mode Switch</span>
-        <span class="tab-badge tab-badge-test" id="tab-modes-badge">Test</span>
+        <span class="tab-badge tab-badge-prod" id="tab-modes-badge">Prod</span>
       </button>
       <button class="tab-btn" id="tab-btn-config" role="tab" aria-selected="false" aria-controls="tab-config" data-tab="config">
         <span class="tab-icon">⚙️</span>
@@ -4064,11 +4064,11 @@
               <span>Active Operating Mode:</span>
             </div>
             <div class="banner-mode-switcher modes-segmented-group" role="radiogroup" aria-label="Active Execution Mode Switcher">
-              <button type="button" class="banner-mode-btn active" id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
+              <button type="button" class="banner-mode-btn " id="banner-mode-test-btn" data-mode="test" title="Switch to Test Mode (Single-Run Auto-Stop)">
                 <span>🧪 Test Mode</span>
                 <span class="banner-mode-indicator">Auto-Stop</span>
               </button>
-              <button type="button" class="banner-mode-btn " id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
+              <button type="button" class="banner-mode-btn active" id="banner-mode-prod-btn" data-mode="production" title="Switch to Production Mode (Continuous Autonomous Loop)">
                 <span>🛡️ Production</span>
                 <span class="banner-mode-indicator">Continuous Loop</span>
               </button>
@@ -4078,7 +4078,7 @@
           <!-- Two Rich Interactive Mode Cards -->
           <div class="mode-lifecycle-grid">
             <!-- 1. Test Mode Card -->
-            <div class="lifecycle-card card-test active-mode-card" id="banner-card-test" role="button" tabindex="0" title="Click to select Test Mode">
+            <div class="lifecycle-card card-test " id="banner-card-test" role="button" tabindex="0" title="Click to select Test Mode">
               <div class="lifecycle-card-top">
                 <div class="lifecycle-card-title">
                   <span class="card-icon">🧪</span>
@@ -4104,7 +4104,7 @@
             </div>
 
             <!-- 2. Production Mode Card -->
-            <div class="lifecycle-card card-production " id="banner-card-prod" role="button" tabindex="0" title="Click to select Production Mode">
+            <div class="lifecycle-card card-production active-mode-card" id="banner-card-prod" role="button" tabindex="0" title="Click to select Production Mode">
               <div class="lifecycle-card-top">
                 <div class="lifecycle-card-title">
                   <span class="card-icon">🛡️</span>
@@ -4247,7 +4247,7 @@
                 <p class="config-subgroup-desc">Select whether the automation pipeline runs in full autonomous Production mode (continuous loop until manually stopped) or fast Test mode (single-run auto-stop).</p>
                 
                 <div class="mode-pill-selector" role="radiogroup" aria-label="Operating Mode">
-                  <button type="button" class="mode-pill " id="cfg-mode-prod-btn" data-mode="production">
+                  <button type="button" class="mode-pill active" id="cfg-mode-prod-btn" data-mode="production">
                     <div class="mode-pill-content">
                       <span class="mode-pill-icon">🛡️</span>
                       <div class="mode-pill-text">
@@ -4257,7 +4257,7 @@
                     </div>
                     <span class="mode-pill-check">✓</span>
                   </button>
-                  <button type="button" class="mode-pill active" id="cfg-mode-test-btn" data-mode="test">
+                  <button type="button" class="mode-pill " id="cfg-mode-test-btn" data-mode="test">
                     <div class="mode-pill-content">
                       <span class="mode-pill-icon">🧪</span>
                       <div class="mode-pill-text">
@@ -4268,7 +4268,7 @@
                     <span class="mode-pill-check">✓</span>
                   </button>
                 </div>
-                <input type="hidden" id="cfg-runtime-mode" value="test">
+                <input type="hidden" id="cfg-runtime-mode" value="production">
 
                 <!-- Dedicated Horizontal Divider & Mode Lifecycle Callout Block -->
                 <hr class="mode-lifecycle-divider">
@@ -4617,7 +4617,7 @@
                   </div>
                   <pre class="json-preview-code"><code id="runtime-json-preview">{
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "test",
+  "mode": "production",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,
     "step0_poll_interval_test_seconds": 10.0,
@@ -4947,7 +4947,7 @@
     <footer>
       <div>Generated by AutoSelect Antigravity (Step 4 Reporting Subsystem)</div>
       <div>Department 06 (Backend & API) & Department 04 (UI/UX Design System) Standard</div>
-      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-07 11:01:17</span></div>
+      <div>Last Synchronized: <span style="font-family: var(--font-mono);">2026-11-13 01:52:22</span></div>
     </footer>
   </div>
 
@@ -4960,7 +4960,7 @@
   <script id="runtime-config-data" type="application/json">
 {
   "_comment": "Step 9: Complete Automation Configuration - AutoSelect Antigravity Master Configuration",
-  "mode": "test",
+  "mode": "production",
   "timing": {
     "step0_poll_interval_prod_seconds": 300.0,
     "step0_poll_interval_test_seconds": 10.0,
