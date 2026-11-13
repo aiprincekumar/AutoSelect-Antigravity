@@ -429,6 +429,7 @@ class AutomationProcessManager:
         self.start_time: Optional[float] = None
         self.active_mode: str = "production"
         self._lock = threading.RLock()
+        self.clear_generation: int = 0
 
         # Recover prior state if server was restarted while automation was running
         self._recover_state()
@@ -585,7 +586,8 @@ class AutomationProcessManager:
             if run_pipeline:
                 cmd.append("--run-pipeline")
 
-            # Prepare log destination
+            # Reset / truncate log files on start so a fresh run starts at 0 logs
+            self.clear_logs()
             self.log_file.parent.mkdir(parents=True, exist_ok=True)
             log_fp = open(self.log_file, "a", encoding="utf-8")
             log_fp.write(f"\n[{time.strftime('%Y-%m-%d %H:%M:%S')}] --- Dashboard Server Spawn: {' '.join(cmd)} ---\n")
@@ -776,11 +778,18 @@ class AutomationProcessManager:
         Returns True if successful.
         """
         success = True
+        with self._lock:
+            self.clear_generation += 1
+
         candidates = [
             self.workspace_dir / "logs" / "complete_automation.log",
             self.workspace_dir / "step_9_complete_automation" / "complete_automation.log",
             self.workspace_dir / "complete_automation.log",
         ]
+        target_log = self.resolve_log_file()
+        if target_log not in candidates:
+            candidates.append(target_log)
+
         for cand in candidates:
             try:
                 if cand.is_file():
@@ -791,7 +800,6 @@ class AutomationProcessManager:
                 logger.error("[STEP 4.34] [LOG_CLEAR] Error clearing log file %s: %s", cand, e)
                 success = False
 
-        target_log = self.resolve_log_file()
         try:
             target_log.parent.mkdir(parents=True, exist_ok=True)
             with open(target_log, "w", encoding="utf-8") as f:
@@ -1046,7 +1054,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 self.wfile.write(msg.encode("utf-8"))
                 self.wfile.flush()
 
-                # 2. Send initial log tail so client immediately has recent activity without waiting for new events
+                # 2. Send initial log state
                 log_path = mgr.resolve_log_file()
                 last_mtime = log_path.stat().st_mtime if log_path.is_file() else 0.0
                 last_size = log_path.stat().st_size if log_path.is_file() else 0
@@ -1056,22 +1064,37 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                 last_status_broadcast = time.time()
                 last_wip_broadcast = time.time()
                 current_stage: Optional[int] = None
+                client_clear_gen = getattr(mgr, "clear_generation", 0)
 
-                initial_lines = mgr.get_log_tail(50, return_list=True)
-                if initial_lines:
-                    if last_running:
+                # Send initial log tail ONLY if automation is actively running.
+                # When idle at start, send initial clean log state with 0 lines so live log counter starts at 0.
+                if last_running:
+                    initial_lines = mgr.get_log_tail(50, return_list=True)
+                    if initial_lines:
                         for l in reversed(initial_lines):
                             stg = extract_stage_from_line(l)
                             if stg is not None:
                                 current_stage = stg
                                 break
 
+                        log_payload = {
+                            "lines": initial_lines,
+                            "total_lines": len(initial_lines),
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "log_file": str(log_path),
+                            "initial": True,
+                        }
+                        msg = f"event: log\ndata: {json.dumps(log_payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+                else:
                     log_payload = {
-                        "lines": initial_lines,
-                        "total_lines": len(initial_lines),
+                        "lines": [],
+                        "total_lines": 0,
                         "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
                         "log_file": str(log_path),
                         "initial": True,
+                        "idle": True,
                     }
                     msg = f"event: log\ndata: {json.dumps(log_payload)}\n\n"
                     self.wfile.write(msg.encode("utf-8"))
@@ -1090,6 +1113,8 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                     if not last_running and curr_running:
                         logger.info("[STEP 4.42] [SSE_TASK_START] Process started (PID: %s)", curr_pid)
                         current_stage = 0
+                        last_size = 0
+                        last_mtime = 0.0
                         start_payload = {
                             "success": True,
                             "event": "task_start",
@@ -1162,6 +1187,23 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                         last_pid = curr_pid
                         last_status_broadcast = now
 
+                    # 4b. Detect server-side log clear
+                    curr_clear_gen = getattr(mgr, "clear_generation", 0)
+                    if curr_clear_gen != client_clear_gen:
+                        client_clear_gen = curr_clear_gen
+                        last_size = 0
+                        last_mtime = 0.0
+                        clear_payload = {
+                            "lines": [],
+                            "total_lines": 0,
+                            "cleared": True,
+                            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                            "log_file": str(log_path),
+                        }
+                        msg = f"event: log\ndata: {json.dumps(clear_payload)}\n\n"
+                        self.wfile.write(msg.encode("utf-8"))
+                        self.wfile.flush()
+
                     # 5. Check log file modifications & parse for stage transitions
                     log_path = mgr.resolve_log_file()
                     if log_path.is_file():
@@ -1170,7 +1212,21 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
                             curr_mtime = stat_info.st_mtime
                             curr_size = stat_info.st_size
 
-                            if curr_size != last_size or curr_mtime != last_mtime:
+                            # Check if file was truncated/cleared on disk
+                            if curr_size == 0 and last_size > 0:
+                                last_size = 0
+                                last_mtime = curr_mtime
+                                clear_payload = {
+                                    "lines": [],
+                                    "total_lines": 0,
+                                    "cleared": True,
+                                    "timestamp": time.strftime("%Y-%m-%dT%H:%M:%SZ", time.gmtime()),
+                                    "log_file": str(log_path),
+                                }
+                                msg = f"event: log\ndata: {json.dumps(clear_payload)}\n\n"
+                                self.wfile.write(msg.encode("utf-8"))
+                                self.wfile.flush()
+                            elif curr_size != last_size or curr_mtime != last_mtime:
                                 new_lines = []
                                 if curr_size > last_size and last_size > 0:
                                     try:
@@ -1373,7 +1429,7 @@ class DashboardRequestHandler(BaseHTTPRequestHandler):
         if path == "/api/logs/clear":
             success = mgr.clear_logs()
             logger.info("[STEP 4.39] [API_LOGS_CLEAR] Cleared log file (success=%s)", success)
-            self.send_json_response({"cleared": success, "message": "Log file cleared successfully." if success else "Failed to clear log file."})
+            self.send_json_response({"cleared": success, "total_lines": 0, "message": "Log file cleared successfully." if success else "Failed to clear log file."})
             return
 
         # 3. API: Save Runtime Configuration

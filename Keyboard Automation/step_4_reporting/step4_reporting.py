@@ -7162,6 +7162,9 @@ class Step4ReportingEngine:
 
           eventSource.addEventListener('task_start', (e) => {{
             try {{
+              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console ready. Starting fresh task run...</div>';
+              if (logBadge) logBadge.textContent = '0';
+              if (floatingLogBadge) floatingLogBadge.textContent = '0';
               isAutomationActive = true;
               localStorage.setItem('asc_automation_running', 'true');
               updateAutomationUI(true, true);
@@ -7923,11 +7926,14 @@ class Step4ReportingEngine:
               if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
               logLines = 0;
               if (logBadge) logBadge.textContent = '0';
+              if (floatingLogBadge) floatingLogBadge.textContent = '0';
+              showToast('Logs cleared successfully.');
             }})
             .catch(err => {{
               if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared locally.</div>';
               logLines = 0;
               if (logBadge) logBadge.textContent = '0';
+              if (floatingLogBadge) floatingLogBadge.textContent = '0';
             }});
         }});
       }}
@@ -7951,10 +7957,20 @@ class Step4ReportingEngine:
           eventSource.addEventListener('log', (e) => {{
             try {{
               const payload = JSON.parse(e.data);
-              if (payload && Array.isArray(payload.lines) && payload.lines.length > 0) {{
-                let startIdx = 0;
-                for (let i = payload.lines.length - 1; i >= 0; i--) {{
-                  const u = payload.lines[i].toUpperCase();
+              if (payload) {{
+                if (payload.cleared === true || payload.total_lines === 0) {{
+                  if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
+                  logLines = 0;
+                  if (logBadge) logBadge.textContent = '0';
+                  if (floatingLogBadge) floatingLogBadge.textContent = '0';
+                }} else if (Array.isArray(payload.lines) && payload.lines.length > 0) {{
+                  if (payload.total_lines !== undefined) {{
+                    if (logBadge) logBadge.textContent = payload.total_lines;
+                    if (floatingLogBadge) floatingLogBadge.textContent = payload.total_lines;
+                  }}
+                  let startIdx = 0;
+                  for (let i = payload.lines.length - 1; i >= 0; i--) {{
+                    const u = payload.lines[i].toUpperCase();
                   if (u.includes('[STEP 9.1]') || u.includes('DASHBOARD SERVER SPAWN:') || u.includes('[PROCESS_SPAWN]') || u.includes('[STEP 4.34]')) {{
                     startIdx = i;
                     break;

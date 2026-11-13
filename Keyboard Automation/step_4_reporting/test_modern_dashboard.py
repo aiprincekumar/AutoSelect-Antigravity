@@ -208,6 +208,15 @@ class TestModernDashboardSuite(unittest.TestCase):
         self.assertIn("!isAutomationActive || refreshMode === 'event'", content,
                       "Must strictly guard against idle reload loop when no task is active.")
 
+    def test_06_mini_log_window_clear_and_unified_clear_handler(self):
+        """Verify mini log window clear button, standby state, and unified clearAllLogsUI handler."""
+        content = (self.modern_dir / "dashboard.html").read_text(encoding="utf-8")
+        self.assertIn('id="btn-feed-clear-logs"', content, "Must have clear button on mini log feed card.")
+        self.assertIn('id="btn-clear-logs"', content, "Must have clear button in full drawer.")
+        self.assertIn('id="live-feed-stream"', content, "Must have live feed stream element.")
+        self.assertIn("clearAllLogsUI", content, "Must define unified clearAllLogsUI function.")
+        self.assertIn("btnFeedClearLogs", content, "Must bind click listener to mini log feed clear button.")
+
 
 if __name__ == "__main__":
     unittest.main()

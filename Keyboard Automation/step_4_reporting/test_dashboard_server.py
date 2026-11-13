@@ -689,6 +689,51 @@ class TestDashboardServer(unittest.TestCase):
             if orig_get_idle is not None:
                 w32.get_idle_duration_seconds = orig_get_idle
 
+    def test_24_manager_clear_logs_and_api_endpoint(self):
+        """Verify clear_logs truncates candidate files, increments clear_generation, and /api/logs/clear responds cleanly."""
+        target_log = self.manager.resolve_log_file()
+        target_log.parent.mkdir(parents=True, exist_ok=True)
+        target_log.write_text("Line 1\nLine 2\nLine 3\n", encoding="utf-8")
+        self.assertTrue(target_log.stat().st_size > 0)
+
+        initial_gen = getattr(self.manager, "clear_generation", 0)
+
+        status, _, body = self._http_request("POST", "/api/logs/clear")
+        self.assertEqual(status, 200)
+        self.assertTrue(body["success"])
+        self.assertTrue(body["data"]["cleared"])
+        self.assertEqual(body["data"].get("total_lines"), 0)
+        self.assertEqual(self.manager.clear_generation, initial_gen + 1)
+        self.assertEqual(target_log.stat().st_size, 0)
+
+    def test_25_events_sse_initial_zero_logs_when_idle(self):
+        """Verify that when automation is idle, SSE /api/automation/events initial log event has total_lines=0."""
+        # Ensure log file has content to prove idle mode does NOT leak historical lines into SSE live feed
+        target_log = self.manager.resolve_log_file()
+        target_log.parent.mkdir(parents=True, exist_ok=True)
+        target_log.write_text("Old historical log line 1\nOld historical log line 2\n", encoding="utf-8")
+
+        url = f"http://{self.server.host}:{self.server.actual_port}/api/automation/events"
+        req = urllib.request.Request(url)
+        with urllib.request.urlopen(req, timeout=3.0) as resp:
+            self.assertEqual(resp.status, 200)
+            events_read = []
+            for _ in range(12):
+                line = resp.readline().decode("utf-8")
+                if not line:
+                    break
+                if line.startswith("data:"):
+                    payload = json.loads(line.replace("data:", "").strip())
+                    events_read.append(payload)
+                if len(events_read) >= 2:
+                    break
+
+            log_event = next((p for p in events_read if "total_lines" in p), None)
+            self.assertIsNotNone(log_event, "Must receive initial log event from SSE stream")
+            self.assertEqual(log_event["total_lines"], 0, "Idle automation must start with total_lines=0")
+            self.assertEqual(log_event["lines"], [], "Idle automation must not send stale lines")
+            self.assertTrue(log_event.get("idle", False), "Idle automation log payload should indicate idle")
+
 
 if __name__ == "__main__":
     unittest.main()

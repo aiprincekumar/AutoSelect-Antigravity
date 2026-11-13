@@ -5240,6 +5240,9 @@ def build_modern_dashboard_html(
           </div>
           <div class="live-feed-actions">
             <span style="font-size: 0.72rem; color: var(--text-muted);" id="live-feed-time">Event Stream Active</span>
+            <button type="button" class="live-feed-btn" id="btn-feed-clear-logs" title="Clear Live Mini Feed & Logs">
+              <span>🧹 Clear Logs</span>
+            </button>
             <button type="button" class="live-feed-btn" id="btn-feed-open-drawer" title="Expand Full Interactive Terminal Drawer">
               <span>🖥️ View Full Log</span>
             </button>
@@ -5247,8 +5250,8 @@ def build_modern_dashboard_html(
         </div>
         <div class="live-feed-terminal" id="live-feed-stream" role="log" aria-live="polite">
           <div class="live-feed-item" style="color: #64748b;">
-            <span class="live-feed-time">Waiting:</span>
-            <span class="live-feed-msg">Connecting to live automation event stream...</span>
+            <span class="live-feed-time">Ready:</span>
+            <span class="live-feed-msg">Automation idle. Logs start at 0 upon task execution...</span>
           </div>
         </div>
       </section>
@@ -9010,53 +9013,62 @@ def build_modern_dashboard_html(
 
 
 
+      // Live feed history buffer and unified clear UI handler
+      let liveFeedHistory = [];
+
+      function clearAllLogsUI() {{
+        liveFeedHistory = [];
+        const stream = document.getElementById('live-feed-stream');
+        if (stream) {{
+          stream.innerHTML = '<div class="live-feed-item" style="color: #64748b;"><span class="live-feed-time">Ready:</span><span class="live-feed-msg">Logs cleared. Waiting for next event...</span></div>';
+        }}
+        const feedTime = document.getElementById('live-feed-time');
+        if (feedTime) {{
+          feedTime.textContent = 'Logs Cleared';
+        }}
+        const terminal = document.getElementById('logs-terminal');
+        if (terminal) {{
+          terminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
+        }}
+        logLines = 0;
+        const badge = document.getElementById('log-count-badge');
+        if (badge) badge.textContent = '0';
+      }}
+
       // Server-Sent Events (SSE) Live Status Stream with fallback to polling (Phase 03)
-
       try {{
-
         if (typeof EventSource !== 'undefined') {{
-
           const eventSource = new EventSource(API_BASE + '/api/automation/events');
 
           eventSource.addEventListener('status', (e) => {{
-
             try {{
-
               const payload = JSON.parse(e.data);
-
               if (payload && payload.success && payload.data) {{
-
                 const d = payload.data;
-
                 updateStatusUI(!!d.running, !!d.is_paused, d.idle_seconds, d.pause_threshold, d.current_step, d.step_percent, d.step_title, d.pid);
-
                 if (d.mode && typeof d.mode === 'string') {{
-
                   const serverMode = d.mode.trim().toLowerCase();
-
                   if (serverMode !== currentExecutionMode.toLowerCase()) {{
-
                     currentExecutionMode = serverMode;
-
                     applyExecutionModeUI(currentExecutionMode);
-
                   }}
-
                 }}
-
               }}
-
             }} catch (_) {{}}
-
           }});
 
           eventSource.addEventListener('log', (e) => {{
             try {{
               const payload = JSON.parse(e.data);
-              if (payload && Array.isArray(payload.lines) && payload.lines.length > 0) {{
-                appendLiveFeedLines(payload.lines, payload.timestamp, !!payload.initial);
-                if (payload.total_lines !== undefined && logBadge) {{
-                  logBadge.textContent = payload.total_lines;
+              if (payload) {{
+                if (payload.cleared === true || payload.total_lines === 0) {{
+                  clearAllLogsUI();
+                }} else if (Array.isArray(payload.lines) && payload.lines.length > 0) {{
+                  appendLiveFeedLines(payload.lines, payload.timestamp, !!payload.initial);
+                  const badge = document.getElementById('log-count-badge');
+                  if (payload.total_lines !== undefined && badge) {{
+                    badge.textContent = payload.total_lines;
+                  }}
                 }}
               }}
             }} catch (_) {{}}
@@ -9065,6 +9077,7 @@ def build_modern_dashboard_html(
           // 1. Task Start Event: Wire active WIP UI state immediately
           eventSource.addEventListener('task_start', (e) => {{
             try {{
+              clearAllLogsUI();
               const payload = JSON.parse(e.data);
               const d = payload.data || {{}};
               isAutomationActive = true;
@@ -9173,6 +9186,7 @@ def build_modern_dashboard_html(
           const bodyPayload = isAutomationActive ? {{}} : {{ mode: currentExecutionMode }};
 
           if (!isAutomationActive) {{
+            clearAllLogsUI();
             activeRunStepProgress = 0;
             currentRunPid = null;
             updateStepProgress(0, true, 10, 'Step 0 of 4 running: AntiGravity Detector (10%)', null);
@@ -9244,11 +9258,25 @@ def build_modern_dashboard_html(
       const liveFeedStream = document.getElementById('live-feed-stream');
       const liveFeedTime = document.getElementById('live-feed-time');
       const btnFeedOpenDrawer = document.getElementById('btn-feed-open-drawer');
-      let liveFeedHistory = [];
+      const btnFeedClearLogs = document.getElementById('btn-feed-clear-logs');
 
       if (btnFeedOpenDrawer) {{
         btnFeedOpenDrawer.addEventListener('click', () => {{
           toggleLogs(true);
+        }});
+      }}
+
+      if (btnFeedClearLogs) {{
+        btnFeedClearLogs.addEventListener('click', () => {{
+          fetch(API_BASE + '/api/logs/clear', {{ method: 'POST' }})
+            .then(res => res.json())
+            .then(d => {{
+              clearAllLogsUI();
+              showToast('Live feed and logs cleared.', 'info');
+            }})
+            .catch(() => {{
+              clearAllLogsUI();
+            }});
         }});
       }}
 
@@ -9427,10 +9455,16 @@ def build_modern_dashboard_html(
 
             }}
 
-            logLines = lines.length;
-
-            if (logBadge) logBadge.textContent = logLines;
-            appendLiveFeedLines(lines, null, true);
+            if (lines.length === 0) {{
+              logLines = 0;
+              if (logBadge) logBadge.textContent = '0';
+            }} else {{
+              logLines = lines.length;
+              if (logBadge) logBadge.textContent = logLines;
+              if (isAutomationActive) {{
+                appendLiveFeedLines(lines, null, true);
+              }}
+            }}
             if (!logsOpen) return;
 
             let colored = '';
@@ -9509,15 +9543,11 @@ def build_modern_dashboard_html(
           fetch(API_BASE + '/api/logs/clear', {{ method: 'POST' }})
             .then(res => res.json())
             .then(d => {{
-              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared. Waiting for next stream tick...</div>';
-              logLines = 0;
-              if (logBadge) logBadge.textContent = '0';
+              clearAllLogsUI();
               showToast('Logs cleared successfully.');
             }})
             .catch(err => {{
-              if (logsTerminal) logsTerminal.innerHTML = '<div style="color: #64748b; padding: 6px;">Console cleared locally.</div>';
-              logLines = 0;
-              if (logBadge) logBadge.textContent = '0';
+              clearAllLogsUI();
             }});
         }});
       }}
